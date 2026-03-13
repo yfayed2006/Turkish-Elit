@@ -2,23 +2,26 @@
 <odoo>
 
     <record id="view_route_visit_list" model="ir.ui.view">
-        <field name="name">route.visit.list</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <list string="Visits">
-                <field name="visit_date"/>
-                <field name="route_id"/>
-                <field name="store_id"/>
-                <field name="user_id"/>
-                <field name="state"/>
-                <field name="check_in"/>
-                <field name="check_out"/>
-                <field name="duration_minutes"/>
-                <field name="active"/>
-            </list>
-        </field>
-    </record>
-
+    <field name="name">route.visit.list</field>
+    <field name="model">route.visit</field>
+    <field name="arch" type="xml">
+        <list string="Visits"
+              decoration-info="state == 'planned'"
+              decoration-warning="state == 'in_progress'"
+              decoration-success="state == 'done'"
+              decoration-danger="state == 'missed'">
+            <field name="visit_date"/>
+            <field name="route_id"/>
+            <field name="store_id"/>
+            <field name="user_id"/>
+            <field name="state"/>
+            <field name="check_in"/>
+            <field name="check_out"/>
+            <field name="duration_minutes"/>
+            <field name="active" optional="hide"/>
+        </list>
+    </field>
+</record>
  <record id="view_route_visit_search" model="ir.ui.view">
     <field name="name">route.visit.search</field>
     <field name="model">route.visit</field>
