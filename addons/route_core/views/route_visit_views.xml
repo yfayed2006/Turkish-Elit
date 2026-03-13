@@ -19,6 +19,74 @@
         </field>
     </record>
 
+    <record id="view_route_visit_search" model="ir.ui.view">
+        <field name="name">route.visit.search</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <search string="Search Visits">
+                <field name="route_id"/>
+                <field name="store_id"/>
+                <field name="user_id"/>
+                <field name="visit_date"/>
+                <field name="state"/>
+
+                <filter name="filter_today"
+                        string="Today"
+                        domain="[('visit_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+
+                <filter name="filter_my_visits"
+                        string="My Visits"
+                        domain="[('user_id', '=', uid)]"/>
+
+                <separator/>
+
+                <filter name="filter_planned"
+                        string="Planned"
+                        domain="[('state', '=', 'planned')]"/>
+
+                <filter name="filter_in_progress"
+                        string="In Progress"
+                        domain="[('state', '=', 'in_progress')]"/>
+
+                <filter name="filter_done"
+                        string="Done"
+                        domain="[('state', '=', 'done')]"/>
+
+                <filter name="filter_missed"
+                        string="Missed"
+                        domain="[('state', '=', 'missed')]"/>
+
+                <separator/>
+
+                <filter name="filter_active"
+                        string="Active"
+                        domain="[('active', '=', True)]"/>
+
+                <group expand="0" string="Group By">
+                    <filter name="group_by_route"
+                            string="Route"
+                            context="{'group_by': 'route_id'}"/>
+
+                    <filter name="group_by_store"
+                            string="Store"
+                            context="{'group_by': 'store_id'}"/>
+
+                    <filter name="group_by_user"
+                            string="Salesperson"
+                            context="{'group_by': 'user_id'}"/>
+
+                    <filter name="group_by_state"
+                            string="Status"
+                            context="{'group_by': 'state'}"/>
+
+                    <filter name="group_by_visit_date"
+                            string="Visit Date"
+                            context="{'group_by': 'visit_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="view_route_visit_form" model="ir.ui.view">
         <field name="name">route.visit.form</field>
         <field name="model">route.visit</field>
@@ -79,6 +147,7 @@
         <field name="name">Visits</field>
         <field name="res_model">route.visit</field>
         <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_route_visit_search"/>
     </record>
 
     <menuitem id="menu_route_visit"
