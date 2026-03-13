@@ -99,3 +99,13 @@ class RouteLine(models.Model):
                 ], limit=1)
                 if duplicate:
                     raise ValidationError('This store already exists in this route.')
+
+    def name_get(self):
+        result = []
+        for rec in self:
+            route_name = rec.route_id.name or 'Route'
+            seq = rec.sequence or 0
+            store_name = rec.store_id.name or 'Store'
+            name = f'{route_name} / {seq} / {store_name}'
+            result.append((rec.id, name))
+        return result
