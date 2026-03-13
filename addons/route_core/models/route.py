@@ -77,29 +77,17 @@ class RouteRoute(models.Model):
         }
 
     def action_generate_visits(self):
-        RouteVisit = self.env['route.visit']
-        today = fields.Date.context_today(self)
-
-        for rec in self:
-            for line in rec.line_ids.filtered(lambda l: l.store_id and l.active):
-                existing_visit = RouteVisit.search([
-                    ('route_id', '=', rec.id),
-                    ('route_line_id', '=', line.id),
-                    ('store_id', '=', line.store_id.id),
-                    ('visit_date', '=', today),
-                ], limit=1)
-
-                if not existing_visit:
-                    RouteVisit.create({
-                        'route_id': rec.id,
-                        'route_line_id': line.id,
-                        'store_id': line.store_id.id,
-                        'user_id': rec.user_id.id or self.env.user.id,
-                        'visit_date': today,
-                        'state': 'planned',
-                    })
-
-        return self.action_open_visits()
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Generate Visits',
+            'res_model': 'generate.visits.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_route_id': self.id,
+            },
+        }
 
     @api.model_create_multi
     def create(self, vals_list):
