@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_route_line_list" model="ir.ui.view">
+        <field name="name">route.line.list</field>
+        <field name="model">route.line</field>
+        <field name="arch" type="xml">
+            <list string="Route Lines">
+                <field name="route_id"/>
+                <field name="sequence"/>
+                <field name="store_id"/>
+                <field name="customer_id"/>
+                <field name="phone"/>
+                <field name="city"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_route_line_form" model="ir.ui.view">
+        <field name="name">route.line.form</field>
+        <field name="model">route.line</field>
+        <field name="arch" type="xml">
+            <form string="Route Line">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="route_id"/>
+                            <field name="sequence"/>
+                            <field name="store_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="customer_id" readonly="1"/>
+                            <field name="phone" readonly="1"/>
+                            <field name="city" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_route_line" model="ir.actions.act_window">
+        <field name="name">Route Lines</field>
+        <field name="res_model">route.line</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_route_line"
+              name="Route Lines"
+              parent="menu_route_core_root"
+              action="action_route_line"
+              sequence="30"/>
+
+</odoo>
