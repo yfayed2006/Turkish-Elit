@@ -19,21 +19,42 @@
         </field>
     </record>
 
-    <record id="view_route_visit_search" model="ir.ui.view">
-        <field name="name">route.visit.search</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <search>
-                <field name="route_id"/>
-                <field name="store_id"/>
-                <field name="user_id"/>
-                <field name="visit_date"/>
+   <record id="view_route_visit_search" model="ir.ui.view">
+    <field name="name">route.visit.search</field>
+    <field name="model">route.visit</field>
+    <field name="arch" type="xml">
+        <search>
+            <field name="route_id"/>
+            <field name="store_id"/>
+            <field name="user_id"/>
+            <field name="visit_date"/>
 
-                <filter name="planned_filter" string="Planned" domain="[('state', '=', 'planned')]"/>
-                <filter name="done_filter" string="Done" domain="[('state', '=', 'done')]"/>
-            </search>
-        </field>
-    </record>
+            <filter name="my_visits_filter"
+                    string="My Visits"
+                    domain="[('user_id', '=', uid)]"/>
+
+            <filter name="planned_filter"
+                    string="Planned"
+                    domain="[('state', '=', 'planned')]"/>
+
+            <filter name="in_progress_filter"
+                    string="In Progress"
+                    domain="[('state', '=', 'in_progress')]"/>
+
+            <filter name="done_filter"
+                    string="Done"
+                    domain="[('state', '=', 'done')]"/>
+
+            <filter name="missed_filter"
+                    string="Missed"
+                    domain="[('state', '=', 'missed')]"/>
+
+            <filter name="active_filter"
+                    string="Active"
+                    domain="[('active', '=', True)]"/>
+        </search>
+    </field>
+</record>
 
     <record id="view_route_visit_form" model="ir.ui.view">
         <field name="name">route.visit.form</field>
