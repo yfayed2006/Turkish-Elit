@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import ValidationError
 
 
 class RouteVisit(models.Model):
@@ -56,7 +57,8 @@ class RouteVisit(models.Model):
     duration_minutes = fields.Float(
         string='Duration (Minutes)',
         compute='_compute_duration_minutes',
-        store=True
+        store=True,
+        digits=(16, 2)
     )
 
     notes = fields.Text(string='Notes')
@@ -98,7 +100,7 @@ class RouteVisit(models.Model):
             rec.duration_minutes = 0.0
             if rec.check_in and rec.check_out:
                 delta = rec.check_out - rec.check_in
-                rec.duration_minutes = delta.total_seconds() / 60.0
+                rec.duration_minutes = round(delta.total_seconds() / 60.0, 2)
 
     @api.onchange('route_line_id')
     def _onchange_route_line_id(self):
@@ -113,17 +115,24 @@ class RouteVisit(models.Model):
             if rec.route_line_id and rec.route_line_id.route_id != rec.route_id:
                 rec.route_line_id = False
 
+    @api.constrains('check_in', 'check_out')
+    def _check_check_out_after_check_in(self):
+        for rec in self:
+            if rec.check_in and rec.check_out and rec.check_out < rec.check_in:
+                raise ValidationError('Check Out cannot be earlier than Check In.')
+
     def action_start_visit(self):
         for rec in self:
             rec.state = 'in_progress'
             rec.check_in = fields.Datetime.now()
+            rec.check_out = False
 
     def action_finish_visit(self):
         for rec in self:
-            rec.state = 'done'
             if not rec.check_in:
-                rec.check_in = fields.Datetime.now()
+                raise ValidationError('You must start the visit before finishing it.')
             rec.check_out = fields.Datetime.now()
+            rec.state = 'done'
 
     def action_mark_missed(self):
         for rec in self:
