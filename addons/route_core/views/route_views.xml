@@ -10,6 +10,7 @@
                 <field name="name"/>
                 <field name="user_id"/>
                 <field name="visit_day"/>
+                <field name="store_count"/>
                 <field name="active"/>
             </list>
         </field>
@@ -30,6 +31,7 @@
                         </group>
                         <group>
                             <field name="visit_day"/>
+                            <field name="store_count" readonly="1"/>
                         </group>
                     </group>
 
@@ -39,6 +41,7 @@
                                 <list editable="bottom">
                                     <field name="sequence"/>
                                     <field name="store_id"/>
+                                    <field name="store_code" readonly="1"/>
                                     <field name="customer_id" readonly="1"/>
                                     <field name="phone" readonly="1"/>
                                     <field name="city" readonly="1"/>
