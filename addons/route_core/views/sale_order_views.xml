@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_sale_order_form_inherit_route_visit" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.route.visit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <div class="oe_button_box" name="button_box">
+                    <button name="action_open_route_visit"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-road"
+                            invisible="route_visit_id == False">
+                        <span>Route Visit</span>
+                    </button>
+                </div>
+            </xpath>
+
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="route_visit_id" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
