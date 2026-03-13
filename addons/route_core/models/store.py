@@ -47,11 +47,12 @@ class RouteStore(models.Model):
         ('code_unique', 'unique(code)', 'Store code must be unique.'),
     ]
 
-    @api.model
-    def create(self, vals):
-        if not vals.get('code'):
-            vals['code'] = self.env['ir.sequence'].next_by_code('route.store') or 'NEW'
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('code'):
+                vals['code'] = self.env['ir.sequence'].next_by_code('route.store') or 'NEW'
+        return super().create(vals_list)
 
     @api.onchange('partner_id')
     def _onchange_partner_id(self):
