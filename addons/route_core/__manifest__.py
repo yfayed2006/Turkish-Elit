@@ -1,11 +1,16 @@
 {
     'name': 'Route Core',
-    'version': '1.0',
+    'version': '19.0.1.0',
     'summary': 'Core module for route distribution',
     'author': 'Yasser',
     'category': 'Sales',
-    'depends': ['contacts', 'stock'],
-    'data': [],
+    'license': 'LGPL-3',
+    'depends': ['base', 'contacts'],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/store_sequence.xml',
+        'views/store_views.xml',
+    ],
     'installable': True,
-    'application': False,
+    'application': True,
 }
