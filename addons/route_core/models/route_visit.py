@@ -144,25 +144,11 @@ class RouteVisit(models.Model):
             rec.check_out = False
 
     def action_finish_visit(self):
-        self.ensure_one()
-
-        if not self.check_in:
-            raise ValidationError('You must start the visit before finishing it.')
-
-        if not self.sale_order_id:
-            return {
-                'type': 'ir.actions.act_window',
-                'name': 'Finish Visit Warning',
-                'res_model': 'finish.visit.warning.wizard',
-                'view_mode': 'form',
-                'target': 'new',
-                'context': {
-                    'default_visit_id': self.id,
-                },
-            }
-
-        self.check_out = fields.Datetime.now()
-        self.state = 'done'
+        for rec in self:
+            if not rec.check_in:
+                raise ValidationError('You must start the visit before finishing it.')
+            rec.check_out = fields.Datetime.now()
+            rec.state = 'done'
 
     def action_mark_missed(self):
         for rec in self:
@@ -189,7 +175,6 @@ class RouteVisit(models.Model):
             'user_id': self.user_id.id,
             'origin': self.name,
             'note': f'Created from Route Visit: {self.name}',
-            'route_visit_id': self.id,
         })
 
         self.sale_order_id = sale_order.id
