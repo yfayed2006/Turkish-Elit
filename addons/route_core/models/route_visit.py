@@ -86,6 +86,18 @@ class RouteVisit(models.Model):
         readonly=True
     )
 
+    sale_order_id = fields.Many2one(
+        'sale.order',
+        string='Sales Order',
+        readonly=True,
+        copy=False
+    )
+
+    sale_order_count = fields.Integer(
+        string='Sales Order Count',
+        compute='_compute_sale_order_count'
+    )
+
     @api.depends('route_id', 'store_id', 'visit_date')
     def _compute_name(self):
         for rec in self:
@@ -101,6 +113,10 @@ class RouteVisit(models.Model):
             if rec.check_in and rec.check_out:
                 delta = rec.check_out - rec.check_in
                 rec.duration_minutes = round(delta.total_seconds() / 60.0, 2)
+
+    def _compute_sale_order_count(self):
+        for rec in self:
+            rec.sale_order_count = 1 if rec.sale_order_id else 0
 
     @api.onchange('route_line_id')
     def _onchange_route_line_id(self):
@@ -137,3 +153,52 @@ class RouteVisit(models.Model):
     def action_mark_missed(self):
         for rec in self:
             rec.state = 'missed'
+
+    def action_create_sale_order(self):
+        self.ensure_one()
+
+        if not self.store_id.partner_id:
+            raise ValidationError('This store does not have a linked customer.')
+
+        if self.sale_order_id:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Sales Order',
+                'res_model': 'sale.order',
+                'res_id': self.sale_order_id.id,
+                'view_mode': 'form',
+                'target': 'current',
+            }
+
+        sale_order = self.env['sale.order'].create({
+            'partner_id': self.store_id.partner_id.id,
+            'user_id': self.user_id.id,
+            'origin': self.name,
+            'note': f'Created from Route Visit: {self.name}',
+        })
+
+        self.sale_order_id = sale_order.id
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Sales Order',
+            'res_model': 'sale.order',
+            'res_id': sale_order.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_open_sale_order(self):
+        self.ensure_one()
+
+        if not self.sale_order_id:
+            raise ValidationError('There is no Sales Order linked to this visit yet.')
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Sales Order',
+            'res_model': 'sale.order',
+            'res_id': self.sale_order_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
