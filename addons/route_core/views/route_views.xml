@@ -37,8 +37,9 @@
 
                     <notebook>
                         <page string="Stores">
-                            <field name="line_ids">
+                            <field name="line_ids" context="{'default_route_id': id}">
                                 <list editable="bottom">
+                                    <field name="route_id" column_invisible="1"/>
                                     <field name="sequence"/>
                                     <field name="store_id"/>
                                     <field name="store_code" readonly="1"/>
