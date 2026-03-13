@@ -171,11 +171,12 @@ class RouteVisit(models.Model):
             }
 
         sale_order = self.env['sale.order'].create({
-            'partner_id': self.store_id.partner_id.id,
-            'user_id': self.user_id.id,
-            'origin': self.name,
-            'note': f'Created from Route Visit: {self.name}',
-        })
+    'partner_id': self.store_id.partner_id.id,
+    'user_id': self.user_id.id,
+    'origin': self.name,
+    'note': f'Created from Route Visit: {self.name}',
+    'route_visit_id': self.id,
+})
 
         self.sale_order_id = sale_order.id
 
