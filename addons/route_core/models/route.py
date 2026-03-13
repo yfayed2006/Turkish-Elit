@@ -33,6 +33,17 @@ class RouteRoute(models.Model):
         string='Stores'
     )
 
+    store_count = fields.Integer(
+        string='Store Count',
+        compute='_compute_store_count',
+        store=True
+    )
+
+    @api.depends('line_ids')
+    def _compute_store_count(self):
+        for rec in self:
+            rec.store_count = len(rec.line_ids)
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
