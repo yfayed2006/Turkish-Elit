@@ -13,6 +13,7 @@
                 <field name="phone"/>
                 <field name="city"/>
                 <field name="visit_day"/>
+                <field name="visit_count"/>
                 <field name="active"/>
             </list>
         </field>
@@ -24,6 +25,15 @@
         <field name="arch" type="xml">
             <form string="Store">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_visits"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-map-marker">
+                            <field name="visit_count" widget="statinfo" string="Visits"/>
+                        </button>
+                    </div>
+
                     <group>
                         <group>
                             <field name="name"/>
