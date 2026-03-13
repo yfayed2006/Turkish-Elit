@@ -5,7 +5,7 @@
     'author': 'Yasser',
     'category': 'Sales',
     'license': 'LGPL-3',
-    'depends': ['base', 'contacts'],
+    'depends': ['base', 'contacts', 'sale'],
     'data': [
         'security/ir.model.access.csv',
         'data/store_sequence.xml',
