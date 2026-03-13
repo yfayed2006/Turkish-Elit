@@ -43,6 +43,11 @@ class RouteStore(models.Model):
 
     notes = fields.Text(string='Notes')
 
+    visit_count = fields.Integer(
+        string='Visit Count',
+        compute='_compute_visit_count'
+    )
+
     _sql_constraints = [
         ('code_unique', 'unique(code)', 'Store code must be unique.'),
     ]
@@ -76,3 +81,30 @@ class RouteStore(models.Model):
                 raise ValidationError('Latitude must be between -90 and 90.')
             if rec.longitude and (rec.longitude < -180 or rec.longitude > 180):
                 raise ValidationError('Longitude must be between -180 and 180.')
+
+    def _compute_visit_count(self):
+        visit_data = self.env['route.visit'].read_group(
+            [('store_id', 'in', self.ids)],
+            ['store_id'],
+            ['store_id']
+        )
+        mapped_data = {
+            item['store_id'][0]: item['store_id_count']
+            for item in visit_data if item.get('store_id')
+        }
+        for rec in self:
+            rec.visit_count = mapped_data.get(rec.id, 0)
+
+    def action_open_visits(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Visits',
+            'res_model': 'route.visit',
+            'view_mode': 'list,form',
+            'domain': [('store_id', '=', self.id)],
+            'context': {
+                'default_store_id': self.id,
+                'default_route_id': False,
+            },
+        }
