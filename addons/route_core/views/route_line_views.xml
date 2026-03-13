@@ -7,8 +7,10 @@
         <field name="arch" type="xml">
             <list string="Route Lines">
                 <field name="route_id"/>
+                <field name="route_code"/>
                 <field name="sequence"/>
                 <field name="store_id"/>
+                <field name="store_code"/>
                 <field name="customer_id"/>
                 <field name="phone"/>
                 <field name="city"/>
@@ -26,8 +28,10 @@
                     <group>
                         <group>
                             <field name="route_id"/>
+                            <field name="route_code" readonly="1"/>
                             <field name="sequence"/>
                             <field name="store_id"/>
+                            <field name="store_code" readonly="1"/>
                             <field name="active"/>
                         </group>
                         <group>
