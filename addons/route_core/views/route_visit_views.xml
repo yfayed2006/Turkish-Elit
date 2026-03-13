@@ -5,16 +5,12 @@
     <field name="name">route.visit.list</field>
     <field name="model">route.visit</field>
     <field name="arch" type="xml">
-        <list string="Visits"
-              decoration-info="state == 'planned'"
-              decoration-warning="state == 'in_progress'"
-              decoration-success="state == 'done'"
-              decoration-danger="state == 'missed'">
+        <list string="Visits">
             <field name="visit_date"/>
+            <field name="state" widget="badge"/>
             <field name="route_id"/>
             <field name="store_id"/>
             <field name="user_id"/>
-            <field name="state"/>
             <field name="check_in"/>
             <field name="check_out"/>
             <field name="duration_minutes"/>
