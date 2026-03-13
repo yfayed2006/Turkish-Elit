@@ -16,10 +16,17 @@ class RouteLine(models.Model):
         ondelete='cascade'
     )
 
+    available_store_ids = fields.Many2many(
+        'route.store',
+        compute='_compute_available_store_ids',
+        string='Available Stores'
+    )
+
     store_id = fields.Many2one(
         'route.store',
         string='Store',
-        required=True
+        required=True,
+        domain="[('id', 'in', available_store_ids)]"
     )
 
     active = fields.Boolean(string='Active', default=True)
@@ -64,6 +71,22 @@ class RouteLine(models.Model):
     _sql_constraints = [
         ('route_store_unique', 'unique(route_id, store_id)', 'This store already exists in this route.'),
     ]
+
+    @api.depends('route_id', 'route_id.line_ids', 'route_id.line_ids.store_id')
+    def _compute_available_store_ids(self):
+        all_stores = self.env['route.store'].search([('active', '=', True)])
+        for rec in self:
+            if not rec.route_id:
+                rec.available_store_ids = all_stores
+                continue
+
+            used_store_ids = rec.route_id.line_ids.filtered(
+                lambda line: line.id != rec.id and line.store_id
+            ).mapped('store_id').ids
+
+            rec.available_store_ids = all_stores.filtered(
+                lambda store: store.id not in used_store_ids
+            )
 
     @api.constrains('route_id', 'store_id')
     def _check_unique_store_in_route(self):
