@@ -13,6 +13,7 @@
         'views/store_views.xml',
         'views/route_views.xml',
         'views/route_line_views.xml',
+        'views/route_visit_views.xml',
     ],
     'installable': True,
     'application': True,
