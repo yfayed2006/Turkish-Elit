@@ -39,10 +39,42 @@ class RouteRoute(models.Model):
         store=True
     )
 
+    visit_count = fields.Integer(
+        string='Visit Count',
+        compute='_compute_visit_count'
+    )
+
     @api.depends('line_ids')
     def _compute_store_count(self):
         for rec in self:
             rec.store_count = len(rec.line_ids)
+
+    def _compute_visit_count(self):
+        visit_data = self.env['route.visit'].read_group(
+            [('route_id', 'in', self.ids)],
+            ['route_id'],
+            ['route_id']
+        )
+        mapped_data = {
+            item['route_id'][0]: item['route_id_count']
+            for item in visit_data if item.get('route_id')
+        }
+        for rec in self:
+            rec.visit_count = mapped_data.get(rec.id, 0)
+
+    def action_open_visits(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Visits',
+            'res_model': 'route.visit',
+            'view_mode': 'list,form',
+            'domain': [('route_id', '=', self.id)],
+            'context': {
+                'default_route_id': self.id,
+                'default_user_id': self.user_id.id,
+            },
+        }
 
     @api.model_create_multi
     def create(self, vals_list):
