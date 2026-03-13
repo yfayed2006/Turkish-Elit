@@ -14,6 +14,7 @@
         'views/route_views.xml',
         'views/route_line_views.xml',
         'views/route_visit_views.xml',
+        'wizard/generate_visits_wizard_views.xml',
     ],
     'installable': True,
     'application': True,
