@@ -11,6 +11,7 @@
                 <field name="user_id"/>
                 <field name="visit_day"/>
                 <field name="store_count"/>
+                <field name="visit_count"/>
                 <field name="active"/>
             </list>
         </field>
@@ -22,6 +23,15 @@
         <field name="arch" type="xml">
             <form string="Route">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_visits"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-map-marker">
+                            <field name="visit_count" widget="statinfo" string="Visits"/>
+                        </button>
+                    </div>
+
                     <group>
                         <group>
                             <field name="name"/>
