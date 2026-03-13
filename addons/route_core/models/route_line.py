@@ -45,3 +45,21 @@ class RouteLine(models.Model):
         store=True,
         readonly=True
     )
+
+    route_code = fields.Char(
+        string='Route Code',
+        related='route_id.code',
+        store=True,
+        readonly=True
+    )
+
+    store_code = fields.Char(
+        string='Store Code',
+        related='store_id.code',
+        store=True,
+        readonly=True
+    )
+
+    _sql_constraints = [
+        ('route_store_unique', 'unique(route_id, store_id)', 'This store already exists in this route.'),
+    ]
