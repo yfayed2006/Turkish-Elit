@@ -6,6 +6,13 @@ class RouteLine(models.Model):
     _name = 'route.line'
     _description = 'Route Line'
     _order = 'sequence, id'
+    _rec_name = 'name'
+
+    name = fields.Char(
+        string='Name',
+        compute='_compute_name',
+        store=True
+    )
 
     sequence = fields.Integer(string='Sequence', default=10)
 
@@ -72,6 +79,14 @@ class RouteLine(models.Model):
         ('route_store_unique', 'unique(route_id, store_id)', 'This store already exists in this route.'),
     ]
 
+    @api.depends('route_id', 'sequence', 'store_id')
+    def _compute_name(self):
+        for rec in self:
+            route_name = rec.route_id.name or 'Route'
+            seq = rec.sequence or 0
+            store_name = rec.store_id.name or 'Store'
+            rec.name = f'{route_name} / {seq} / {store_name}'
+
     @api.depends('route_id', 'route_id.line_ids', 'route_id.line_ids.store_id')
     def _compute_available_store_ids(self):
         all_stores = self.env['route.store'].search([('active', '=', True)])
@@ -99,13 +114,3 @@ class RouteLine(models.Model):
                 ], limit=1)
                 if duplicate:
                     raise ValidationError('This store already exists in this route.')
-
-    def name_get(self):
-        result = []
-        for rec in self:
-            route_name = rec.route_id.name or 'Route'
-            seq = rec.sequence or 0
-            store_name = rec.store_id.name or 'Store'
-            name = f'{route_name} / {seq} / {store_name}'
-            result.append((rec.id, name))
-        return result
