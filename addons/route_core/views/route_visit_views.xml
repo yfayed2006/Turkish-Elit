@@ -19,7 +19,7 @@
         </field>
     </record>
 
-   <record id="view_route_visit_search" model="ir.ui.view">
+  <record id="view_route_visit_search" model="ir.ui.view">
     <field name="name">route.visit.search</field>
     <field name="model">route.visit</field>
     <field name="arch" type="xml">
@@ -52,6 +52,28 @@
             <filter name="active_filter"
                     string="Active"
                     domain="[('active', '=', True)]"/>
+
+            <group string="Group By">
+                <filter name="group_by_route"
+                        string="Route"
+                        context="{'group_by': 'route_id'}"/>
+
+                <filter name="group_by_store"
+                        string="Store"
+                        context="{'group_by': 'store_id'}"/>
+
+                <filter name="group_by_user"
+                        string="Salesperson"
+                        context="{'group_by': 'user_id'}"/>
+
+                <filter name="group_by_state"
+                        string="Status"
+                        context="{'group_by': 'state'}"/>
+
+                <filter name="group_by_visit_date"
+                        string="Visit Date"
+                        context="{'group_by': 'visit_date'}"/>
+            </group>
         </search>
     </field>
 </record>
