@@ -28,58 +28,49 @@
                 <field name="store_id"/>
                 <field name="user_id"/>
                 <field name="visit_date"/>
-                <field name="state"/>
 
-                <filter name="filter_today"
-                        string="Today"
-                        domain="[('visit_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
-
-                <filter name="filter_my_visits"
+                <filter name="my_visits"
                         string="My Visits"
                         domain="[('user_id', '=', uid)]"/>
 
-                <separator/>
-
-                <filter name="filter_planned"
+                <filter name="planned"
                         string="Planned"
                         domain="[('state', '=', 'planned')]"/>
 
-                <filter name="filter_in_progress"
+                <filter name="in_progress"
                         string="In Progress"
                         domain="[('state', '=', 'in_progress')]"/>
 
-                <filter name="filter_done"
+                <filter name="done"
                         string="Done"
                         domain="[('state', '=', 'done')]"/>
 
-                <filter name="filter_missed"
+                <filter name="missed"
                         string="Missed"
                         domain="[('state', '=', 'missed')]"/>
 
-                <separator/>
-
-                <filter name="filter_active"
+                <filter name="active"
                         string="Active"
                         domain="[('active', '=', True)]"/>
 
                 <group expand="0" string="Group By">
-                    <filter name="group_by_route"
+                    <filter name="group_route"
                             string="Route"
                             context="{'group_by': 'route_id'}"/>
 
-                    <filter name="group_by_store"
+                    <filter name="group_store"
                             string="Store"
                             context="{'group_by': 'store_id'}"/>
 
-                    <filter name="group_by_user"
+                    <filter name="group_user"
                             string="Salesperson"
                             context="{'group_by': 'user_id'}"/>
 
-                    <filter name="group_by_state"
+                    <filter name="group_state"
                             string="Status"
                             context="{'group_by': 'state'}"/>
 
-                    <filter name="group_by_visit_date"
+                    <filter name="group_visit_date"
                             string="Visit Date"
                             context="{'group_by': 'visit_date'}"/>
                 </group>
