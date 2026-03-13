@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="seq_route_route" model="ir.sequence">
+        <field name="name">Route Sequence</field>
+        <field name="code">route.route</field>
+        <field name="prefix">RTE/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>
