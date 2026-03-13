@@ -54,20 +54,20 @@ class RouteStore(models.Model):
                 vals['code'] = self.env['ir.sequence'].next_by_code('route.store') or 'NEW'
         return super().create(vals_list)
 
-   @api.onchange('partner_id')
-def _onchange_partner_id(self):
-    for rec in self:
-        if rec.partner_id:
-            partner = rec.partner_id
-            rec.name = partner.name or rec.name
-            rec.phone = partner.phone
-            rec.mobile = getattr(partner, 'mobile', False)
-            rec.email = partner.email
-            rec.street = partner.street
-            rec.street2 = partner.street2
-            rec.city = partner.city
-            rec.zip = partner.zip
-            rec.country_id = partner.country_id
+    @api.onchange('partner_id')
+    def _onchange_partner_id(self):
+        for rec in self:
+            if rec.partner_id:
+                partner = rec.partner_id
+                rec.name = partner.name or rec.name
+                rec.phone = partner.phone
+                rec.mobile = getattr(partner, 'mobile', False)
+                rec.email = partner.email
+                rec.street = partner.street
+                rec.street2 = partner.street2
+                rec.city = partner.city
+                rec.zip = partner.zip
+                rec.country_id = partner.country_id
 
     @api.constrains('latitude', 'longitude')
     def _check_coordinates(self):
