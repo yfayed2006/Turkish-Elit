@@ -27,6 +27,12 @@ class RouteRoute(models.Model):
 
     notes = fields.Text(string='Notes')
 
+    line_ids = fields.One2many(
+        'route.line',
+        'route_id',
+        string='Stores'
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
