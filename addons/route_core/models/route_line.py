@@ -1,4 +1,5 @@
-from odoo import models, fields
+from odoo import models, fields, api
+from odoo.exceptions import ValidationError
 
 
 class RouteLine(models.Model):
@@ -63,3 +64,15 @@ class RouteLine(models.Model):
     _sql_constraints = [
         ('route_store_unique', 'unique(route_id, store_id)', 'This store already exists in this route.'),
     ]
+
+    @api.constrains('route_id', 'store_id')
+    def _check_unique_store_in_route(self):
+        for rec in self:
+            if rec.route_id and rec.store_id:
+                duplicate = self.search([
+                    ('id', '!=', rec.id),
+                    ('route_id', '=', rec.route_id.id),
+                    ('store_id', '=', rec.store_id.id),
+                ], limit=1)
+                if duplicate:
+                    raise ValidationError('This store already exists in this route.')
