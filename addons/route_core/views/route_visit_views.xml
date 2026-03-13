@@ -23,57 +23,14 @@
         <field name="name">route.visit.search</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <search string="Search Visits">
+            <search>
                 <field name="route_id"/>
                 <field name="store_id"/>
                 <field name="user_id"/>
                 <field name="visit_date"/>
 
-                <filter name="my_visits"
-                        string="My Visits"
-                        domain="[('user_id', '=', uid)]"/>
-
-                <filter name="planned"
-                        string="Planned"
-                        domain="[('state', '=', 'planned')]"/>
-
-                <filter name="in_progress"
-                        string="In Progress"
-                        domain="[('state', '=', 'in_progress')]"/>
-
-                <filter name="done"
-                        string="Done"
-                        domain="[('state', '=', 'done')]"/>
-
-                <filter name="missed"
-                        string="Missed"
-                        domain="[('state', '=', 'missed')]"/>
-
-                <filter name="active"
-                        string="Active"
-                        domain="[('active', '=', True)]"/>
-
-                <group expand="0" string="Group By">
-                    <filter name="group_route"
-                            string="Route"
-                            context="{'group_by': 'route_id'}"/>
-
-                    <filter name="group_store"
-                            string="Store"
-                            context="{'group_by': 'store_id'}"/>
-
-                    <filter name="group_user"
-                            string="Salesperson"
-                            context="{'group_by': 'user_id'}"/>
-
-                    <filter name="group_state"
-                            string="Status"
-                            context="{'group_by': 'state'}"/>
-
-                    <filter name="group_visit_date"
-                            string="Visit Date"
-                            context="{'group_by': 'visit_date'}"/>
-                </group>
+                <filter name="planned_filter" string="Planned" domain="[('state', '=', 'planned')]"/>
+                <filter name="done_filter" string="Done" domain="[('state', '=', 'done')]"/>
             </search>
         </field>
     </record>
