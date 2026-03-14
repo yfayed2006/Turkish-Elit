@@ -1,164 +1,156 @@
-from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
 
+    <record id="view_route_visit_tree" model="ir.ui.view">
+        <field name="name">route.visit.tree</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <list string="Route Visits">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="user_id"/>
+                <field name="state"/>
+                <field name="sale_order_id"/>
+                <field name="start_datetime"/>
+                <field name="end_datetime"/>
+            </list>
+        </field>
+    </record>
 
-class RouteVisit(models.Model):
-    _name = "route.visit"
-    _description = "Route Visit"
-    _order = "date desc, id desc"
+    <record id="view_route_visit_form" model="ir.ui.view">
+        <field name="name">route.visit.form</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <form string="Route Visit">
+                <header>
+                    <button
+                        name="action_start_visit"
+                        string="Start Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'draft'"
+                    />
+                    <button
+                        name="action_create_sale_order"
+                        string="Create Sale Order"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'in_progress'"
+                    />
+                    <button
+                        name="action_end_visit"
+                        string="End Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'in_progress'"
+                    />
+                    <button
+                        name="action_cancel"
+                        string="Cancel"
+                        type="object"
+                        invisible="state in ('done', 'cancel')"
+                    />
+                    <button
+                        name="action_reset_to_draft"
+                        string="Reset to Draft"
+                        type="object"
+                        invisible="state != 'cancel'"
+                    />
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
+                </header>
 
-    name = fields.Char(
-        string="Visit Reference",
-        required=True,
-        copy=False,
-        readonly=True,
-        default="New",
-    )
-    date = fields.Date(
-        string="Visit Date",
-        required=True,
-        default=fields.Date.context_today,
-    )
-    partner_id = fields.Many2one(
-        "res.partner",
-        string="Customer",
-        required=True,
-    )
-    user_id = fields.Many2one(
-        "res.users",
-        string="Salesperson",
-        required=True,
-        default=lambda self: self.env.user,
-    )
-    notes = fields.Text(string="Notes")
-    no_sale_reason = fields.Text(
-        string="Reason for Ending Without Sale",
-        readonly=True,
-    )
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_sale_order"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-shopping-cart"
+                            invisible="sale_order_count == 0"
+                        >
+                            <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+                        </button>
+                    </div>
 
-    state = fields.Selection(
-        [
-            ("draft", "Draft"),
-            ("in_progress", "In Progress"),
-            ("done", "Done"),
-            ("cancel", "Cancelled"),
-        ],
-        string="Status",
-        default="draft",
-        required=True,
-    )
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="date"/>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="user_id" readonly="state != 'draft'"/>
+                            <field name="state" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
+                        </group>
+                    </group>
 
-    start_datetime = fields.Datetime(
-        string="Start DateTime",
-        readonly=True,
-    )
-    end_datetime = fields.Datetime(
-        string="End DateTime",
-        readonly=True,
-    )
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+                        <page string="No Sale Reason" invisible="not no_sale_reason">
+                            <field name="no_sale_reason" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
 
-    sale_order_id = fields.Many2one(
-        "sale.order",
-        string="Sale Order",
-        readonly=True,
-        copy=False,
-    )
+                <chatter/>
+            </form>
+        </field>
+    </record>
 
-    sale_order_count = fields.Integer(
-        string="Sale Order Count",
-        compute="_compute_sale_order_count",
-    )
+    <record id="view_route_visit_search" model="ir.ui.view">
+        <field name="name">route.visit.search</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <search string="Search Route Visits">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="user_id"/>
+                <field name="date"/>
+                <field name="state"/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+                <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_by_date" string="Visit Date" context="{'group_by': 'date'}"/>
+                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
 
-    @api.depends("sale_order_id")
-    def _compute_sale_order_count(self):
-        for rec in self:
-            rec.sale_order_count = 1 if rec.sale_order_id else 0
+    <record id="action_route_visit" model="ir.actions.act_window">
+        <field name="name">Route Visits</field>
+        <field name="res_model">route.visit</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_route_visit_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first route visit
+            </p>
+        </field>
+    </record>
 
-    @api.model
-    def create(self, vals):
-        if vals.get("name", "New") == "New":
-            vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
-        return super().create(vals)
+    <menuitem
+        id="menu_route_visit_root"
+        name="Route Visits"
+        sequence="10"
+    />
 
-    def action_start_visit(self):
-        for rec in self:
-            if rec.state != "draft":
-                raise UserError(_("Only draft visits can be started."))
-            rec.write({
-                "state": "in_progress",
-                "start_datetime": fields.Datetime.now(),
-                "end_datetime": False,
-                "no_sale_reason": False,
-            })
+    <menuitem
+        id="menu_route_visit"
+        name="Visits"
+        parent="menu_route_visit_root"
+        action="action_route_visit"
+        sequence="10"
+    />
 
-    def action_create_sale_order(self):
-        self.ensure_one()
-
-        if self.state != "in_progress":
-            raise UserError(_("You can only create a sale order when the visit is in progress."))
-
-        if self.sale_order_id:
-            action = self.env.ref("sale.action_orders").read()[0]
-            action["res_id"] = self.sale_order_id.id
-            action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-            return action
-
-        sale_order = self.env["sale.order"].create({
-            "partner_id": self.partner_id.id,
-            "user_id": self.user_id.id,
-            "origin": self.name,
-        })
-
-        self.sale_order_id = sale_order.id
-
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = sale_order.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        return action
-
-    def action_view_sale_order(self):
-        self.ensure_one()
-
-        if not self.sale_order_id:
-            raise UserError(_("There is no sale order linked to this visit."))
-
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = self.sale_order_id.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        return action
-
-    def action_end_visit(self):
-        for rec in self:
-            if rec.state != "in_progress":
-                raise UserError(_("Only visits in progress can be ended."))
-            if not rec.sale_order_id:
-                raise UserError(_("You must create a sale order before ending the visit."))
-            rec.write({
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
-
-    def action_force_end_visit(self):
-        for rec in self:
-            if rec.state != "in_progress":
-                raise UserError(_("Only visits in progress can be force ended."))
-            rec.write({
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
-
-    def action_cancel(self):
-        for rec in self:
-            if rec.state == "done":
-                raise UserError(_("You cannot cancel a completed visit."))
-            rec.write({"state": "cancel"})
-
-    def action_reset_to_draft(self):
-        for rec in self:
-            rec.write({
-                "state": "draft",
-                "start_datetime": False,
-                "end_datetime": False,
-                "sale_order_id": False,
-                "no_sale_reason": False,
-            })
+</odoo>
