@@ -1,1 +1,1 @@
-# models package
+from . import route_visit
