@@ -1,4 +1,4 @@
-from odoo import models
+from odoo import fields, models
 
 
 class SaleOrder(models.Model):
@@ -7,12 +7,16 @@ class SaleOrder(models.Model):
     def button_confirm(self):
         result = super().button_confirm()
 
-        if len(self) == 1 and self.origin:
+        if len(self) == 1:
             visit = self.env["route.visit"].search(
-                [("name", "=", self.origin)],
+                [("sale_order_id", "=", self.id)],
                 limit=1,
             )
             if visit:
+                visit.write({
+                    "state": "done",
+                    "end_datetime": fields.Datetime.now(),
+                })
                 return {
                     "type": "ir.actions.act_window",
                     "name": "Route Visit",
