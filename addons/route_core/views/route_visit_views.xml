@@ -36,11 +36,6 @@
                             type="object"
                             invisible="state != 'in_progress'"/>
 
-                    <button name="action_force_end_visit"
-                            string="Force End Visit"
-                            type="object"
-                            invisible="state != 'in_progress'"/>
-
                     <button name="action_cancel_visit"
                             string="Cancel"
                             type="object"
