@@ -9,6 +9,7 @@
     "depends": ["base"],
     "data": [
         "security/ir.model.access.csv",
+        "data/sequence.xml",
         "views/route_visit_views.xml",
     ],
     "installable": True,
