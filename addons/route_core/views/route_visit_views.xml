@@ -20,6 +20,30 @@
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
             <form string="Route Visit">
+                <header>
+                    <button name="action_start_visit"
+                            string="Start Visit"
+                            type="object"
+                            invisible="state != 'draft'"/>
+
+                    <button name="action_end_visit"
+                            string="End Visit"
+                            type="object"
+                            invisible="state != 'in_progress'"/>
+
+                    <button name="action_cancel_visit"
+                            string="Cancel"
+                            type="object"
+                            invisible="state in ('done','cancel')"/>
+
+                    <button name="action_reset_to_draft"
+                            string="Reset to Draft"
+                            type="object"
+                            invisible="state == 'draft'"/>
+
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
+                </header>
+
                 <sheet>
                     <group>
                         <field name="name"/>
