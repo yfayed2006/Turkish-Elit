@@ -8,6 +8,8 @@
             <list>
                 <field name="name"/>
                 <field name="date"/>
+                <field name="partner_id"/>
+                <field name="user_id"/>
                 <field name="state"/>
             </list>
         </field>
@@ -22,6 +24,8 @@
                     <group>
                         <field name="name"/>
                         <field name="date"/>
+                        <field name="partner_id"/>
+                        <field name="user_id"/>
                         <field name="state"/>
                         <field name="notes"/>
                     </group>
