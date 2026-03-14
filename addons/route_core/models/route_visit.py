@@ -13,7 +13,11 @@ class RouteVisit(models.Model):
         copy=False,
         default="New",
     )
-    date = fields.Date(string="Visit Date")
+    date = fields.Date(
+        string="Visit Date",
+        required=True,
+        default=fields.Date.context_today,
+    )
     notes = fields.Text(string="Notes")
     state = fields.Selection(
         [
@@ -25,8 +29,16 @@ class RouteVisit(models.Model):
         string="Status",
         default="draft",
     )
-    user_id = fields.Many2one("res.users", string="Salesperson")
-    partner_id = fields.Many2one("res.partner", string="Customer")
+    user_id = fields.Many2one(
+        "res.users",
+        string="Salesperson",
+        default=lambda self: self.env.user,
+    )
+    partner_id = fields.Many2one(
+        "res.partner",
+        string="Customer",
+        required=True,
+    )
     start_datetime = fields.Datetime(string="Start Time", readonly=True)
     end_datetime = fields.Datetime(string="End Time", readonly=True)
 
