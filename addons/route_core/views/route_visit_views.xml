@@ -56,11 +56,11 @@
 
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_customer_sale_orders"
+                        <button name="action_view_sale_order"
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-shopping-cart">
-                            <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
+                            <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                         </button>
                     </div>
 
