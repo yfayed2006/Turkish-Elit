@@ -8,6 +8,7 @@
             <list>
                 <field name="name"/>
                 <field name="date"/>
+                <field name="state"/>
             </list>
         </field>
     </record>
@@ -21,6 +22,7 @@
                     <group>
                         <field name="name"/>
                         <field name="date"/>
+                        <field name="state"/>
                         <field name="notes"/>
                     </group>
                 </sheet>
