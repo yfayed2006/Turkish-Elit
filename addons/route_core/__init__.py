@@ -1,1 +1,1 @@
-addons/route_core/__init__.py
+# -*- coding: utf-8 -*-
