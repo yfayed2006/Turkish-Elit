@@ -2,7 +2,7 @@
     "name": "Route Core",
     "version": "19.0.1.0.0",
     "summary": "Sales representative route visits",
-    "depends": ["base", "sale"],
+    "depends": ["base", "sale", "mail"],
     "data": [
         "security/ir.model.access.csv",
         "views/route_visit_views.xml",
