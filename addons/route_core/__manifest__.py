@@ -10,6 +10,9 @@
         "base",
         "mail",
     ],
-  "data": [
-    "views/route_visit_views.xml",
-],
+    "data": [
+        "views/route_visit_views.xml",
+    ],
+    "installable": True,
+    "application": True,
+}
