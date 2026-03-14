@@ -112,6 +112,7 @@ class RouteVisit(models.Model):
             action = self.env.ref("sale.action_orders").read()[0]
             action["res_id"] = self.sale_order_id.id
             action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
+            action["context"] = dict(self.env.context, route_visit_id=self.id)
             return action
 
         sale_order = self.env["sale.order"].create({
@@ -125,6 +126,7 @@ class RouteVisit(models.Model):
         action = self.env.ref("sale.action_orders").read()[0]
         action["res_id"] = sale_order.id
         action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
+        action["context"] = dict(self.env.context, route_visit_id=self.id)
         return action
 
     def action_view_sale_order(self):
@@ -136,6 +138,7 @@ class RouteVisit(models.Model):
         action = self.env.ref("sale.action_orders").read()[0]
         action["res_id"] = self.sale_order_id.id
         action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
+        action["context"] = dict(self.env.context, route_visit_id=self.id)
         return action
 
     def action_end_visit(self):
