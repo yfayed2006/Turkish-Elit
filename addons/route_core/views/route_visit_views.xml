@@ -5,12 +5,15 @@
         <field name="name">route.visit.tree</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <list>
+            <list string="Route Visits">
                 <field name="name"/>
                 <field name="date"/>
                 <field name="partner_id"/>
                 <field name="user_id"/>
                 <field name="state"/>
+                <field name="sale_order_id"/>
+                <field name="start_datetime"/>
+                <field name="end_datetime"/>
             </list>
         </field>
     </record>
@@ -21,53 +24,77 @@
         <field name="arch" type="xml">
             <form string="Route Visit">
                 <header>
-                    <button name="action_start_visit"
-                            string="Start Visit"
-                            type="object"
-                            invisible="state != 'draft'"/>
-
-                    <button name="action_create_sale_order"
-                            string="Create Sale Order"
-                            type="object"
-                            invisible="state != 'in_progress'"/>
-
-                    <button name="action_end_visit"
-                            string="End Visit"
-                            type="object"
-                            invisible="state != 'in_progress'"/>
-
-                    <button name="action_cancel_visit"
-                            string="Cancel"
-                            type="object"
-                            invisible="state in ('done','cancel')"/>
-
-                    <button name="action_reset_to_draft"
-                            string="Reset to Draft"
-                            type="object"
-                            invisible="state == 'draft'"/>
-
+                    <button
+                        name="action_start_visit"
+                        string="Start Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'draft'"
+                    />
+                    <button
+                        name="action_create_sale_order"
+                        string="Create Sale Order"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state not in ('in_progress', 'done')"
+                    />
+                    <button
+                        name="action_end_visit"
+                        string="End Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'in_progress'"
+                    />
+                    <button
+                        name="action_cancel"
+                        string="Cancel"
+                        type="object"
+                        invisible="state in ('done', 'cancel')"
+                    />
+                    <button
+                        name="action_reset_to_draft"
+                        string="Reset to Draft"
+                        type="object"
+                        invisible="state != 'cancel'"
+                    />
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
                 </header>
 
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_sale_order"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-shopping-cart">
-                            <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+                        <button
+                            name="action_view_sale_order"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-shopping-cart"
+                            invisible="sale_order_count == 0"
+                        >
+                            <field name="sale_order_count" widget="statinfo" string="Sale Order"/>
                         </button>
                     </div>
 
                     <group>
-                        <field name="name"/>
-                        <field name="date"/>
-                        <field name="partner_id"/>
-                        <field name="user_id"/>
-                        <field name="start_datetime"/>
-                        <field name="end_datetime"/>
-                        <field name="notes"/>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="user_id" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"/>
+                        </group>
                     </group>
+
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes" readonly="state in ('done', 'cancel')"/>
+                        </page>
+                        <page string="No Sale Reason">
+                            <field name="no_sale_reason" readonly="1"/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
@@ -79,7 +106,7 @@
         <field name="view_mode">list,form</field>
     </record>
 
-    <menuitem id="menu_route_root" name="Route Management" sequence="10"/>
-    <menuitem id="menu_route_visit" name="Visits" parent="menu_route_root" action="action_route_visit" sequence="20"/>
+    <menuitem id="menu_route_root" name="Routes" sequence="10"/>
+    <menuitem id="menu_route_visit" name="Visits" parent="menu_route_root" action="action_route_visit" sequence="10"/>
 
 </odoo>
