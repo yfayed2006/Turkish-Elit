@@ -31,7 +31,10 @@ class RouteVisit(models.Model):
         default=lambda self: self.env.user,
     )
     notes = fields.Text(string="Notes")
-    no_sale_reason = fields.Text(string="Reason for Ending Without Sale", readonly=True)
+    no_sale_reason = fields.Text(
+        string="Reason for Ending Without Sale",
+        readonly=True,
+    )
 
     state = fields.Selection(
         [
@@ -45,31 +48,8 @@ class RouteVisit(models.Model):
         required=True,
     )
 
-    start_datetime = fields.Datetime(string="Start DateTime", readonly=True)
-    end_datetime = fields.Datetime(string="End DateTime", readonly=True)
-
-    sale_order_id = fields.Many2one(
-        "sale.order",
-        string="Sale Order",
+    start_datetime = fields.Datetime(
+        string="Start DateTime",
         readonly=True,
-        copy=False,
     )
-
-    sale_order_count = fields.Integer(
-        string="Sale Order Count",
-        compute="_compute_sale_order_count",
-    )
-
-    @api.depends("sale_order_id")
-    def _compute_sale_order_count(self):
-        for rec in self:
-            rec.sale_order_count = 1 if rec.sale_order_id else 0
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if not vals.get("name") or vals.get("name") == "New":
-                vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
-        return super().create(vals_list)
-
-    def write(self, vals):
+    end_datetime = fields.Datetime_
