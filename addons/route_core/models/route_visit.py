@@ -75,15 +75,22 @@ class RouteVisit(models.Model):
 
     def action_end_visit(self):
         for rec in self:
-            if not rec.sale_order_id:
-                raise UserError(
-                    "No Sale Order has been created for this visit yet.\n\n"
-                    "Please create a Sale Order first, or use Force End Visit if you want to close the visit without a sale."
-                )
-            rec.write({
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
+            if rec.sale_order_id:
+                rec.write({
+                    "state": "done",
+                    "end_datetime": fields.Datetime.now(),
+                })
+            else:
+                return {
+                    "type": "ir.actions.act_window",
+                    "name": "End Visit Options",
+                    "res_model": "route.visit.end.wizard",
+                    "view_mode": "form",
+                    "target": "new",
+                    "context": {
+                        "default_route_visit_id": rec.id,
+                    },
+                }
 
     def action_force_end_visit(self):
         for rec in self:
