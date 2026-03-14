@@ -43,7 +43,6 @@ class RouteVisit(models.Model):
         string="Status",
         default="draft",
         required=True,
-        tracking=True,
     )
 
     start_datetime = fields.Datetime(string="Start DateTime", readonly=True)
@@ -105,6 +104,9 @@ class RouteVisit(models.Model):
             "view_mode": "form",
             "res_id": self.sale_order_id.id,
             "target": "current",
+            "context": {
+                "route_visit_id": self.id,
+            },
         }
 
     def action_view_sale_order(self):
@@ -120,6 +122,9 @@ class RouteVisit(models.Model):
             "view_mode": "form",
             "res_id": self.sale_order_id.id,
             "target": "current",
+            "context": {
+                "route_visit_id": self.id,
+            },
         }
 
     def action_end_visit(self):
@@ -133,7 +138,7 @@ class RouteVisit(models.Model):
                 "state": "done",
                 "end_datetime": fields.Datetime.now(),
             })
-            return True
+            return self.env.ref("route_core.action_route_visit").read()[0]
 
         return {
             "type": "ir.actions.act_window",
