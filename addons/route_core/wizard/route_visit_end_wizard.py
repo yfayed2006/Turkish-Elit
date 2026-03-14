@@ -27,5 +27,4 @@ class RouteVisitEndWizard(models.TransientModel):
             raise ValidationError(_("You must enter a reason before ending the visit without sale."))
 
         self.visit_id.action_end_without_sale(self.no_sale_reason)
-
-        return {"type": "ir.actions.act_window_close"}
+        return self.env.ref("route_core.action_route_visit").read()[0]
