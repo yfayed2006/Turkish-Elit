@@ -4,8 +4,8 @@ from odoo import fields, models
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
-    def button_confirm(self):
-        result = super().button_confirm()
+    def action_confirm(self):
+        result = super().action_confirm()
 
         if len(self) == 1:
             visit = self.env["route.visit"].search(
