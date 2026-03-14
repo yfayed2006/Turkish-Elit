@@ -1,6 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_route_store_user,access.route.store.user,model_route_store,base.group_user,1,1,1,1
-access_route_route_user,access.route.route.user,model_route_route,base.group_user,1,1,1,1
-access_route_line_user,access.route.line.user,model_route_line,base.group_user,1,1,1,1
-access_route_visit_user,access.route.visit.user,model_route_visit,base.group_user,1,1,1,1
-access_generate_visits_wizard_user,access.generate.visits.wizard.user,model_generate_visits_wizard,base.group_user,1,1,1,1
