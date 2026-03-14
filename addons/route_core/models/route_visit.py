@@ -92,6 +92,9 @@ class RouteVisit(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        if self.env.context.get("route_visit_force_write"):
+            return super().write(vals)
+
         allowed_when_locked = {
             "message_follower_ids",
             "message_partner_ids",
