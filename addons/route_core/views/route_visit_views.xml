@@ -107,22 +107,15 @@
         <field name="name">route.visit.search</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <search string="Search Route Visits">
+            <search>
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
-                <field name="state"/>
                 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
                 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
                 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
                 <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
-                <group expand="0" string="Group By">
-                    <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
-                    <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
-                    <filter name="group_by_date" string="Visit Date" context="{'group_by': 'date'}"/>
-                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
-                </group>
             </search>
         </field>
     </record>
