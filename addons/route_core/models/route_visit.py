@@ -87,7 +87,7 @@ class RouteVisit(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if vals.get("name", "New") == "New":
+            if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
         return super().create(vals_list)
 
