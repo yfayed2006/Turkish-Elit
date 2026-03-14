@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class RouteVisit(models.Model):
@@ -6,7 +6,13 @@ class RouteVisit(models.Model):
     _description = "Route Visit"
     _order = "id desc"
 
-    name = fields.Char(string="Visit Reference", required=True)
+    name = fields.Char(
+        string="Visit Reference",
+        required=True,
+        readonly=True,
+        copy=False,
+        default="New",
+    )
     date = fields.Date(string="Visit Date")
     notes = fields.Text(string="Notes")
     state = fields.Selection(
@@ -23,6 +29,13 @@ class RouteVisit(models.Model):
     partner_id = fields.Many2one("res.partner", string="Customer")
     start_datetime = fields.Datetime(string="Start Time", readonly=True)
     end_datetime = fields.Datetime(string="End Time", readonly=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("name", "New") == "New":
+                vals["name"] = self.env["ir.sequence"].next_by_code("route.visit.seq") or "New"
+        return super().create(vals_list)
 
     def action_start_visit(self):
         for rec in self:
