@@ -8,6 +8,7 @@
     "category": "Sales",
     "depends": ["base"],
     "data": [
+        "security/ir.model.access.csv",
         "views/route_visit_views.xml",
     ],
     "installable": True,
