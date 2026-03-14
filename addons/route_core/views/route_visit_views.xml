@@ -50,7 +50,8 @@
                         <field name="date"/>
                         <field name="partner_id"/>
                         <field name="user_id"/>
-                        <field name="state"/>
+                        <field name="start_datetime"/>
+                        <field name="end_datetime"/>
                         <field name="notes"/>
                     </group>
                 </sheet>
