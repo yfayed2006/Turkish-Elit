@@ -5,6 +5,7 @@ from odoo.exceptions import UserError
 class RouteVisit(models.Model):
     _name = "route.visit"
     _description = "Route Visit"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "date desc, id desc"
 
     name = fields.Char(
@@ -13,27 +14,32 @@ class RouteVisit(models.Model):
         copy=False,
         readonly=True,
         default="New",
+        tracking=True,
     )
     date = fields.Date(
         string="Visit Date",
         required=True,
         default=fields.Date.context_today,
+        tracking=True,
     )
     partner_id = fields.Many2one(
         "res.partner",
         string="Customer",
         required=True,
+        tracking=True,
     )
     user_id = fields.Many2one(
         "res.users",
         string="Salesperson",
         required=True,
         default=lambda self: self.env.user,
+        tracking=True,
     )
     notes = fields.Text(string="Notes")
     no_sale_reason = fields.Text(
         string="Reason for Ending Without Sale",
         readonly=True,
+        tracking=True,
     )
 
     state = fields.Selection(
@@ -46,15 +52,18 @@ class RouteVisit(models.Model):
         string="Status",
         default="draft",
         required=True,
+        tracking=True,
     )
 
     start_datetime = fields.Datetime(
         string="Start DateTime",
         readonly=True,
+        tracking=True,
     )
     end_datetime = fields.Datetime(
         string="End DateTime",
         readonly=True,
+        tracking=True,
     )
 
     sale_order_id = fields.Many2one(
@@ -62,6 +71,7 @@ class RouteVisit(models.Model):
         string="Sale Order",
         readonly=True,
         copy=False,
+        tracking=True,
     )
 
     sale_order_count = fields.Integer(
