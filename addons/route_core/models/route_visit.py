@@ -21,14 +21,22 @@ class RouteVisit(models.Model):
     )
     user_id = fields.Many2one("res.users", string="Salesperson")
     partner_id = fields.Many2one("res.partner", string="Customer")
+    start_datetime = fields.Datetime(string="Start Time", readonly=True)
+    end_datetime = fields.Datetime(string="End Time", readonly=True)
 
     def action_start_visit(self):
         for rec in self:
-            rec.state = "in_progress"
+            rec.write({
+                "state": "in_progress",
+                "start_datetime": fields.Datetime.now(),
+            })
 
     def action_end_visit(self):
         for rec in self:
-            rec.state = "done"
+            rec.write({
+                "state": "done",
+                "end_datetime": fields.Datetime.now(),
+            })
 
     def action_cancel_visit(self):
         for rec in self:
@@ -36,4 +44,8 @@ class RouteVisit(models.Model):
 
     def action_reset_to_draft(self):
         for rec in self:
-            rec.state = "draft"
+            rec.write({
+                "state": "draft",
+                "start_datetime": False,
+                "end_datetime": False,
+            })
