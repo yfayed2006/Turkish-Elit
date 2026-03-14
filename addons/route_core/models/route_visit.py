@@ -52,4 +52,7 @@ class RouteVisit(models.Model):
         string="Start DateTime",
         readonly=True,
     )
-    end_datetime = fields.Datetime_
+    end_datetime = fields.Datetime(
+        string="End DateTime",
+        readonly=True,
+    )
