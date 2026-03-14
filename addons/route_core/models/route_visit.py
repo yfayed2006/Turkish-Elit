@@ -19,3 +19,5 @@ class RouteVisit(models.Model):
         string="Status",
         default="draft",
     )
+    user_id = fields.Many2one("res.users", string="Salesperson")
+    partner_id = fields.Many2one("res.partner", string="Customer")
