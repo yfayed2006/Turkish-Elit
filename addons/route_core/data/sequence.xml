@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="seq_route_visit" model="ir.sequence">
+        <field name="name">Route Visit</field>
+        <field name="code">route.visit.seq</field>
+        <field name="prefix">RV/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>
