@@ -9,12 +9,29 @@
                 <sheet>
                     <group>
                         <field name="visit_id" readonly="1"/>
-                        <field name="action_choice"/>
-                        <field name="reason" invisible="action_choice != 'end_without_sale'" required="action_choice == 'end_without_sale'"/>
+                        <field
+                            name="reason"
+                            placeholder="Write the reason here if the visit will be ended without sale..."
+                        />
                     </group>
                     <footer>
-                        <button name="action_confirm" string="Confirm" type="object" class="btn-primary"/>
-                        <button name="action_cancel" string="Cancel" type="object" special="cancel"/>
+                        <button
+                            name="action_create_sale_order"
+                            string="Create Sale Order"
+                            type="object"
+                            class="btn-primary"
+                        />
+                        <button
+                            name="action_end_without_sale"
+                            string="End Without Sale"
+                            type="object"
+                        />
+                        <button
+                            name="action_cancel"
+                            string="Cancel"
+                            type="object"
+                            special="cancel"
+                        />
                     </footer>
                 </sheet>
             </form>
