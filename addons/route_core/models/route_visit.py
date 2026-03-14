@@ -7,3 +7,5 @@ class RouteVisit(models.Model):
     _order = "id desc"
 
     name = fields.Char(string="Visit Reference", required=True)
+    date = fields.Date(string="Visit Date")
+    notes = fields.Text(string="Notes")
