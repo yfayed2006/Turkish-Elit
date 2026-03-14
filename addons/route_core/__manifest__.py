@@ -11,7 +11,6 @@
         "security/ir.model.access.csv",
         "data/sequence.xml",
         "views/route_visit_views.xml",
-        "wizard/route_visit_end_wizard_views.xml",
     ],
     "installable": True,
     "application": True,
