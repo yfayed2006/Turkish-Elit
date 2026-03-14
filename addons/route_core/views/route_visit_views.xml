@@ -26,6 +26,11 @@
                             type="object"
                             invisible="state != 'draft'"/>
 
+                    <button name="action_create_sale_order"
+                            string="Create Sale Order"
+                            type="object"
+                            invisible="state != 'in_progress'"/>
+
                     <button name="action_end_visit"
                             string="End Visit"
                             type="object"
@@ -45,6 +50,15 @@
                 </header>
 
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_customer_sale_orders"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-shopping-cart">
+                            <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
+                        </button>
+                    </div>
+
                     <group>
                         <field name="name"/>
                         <field name="date"/>
