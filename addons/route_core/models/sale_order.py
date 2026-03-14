@@ -7,15 +7,19 @@ class SaleOrder(models.Model):
     def button_confirm(self):
         result = super().button_confirm()
 
-        route_visit_id = self.env.context.get("route_visit_id")
-        if route_visit_id and len(self) == 1:
-            return {
-                "type": "ir.actions.act_window",
-                "name": "Route Visit",
-                "res_model": "route.visit",
-                "res_id": route_visit_id,
-                "view_mode": "form",
-                "target": "current",
-            }
+        if len(self) == 1 and self.origin:
+            visit = self.env["route.visit"].search(
+                [("name", "=", self.origin)],
+                limit=1,
+            )
+            if visit:
+                return {
+                    "type": "ir.actions.act_window",
+                    "name": "Route Visit",
+                    "res_model": "route.visit",
+                    "res_id": visit.id,
+                    "view_mode": "form",
+                    "target": "current",
+                }
 
         return result
