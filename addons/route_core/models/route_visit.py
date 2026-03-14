@@ -42,20 +42,22 @@ class RouteVisit(models.Model):
     )
     start_datetime = fields.Datetime(string="Start Time", readonly=True)
     end_datetime = fields.Datetime(string="End Time", readonly=True)
+
+    sale_order_id = fields.Many2one(
+        "sale.order",
+        string="Sale Order",
+        readonly=True,
+        copy=False,
+    )
     sale_order_count = fields.Integer(
         string="Sale Orders",
         compute="_compute_sale_order_count",
     )
 
-    @api.depends("partner_id")
+    @api.depends("sale_order_id")
     def _compute_sale_order_count(self):
         for rec in self:
-            if rec.partner_id:
-                rec.sale_order_count = self.env["sale.order"].search_count([
-                    ("partner_id", "=", rec.partner_id.id)
-                ])
-            else:
-                rec.sale_order_count = 0
+            rec.sale_order_count = 1 if rec.sale_order_id else 0
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -73,12 +75,9 @@ class RouteVisit(models.Model):
 
     def action_end_visit(self):
         for rec in self:
-            sale_count = self.env["sale.order"].search_count([
-                ("partner_id", "=", rec.partner_id.id)
-            ])
-            if sale_count == 0:
+            if not rec.sale_order_id:
                 raise UserError(
-                    "No Sale Order exists yet for this customer.\n\n"
+                    "No Sale Order has been created for this visit yet.\n\n"
                     "Please create a Sale Order first, or use Force End Visit if you want to close the visit without a sale."
                 )
             rec.write({
@@ -103,27 +102,46 @@ class RouteVisit(models.Model):
                 "state": "draft",
                 "start_datetime": False,
                 "end_datetime": False,
+                "sale_order_id": False,
             })
 
     def action_create_sale_order(self):
         self.ensure_one()
+
+        if self.sale_order_id:
+            return {
+                "type": "ir.actions.act_window",
+                "name": "Sale Order",
+                "res_model": "sale.order",
+                "res_id": self.sale_order_id.id,
+                "view_mode": "form",
+                "target": "current",
+            }
+
+        sale_order = self.env["sale.order"].create({
+            "partner_id": self.partner_id.id,
+        })
+
+        self.sale_order_id = sale_order.id
+
         return {
             "type": "ir.actions.act_window",
             "name": "Sale Order",
             "res_model": "sale.order",
+            "res_id": sale_order.id,
             "view_mode": "form",
             "target": "current",
-            "context": {
-                "default_partner_id": self.partner_id.id,
-            },
         }
 
-    def action_view_customer_sale_orders(self):
+    def action_view_sale_order(self):
         self.ensure_one()
+        if not self.sale_order_id:
+            raise UserError("No Sale Order is linked to this visit yet.")
         return {
             "type": "ir.actions.act_window",
-            "name": "Customer Sale Orders",
+            "name": "Sale Order",
             "res_model": "sale.order",
-            "view_mode": "list,form",
-            "domain": [("partner_id", "=", self.partner_id.id)],
+            "res_id": self.sale_order_id.id,
+            "view_mode": "form",
+            "target": "current",
         }
