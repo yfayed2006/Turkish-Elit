@@ -77,7 +77,17 @@ class RouteVisit(models.Model):
                 ("partner_id", "=", rec.partner_id.id)
             ])
             if sale_count == 0:
-                raise UserError("No Sale Order exists yet for this customer. Please create a Sale Order before ending the visit.")
+                raise UserError(
+                    "No Sale Order exists yet for this customer.\n\n"
+                    "Please create a Sale Order first, or use Force End Visit if you want to close the visit without a sale."
+                )
+            rec.write({
+                "state": "done",
+                "end_datetime": fields.Datetime.now(),
+            })
+
+    def action_force_end_visit(self):
+        for rec in self:
             rec.write({
                 "state": "done",
                 "end_datetime": fields.Datetime.now(),
