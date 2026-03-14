@@ -17,13 +17,6 @@ class SaleOrder(models.Model):
                     "state": "done",
                     "end_datetime": fields.Datetime.now(),
                 })
-                return {
-                    "type": "ir.actions.act_window",
-                    "name": "Route Visit",
-                    "res_model": "route.visit",
-                    "res_id": visit.id,
-                    "view_mode": "form",
-                    "target": "current",
-                }
+                return self.env.ref("route_core.action_route_visit").read()[0]
 
         return result
