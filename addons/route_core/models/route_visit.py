@@ -128,24 +128,28 @@ class RouteVisit(models.Model):
         return action
 
     def action_end_visit(self):
-        for rec in self:
-            if rec.state != "in_progress":
-                raise UserError(_("Only visits in progress can be ended."))
-            if not rec.sale_order_id:
-                raise UserError(_("You must create a sale order before ending the visit."))
-            rec.write({
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
+        self.ensure_one()
 
-    def action_force_end_visit(self):
-        for rec in self:
-            if rec.state != "in_progress":
-                raise UserError(_("Only visits in progress can be force ended."))
-            rec.write({
+        if self.state != "in_progress":
+            raise UserError(_("Only visits in progress can be ended."))
+
+        if self.sale_order_id:
+            self.write({
                 "state": "done",
                 "end_datetime": fields.Datetime.now(),
             })
+            return True
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("End Visit"),
+            "res_model": "route.visit.end.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
 
     def action_cancel(self):
         for rec in self:
