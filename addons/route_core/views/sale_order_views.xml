@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_sale_order_form_inherit_route_visit" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.route.visit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="route_visit_id"
+                       options="{'no_create': True}"
+                       domain="[('state', '=', 'in_progress')]"/>
+                <field name="route_visit_state" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_sale_order_tree_inherit_route_visit" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.route.visit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="route_visit_id"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
