@@ -7,7 +7,9 @@
     "license": "LGPL-3",
     "category": "Sales",
     "depends": ["base"],
-    "data": [],
+    "data": [
+        "views/route_visit_views.xml",
+    ],
     "installable": True,
     "application": True,
     "auto_install": False,
