@@ -45,7 +45,7 @@ class RouteVisitEndWizard(models.TransientModel):
             "no_sale_reason": self.reason.strip(),
         })
 
-        return {"type": "ir.actions.act_window_close"}
+        return self.env.ref("route_core.action_route_visit").read()[0]
 
     def action_cancel(self):
         return {"type": "ir.actions.act_window_close"}
