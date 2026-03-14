@@ -116,10 +116,37 @@
                 <field name="partner_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
-                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
-                <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
-                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
-                <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+
+                <filter
+                    name="filter_my_visits"
+                    string="My Visits"
+                    domain="[('user_id', '=', uid)]"
+                />
+                <filter
+                    name="filter_today"
+                    string="Today"
+                    domain="[('date', '=', context_today())]"
+                />
+                <filter
+                    name="filter_draft"
+                    string="Draft"
+                    domain="[('state', '=', 'draft')]"
+                />
+                <filter
+                    name="filter_in_progress"
+                    string="In Progress"
+                    domain="[('state', '=', 'in_progress')]"
+                />
+                <filter
+                    name="filter_done"
+                    string="Done"
+                    domain="[('state', '=', 'done')]"
+                />
+                <filter
+                    name="filter_cancel"
+                    string="Cancelled"
+                    domain="[('state', '=', 'cancel')]"
+                />
             </search>
         </field>
     </record>
@@ -129,6 +156,12 @@
         <field name="res_model">route.visit</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_route_visit_search"/>
+        <field name="context">
+            {
+                'search_default_filter_my_visits': 1,
+                'search_default_filter_today': 1
+            }
+        </field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create your first route visit
