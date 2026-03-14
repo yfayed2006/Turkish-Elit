@@ -91,6 +91,32 @@ class RouteVisit(models.Model):
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
         return super().create(vals_list)
 
+    def write(self, vals):
+        allowed_when_locked = {
+            "message_follower_ids",
+            "message_partner_ids",
+            "message_ids",
+            "activity_ids",
+            "activity_state",
+            "activity_type_id",
+            "activity_user_id",
+            "activity_date_deadline",
+            "message_main_attachment_id",
+            "__last_update",
+            "write_date",
+            "write_uid",
+        }
+
+        for rec in self:
+            if rec.state in ("done", "cancel"):
+                disallowed_keys = set(vals.keys()) - allowed_when_locked
+                if disallowed_keys:
+                    raise UserError(
+                        _("You cannot modify a visit that is Done or Cancelled. Please reset it first if changes are needed.")
+                    )
+
+        return super().write(vals)
+
     def action_start_visit(self):
         for rec in self:
             if rec.state != "draft":
@@ -148,7 +174,7 @@ class RouteVisit(models.Model):
             raise UserError(_("Only visits in progress can be ended."))
 
         if self.sale_order_id:
-            self.write({
+            self.with_context(route_visit_force_write=True).write({
                 "state": "done",
                 "end_datetime": fields.Datetime.now(),
             })
@@ -169,11 +195,11 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.state == "done":
                 raise UserError(_("You cannot cancel a completed visit."))
-            rec.write({"state": "cancel"})
+            rec.with_context(route_visit_force_write=True).write({"state": "cancel"})
 
     def action_reset_to_draft(self):
         for rec in self:
-            rec.write({
+            rec.with_context(route_visit_force_write=True).write({
                 "state": "draft",
                 "start_datetime": False,
                 "end_datetime": False,
