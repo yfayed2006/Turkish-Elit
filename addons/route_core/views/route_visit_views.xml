@@ -67,3 +67,90 @@
                             type="object"
                             class="oe_stat_button"
                             icon="fa-shopping-cart"
+                            invisible="sale_order_count == 0"
+                        >
+                            <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+                        </button>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="date"/>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="user_id" readonly="state != 'draft'"/>
+                            <field name="state" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+                        <page string="No Sale Reason" invisible="not no_sale_reason">
+                            <field name="no_sale_reason" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_route_visit_search" model="ir.ui.view">
+        <field name="name">route.visit.search</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <search string="Search Route Visits">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="user_id"/>
+                <field name="date"/>
+                <field name="state"/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+                <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_by_date" string="Visit Date" context="{'group_by': 'date'}"/>
+                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_route_visit" model="ir.actions.act_window">
+        <field name="name">Route Visits</field>
+        <field name="res_model">route.visit</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_route_visit_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first route visit
+            </p>
+        </field>
+    </record>
+
+    <menuitem
+        id="menu_route_visit_root"
+        name="Route Visits"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_route_visit"
+        name="Visits"
+        parent="menu_route_visit_root"
+        action="action_route_visit"
+        sequence="10"
+    />
+
+</odoo>
