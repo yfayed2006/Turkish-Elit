@@ -6,7 +6,7 @@
     "author": "Yasser Fayed",
     "license": "LGPL-3",
     "category": "Sales",
-    "depends": ["base"],
+    "depends": ["base", "sale_management"],
     "data": [
         "security/ir.model.access.csv",
         "data/sequence.xml",
