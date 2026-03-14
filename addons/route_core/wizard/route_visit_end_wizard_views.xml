@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_route_visit_end_wizard_form" model="ir.ui.view">
+        <field name="name">route.visit.end.wizard.form</field>
+        <field name="model">route.visit.end.wizard</field>
+        <field name="arch" type="xml">
+            <form string="End Visit">
+                <sheet>
+                    <group>
+                        <field name="visit_id" readonly="1"/>
+                        <field name="no_sale_reason" placeholder="Required only if you choose End Without Sale"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button
+                        name="action_create_sale_order"
+                        string="Create Sale Order"
+                        type="object"
+                        class="btn-primary"
+                    />
+                    <button
+                        name="action_end_without_sale"
+                        string="End Without Sale"
+                        type="object"
+                        class="btn-secondary"
+                    />
+                    <button
+                        string="Cancel"
+                        special="cancel"
+                        class="btn-secondary"
+                    />
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
