@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 
 class RouteVisit(models.Model):
@@ -72,6 +73,11 @@ class RouteVisit(models.Model):
 
     def action_end_visit(self):
         for rec in self:
+            sale_count = self.env["sale.order"].search_count([
+                ("partner_id", "=", rec.partner_id.id)
+            ])
+            if sale_count == 0:
+                raise UserError("No Sale Order exists yet for this customer. Please create a Sale Order before ending the visit.")
             rec.write({
                 "state": "done",
                 "end_datetime": fields.Datetime.now(),
