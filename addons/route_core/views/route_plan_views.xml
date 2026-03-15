@@ -104,11 +104,11 @@
 
                     <notebook>
                         <page string="Planned Visits">
-                            <field name="line_ids">
+                            <field name="line_ids" context="{'default_area_id': area_id}">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
-                                    <field name="outlet_id"/>
-                                    <field name="area_id" readonly="1"/>
+                                    <field name="area_id"/>
+                                    <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
                                     <field name="partner_id" readonly="1"/>
                                     <field name="state" string="Visit Status" widget="badge"
                                            decoration-info="state == 'pending'"
