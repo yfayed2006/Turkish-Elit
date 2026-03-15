@@ -4,3 +4,5 @@ access_route_visit_end_wizard_user,access.route.visit.end.wizard.user,model_rout
 access_route_area_user,access.route.area.user,model_route_area,base.group_user,1,1,1,1
 access_route_outlet_user,access.route.outlet.user,model_route_outlet,base.group_user,1,1,1,1
 access_route_vehicle_user,access.route.vehicle.user,model_route_vehicle,base.group_user,1,1,1,1
+access_route_plan_user,access.route.plan.user,model_route_plan,base.group_user,1,1,1,1
+access_route_plan_line_user,access.route.plan.line.user,model_route_plan_line,base.group_user,1,1,1,1
