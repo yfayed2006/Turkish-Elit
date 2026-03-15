@@ -105,7 +105,7 @@
     </record>
 
     <record id="action_route_visit" model="ir.actions.act_window">
-        <field name="name">Route Visits</field>
+        <field name="name">Visit History</field>
         <field name="res_model">route.visit</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_route_visit_search"/>
@@ -123,6 +123,14 @@
     </record>
 
     <menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
+
+    <menuitem
+        id="menu_route_visit_history"
+        name="Visit History"
+        parent="menu_route_visit_root"
+        action="action_route_visit"
+        sequence="40"
+    />
 
     <record id="menu_route_visit" model="ir.ui.menu">
         <field name="active" eval="False"/>
