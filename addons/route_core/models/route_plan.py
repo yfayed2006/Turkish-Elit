@@ -57,10 +57,18 @@ class RoutePlan(models.Model):
         string="Lines Count",
         compute="_compute_line_count",
     )
+    visit_count = fields.Integer(
+        string="Visits Count",
+        compute="_compute_visit_count",
+    )
 
     def _compute_line_count(self):
         for rec in self:
             rec.line_count = len(rec.line_ids)
+
+    def _compute_visit_count(self):
+        for rec in self:
+            rec.visit_count = len(rec.line_ids.filtered(lambda l: l.visit_id))
 
     def _sync_state_from_lines(self):
         for rec in self:
@@ -81,6 +89,21 @@ class RoutePlan(models.Model):
 
             if rec.state != new_state:
                 rec.with_context(route_plan_skip_sync=True).write({"state": new_state})
+
+    def action_view_visits(self):
+        self.ensure_one()
+
+        visits = self.line_ids.mapped("visit_id")
+        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["domain"] = [("id", "in", visits.ids)]
+
+        if len(visits) == 1:
+            action["res_id"] = visits.id
+            action["views"] = [(False, "form")]
+        else:
+            action["views"] = [(False, "list"), (False, "form")]
+
+        return action
 
     @api.model_create_multi
     def create(self, vals_list):
