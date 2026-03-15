@@ -156,6 +156,20 @@ class RoutePlan(models.Model):
 
         return action
 
+    def action_open_add_area_outlets_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Add Visits by Area"),
+            "res_model": "route.plan.add.area.outlets.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_plan_id": self.id,
+                "default_area_id": self.area_id.id if self.area_id else False,
+            },
+        }
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
