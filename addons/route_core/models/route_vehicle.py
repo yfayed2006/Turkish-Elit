@@ -82,3 +82,13 @@ class RouteVehicle(models.Model):
             if not vals.get("code"):
                 vals["code"] = self.env["ir.sequence"].next_by_code("route.vehicle") or "/"
         return super().create(vals_list)
+
+    def action_view_visits(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["domain"] = [("vehicle_id", "=", self.id)]
+        action["context"] = dict(
+            self.env.context,
+            default_vehicle_id=self.id,
+        )
+        return action
