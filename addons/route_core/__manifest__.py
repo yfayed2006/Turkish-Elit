@@ -15,6 +15,7 @@
         "views/route_vehicle_views.xml",
         "views/route_visit_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
+        "wizard/route_plan_add_area_outlets_wizard_views.xml",
     ],
     "installable": True,
     "application": True,
