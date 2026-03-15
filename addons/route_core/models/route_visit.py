@@ -22,6 +22,11 @@ class RouteVisit(models.Model):
         default=fields.Date.context_today,
         tracking=True,
     )
+    outlet_id = fields.Many2one(
+        "route.outlet",
+        string="Outlet",
+        tracking=True,
+    )
     partner_id = fields.Many2one(
         "res.partner",
         string="Customer",
@@ -89,11 +94,29 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
+    @api.onchange("outlet_id")
+    def _onchange_outlet_id(self):
+        for rec in self:
+            if rec.outlet_id:
+                rec.area_id = rec.outlet_id.area_id
+                if rec.outlet_id.partner_id:
+                    rec.partner_id = rec.outlet_id.partner_id
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
+
+            outlet_id = vals.get("outlet_id")
+            if outlet_id:
+                outlet = self.env["route.outlet"].browse(outlet_id)
+                if outlet.exists():
+                    if not vals.get("area_id") and outlet.area_id:
+                        vals["area_id"] = outlet.area_id.id
+                    if not vals.get("partner_id") and outlet.partner_id:
+                        vals["partner_id"] = outlet.partner_id.id
+
         return super().create(vals_list)
 
     def write(self, vals):
@@ -122,6 +145,14 @@ class RouteVisit(models.Model):
                     raise UserError(
                         _("You cannot modify a visit that is Done or Cancelled. Please reset it first if changes are needed.")
                     )
+
+        if vals.get("outlet_id"):
+            outlet = self.env["route.outlet"].browse(vals["outlet_id"])
+            if outlet.exists():
+                if not vals.get("area_id") and outlet.area_id:
+                    vals["area_id"] = outlet.area_id.id
+                if not vals.get("partner_id") and outlet.partner_id:
+                    vals["partner_id"] = outlet.partner_id.id
 
         return super().write(vals)
 
