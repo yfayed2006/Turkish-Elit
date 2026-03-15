@@ -122,14 +122,10 @@
         </field>
     </record>
 
-    <menuitem id="menu_route_visit_root" name="Route Visits" sequence="10"/>
+    <menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
 
-    <menuitem
-        id="menu_route_visit"
-        name="Visits"
-        parent="menu_route_visit_root"
-        action="action_route_visit"
-        sequence="10"
-    />
+    <record id="menu_route_visit" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 
 </odoo>
