@@ -9,6 +9,7 @@
                 <field name="name"/>
                 <field name="date"/>
                 <field name="partner_id"/>
+                <field name="area_id"/>
                 <field name="user_id"/>
                 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
                 <field name="sale_order_id"/>
@@ -78,6 +79,7 @@
                             <field name="name" readonly="1"/>
                             <field name="date" readonly="state in ('done', 'cancel')"/>
                             <field name="partner_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
+                            <field name="area_id" readonly="1"/>
                             <field name="user_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
                             <field name="state" readonly="1"/>
                         </group>
@@ -114,6 +116,7 @@
             <search>
                 <field name="name"/>
                 <field name="partner_id"/>
+                <field name="area_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
 
@@ -147,6 +150,13 @@
                     string="Cancelled"
                     domain="[('state', '=', 'cancel')]"
                 />
+                <group expand="0" string="Group By">
+                    <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+                    <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_by_date" string="Visit Date" context="{'group_by': 'date'}"/>
+                    <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
             </search>
         </field>
     </record>
