@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 
 class RoutePlan(models.Model):
@@ -115,6 +116,17 @@ class RoutePlan(models.Model):
         return records
 
     def write(self, vals):
+        protected_fields = {"date", "user_id", "vehicle_id"}
+
+        if protected_fields.intersection(vals.keys()):
+            for rec in self:
+                if rec.line_ids.filtered("visit_id"):
+                    raise UserError(
+                        _(
+                            "You cannot change Plan Date, Salesperson, or Vehicle after visits have already been created from this plan."
+                        )
+                    )
+
         result = super().write(vals)
 
         if self.env.context.get("route_plan_skip_sync"):
