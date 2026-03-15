@@ -39,4 +39,3 @@ class RouteArea(models.Model):
         action["domain"] = [("area_id", "=", self.id)]
         action["context"] = dict(self.env.context, default_area_id=self.id)
         return action
-        return action
