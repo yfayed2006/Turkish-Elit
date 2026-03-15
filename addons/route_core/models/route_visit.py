@@ -224,9 +224,7 @@ class RouteVisit(models.Model):
             previous_pending_line = rec._get_previous_pending_plan_line()
             if previous_pending_line:
                 raise UserError(
-                    _(
-                        "You must complete the previous stop first: %s."
-                    )
+                    _("You must complete the previous stop first: %s.")
                     % (previous_pending_line.outlet_id.display_name or previous_pending_line.plan_id.name)
                 )
 
