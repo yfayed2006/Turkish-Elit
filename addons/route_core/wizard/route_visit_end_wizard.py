@@ -16,6 +16,22 @@ class RouteVisitEndWizard(models.TransientModel):
         string="Reason for Ending Without Sale",
     )
 
+    def _get_return_action(self):
+        self.ensure_one()
+
+        plan_line = self.env["route.plan.line"].search(
+            [("visit_id", "=", self.visit_id.id)],
+            limit=1,
+        )
+
+        if plan_line and plan_line.plan_id:
+            action = self.env.ref("route_core.action_route_plan").read()[0]
+            action["res_id"] = plan_line.plan_id.id
+            action["views"] = [(False, "form")]
+            return action
+
+        return self.env.ref("route_core.action_route_visit").read()[0]
+
     def action_create_sale_order(self):
         self.ensure_one()
 
@@ -45,7 +61,7 @@ class RouteVisitEndWizard(models.TransientModel):
             "no_sale_reason": self.reason.strip(),
         })
 
-        return self.env.ref("route_core.action_route_visit").read()[0]
+        return self._get_return_action()
 
     def action_cancel(self):
         return {"type": "ir.actions.act_window_close"}
