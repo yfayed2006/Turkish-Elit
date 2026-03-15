@@ -10,6 +10,7 @@
                 <field name="name"/>
                 <field name="area_id"/>
                 <field name="partner_id"/>
+                <field name="visit_count"/>
                 <field name="phone"/>
                 <field name="mobile"/>
                 <field name="active"/>
@@ -23,6 +24,17 @@
         <field name="arch" type="xml">
             <form string="Outlet">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_visits"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-map-marker"
+                        >
+                            <field name="visit_count" string="Visits" widget="statinfo"/>
+                        </button>
+                    </div>
+
                     <div class="oe_title">
                         <h1>
                             <field name="name" placeholder="Outlet Name"/>
@@ -62,6 +74,20 @@
                             <group>
                                 <field name="display_address" readonly="1"/>
                             </group>
+                        </page>
+
+                        <page string="Visits">
+                            <field name="visit_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="date"/>
+                                    <field name="partner_id"/>
+                                    <field name="area_id"/>
+                                    <field name="user_id"/>
+                                    <field name="state"/>
+                                    <field name="sale_order_id"/>
+                                </list>
+                            </field>
                         </page>
 
                         <page string="Notes">
