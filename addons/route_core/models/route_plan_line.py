@@ -53,11 +53,25 @@ class RoutePlanLine(models.Model):
         default="pending",
         required=True,
     )
+    button_label = fields.Char(
+        string="Button Label",
+        compute="_compute_button_label",
+    )
     note = fields.Text(string="Line Note")
 
     @property
     def _plan_sync_context_key(self):
         return "route_plan_line_skip_plan_sync"
+
+    @api.depends("visit_id", "visit_id.state", "state")
+    def _compute_button_label(self):
+        for rec in self:
+            if not rec.visit_id:
+                rec.button_label = "Execute Visit"
+            elif rec.state in ("visited", "skipped") or rec.visit_id.state in ("done", "cancel"):
+                rec.button_label = "View Visit"
+            else:
+                rec.button_label = "Open Visit"
 
     def _sync_parent_plan_state(self):
         plans = self.mapped("plan_id")
