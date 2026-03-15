@@ -56,20 +56,41 @@ class RoutePlan(models.Model):
     )
     line_count = fields.Integer(
         string="Lines Count",
-        compute="_compute_line_count",
+        compute="_compute_line_counts",
     )
     visit_count = fields.Integer(
         string="Visits Count",
-        compute="_compute_visit_count",
+        compute="_compute_line_counts",
+    )
+    pending_count = fields.Integer(
+        string="Pending Stops",
+        compute="_compute_line_counts",
+    )
+    visited_count = fields.Integer(
+        string="Visited Stops",
+        compute="_compute_line_counts",
+    )
+    skipped_count = fields.Integer(
+        string="Skipped Stops",
+        compute="_compute_line_counts",
+    )
+    in_progress_count = fields.Integer(
+        string="In Progress Stops",
+        compute="_compute_line_counts",
     )
 
-    def _compute_line_count(self):
+    @api.depends("line_ids", "line_ids.state", "line_ids.visit_id")
+    def _compute_line_counts(self):
         for rec in self:
-            rec.line_count = len(rec.line_ids)
-
-    def _compute_visit_count(self):
-        for rec in self:
-            rec.visit_count = len(rec.line_ids.filtered(lambda l: l.visit_id))
+            lines = rec.line_ids
+            rec.line_count = len(lines)
+            rec.visit_count = len(lines.filtered(lambda l: l.visit_id))
+            rec.pending_count = len(lines.filtered(lambda l: l.state == "pending"))
+            rec.visited_count = len(lines.filtered(lambda l: l.state == "visited"))
+            rec.skipped_count = len(lines.filtered(lambda l: l.state == "skipped"))
+            rec.in_progress_count = len(
+                lines.filtered(lambda l: l.visit_id and l.visit_id.state == "in_progress")
+            )
 
     def _sync_state_from_lines(self):
         for rec in self:
