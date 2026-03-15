@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tree View -->
+    <record id="view_route_outlet_tree" model="ir.ui.view">
+        <field name="name">route.outlet.tree</field>
+        <field name="model">route.outlet</field>
+        <field name="arch" type="xml">
+            <list string="Outlets">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="area_id"/>
+                <field name="partner_id"/>
+                <field name="phone"/>
+                <field name="mobile"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_route_outlet_form" model="ir.ui.view">
+        <field name="name">route.outlet.form</field>
+        <field name="model">route.outlet</field>
+        <field name="arch" type="xml">
+            <form string="Outlet">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Outlet Name"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="code" readonly="1"/>
+                            <field name="area_id"/>
+                            <field name="partner_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="phone"/>
+                            <field name="mobile"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Address">
+                            <group>
+                                <group>
+                                    <field name="street"/>
+                                    <field name="street2"/>
+                                    <field name="city"/>
+                                    <field name="zip"/>
+                                </group>
+                                <group>
+                                    <field name="state_id"/>
+                                    <field name="country_id"/>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="display_address" readonly="1"/>
+                            </group>
+                        </page>
+
+                        <page string="Notes">
+                            <field name="note" placeholder="Internal notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_route_outlet_search" model="ir.ui.view">
+        <field name="name">route.outlet.search</field>
+        <field name="model">route.outlet</field>
+        <field name="arch" type="xml">
+            <search string="Search Outlets">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="area_id"/>
+                <field name="partner_id"/>
+                <filter string="Active" name="filter_active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="filter_inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Area" name="group_by_area" context="{'group_by': 'area_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_route_outlet" model="ir.actions.act_window">
+        <field name="name">Outlets</field>
+        <field name="res_model">route.outlet</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_route_outlet_search"/>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_route_outlet_root"
+              name="Outlets"
+              parent="sales_team.menu_sale_config"
+              action="action_route_outlet"
+              sequence="60"/>
+
+</odoo>
