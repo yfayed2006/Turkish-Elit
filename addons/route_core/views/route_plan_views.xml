@@ -37,27 +37,27 @@
                             icon="fa-map-marker"
                             invisible="visit_count == 0"
                         >
-                            <field name="visit_count" string="Executed Stops" widget="statinfo"/>
+                            <field name="visit_count" string="Executed Visits" widget="statinfo"/>
                         </button>
 
                         <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-list" invisible="1">
-                            <field name="line_count" string="Total Stops" widget="statinfo"/>
+                            <field name="line_count" string="Total Visits" widget="statinfo"/>
                         </button>
 
                         <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-clock-o" invisible="1">
-                            <field name="pending_count" string="Pending" widget="statinfo"/>
+                            <field name="pending_count" string="Pending Visits" widget="statinfo"/>
                         </button>
 
                         <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-spinner" invisible="1">
-                            <field name="in_progress_count" string="In Progress" widget="statinfo"/>
+                            <field name="in_progress_count" string="In Progress Visits" widget="statinfo"/>
                         </button>
 
                         <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-check-circle" invisible="1">
-                            <field name="visited_count" string="Visited" widget="statinfo"/>
+                            <field name="visited_count" string="Completed Visits" widget="statinfo"/>
                         </button>
 
                         <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-times-circle" invisible="1">
-                            <field name="skipped_count" string="Skipped" widget="statinfo"/>
+                            <field name="skipped_count" string="Skipped Visits" widget="statinfo"/>
                         </button>
                     </div>
 
@@ -87,10 +87,10 @@
                         </group>
                     </group>
 
-                    <separator string="Route Summary"/>
+                    <separator string="Visit Summary"/>
 
                     <group col="4">
-                        <group string="Stops Overview">
+                        <group string="Visit Overview">
                             <field name="line_count" readonly="1"/>
                             <field name="pending_count" readonly="1"/>
                             <field name="in_progress_count" readonly="1"/>
@@ -103,14 +103,14 @@
                     </group>
 
                     <notebook>
-                        <page string="Route Stops">
+                        <page string="Planned Visits">
                             <field name="line_ids">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
                                     <field name="outlet_id"/>
                                     <field name="area_id" readonly="1"/>
                                     <field name="partner_id" readonly="1"/>
-                                    <field name="state" string="Line Status" widget="badge"
+                                    <field name="state" string="Visit Status" widget="badge"
                                            decoration-info="state == 'pending'"
                                            decoration-success="state == 'visited'"
                                            decoration-danger="state == 'skipped'"/>
