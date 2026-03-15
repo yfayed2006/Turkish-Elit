@@ -8,7 +8,7 @@
             <list string="Route Areas">
                 <field name="name"/>
                 <field name="code"/>
-                <field name="partner_count"/>
+                <field name="visit_count"/>
                 <field name="active"/>
             </list>
         </field>
@@ -22,12 +22,12 @@
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button
-                            name="action_view_markets"
+                            name="action_view_visits"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-building"
+                            icon="fa-map-marker"
                         >
-                            <field name="partner_count" string="Markets" widget="statinfo"/>
+                            <field name="visit_count" string="Visits" widget="statinfo"/>
                         </button>
                     </div>
 
@@ -41,19 +41,6 @@
                             <field name="notes"/>
                         </group>
                     </group>
-
-                    <notebook>
-                        <page string="Markets">
-                            <field name="partner_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="route_area_id"/>
-                                    <field name="market_location_id"/>
-                                    <field name="phone"/>
-                                </list>
-                            </field>
-                        </page>
-                    </notebook>
                 </sheet>
             </form>
         </field>
