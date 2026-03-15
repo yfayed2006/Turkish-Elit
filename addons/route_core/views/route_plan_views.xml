@@ -39,15 +39,42 @@
                         >
                             <field name="visit_count" string="Executed Stops" widget="statinfo"/>
                         </button>
+
+                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-list" invisible="1">
+                            <field name="line_count" string="Total Stops" widget="statinfo"/>
+                        </button>
+
+                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-clock-o" invisible="1">
+                            <field name="pending_count" string="Pending" widget="statinfo"/>
+                        </button>
+
+                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-spinner" invisible="1">
+                            <field name="in_progress_count" string="In Progress" widget="statinfo"/>
+                        </button>
+
+                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-check-circle" invisible="1">
+                            <field name="visited_count" string="Visited" widget="statinfo"/>
+                        </button>
+
+                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-times-circle" invisible="1">
+                            <field name="skipped_count" string="Skipped" widget="statinfo"/>
+                        </button>
                     </div>
 
                     <div class="oe_title">
                         <h1>
                             <field name="name" readonly="1"/>
                         </h1>
+                        <div class="mt8">
+                            <field name="state" widget="badge"
+                                   decoration-info="state == 'draft'"
+                                   decoration-warning="state == 'in_progress'"
+                                   decoration-success="state == 'done'"
+                                   decoration-danger="state == 'cancel'"/>
+                        </div>
                     </div>
 
-                    <group>
+                    <group string="Plan Information" col="2">
                         <group>
                             <field name="date"/>
                             <field name="user_id"/>
@@ -55,21 +82,24 @@
                         </group>
                         <group>
                             <field name="area_id"/>
-                            <field name="state" widget="badge"
-                                   decoration-info="state == 'draft'"
-                                   decoration-warning="state == 'in_progress'"
-                                   decoration-success="state == 'done'"
-                                   decoration-danger="state == 'cancel'"/>
+                            <field name="line_count" readonly="1"/>
+                            <field name="visit_count" readonly="1"/>
                         </group>
                     </group>
 
-                    <group string="Route Summary" col="4">
-                        <field name="line_count" readonly="1"/>
-                        <field name="visit_count" readonly="1"/>
-                        <field name="pending_count" readonly="1"/>
-                        <field name="in_progress_count" readonly="1"/>
-                        <field name="visited_count" readonly="1"/>
-                        <field name="skipped_count" readonly="1"/>
+                    <separator string="Route Summary"/>
+
+                    <group col="4">
+                        <group string="Stops Overview">
+                            <field name="line_count" readonly="1"/>
+                            <field name="pending_count" readonly="1"/>
+                            <field name="in_progress_count" readonly="1"/>
+                        </group>
+                        <group string="Execution Results">
+                            <field name="visit_count" readonly="1"/>
+                            <field name="visited_count" readonly="1"/>
+                            <field name="skipped_count" readonly="1"/>
+                        </group>
                     </group>
 
                     <notebook>
