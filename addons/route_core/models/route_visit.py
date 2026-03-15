@@ -116,6 +116,27 @@ class RouteVisit(models.Model):
             else:
                 line.state = "pending"
 
+    def _get_plan_line(self):
+        self.ensure_one()
+        return self.env["route.plan.line"].search([("visit_id", "=", self.id)], limit=1)
+
+    def _get_other_in_progress_visit_in_same_plan(self):
+        self.ensure_one()
+
+        plan_line = self._get_plan_line()
+        if not plan_line or not plan_line.plan_id:
+            return False
+
+        other_plan_lines = plan_line.plan_id.line_ids.filtered(
+            lambda line: line.visit_id and line.visit_id.id != self.id
+        )
+
+        for line in other_plan_lines:
+            if line.visit_id.state == "in_progress":
+                return line.visit_id
+
+        return False
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -184,6 +205,16 @@ class RouteVisit(models.Model):
                 raise UserError(_("Please select an outlet before starting the visit."))
             if not rec.vehicle_id:
                 raise UserError(_("Please select a vehicle before starting the visit."))
+
+            other_in_progress_visit = rec._get_other_in_progress_visit_in_same_plan()
+            if other_in_progress_visit:
+                raise UserError(
+                    _(
+                        "Another stop in the same route is already in progress: %s. Please finish it before starting this stop."
+                    )
+                    % (other_in_progress_visit.outlet_id.display_name or other_in_progress_visit.name)
+                )
+
             rec.write({
                 "state": "in_progress",
                 "start_datetime": fields.Datetime.now(),
