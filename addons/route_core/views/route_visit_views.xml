@@ -11,6 +11,7 @@
                 <field name="outlet_id"/>
                 <field name="partner_id"/>
                 <field name="area_id"/>
+                <field name="vehicle_id"/>
                 <field name="user_id"/>
                 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
                 <field name="sale_order_id"/>
@@ -54,6 +55,7 @@
                             <field name="outlet_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
                             <field name="partner_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
                             <field name="area_id" readonly="state in ('done', 'cancel')"/>
+                            <field name="vehicle_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
                             <field name="user_id" readonly="state != 'draft' or state in ('done', 'cancel')"/>
                             <field name="state" readonly="1"/>
                         </group>
@@ -88,6 +90,7 @@
                 <field name="outlet_id"/>
                 <field name="partner_id"/>
                 <field name="area_id"/>
+                <field name="vehicle_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
 
