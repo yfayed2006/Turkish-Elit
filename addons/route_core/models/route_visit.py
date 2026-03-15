@@ -154,6 +154,13 @@ class RouteVisit(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.context.get("route_plan_allow_visit_create"):
+            raise UserError(
+                _(
+                    "Route Visits cannot be created manually. They must be generated from Route Plan."
+                )
+            )
+
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
