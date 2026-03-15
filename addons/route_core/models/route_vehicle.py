@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class RouteVehicle(models.Model):
@@ -32,3 +32,10 @@ class RouteVehicle(models.Model):
         ("route_vehicle_code_unique", "unique(code)", "Vehicle code must be unique."),
         ("route_vehicle_plate_no_unique", "unique(plate_no)", "Plate number must be unique."),
     ]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get("code"):
+                vals["code"] = self.env["ir.sequence"].next_by_code("route.vehicle") or "/"
+        return super().create(vals_list)
