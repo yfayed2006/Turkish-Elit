@@ -19,6 +19,7 @@ class RouteArea(models.Model):
     notes = fields.Text(
         string="Notes",
     )
+
     visit_ids = fields.One2many(
         "route.visit",
         "area_id",
@@ -29,13 +30,34 @@ class RouteArea(models.Model):
         compute="_compute_visit_count",
     )
 
+    outlet_ids = fields.One2many(
+        "route.outlet",
+        "area_id",
+        string="Outlets",
+    )
+    outlet_count = fields.Integer(
+        string="Outlets Count",
+        compute="_compute_outlet_count",
+    )
+
     def _compute_visit_count(self):
         for rec in self:
             rec.visit_count = len(rec.visit_ids)
 
+    def _compute_outlet_count(self):
+        for rec in self:
+            rec.outlet_count = len(rec.outlet_ids)
+
     def action_view_visits(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["domain"] = [("area_id", "=", self.id)]
+        action["context"] = dict(self.env.context, default_area_id=self.id)
+        return action
+
+    def action_view_outlets(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_outlet").read()[0]
         action["domain"] = [("area_id", "=", self.id)]
         action["context"] = dict(self.env.context, default_area_id=self.id)
         return action
