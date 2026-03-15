@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_partner_form_route_core" model="ir.ui.view">
+        <field name="name">res.partner.form.route.core</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet//group[1]" position="inside">
+                <field name="is_route_market"/>
+                <field name="route_area_id" invisible="not is_route_market"/>
+                <field name="market_location_id" invisible="not is_route_market"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
