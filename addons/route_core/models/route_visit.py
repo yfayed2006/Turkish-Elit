@@ -27,14 +27,11 @@ class RouteVisit(models.Model):
         string="Customer",
         required=True,
         tracking=True,
-        domain="[('is_route_market', '=', True)]",
     )
     area_id = fields.Many2one(
         "route.area",
         string="Area",
-        related="partner_id.route_area_id",
-        store=True,
-        readonly=True,
+        tracking=True,
     )
     user_id = fields.Many2one(
         "res.users",
