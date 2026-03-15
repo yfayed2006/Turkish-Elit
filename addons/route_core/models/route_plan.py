@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class RoutePlan(models.Model):
@@ -61,3 +61,10 @@ class RoutePlan(models.Model):
     def _compute_line_count(self):
         for rec in self:
             rec.line_count = len(rec.line_ids)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get("name") or vals.get("name") == "New":
+                vals["name"] = self.env["ir.sequence"].next_by_code("route.plan") or "New"
+        return super().create(vals_list)
