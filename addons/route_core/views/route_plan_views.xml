@@ -23,6 +23,18 @@
         <field name="arch" type="xml">
             <form string="Route Plan">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_visits"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-map-marker"
+                            invisible="visit_count == 0"
+                        >
+                            <field name="visit_count" string="Visits" widget="statinfo"/>
+                        </button>
+                    </div>
+
                     <div class="oe_title">
                         <h1>
                             <field name="name" readonly="1"/>
