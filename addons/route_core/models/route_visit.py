@@ -37,6 +37,11 @@ class RouteVisit(models.Model):
         string="Area",
         tracking=True,
     )
+    vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Vehicle",
+        tracking=True,
+    )
     user_id = fields.Many2one(
         "res.users",
         string="Salesperson",
@@ -161,6 +166,8 @@ class RouteVisit(models.Model):
                 raise UserError(_("Only draft visits can be started."))
             if not rec.outlet_id:
                 raise UserError(_("Please select an outlet before starting the visit."))
+            if not rec.vehicle_id:
+                raise UserError(_("Please select a vehicle before starting the visit."))
             rec.write({
                 "state": "in_progress",
                 "start_datetime": fields.Datetime.now(),
