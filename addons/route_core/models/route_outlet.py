@@ -14,6 +14,7 @@ class RouteOutlet(models.Model):
     area_id = fields.Many2one(
         "route.area",
         string="Area",
+        required=True,
         ondelete="restrict",
     )
 
@@ -34,6 +35,16 @@ class RouteOutlet(models.Model):
     zip = fields.Char(string="ZIP")
     note = fields.Text(string="Notes")
 
+    visit_ids = fields.One2many(
+        "route.visit",
+        "outlet_id",
+        string="Visits",
+    )
+    visit_count = fields.Integer(
+        string="Visits Count",
+        compute="_compute_visit_count",
+    )
+
     display_address = fields.Text(
         string="Address",
         compute="_compute_display_address",
@@ -43,6 +54,11 @@ class RouteOutlet(models.Model):
         ("route_outlet_name_unique", "unique(name)", "Outlet name must be unique."),
         ("route_outlet_code_unique", "unique(code)", "Outlet code must be unique."),
     ]
+
+    @api.depends("visit_ids")
+    def _compute_visit_count(self):
+        for record in self:
+            record.visit_count = len(record.visit_ids)
 
     @api.depends("street", "street2", "city", "state_id", "country_id", "zip")
     def _compute_display_address(self):
@@ -69,3 +85,15 @@ class RouteOutlet(models.Model):
             if not vals.get("code"):
                 vals["code"] = self.env["ir.sequence"].next_by_code("route.outlet") or "/"
         return super().create(vals_list)
+
+    def action_view_visits(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["domain"] = [("outlet_id", "=", self.id)]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+            default_area_id=self.area_id.id,
+            default_partner_id=self.partner_id.id if self.partner_id else False,
+        )
+        return action
