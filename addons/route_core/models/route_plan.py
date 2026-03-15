@@ -62,9 +62,35 @@ class RoutePlan(models.Model):
         for rec in self:
             rec.line_count = len(rec.line_ids)
 
+    def _sync_state_from_lines(self):
+        for rec in self:
+            if rec.state == "cancel":
+                continue
+
+            if not rec.line_ids:
+                rec.state = "draft"
+                continue
+
+            line_states = set(rec.line_ids.mapped("state"))
+
+            if line_states == {"pending"}:
+                rec.state = "draft"
+            elif line_states.issubset({"visited", "skipped"}):
+                rec.state = "done"
+            else:
+                rec.state = "in_progress"
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.plan") or "New"
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records._sync_state_from_lines()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        if "state" not in vals or vals.get("state") != "cancel":
+            self._sync_state_from_lines()
+        return result
