@@ -30,7 +30,6 @@ class RouteVisit(models.Model):
     partner_id = fields.Many2one(
         "res.partner",
         string="Customer",
-        required=True,
         tracking=True,
     )
     area_id = fields.Many2one(
@@ -160,6 +159,8 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.state != "draft":
                 raise UserError(_("Only draft visits can be started."))
+            if not rec.outlet_id:
+                raise UserError(_("Please select an outlet before starting the visit."))
             rec.write({
                 "state": "in_progress",
                 "start_datetime": fields.Datetime.now(),
@@ -172,6 +173,9 @@ class RouteVisit(models.Model):
 
         if self.state != "in_progress":
             raise UserError(_("You can only create a sale order when the visit is in progress."))
+
+        if not self.partner_id:
+            raise UserError(_("Please set a customer on the visit before creating a sale order."))
 
         if self.sale_order_id:
             action = self.env.ref("sale.action_orders").read()[0]
