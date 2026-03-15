@@ -49,7 +49,7 @@ class RoutePlanLine(models.Model):
             ("visited", "Visited"),
             ("skipped", "Skipped"),
         ],
-        string="Line Status",
+        string="Visit Status",
         default="pending",
         required=True,
     )
@@ -58,14 +58,6 @@ class RoutePlanLine(models.Model):
         compute="_compute_button_label",
     )
     note = fields.Text(string="Line Note")
-
-    _sql_constraints = [
-        (
-            "route_plan_line_unique_outlet_per_plan",
-            "unique(plan_id, outlet_id)",
-            "You cannot add the same outlet more than once in the same route plan.",
-        ),
-    ]
 
     @property
     def _plan_sync_context_key(self):
@@ -87,19 +79,12 @@ class RoutePlanLine(models.Model):
             if not rec.plan_id or not rec.outlet_id:
                 continue
 
-            duplicate = self.search(
-                [
-                    ("id", "!=", rec.id),
-                    ("plan_id", "=", rec.plan_id.id),
-                    ("outlet_id", "=", rec.outlet_id.id),
-                ],
-                limit=1,
+            duplicates = rec.plan_id.line_ids.filtered(
+                lambda line: line.id != rec.id and line.outlet_id.id == rec.outlet_id.id
             )
-            if duplicate:
+            if duplicates:
                 raise ValidationError(
-                    _(
-                        "This outlet is already added in the same route plan. Duplicate outlets are not allowed."
-                    )
+                    _("You cannot add the same outlet more than once in the same route plan.")
                 )
 
     def _sync_parent_plan_state(self):
@@ -143,11 +128,13 @@ class RoutePlanLine(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
+        records._check_unique_outlet_per_plan()
         records._sync_parent_plan_state()
         return records
 
     def write(self, vals):
         result = super().write(vals)
+        self._check_unique_outlet_per_plan()
         if not self.env.context.get(self._plan_sync_context_key):
             self._sync_parent_plan_state()
         return result
