@@ -17,18 +17,18 @@ class RoutePlanLine(models.Model):
         required=True,
         ondelete="cascade",
     )
+    area_id = fields.Many2one(
+        "route.area",
+        string="Area",
+        required=True,
+        ondelete="restrict",
+    )
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
         required=True,
         ondelete="restrict",
-    )
-    area_id = fields.Many2one(
-        "route.area",
-        string="Area",
-        related="outlet_id.area_id",
-        store=True,
-        readonly=True,
+        domain="[('area_id', '=', area_id)]",
     )
     partner_id = fields.Many2one(
         "res.partner",
@@ -73,6 +73,23 @@ class RoutePlanLine(models.Model):
             else:
                 rec.button_label = "Open Visit"
 
+    @api.onchange("area_id")
+    def _onchange_area_id(self):
+        for rec in self:
+            if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
+                rec.outlet_id = False
+        return {
+            "domain": {
+                "outlet_id": [("area_id", "=", self.area_id.id)] if self.area_id else []
+            }
+        }
+
+    @api.onchange("outlet_id")
+    def _onchange_outlet_id(self):
+        for rec in self:
+            if rec.outlet_id and not rec.area_id:
+                rec.area_id = rec.outlet_id.area_id
+
     @api.constrains("plan_id", "outlet_id")
     def _check_unique_outlet_per_plan(self):
         for rec in self:
@@ -85,6 +102,14 @@ class RoutePlanLine(models.Model):
             if duplicates:
                 raise ValidationError(
                     _("You cannot add the same outlet more than once in the same route plan.")
+                )
+
+    @api.constrains("area_id", "outlet_id")
+    def _check_area_matches_outlet(self):
+        for rec in self:
+            if rec.area_id and rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
+                raise ValidationError(
+                    _("The selected outlet does not belong to the selected area.")
                 )
 
     def _sync_parent_plan_state(self):
@@ -127,14 +152,22 @@ class RoutePlanLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get("area_id") and vals.get("plan_id"):
+                plan = self.env["route.plan"].browse(vals["plan_id"])
+                if plan.exists() and plan.area_id:
+                    vals["area_id"] = plan.area_id.id
+
         records = super().create(vals_list)
         records._check_unique_outlet_per_plan()
+        records._check_area_matches_outlet()
         records._sync_parent_plan_state()
         return records
 
     def write(self, vals):
         result = super().write(vals)
         self._check_unique_outlet_per_plan()
+        self._check_area_matches_outlet()
         if not self.env.context.get(self._plan_sync_context_key):
             self._sync_parent_plan_state()
         return result
