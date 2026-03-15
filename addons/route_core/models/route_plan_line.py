@@ -55,6 +55,15 @@ class RoutePlanLine(models.Model):
     )
     note = fields.Text(string="Line Note")
 
+    @property
+    def _plan_sync_context_key(self):
+        return "route_plan_line_skip_plan_sync"
+
+    def _sync_parent_plan_state(self):
+        plans = self.mapped("plan_id")
+        if plans:
+            plans._sync_state_from_lines()
+
     def action_open_or_create_visit(self):
         self.ensure_one()
 
@@ -84,3 +93,22 @@ class RoutePlanLine(models.Model):
         action["res_id"] = visit.id
         action["views"] = [(False, "form")]
         return action
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._sync_parent_plan_state()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        if not self.env.context.get(self._plan_sync_context_key):
+            self._sync_parent_plan_state()
+        return result
+
+    def unlink(self):
+        plans = self.mapped("plan_id")
+        result = super().unlink()
+        if plans:
+            plans._sync_state_from_lines()
+        return result
