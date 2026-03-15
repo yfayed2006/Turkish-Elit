@@ -106,6 +106,16 @@ class RouteVisit(models.Model):
                 if rec.outlet_id.partner_id:
                     rec.partner_id = rec.outlet_id.partner_id
 
+    def _sync_plan_line_state(self):
+        plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
+        for line in plan_lines:
+            if line.visit_id.state == "done":
+                line.state = "visited"
+            elif line.visit_id.state == "cancel":
+                line.state = "skipped"
+            else:
+                line.state = "pending"
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -121,11 +131,15 @@ class RouteVisit(models.Model):
                     if not vals.get("partner_id") and outlet.partner_id:
                         vals["partner_id"] = outlet.partner_id.id
 
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records._sync_plan_line_state()
+        return records
 
     def write(self, vals):
         if self.env.context.get("route_visit_force_write"):
-            return super().write(vals)
+            result = super().write(vals)
+            self._sync_plan_line_state()
+            return result
 
         allowed_when_locked = {
             "message_follower_ids",
@@ -158,7 +172,9 @@ class RouteVisit(models.Model):
                 if not vals.get("partner_id") and outlet.partner_id:
                     vals["partner_id"] = outlet.partner_id.id
 
-        return super().write(vals)
+        result = super().write(vals)
+        self._sync_plan_line_state()
+        return result
 
     def action_start_visit(self):
         for rec in self:
