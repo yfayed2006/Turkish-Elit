@@ -52,34 +52,34 @@ class RoutePlan(models.Model):
     line_ids = fields.One2many(
         "route.plan.line",
         "plan_id",
-        string="Plan Lines",
+        string="Planned Visits",
     )
     line_count = fields.Integer(
-        string="Lines Count",
-        compute="_compute_line_counts",
-    )
-    visit_count = fields.Integer(
         string="Visits Count",
         compute="_compute_line_counts",
     )
+    visit_count = fields.Integer(
+        string="Executed Visits",
+        compute="_compute_line_counts",
+    )
     pending_count = fields.Integer(
-        string="Pending Stops",
+        string="Pending Visits",
         compute="_compute_line_counts",
     )
     visited_count = fields.Integer(
-        string="Visited Stops",
+        string="Completed Visits",
         compute="_compute_line_counts",
     )
     skipped_count = fields.Integer(
-        string="Skipped Stops",
+        string="Skipped Visits",
         compute="_compute_line_counts",
     )
     in_progress_count = fields.Integer(
-        string="In Progress Stops",
+        string="In Progress Visits",
         compute="_compute_line_counts",
     )
 
-    @api.depends("line_ids", "line_ids.state", "line_ids.visit_id")
+    @api.depends("line_ids", "line_ids.state", "line_ids.visit_id", "line_ids.visit_id.state")
     def _compute_line_counts(self):
         for rec in self:
             lines = rec.line_ids
@@ -121,7 +121,7 @@ class RoutePlan(models.Model):
             "area_id": line.area_id.id if line.area_id else (self.area_id.id if self.area_id else False),
             "vehicle_id": self.vehicle_id.id,
             "user_id": self.user_id.id,
-            "notes": line.notes or False,
+            "notes": line.note or False,
         }
 
     def _create_visit_for_line(self, line):
