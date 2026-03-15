@@ -2,60 +2,40 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 
-class RouteVisit(models.Model):
-    _name = "route.visit"
-    _description = "Route Visit"
-    _inherit = ["mail.thread", "mail.activity.mixin"]
+class RoutePlan(models.Model):
+    _name = "route.plan"
+    _description = "Daily Route Plan"
     _order = "date desc, id desc"
 
     name = fields.Char(
-        string="Visit Reference",
+        string="Plan Reference",
         required=True,
         copy=False,
         readonly=True,
         default="New",
-        tracking=True,
     )
     date = fields.Date(
-        string="Visit Date",
+        string="Plan Date",
         required=True,
         default=fields.Date.context_today,
-        tracking=True,
-    )
-    outlet_id = fields.Many2one(
-        "route.outlet",
-        string="Outlet",
-        tracking=True,
-    )
-    partner_id = fields.Many2one(
-        "res.partner",
-        string="Customer",
-        tracking=True,
-    )
-    area_id = fields.Many2one(
-        "route.area",
-        string="Area",
-        tracking=True,
-    )
-    vehicle_id = fields.Many2one(
-        "route.vehicle",
-        string="Vehicle",
-        tracking=True,
     )
     user_id = fields.Many2one(
         "res.users",
         string="Salesperson",
         required=True,
         default=lambda self: self.env.user,
-        tracking=True,
     )
-    notes = fields.Text(string="Notes")
-    no_sale_reason = fields.Text(
-        string="Reason for Ending Without Sale",
-        readonly=True,
-        tracking=True,
+    vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Vehicle",
+        required=True,
+        ondelete="restrict",
     )
-
+    area_id = fields.Many2one(
+        "route.area",
+        string="Area",
+        ondelete="restrict",
+    )
     state = fields.Selection(
         [
             ("draft", "Draft"),
@@ -66,269 +46,122 @@ class RouteVisit(models.Model):
         string="Status",
         default="draft",
         required=True,
-        tracking=True,
+    )
+    notes = fields.Text(string="Notes")
+
+    line_ids = fields.One2many(
+        "route.plan.line",
+        "plan_id",
+        string="Plan Lines",
+    )
+    line_count = fields.Integer(
+        string="Lines Count",
+        compute="_compute_line_count",
+    )
+    visit_count = fields.Integer(
+        string="Visits Count",
+        compute="_compute_visit_count",
     )
 
-    start_datetime = fields.Datetime(
-        string="Start DateTime",
-        readonly=True,
-        tracking=True,
-    )
-    end_datetime = fields.Datetime(
-        string="End DateTime",
-        readonly=True,
-        tracking=True,
-    )
-
-    sale_order_id = fields.Many2one(
-        "sale.order",
-        string="Sale Order",
-        readonly=True,
-        copy=False,
-        tracking=True,
-    )
-
-    sale_order_count = fields.Integer(
-        string="Sale Order Count",
-        compute="_compute_sale_order_count",
-    )
-
-    @api.depends("sale_order_id")
-    def _compute_sale_order_count(self):
+    def _compute_line_count(self):
         for rec in self:
-            rec.sale_order_count = 1 if rec.sale_order_id else 0
+            rec.line_count = len(rec.line_ids)
 
-    @api.onchange("outlet_id")
-    def _onchange_outlet_id(self):
+    def _compute_visit_count(self):
         for rec in self:
-            if rec.outlet_id:
-                rec.area_id = rec.outlet_id.area_id
-                if rec.outlet_id.partner_id:
-                    rec.partner_id = rec.outlet_id.partner_id
+            rec.visit_count = len(rec.line_ids.filtered(lambda l: l.visit_id))
 
-    def _sync_plan_line_state(self):
-        plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
-        for line in plan_lines:
-            if line.visit_id.state == "done":
-                line.state = "visited"
-            elif line.visit_id.state == "cancel":
-                line.state = "skipped"
+    def _sync_state_from_lines(self):
+        for rec in self:
+            if rec.state == "cancel":
+                continue
+
+            if not rec.line_ids:
+                new_state = "draft"
             else:
-                line.state = "pending"
+                line_states = set(rec.line_ids.mapped("state"))
 
-    def _get_plan_line(self):
+                if line_states == {"pending"}:
+                    new_state = "draft"
+                elif line_states.issubset({"visited", "skipped"}):
+                    new_state = "done"
+                else:
+                    new_state = "in_progress"
+
+            if rec.state != new_state:
+                rec.with_context(route_plan_skip_sync=True).write({"state": new_state})
+
+    def _prepare_visit_vals(self, line):
         self.ensure_one()
-        return self.env["route.plan.line"].search([("visit_id", "=", self.id)], limit=1)
+        return {
+            "date": self.date,
+            "outlet_id": line.outlet_id.id,
+            "partner_id": line.partner_id.id if line.partner_id else False,
+            "area_id": line.area_id.id if line.area_id else (self.area_id.id if self.area_id else False),
+            "vehicle_id": self.vehicle_id.id,
+            "user_id": self.user_id.id,
+            "notes": line.notes or False,
+        }
 
-    def _get_other_in_progress_visit_in_same_plan(self):
+    def _create_visit_for_line(self, line):
         self.ensure_one()
 
-        plan_line = self._get_plan_line()
-        if not plan_line or not plan_line.plan_id:
-            return False
+        if line.visit_id:
+            return line.visit_id
 
-        other_plan_lines = plan_line.plan_id.line_ids.filtered(
-            lambda line: line.visit_id and line.visit_id.id != self.id
-        )
+        if not line.outlet_id:
+            raise UserError(_("Cannot create a visit for a route line without an outlet."))
 
-        for line in other_plan_lines:
-            if line.visit_id.state == "in_progress":
-                return line.visit_id
+        visit_vals = self._prepare_visit_vals(line)
+        visit = self.env["route.visit"].with_context(
+            route_plan_allow_visit_create=True
+        ).create(visit_vals)
 
-        return False
+        line.visit_id = visit.id
+        return visit
 
-    def _get_previous_pending_plan_line(self):
+    def action_view_visits(self):
         self.ensure_one()
 
-        plan_line = self._get_plan_line()
-        if not plan_line or not plan_line.plan_id:
-            return False
+        visits = self.line_ids.mapped("visit_id")
+        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["domain"] = [("id", "in", visits.ids)]
 
-        previous_pending_lines = plan_line.plan_id.line_ids.filtered(
-            lambda line: line.id != plan_line.id
-            and line.sequence < plan_line.sequence
-            and line.state == "pending"
-        ).sorted(key=lambda line: (line.sequence, line.id))
+        if len(visits) == 1:
+            action["res_id"] = visits.id
+            action["views"] = [(False, "form")]
+        else:
+            action["views"] = [(False, "list"), (False, "form")]
 
-        return previous_pending_lines[:1]
+        return action
 
     @api.model_create_multi
     def create(self, vals_list):
-        if not self.env.context.get("route_plan_allow_visit_create"):
-            raise UserError(
-                _(
-                    "Route Visits cannot be created manually. They must be generated from Route Plan."
-                )
-            )
-
         for vals in vals_list:
             if not vals.get("name") or vals.get("name") == "New":
-                vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
-
-            outlet_id = vals.get("outlet_id")
-            if outlet_id:
-                outlet = self.env["route.outlet"].browse(outlet_id)
-                if outlet.exists():
-                    if not vals.get("area_id") and outlet.area_id:
-                        vals["area_id"] = outlet.area_id.id
-                    if not vals.get("partner_id") and outlet.partner_id:
-                        vals["partner_id"] = outlet.partner_id.id
-
+                vals["name"] = self.env["ir.sequence"].next_by_code("route.plan") or "New"
         records = super().create(vals_list)
-        records._sync_plan_line_state()
+        records._sync_state_from_lines()
         return records
 
     def write(self, vals):
-        if self.env.context.get("route_visit_force_write"):
-            result = super().write(vals)
-            self._sync_plan_line_state()
-            return result
+        protected_fields = {"date", "user_id", "vehicle_id"}
 
-        allowed_when_locked = {
-            "message_follower_ids",
-            "message_partner_ids",
-            "message_ids",
-            "activity_ids",
-            "activity_state",
-            "activity_type_id",
-            "activity_user_id",
-            "activity_date_deadline",
-            "message_main_attachment_id",
-            "__last_update",
-            "write_date",
-            "write_uid",
-        }
-
-        for rec in self:
-            if rec.state in ("done", "cancel"):
-                disallowed_keys = set(vals.keys()) - allowed_when_locked
-                if disallowed_keys:
+        if protected_fields.intersection(vals.keys()):
+            for rec in self:
+                if rec.line_ids.filtered("visit_id"):
                     raise UserError(
-                        _("You cannot modify a visit that is Done or Cancelled. Please reset it first if changes are needed.")
+                        _(
+                            "You cannot change Plan Date, Salesperson, or Vehicle after visits have already been created from this plan."
+                        )
                     )
-
-        if vals.get("outlet_id"):
-            outlet = self.env["route.outlet"].browse(vals["outlet_id"])
-            if outlet.exists():
-                if not vals.get("area_id") and outlet.area_id:
-                    vals["area_id"] = outlet.area_id.id
-                if not vals.get("partner_id") and outlet.partner_id:
-                    vals["partner_id"] = outlet.partner_id.id
 
         result = super().write(vals)
-        self._sync_plan_line_state()
+
+        if self.env.context.get("route_plan_skip_sync"):
+            return result
+
+        if "state" not in vals or vals.get("state") != "cancel":
+            self._sync_state_from_lines()
+
         return result
-
-    def action_start_visit(self):
-        for rec in self:
-            if rec.state != "draft":
-                raise UserError(_("Only draft visits can be started."))
-            if not rec.outlet_id:
-                raise UserError(_("Please select an outlet before starting the visit."))
-            if not rec.vehicle_id:
-                raise UserError(_("Please select a vehicle before starting the visit."))
-
-            previous_pending_line = rec._get_previous_pending_plan_line()
-            if previous_pending_line:
-                raise UserError(
-                    _("You must complete the previous stop first: %s.")
-                    % (previous_pending_line.outlet_id.display_name or previous_pending_line.plan_id.name)
-                )
-
-            other_in_progress_visit = rec._get_other_in_progress_visit_in_same_plan()
-            if other_in_progress_visit:
-                raise UserError(
-                    _(
-                        "Another stop in the same route is already in progress: %s. Please finish it before starting this stop."
-                    )
-                    % (other_in_progress_visit.outlet_id.display_name or other_in_progress_visit.name)
-                )
-
-            rec.write({
-                "state": "in_progress",
-                "start_datetime": fields.Datetime.now(),
-                "end_datetime": False,
-                "no_sale_reason": False,
-            })
-
-    def action_create_sale_order(self):
-        self.ensure_one()
-
-        if self.state != "in_progress":
-            raise UserError(_("You can only create a sale order when the visit is in progress."))
-
-        if not self.partner_id:
-            raise UserError(_("Please set a customer on the visit before creating a sale order."))
-
-        if self.sale_order_id:
-            action = self.env.ref("sale.action_orders").read()[0]
-            action["res_id"] = self.sale_order_id.id
-            action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-            action["context"] = dict(self.env.context, route_visit_id=self.id)
-            return action
-
-        sale_order = self.env["sale.order"].create({
-            "partner_id": self.partner_id.id,
-            "user_id": self.user_id.id,
-            "origin": self.name,
-        })
-
-        self.sale_order_id = sale_order.id
-
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = sale_order.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, route_visit_id=self.id)
-        return action
-
-    def action_view_sale_order(self):
-        self.ensure_one()
-
-        if not self.sale_order_id:
-            raise UserError(_("There is no sale order linked to this visit."))
-
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = self.sale_order_id.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, route_visit_id=self.id)
-        return action
-
-    def action_end_visit(self):
-        self.ensure_one()
-
-        if self.state != "in_progress":
-            raise UserError(_("Only visits in progress can be ended."))
-
-        if self.sale_order_id:
-            self.with_context(route_visit_force_write=True).write({
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
-            return True
-
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("End Visit"),
-            "res_model": "route.visit.end.wizard",
-            "view_mode": "form",
-            "target": "new",
-            "context": {
-                "default_visit_id": self.id,
-            },
-        }
-
-    def action_cancel(self):
-        for rec in self:
-            if rec.state == "done":
-                raise UserError(_("You cannot cancel a completed visit."))
-            rec.with_context(route_visit_force_write=True).write({"state": "cancel"})
-
-    def action_reset_to_draft(self):
-        for rec in self:
-            rec.with_context(route_visit_force_write=True).write({
-                "state": "draft",
-                "start_datetime": False,
-                "end_datetime": False,
-                "sale_order_id": False,
-                "no_sale_reason": False,
-            })
