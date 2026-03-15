@@ -112,7 +112,8 @@
         <field name="context">
             {
                 'search_default_filter_my_visits': 1,
-                'search_default_filter_today': 1
+                'search_default_filter_today': 1,
+                'create': 0
             }
         </field>
         <field name="help" type="html">
