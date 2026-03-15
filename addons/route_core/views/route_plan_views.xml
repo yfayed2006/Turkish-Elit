@@ -78,7 +78,7 @@
                                     <button
                                         name="action_open_or_create_visit"
                                         type="object"
-                                        string="%(button_label)s"
+                                        string="Execute Visit"
                                         icon="fa-play"
                                     />
                                 </list>
