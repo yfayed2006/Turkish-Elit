@@ -117,14 +117,10 @@
         <field name="view_mode">list,form</field>
     </record>
 
-    <menuitem id="menu_route_outlet_root"
-              name="Route Sales"
-              sequence="60"/>
-
     <menuitem id="menu_route_outlet"
               name="Outlets"
-              parent="menu_route_outlet_root"
+              parent="menu_route_visit_root"
               action="action_route_outlet"
-              sequence="10"/>
+              sequence="30"/>
 
 </odoo>
