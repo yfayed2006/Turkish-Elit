@@ -39,26 +39,6 @@
                         >
                             <field name="visit_count" string="Executed Visits" widget="statinfo"/>
                         </button>
-
-                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-list" invisible="1">
-                            <field name="line_count" string="Total Visits" widget="statinfo"/>
-                        </button>
-
-                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-clock-o" invisible="1">
-                            <field name="pending_count" string="Pending Visits" widget="statinfo"/>
-                        </button>
-
-                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-spinner" invisible="1">
-                            <field name="in_progress_count" string="In Progress Visits" widget="statinfo"/>
-                        </button>
-
-                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-check-circle" invisible="1">
-                            <field name="visited_count" string="Completed Visits" widget="statinfo"/>
-                        </button>
-
-                        <button type="object" name="action_view_visits" class="oe_stat_button" icon="fa-times-circle" invisible="1">
-                            <field name="skipped_count" string="Skipped Visits" widget="statinfo"/>
-                        </button>
                     </div>
 
                     <div class="oe_title">
@@ -104,6 +84,16 @@
 
                     <notebook>
                         <page string="Planned Visits">
+                            <group>
+                                <button
+                                    name="action_open_add_area_outlets_wizard"
+                                    type="object"
+                                    string="Add Visits by Area"
+                                    class="btn-primary"
+                                    icon="fa-plus"
+                                />
+                            </group>
+
                             <field name="line_ids" context="{'default_area_id': area_id}">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
