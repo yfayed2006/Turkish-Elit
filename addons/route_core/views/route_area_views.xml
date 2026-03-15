@@ -19,6 +19,14 @@
         <field name="model">route.area</field>
         <field name="arch" type="xml">
             <form string="Route Area">
+                <header>
+                    <button
+                        name="action_save_and_back"
+                        string="Save and Back"
+                        type="object"
+                        class="btn-primary"
+                    />
+                </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button
