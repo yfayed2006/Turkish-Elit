@@ -77,9 +77,13 @@
     </record>
 
     <menuitem id="menu_route_outlet_root"
-              name="Outlets"
-              parent="sales_team.menu_sale_config"
-              action="action_route_outlet"
+              name="Route Sales"
               sequence="60"/>
+
+    <menuitem id="menu_route_outlet"
+              name="Outlets"
+              parent="menu_route_outlet_root"
+              action="action_route_outlet"
+              sequence="10"/>
 
 </odoo>
