@@ -10,7 +10,7 @@
                 <field name="date"/>
                 <field name="partner_id"/>
                 <field name="user_id"/>
-                <field name="state"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
                 <field name="sale_order_id"/>
                 <field name="start_datetime"/>
                 <field name="end_datetime"/>
