@@ -52,6 +52,12 @@
                                     <field name="visit_id" readonly="1"/>
                                     <field name="state"/>
                                     <field name="note"/>
+                                    <button
+                                        name="action_open_or_create_visit"
+                                        type="object"
+                                        string="Open/Create Visit"
+                                        icon="fa-external-link"
+                                    />
                                 </list>
                             </field>
                         </page>
