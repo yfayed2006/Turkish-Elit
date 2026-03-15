@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_route_outlet" model="ir.sequence">
+        <field name="name">Route Outlet</field>
+        <field name="code">route.outlet</field>
+        <field name="prefix">OUT/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>
