@@ -5,7 +5,7 @@
         <field name="name">route.visit.tree</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <list string="Route Visits">
+            <list string="Route Visits" create="0" delete="0">
                 <field name="name"/>
                 <field name="date"/>
                 <field name="outlet_id"/>
@@ -27,11 +27,6 @@
         <field name="arch" type="xml">
             <form string="Route Visit" edit="0" create="0" delete="0">
                 <header>
-                    <button name="action_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="state != 'draft'"/>
-                    <button name="action_create_sale_order" string="Create Sale Order" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                    <button name="action_end_visit" string="End Visit" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('done', 'cancel')"/>
-                    <button name="action_reset_to_draft" string="Reset to Draft" type="object" invisible="state != 'cancel'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
                 </header>
 
@@ -120,7 +115,7 @@
         </field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Create your first route visit
+                Visit History is for review only.
             </p>
         </field>
     </record>
