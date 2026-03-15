@@ -39,3 +39,6 @@ class RouteArea(models.Model):
         action["domain"] = [("area_id", "=", self.id)]
         action["context"] = dict(self.env.context, default_area_id=self.id)
         return action
+
+    def action_save_and_back(self):
+        return self.env.ref("route_core.action_route_area").read()[0]
