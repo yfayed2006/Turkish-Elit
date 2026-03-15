@@ -25,10 +25,19 @@ class RouteVisitEndWizard(models.TransientModel):
         )
 
         if plan_line and plan_line.plan_id:
-            action = self.env.ref("route_core.action_route_plan").read()[0]
-            action["res_id"] = plan_line.plan_id.id
-            action["views"] = [(False, "form")]
-            return action
+            plan = plan_line.plan_id
+
+            remaining_lines = plan.line_ids.filtered(
+                lambda line: line.state == "pending"
+            )
+
+            if remaining_lines:
+                action = self.env.ref("route_core.action_route_plan").read()[0]
+                action["res_id"] = plan.id
+                action["views"] = [(False, "form")]
+                return action
+
+            return self.env.ref("route_core.action_route_plan").read()[0]
 
         return self.env.ref("route_core.action_route_visit").read()[0]
 
