@@ -31,7 +31,7 @@
                             icon="fa-map-marker"
                             invisible="visit_count == 0"
                         >
-                            <field name="visit_count" string="Visits" widget="statinfo"/>
+                            <field name="visit_count" string="Executed Stops" widget="statinfo"/>
                         </button>
                     </div>
 
@@ -54,21 +54,21 @@
                     </group>
 
                     <notebook>
-                        <page string="Plan Lines">
+                        <page string="Route Stops">
                             <field name="line_ids">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
                                     <field name="outlet_id"/>
                                     <field name="area_id" readonly="1"/>
                                     <field name="partner_id" readonly="1"/>
-                                    <field name="visit_id" readonly="1"/>
+                                    <field name="visit_id" string="Execution Record" readonly="1"/>
                                     <field name="state"/>
                                     <field name="note"/>
                                     <button
                                         name="action_open_or_create_visit"
                                         type="object"
-                                        string="Open/Create Visit"
-                                        icon="fa-external-link"
+                                        string="Execute Stop"
+                                        icon="fa-play"
                                     />
                                 </list>
                             </field>
