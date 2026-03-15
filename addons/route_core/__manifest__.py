@@ -9,6 +9,7 @@
         "data/route_outlet_sequence.xml",
         "views/route_area_views.xml",
         "views/res_partner_views.xml",
+        "views/route_outlet_views.xml",
         "views/route_visit_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
     ],
