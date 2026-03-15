@@ -42,7 +42,21 @@ class RouteOutlet(models.Model):
     )
     visit_count = fields.Integer(
         string="Visits Count",
-        compute="_compute_visit_count",
+        compute="_compute_visit_stats",
+    )
+    last_visit_id = fields.Many2one(
+        "route.visit",
+        string="Last Visit",
+        compute="_compute_visit_stats",
+    )
+    last_visit_date = fields.Date(
+        string="Last Visit Date",
+        compute="_compute_visit_stats",
+    )
+    last_sale_order_id = fields.Many2one(
+        "sale.order",
+        string="Last Sale Order",
+        compute="_compute_visit_stats",
     )
 
     display_address = fields.Text(
@@ -55,10 +69,24 @@ class RouteOutlet(models.Model):
         ("route_outlet_code_unique", "unique(code)", "Outlet code must be unique."),
     ]
 
-    @api.depends("visit_ids")
-    def _compute_visit_count(self):
+    @api.depends(
+        "visit_ids",
+        "visit_ids.date",
+        "visit_ids.sale_order_id",
+        "visit_ids.write_date",
+    )
+    def _compute_visit_stats(self):
         for record in self:
-            record.visit_count = len(record.visit_ids)
+            visits = record.visit_ids.sorted(
+                key=lambda v: ((v.date or fields.Date.today()), v.id),
+                reverse=True,
+            )
+            record.visit_count = len(visits)
+            record.last_visit_id = visits[0] if visits else False
+            record.last_visit_date = visits[0].date if visits else False
+
+            last_visit_with_sale = next((visit for visit in visits if visit.sale_order_id), False)
+            record.last_sale_order_id = last_visit_with_sale.sale_order_id if last_visit_with_sale else False
 
     @api.depends("street", "street2", "city", "state_id", "country_id", "zip")
     def _compute_display_address(self):
