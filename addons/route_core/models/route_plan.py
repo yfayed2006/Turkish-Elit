@@ -68,17 +68,19 @@ class RoutePlan(models.Model):
                 continue
 
             if not rec.line_ids:
-                rec.state = "draft"
-                continue
-
-            line_states = set(rec.line_ids.mapped("state"))
-
-            if line_states == {"pending"}:
-                rec.state = "draft"
-            elif line_states.issubset({"visited", "skipped"}):
-                rec.state = "done"
+                new_state = "draft"
             else:
-                rec.state = "in_progress"
+                line_states = set(rec.line_ids.mapped("state"))
+
+                if line_states == {"pending"}:
+                    new_state = "draft"
+                elif line_states.issubset({"visited", "skipped"}):
+                    new_state = "done"
+                else:
+                    new_state = "in_progress"
+
+            if rec.state != new_state:
+                rec.with_context(route_plan_skip_sync=True).write({"state": new_state})
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -91,6 +93,11 @@ class RoutePlan(models.Model):
 
     def write(self, vals):
         result = super().write(vals)
+
+        if self.env.context.get("route_plan_skip_sync"):
+            return result
+
         if "state" not in vals or vals.get("state") != "cancel":
             self._sync_state_from_lines()
+
         return result
