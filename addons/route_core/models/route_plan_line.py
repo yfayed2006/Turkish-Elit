@@ -1,5 +1,5 @@
 from odoo import api, _, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class RoutePlanLine(models.Model):
@@ -59,6 +59,14 @@ class RoutePlanLine(models.Model):
     )
     note = fields.Text(string="Line Note")
 
+    _sql_constraints = [
+        (
+            "route_plan_line_unique_outlet_per_plan",
+            "unique(plan_id, outlet_id)",
+            "You cannot add the same outlet more than once in the same route plan.",
+        ),
+    ]
+
     @property
     def _plan_sync_context_key(self):
         return "route_plan_line_skip_plan_sync"
@@ -72,6 +80,27 @@ class RoutePlanLine(models.Model):
                 rec.button_label = "View Visit"
             else:
                 rec.button_label = "Open Visit"
+
+    @api.constrains("plan_id", "outlet_id")
+    def _check_unique_outlet_per_plan(self):
+        for rec in self:
+            if not rec.plan_id or not rec.outlet_id:
+                continue
+
+            duplicate = self.search(
+                [
+                    ("id", "!=", rec.id),
+                    ("plan_id", "=", rec.plan_id.id),
+                    ("outlet_id", "=", rec.outlet_id.id),
+                ],
+                limit=1,
+            )
+            if duplicate:
+                raise ValidationError(
+                    _(
+                        "This outlet is already added in the same route plan. Duplicate outlets are not allowed."
+                    )
+                )
 
     def _sync_parent_plan_state(self):
         plans = self.mapped("plan_id")
@@ -93,7 +122,7 @@ class RoutePlanLine(models.Model):
         if other_in_progress_line:
             raise UserError(
                 _(
-                    "Another stop is already in progress in this route plan: %s. Please finish it before starting a new stop."
+                    "Another visit is already in progress in this route plan: %s. Please finish it before starting a new visit."
                 )
                 % (other_in_progress_line.outlet_id.display_name or other_in_progress_line.visit_id.name)
             )
@@ -104,18 +133,7 @@ class RoutePlanLine(models.Model):
             action["views"] = [(False, "form")]
             return action
 
-        visit_vals = {
-            "date": self.plan_id.date,
-            "outlet_id": self.outlet_id.id,
-            "area_id": self.area_id.id if self.area_id else False,
-            "partner_id": self.partner_id.id if self.partner_id else False,
-            "vehicle_id": self.plan_id.vehicle_id.id if self.plan_id.vehicle_id else False,
-            "user_id": self.plan_id.user_id.id if self.plan_id.user_id else self.env.user.id,
-            "notes": self.note or False,
-        }
-
-        visit = self.env["route.visit"].create(visit_vals)
-        self.visit_id = visit.id
+        visit = self.plan_id._create_visit_for_line(self)
 
         action = self.env.ref("route_core.action_route_visit").read()[0]
         action["res_id"] = visit.id
