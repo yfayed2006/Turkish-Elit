@@ -9,6 +9,7 @@
                 <field name="name"/>
                 <field name="code"/>
                 <field name="visit_count"/>
+                <field name="outlet_count"/>
                 <field name="active"/>
             </list>
         </field>
@@ -37,6 +38,15 @@
                         >
                             <field name="visit_count" string="Visits" widget="statinfo"/>
                         </button>
+
+                        <button
+                            name="action_view_outlets"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-building"
+                        >
+                            <field name="outlet_count" string="Outlets" widget="statinfo"/>
+                        </button>
                     </div>
 
                     <group>
@@ -49,6 +59,34 @@
                             <field name="notes"/>
                         </group>
                     </group>
+
+                    <notebook>
+                        <page string="Outlets">
+                            <field name="outlet_ids" context="{'default_area_id': id}">
+                                <list editable="bottom">
+                                    <field name="code" readonly="1"/>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="phone"/>
+                                    <field name="mobile"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Visits">
+                            <field name="visit_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="state"/>
+                                    <field name="start_datetime"/>
+                                    <field name="end_datetime"/>
+                                    <field name="sale_order_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
