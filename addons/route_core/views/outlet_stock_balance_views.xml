@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_outlet_stock_balance_tree" model="ir.ui.view">
-        <field name="name">outlet.stock.balance.tree</field>
+    <record id="view_outlet_stock_balance_list" model="ir.ui.view">
+        <field name="name">outlet.stock.balance.list</field>
         <field name="model">outlet.stock.balance</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="outlet_id"/>
                 <field name="product_id"/>
                 <field name="barcode"/>
@@ -12,7 +12,7 @@
                 <field name="unit_price"/>
                 <field name="last_visit_id"/>
                 <field name="last_updated_at"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -43,13 +43,13 @@
     <record id="action_outlet_stock_balance" model="ir.actions.act_window">
         <field name="name">Outlet Stock Balances</field>
         <field name="res_model">outlet.stock.balance</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <menuitem
         id="menu_outlet_stock_balance"
         name="Outlet Stock Balances"
-        parent="route_core.menu_route_root"
+        parent="menu_route_visit_root"
         action="action_outlet_stock_balance"
         sequence="60"/>
 </odoo>
