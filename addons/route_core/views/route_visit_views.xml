@@ -333,6 +333,220 @@
         </field>
     </record>
 
+    <record id="view_route_visit_pda_form" model="ir.ui.view">
+        <field name="name">route.visit.pda.form</field>
+        <field name="model">route.visit</field>
+        <field name="priority" eval="90"/>
+        <field name="arch" type="xml">
+            <form string="PDA Visit" create="0" delete="0">
+                <header>
+                    <button
+                        name="action_load_previous_balance"
+                        string="Load Previous Balance"
+                        type="object"
+                        class="btn-primary"
+                        invisible="line_ids or visit_process_state in ('done', 'cancelled')"
+                    />
+                    <button
+                        name="action_set_checked_in"
+                        string="Check In"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'pending' or line_ids"
+                    />
+                    <button
+                        name="action_set_counting"
+                        string="Start Count"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'checked_in'"
+                    />
+                    <button
+                        name="action_set_reconciled"
+                        string="Reconcile"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'counting'"
+                    />
+                    <button
+                        name="action_generate_refill_proposal"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+                    <button
+                        name="action_confirm_all_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+                    <button
+                        name="action_skip_collection"
+                        string="Skip Collection"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+                    <button
+                        name="action_update_outlet_balance"
+                        string="Update Balance"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'collection_done'"
+                    />
+                    <button
+                        name="action_set_done_process"
+                        string="Finish Process"
+                        type="object"
+                        class="btn-success"
+                        invisible="visit_process_state != 'ready_to_close'"
+                    />
+                    <button
+                        name="action_set_cancelled_process"
+                        string="Cancel Process"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state in ('done', 'cancelled')"
+                    />
+
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="outlet_id" readonly="1"/>
+                        </h1>
+                        <div class="mt8">
+                            <field name="visit_process_state" widget="badge"/>
+                        </div>
+                    </div>
+
+                    <group col="2">
+                        <group string="Visit Info">
+                            <field name="name" readonly="1"/>
+                            <field name="date" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="area_id" readonly="1"/>
+                            <field name="vehicle_id" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="source_location_id"/>
+                        </group>
+                        <group string="Quick Status">
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="refill_backorder_id" readonly="1"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="check_in_datetime" readonly="1"/>
+                            <field name="collection_datetime" readonly="1"/>
+                            <field name="check_out_datetime" readonly="1"/>
+                            <field name="no_refill"/>
+                            <field name="no_refill_reason" invisible="not no_refill"/>
+                        </group>
+                    </group>
+
+                    <group string="Quick Summary" col="4">
+                        <group>
+                            <field name="net_due_amount" readonly="1"/>
+                            <field name="collected_amount" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="remaining_due_amount" readonly="1"/>
+                            <field name="commission_amount" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Visit Lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="previous_qty"/>
+                                    <field name="counted_qty"/>
+                                    <field name="return_qty"/>
+                                    <field name="sold_qty" readonly="1"/>
+                                    <field name="vehicle_available_qty" readonly="1"/>
+                                    <field name="supplied_qty"/>
+                                    <field name="pending_refill_qty" readonly="1"/>
+                                    <field name="new_balance_qty" readonly="1"/>
+                                    <field name="unit_price"/>
+                                    <field name="sold_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                    <field name="supply_value" readonly="1"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Payments">
+                            <field name="payment_ids">
+                                <list editable="bottom">
+                                    <field name="payment_date"/>
+                                    <field name="payment_mode"/>
+                                    <field name="amount"/>
+                                    <field name="reference"/>
+                                    <field name="bank_name"/>
+                                    <field name="pos_terminal"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Summary">
+                            <group string="Quantity Summary">
+                                <group>
+                                    <field name="previous_total_qty" readonly="1"/>
+                                    <field name="counted_total_qty" readonly="1"/>
+                                    <field name="returned_total_qty" readonly="1"/>
+                                    <field name="pending_refill_total_qty" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="sold_total_qty" readonly="1"/>
+                                    <field name="supplied_total_qty" readonly="1"/>
+                                    <field name="new_balance_total_qty" readonly="1"/>
+                                </group>
+                            </group>
+
+                            <group string="Financial Summary">
+                                <group>
+                                    <field name="previous_stock_value" readonly="1"/>
+                                    <field name="counted_stock_value" readonly="1"/>
+                                    <field name="gross_sales_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="net_due_amount" readonly="1"/>
+                                    <field name="collected_amount" readonly="1"/>
+                                    <field name="remaining_due_amount" readonly="1"/>
+                                    <field name="new_balance_value" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+
+                        <page string="Process Notes">
+                            <group>
+                                <group>
+                                    <field name="collection_skip_reason"/>
+                                    <field name="cancel_reason"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="No Sale Reason" invisible="not no_sale_reason">
+                            <field name="no_sale_reason" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_route_visit_search" model="ir.ui.view">
         <field name="name">route.visit.search</field>
         <field name="model">route.visit</field>
@@ -392,8 +606,7 @@
     <record id="action_route_visit_pda" model="ir.actions.act_window">
         <field name="name">PDA Visits</field>
         <field name="res_model">route.visit</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="view_id" ref="view_route_visit_pda_kanban"/>
+        <field name="view_mode">kanban,form,list</field>
         <field name="search_view_id" ref="view_route_visit_search"/>
         <field name="context">
             {
@@ -407,6 +620,27 @@
                 Open the route visits for the selected plan in PDA mode.
             </p>
         </field>
+    </record>
+
+    <record id="action_route_visit_pda_kanban_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_route_visit_pda_kanban"/>
+        <field name="act_window_id" ref="action_route_visit_pda"/>
+    </record>
+
+    <record id="action_route_visit_pda_form_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_route_visit_pda_form"/>
+        <field name="act_window_id" ref="action_route_visit_pda"/>
+    </record>
+
+    <record id="action_route_visit_pda_list_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_route_visit_tree"/>
+        <field name="act_window_id" ref="action_route_visit_pda"/>
     </record>
 
     <menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
