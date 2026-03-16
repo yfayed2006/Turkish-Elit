@@ -27,27 +27,6 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        empty_packaging = False
-
-        # Try packaging only if the model actually exists in this database
-        if "product.packaging" in self.env.registry.models:
-            Packaging = self.env["product.packaging"]
-            packaging = Packaging.search(
-                [("barcode", "=", barcode)],
-                limit=1,
-            )
-            if packaging and getattr(packaging, "product_id", False):
-                factor = getattr(packaging, "qty", 1.0) or 1.0
-                return {
-                    "product": packaging.product_id,
-                    "scan_type": "packaging",
-                    "scan_type_label": packaging.display_name or _("Packaging"),
-                    "factor": factor,
-                    "packaging": packaging,
-                }
-
-            empty_packaging = Packaging.browse()
-
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -56,13 +35,11 @@ class RouteVisit(models.Model):
             return {
                 "product": product,
                 "scan_type": "unit",
-                "scan_type_label": _("Unit"),
-                "factor": 1.0,
-                "packaging": empty_packaging,
+                "scan_type_label": _("Product Barcode"),
             }
 
         raise UserError(
-            _("No product or packaging was found with barcode '%s'.") % barcode
+            _("No product was found with barcode '%s'.") % barcode
         )
 
     def _is_product_available_in_vehicle(self, product):
@@ -114,7 +91,26 @@ class RouteVisit(models.Model):
             "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
         }
 
-    def _process_scanned_barcode(self, barcode, scan_qty=1.0):
+    def _get_scan_counted_increase(self, product, scan_qty=1.0, scanned_uom=False):
+        self.ensure_one()
+
+        if not product:
+            raise UserError(_("Product is required."))
+
+        if scan_qty <= 0:
+            raise UserError(_("Quantity must be greater than zero."))
+
+        base_uom = product.uom_id
+        scanned_uom = scanned_uom or base_uom
+
+        if scanned_uom.category_id != base_uom.category_id:
+            raise UserError(
+                _("Selected Count Unit must belong to the same UoM category as the product.")
+            )
+
+        return scanned_uom._compute_quantity(scan_qty, base_uom)
+
+    def _process_scanned_barcode(self, barcode, scan_qty=1.0, scanned_uom=False):
         self.ensure_one()
 
         RouteVisitLine = self.env["route.visit.line"]
@@ -137,13 +133,13 @@ class RouteVisit(models.Model):
         if not self.source_location_id:
             raise UserError(_("No source location is available for this visit."))
 
-        if scan_qty <= 0:
-            raise UserError(_("Quantity must be greater than zero."))
-
         scan_info = self._resolve_scanned_barcode(barcode)
         product = scan_info["product"]
-        factor = scan_info["factor"]
-        counted_increase = scan_qty * factor
+        counted_increase = self._get_scan_counted_increase(
+            product,
+            scan_qty=scan_qty,
+            scanned_uom=scanned_uom,
+        )
 
         if not self._is_product_available_in_vehicle(product):
             raise UserError(
@@ -171,9 +167,9 @@ class RouteVisit(models.Model):
             "product": product,
             "scan_type": scan_info["scan_type"],
             "scan_type_label": scan_info["scan_type_label"],
-            "factor": factor,
             "counted_increase": counted_increase,
-            "packaging": scan_info["packaging"],
+            "base_uom": product.uom_id,
+            "used_uom": scanned_uom or product.uom_id,
         }
 
     def action_scan_barcode_input(self):
