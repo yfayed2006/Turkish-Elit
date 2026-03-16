@@ -13,3 +13,5 @@ from . import route_outlet_ext
 from . import route_refill_backorder
 from . import route_refill_backorder_line
 from . import route_plan_pda
+from . import route_vehicle_location_ext
+from . import route_outlet_location_ext
