@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 
 class RouteVisit(models.Model):
@@ -233,6 +234,51 @@ class RouteVisit(models.Model):
             rec.is_ready_to_close = bool(rec.line_ids) and (
                 rec.visit_process_state in ("refill_done", "ready_to_close", "done")
             )
+
+    def action_load_previous_balance(self):
+        OutletStockBalance = self.env["outlet.stock.balance"]
+        RouteVisitLine = self.env["route.visit.line"]
+
+        for rec in self:
+            if not rec.outlet_id:
+                raise UserError("Please set an outlet before loading previous balance.")
+
+            if rec.line_ids:
+                raise UserError(
+                    "This visit already has lines. Remove existing lines first if you want to reload previous balance."
+                )
+
+            balances = OutletStockBalance.search([
+                ("outlet_id", "=", rec.outlet_id.id),
+                ("qty", ">", 0),
+            ])
+
+            if not balances:
+                raise UserError("No previous stock balance was found for this outlet.")
+
+            if hasattr(rec.outlet_id, "default_commission_rate") and rec.outlet_id.default_commission_rate:
+                rec.commission_rate = rec.outlet_id.default_commission_rate
+
+            line_vals_list = []
+            for balance in balances:
+                line_vals_list.append({
+                    "visit_id": rec.id,
+                    "company_id": rec.company_id.id,
+                    "product_id": balance.product_id.id,
+                    "previous_qty": balance.qty,
+                    "unit_price": balance.unit_price,
+                })
+
+            RouteVisitLine.create(line_vals_list)
+
+            vals = {}
+            if rec.visit_process_state == "pending":
+                vals["visit_process_state"] = "checked_in"
+            if not rec.check_in_datetime:
+                vals["check_in_datetime"] = fields.Datetime.now()
+
+            if vals:
+                rec.write(vals)
 
     def action_set_checked_in(self):
         for rec in self:
