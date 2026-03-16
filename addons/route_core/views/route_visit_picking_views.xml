@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_route_visit_form_picking_ext" model="ir.ui.view">
+        <field name="name">route.visit.form.picking.ext</field>
+        <field name="model">route.visit</field>
+        <field name="inherit_id" ref="route_core.view_route_visit_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//form/header" position="inside">
+                <button
+                    name="action_prepare_stock_transfer"
+                    type="object"
+                    string="Prepare Stock Transfer"
+                    class="btn-primary"
+                    invisible="state != 'in_progress'"/>
+            </xpath>
+
+            <xpath expr="//form/sheet" position="inside">
+                <div class="oe_button_box" name="button_box">
+                    <button
+                        name="action_open_pickings"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-exchange">
+                        <field
+                            name="picking_count"
+                            widget="statinfo"
+                            string="Transfers"/>
+                    </button>
+                </div>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
