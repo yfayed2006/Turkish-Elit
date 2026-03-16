@@ -10,3 +10,5 @@ access_route_plan_add_area_outlets_wizard,access.route.plan.add.area.outlets.wiz
 access_route_visit_line_user,access.route.visit.line.user,model_route_visit_line,base.group_user,1,1,1,1
 access_route_visit_payment_user,access.route.visit.payment.user,model_route_visit_payment,base.group_user,1,1,1,1
 access_outlet_stock_balance_user,access.outlet.stock.balance.user,model_outlet_stock_balance,base.group_user,1,1,1,1
+access_route_refill_backorder_user,access.route.refill.backorder.user,model_route_refill_backorder,base.group_user,1,1,1,1
+access_route_refill_backorder_line_user,access.route.refill.backorder.line.user,model_route_refill_backorder_line,base.group_user,1,1,1,1
