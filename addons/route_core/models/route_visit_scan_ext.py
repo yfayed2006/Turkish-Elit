@@ -38,9 +38,7 @@ class RouteVisit(models.Model):
                 "scan_type_label": _("Product Barcode"),
             }
 
-        raise UserError(
-            _("No product was found with barcode '%s'.") % barcode
-        )
+        raise UserError(_("No product was found with barcode '%s'.") % barcode)
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
@@ -103,12 +101,13 @@ class RouteVisit(models.Model):
         base_uom = product.uom_id
         scanned_uom = scanned_uom or base_uom
 
-        if scanned_uom.category_id != base_uom.category_id:
+        try:
+            return scanned_uom._compute_quantity(scan_qty, base_uom)
+        except Exception as e:
             raise UserError(
-                _("Selected Count Unit must belong to the same UoM category as the product.")
+                _("Could not convert the scanned quantity from the selected UoM to the product base UoM.\n\n%s")
+                % str(e)
             )
-
-        return scanned_uom._compute_quantity(scan_qty, base_uom)
 
     def _process_scanned_barcode(self, barcode, scan_qty=1.0, scanned_uom=False):
         self.ensure_one()
@@ -117,9 +116,7 @@ class RouteVisit(models.Model):
 
         if self.visit_process_state not in ("checked_in", "counting", "reconciled"):
             raise UserError(
-                _(
-                    "Barcode scanning is only allowed when the visit is Checked In, Counting, or Reconciled."
-                )
+                _("Barcode scanning is only allowed when the visit is Checked In, Counting, or Reconciled.")
             )
 
         if not self.vehicle_id:
