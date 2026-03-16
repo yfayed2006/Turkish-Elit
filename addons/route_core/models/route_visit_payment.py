@@ -83,3 +83,9 @@ class RouteVisitPayment(models.Model):
     def action_reset_to_draft(self):
         for rec in self:
             rec.state = "draft"
+
+    def unlink(self):
+        for rec in self:
+            if rec.state == "confirmed":
+                raise ValidationError("You cannot delete a confirmed payment.")
+        return super().unlink()
