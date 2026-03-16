@@ -1,9 +1,21 @@
-from odoo import models, _
+from odoo import fields, models, _
 from odoo.exceptions import UserError
 
 
 class RouteVisit(models.Model):
     _inherit = "route.visit"
+
+    # Keep these fields for compatibility with any existing inherited views
+    scan_barcode_input = fields.Char(
+        string="Scan Barcode",
+        copy=False,
+    )
+
+    last_scanned_barcode = fields.Char(
+        string="Last Scanned Barcode",
+        readonly=True,
+        copy=False,
+    )
 
     def _get_scan_source_location(self):
         self.ensure_one()
@@ -22,9 +34,7 @@ class RouteVisit(models.Model):
         )
 
         if not product:
-            raise UserError(
-                _("No product was found with barcode '%s'.") % barcode
-            )
+            raise UserError(_("No product was found with barcode '%s'.") % barcode)
 
         return product
 
@@ -35,13 +45,15 @@ class RouteVisit(models.Model):
         if not source_location or not product:
             return False
 
-        quants = self.env["stock.quant"].search([
-            ("location_id", "child_of", source_location.id),
-            ("product_id", "=", product.id),
-            ("quantity", ">", 0),
-        ], limit=1)
-
-        return bool(quants)
+        quant = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+                ("quantity", ">", 0),
+            ],
+            limit=1,
+        )
+        return bool(quant)
 
     def _get_vehicle_available_qty_for_scan_product(self, product):
         self.ensure_one()
@@ -50,10 +62,12 @@ class RouteVisit(models.Model):
         if not source_location or not product:
             return 0.0
 
-        quants = self.env["stock.quant"].search([
-            ("location_id", "child_of", source_location.id),
-            ("product_id", "=", product.id),
-        ])
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+            ]
+        )
         return sum(quants.mapped("quantity"))
 
     def _find_visit_line_for_product(self, product):
@@ -108,13 +122,14 @@ class RouteVisit(models.Model):
         line = self._find_visit_line_for_product(product)
 
         if line:
-            new_counted_qty = (line.counted_qty or 0.0) + 1.0
             line.write({
-                "counted_qty": new_counted_qty,
+                "counted_qty": (line.counted_qty or 0.0) + 1.0,
                 "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
             })
         else:
             line = RouteVisitLine.create([self._prepare_visit_line_from_scan(product)])
+
+        self.last_scanned_barcode = barcode
 
         if self.visit_process_state == "checked_in":
             self.visit_process_state = "counting"
