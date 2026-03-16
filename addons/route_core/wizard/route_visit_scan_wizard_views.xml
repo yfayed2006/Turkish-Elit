@@ -11,12 +11,14 @@
                         <field name="visit_id" readonly="1"/>
                         <field name="barcode" placeholder="Type or paste barcode here"/>
                         <field name="quantity"/>
+                        <field name="scanned_uom_id"/>
                     </group>
                     <group>
                         <field name="detected_product_id" readonly="1"/>
+                        <field name="base_uom_id" readonly="1"/>
                         <field name="detected_scan_type" readonly="1"/>
-                        <field name="detected_factor" readonly="1"/>
                         <field name="counted_increase" readonly="1"/>
+                        <field name="base_uom_category_id" invisible="1"/>
                     </group>
                 </group>
                 <group string="Last Scan Result">
