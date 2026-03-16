@@ -477,9 +477,6 @@
                                     <field name="return_qty"/>
                                     <field name="sold_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
-                                    <field name="new_balance_qty" readonly="1"/>
-                                    <field name="unit_price"/>
-                                    <field name="sold_amount" readonly="1"/>
                                     <field name="note"/>
                                 </list>
                             </field>
