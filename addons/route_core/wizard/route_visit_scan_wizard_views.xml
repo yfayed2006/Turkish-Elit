@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
+        <field name="name">route.visit.scan.wizard.form</field>
+        <field name="model">route.visit.scan.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Scan Barcode">
+                <group>
+                    <group>
+                        <field name="visit_id" readonly="1"/>
+                        <field name="barcode" placeholder="Type or paste barcode here"/>
+                    </group>
+                    <group>
+                        <field name="last_product_id" readonly="1"/>
+                        <field name="last_counted_qty" readonly="1"/>
+                    </group>
+                </group>
+                <footer>
+                    <button
+                        name="action_scan_and_add"
+                        type="object"
+                        string="Scan / Add"
+                        class="btn-primary"/>
+                    <button
+                        name="action_done"
+                        type="object"
+                        string="Done"
+                        class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
