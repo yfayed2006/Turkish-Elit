@@ -131,6 +131,12 @@ class RouteVisitLine(models.Model):
     return_confirmed = fields.Boolean(string="Return Confirmed", default=False)
     supply_confirmed = fields.Boolean(string="Supply Confirmed", default=False)
 
+    @api.onchange("product_id")
+    def _onchange_product_id_set_unit_price(self):
+        for line in self:
+            if line.product_id:
+                line.unit_price = line.product_id.lst_price or 0.0
+
     @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
     def _compute_quantities(self):
         for line in self:
@@ -155,6 +161,22 @@ class RouteVisitLine(models.Model):
             line.return_amount = line.return_qty * line.unit_price
             line.supply_value = line.supplied_qty * line.unit_price
             line.new_balance_value = line.new_balance_qty * line.unit_price
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            product_id = vals.get("product_id")
+            if product_id and not vals.get("unit_price"):
+                product = self.env["product.product"].browse(product_id)
+                vals["unit_price"] = product.lst_price or 0.0
+        return super().create(vals_list)
+
+    def write(self, vals):
+        vals = dict(vals or {})
+        if vals.get("product_id") and not vals.get("unit_price"):
+            product = self.env["product.product"].browse(vals["product_id"])
+            vals["unit_price"] = product.lst_price or 0.0
+        return super().write(vals)
 
     @api.constrains("previous_qty", "counted_qty", "return_qty", "supplied_qty", "unit_price")
     def _check_non_negative_values(self):
