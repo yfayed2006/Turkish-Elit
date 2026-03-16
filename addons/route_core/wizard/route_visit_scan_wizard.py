@@ -28,13 +28,26 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
-    detected_scan_type = fields.Char(
-        string="Detected Type",
+    base_uom_id = fields.Many2one(
+        "uom.uom",
+        string="Base UoM",
         readonly=True,
     )
 
-    detected_factor = fields.Float(
-        string="Units per Scan",
+    scanned_uom_id = fields.Many2one(
+        "uom.uom",
+        string="Count As UoM",
+        domain="[('category_id', '=', base_uom_category_id)]",
+    )
+
+    base_uom_category_id = fields.Many2one(
+        "uom.category",
+        string="Base UoM Category",
+        readonly=True,
+    )
+
+    detected_scan_type = fields.Char(
+        string="Detected Source",
         readonly=True,
     )
 
@@ -54,29 +67,39 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
-    @api.onchange("barcode", "quantity", "visit_id")
+    @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id")
     def _onchange_barcode_preview(self):
         for rec in self:
             rec.detected_product_id = False
+            rec.base_uom_id = False
+            rec.base_uom_category_id = False
             rec.detected_scan_type = False
-            rec.detected_factor = 0.0
             rec.counted_increase = 0.0
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
+                rec.scanned_uom_id = False
                 continue
 
             try:
                 scan_info = rec.visit_id._resolve_scanned_barcode(rec.barcode)
-            except Exception:
+            except UserError:
+                rec.scanned_uom_id = False
                 continue
 
-            factor = scan_info["factor"] or 1.0
-            qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
-
-            rec.detected_product_id = scan_info["product"].id
+            product = scan_info["product"]
+            rec.detected_product_id = product.id
+            rec.base_uom_id = product.uom_id.id
+            rec.base_uom_category_id = product.uom_id.category_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
-            rec.detected_factor = factor
-            rec.counted_increase = qty * factor
+
+            if not rec.scanned_uom_id or rec.scanned_uom_id.category_id != product.uom_id.category_id:
+                rec.scanned_uom_id = product.uom_id.id
+
+            qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
+            if qty and rec.scanned_uom_id:
+                rec.counted_increase = rec.scanned_uom_id._compute_quantity(qty, product.uom_id)
+            else:
+                rec.counted_increase = 0.0
 
     def action_scan_and_add(self):
         self.ensure_one()
@@ -93,8 +116,10 @@ class RouteVisitScanWizard(models.TransientModel):
         result = self.visit_id._process_scanned_barcode(
             self.barcode,
             scan_qty=self.quantity,
+            scanned_uom=self.scanned_uom_id,
         )
         line = result["line"]
+        product = result["product"]
 
         return {
             "type": "ir.actions.act_window",
@@ -107,9 +132,11 @@ class RouteVisitScanWizard(models.TransientModel):
                 "default_quantity": 1.0,
                 "default_last_product_id": line.product_id.id,
                 "default_last_counted_qty": line.counted_qty,
-                "default_detected_product_id": line.product_id.id,
+                "default_detected_product_id": product.id,
+                "default_base_uom_id": product.uom_id.id,
+                "default_base_uom_category_id": product.uom_id.category_id.id,
+                "default_scanned_uom_id": product.uom_id.id,
                 "default_detected_scan_type": False,
-                "default_detected_factor": 0.0,
                 "default_counted_increase": 0.0,
             },
         }
