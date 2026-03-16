@@ -27,16 +27,17 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        Packaging = self.env["product.packaging"]
+        empty_packaging = False
 
-        # Only try packaging barcode if that field really exists in this database
-        if "barcode" in Packaging._fields:
+        # Try packaging only if the model actually exists in this database
+        if "product.packaging" in self.env.registry.models:
+            Packaging = self.env["product.packaging"]
             packaging = Packaging.search(
                 [("barcode", "=", barcode)],
                 limit=1,
             )
-            if packaging and packaging.product_id:
-                factor = packaging.qty or 1.0
+            if packaging and getattr(packaging, "product_id", False):
+                factor = getattr(packaging, "qty", 1.0) or 1.0
                 return {
                     "product": packaging.product_id,
                     "scan_type": "packaging",
@@ -44,6 +45,8 @@ class RouteVisit(models.Model):
                     "factor": factor,
                     "packaging": packaging,
                 }
+
+            empty_packaging = Packaging.browse()
 
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
@@ -55,7 +58,7 @@ class RouteVisit(models.Model):
                 "scan_type": "unit",
                 "scan_type_label": _("Unit"),
                 "factor": 1.0,
-                "packaging": self.env["product.packaging"],
+                "packaging": empty_packaging,
             }
 
         raise UserError(
