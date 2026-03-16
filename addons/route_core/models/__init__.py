@@ -16,3 +16,5 @@ from . import route_plan_pda
 from . import route_vehicle_location_ext
 from . import route_outlet_location_ext
 from . import route_visit_stock_ext
+from . import stock_picking_route_visit_ext
+from . import route_visit_picking_ext
