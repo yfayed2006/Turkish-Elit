@@ -1,1 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
 
+    <record id="view_route_visit_form_scan_ext" model="ir.ui.view">
+        <field name="name">route.visit.form.scan.ext</field>
+        <field name="model">route.visit</field>
+        <field name="inherit_id" ref="route_core.view_route_visit_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//form/sheet" position="inside">
+                <group string="Quick Scan">
+                    <group>
+                        <field
+                            name="scan_barcode_input"
+                            placeholder="Type or paste barcode here"/>
+                        <field
+                            name="last_scanned_barcode"
+                            readonly="1"/>
+                    </group>
+                    <group>
+                        <button
+                            name="action_scan_barcode_input"
+                            type="object"
+                            string="Scan / Add"
+                            class="btn-primary"
+                            invisible="visit_process_state not in ('checked_in', 'counting', 'reconciled')"/>
+                    </group>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
