@@ -42,7 +42,7 @@
                         name="action_set_checked_in"
                         string="Check In"
                         type="object"
-                        invisible="visit_process_state != 'pending'"
+                        invisible="visit_process_state != 'pending' or line_ids"
                     />
                     <button
                         name="action_set_counting"
@@ -76,12 +76,6 @@
                         type="object"
                         class="btn-secondary"
                         invisible="visit_process_state != 'collection_done'"
-                    />
-                    <button
-                        name="action_set_ready_to_close"
-                        string="Ready To Close"
-                        type="object"
-                        invisible="visit_process_state != 'refill_done'"
                     />
                     <button
                         name="action_set_done_process"
