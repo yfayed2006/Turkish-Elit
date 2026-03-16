@@ -7,25 +7,13 @@
         <field name="inherit_id" ref="route_core.view_route_visit_form"/>
         <field name="arch" type="xml">
 
-            <xpath expr="//form/sheet" position="inside">
-                <group string="Quick Scan">
-                    <group>
-                        <field
-                            name="scan_barcode_input"
-                            placeholder="Type or paste barcode here"/>
-                        <field
-                            name="last_scanned_barcode"
-                            readonly="1"/>
-                    </group>
-                    <group>
-                        <button
-                            name="action_scan_barcode_input"
-                            type="object"
-                            string="Scan / Add"
-                            class="btn-primary"
-                            invisible="visit_process_state not in ('checked_in', 'counting', 'reconciled')"/>
-                    </group>
-                </group>
+            <xpath expr="//form/header" position="inside">
+                <button
+                    name="action_open_scan_wizard"
+                    type="object"
+                    string="Scan Barcode"
+                    class="btn-primary"
+                    invisible="visit_process_state not in ('checked_in', 'counting', 'reconciled')"/>
             </xpath>
 
         </field>
