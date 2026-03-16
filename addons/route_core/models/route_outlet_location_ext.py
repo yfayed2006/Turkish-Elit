@@ -11,3 +11,11 @@ class RouteOutlet(models.Model):
         ondelete="restrict",
         help="Internal stock location used for this outlet consignment/location mapping.",
     )
+
+    def get_stock_location(self):
+        self.ensure_one()
+        return self.stock_location_id
+
+    def has_stock_location(self):
+        self.ensure_one()
+        return bool(self.stock_location_id)
