@@ -28,6 +28,15 @@
         <field name="model">route.plan</field>
         <field name="arch" type="xml">
             <form string="Route Plan">
+                <header>
+                    <button
+                        name="action_open_pda_screen"
+                        type="object"
+                        string="PDA Screen"
+                        class="btn-primary"
+                    />
+                </header>
+
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button
