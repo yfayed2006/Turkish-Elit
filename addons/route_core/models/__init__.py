@@ -5,3 +5,6 @@ from . import route_plan_line
 from . import route_vehicle
 from . import route_visit
 from . import sale_order
+from . import route_visit_line
+from . import route_visit_payment
+from . import outlet_stock_balance
