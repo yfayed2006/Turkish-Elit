@@ -31,18 +31,72 @@
         <field name="arch" type="xml">
             <form string="Route Visit" create="0" delete="0">
                 <header>
-                    <button name="action_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary"/>
-                    <button name="action_confirm_all_payments" string="Confirm All Payments" type="object" class="btn-primary"/>
-                    <button name="action_skip_collection" string="Skip Collection" type="object" class="btn-secondary"/>
-                    <button name="action_update_outlet_balance" string="Update Outlet Balance" type="object" class="btn-secondary"/>
-                    <button name="action_set_checked_in" string="Check In" type="object"/>
-                    <button name="action_set_counting" string="Start Count" type="object"/>
-                    <button name="action_set_reconciled" string="Reconcile" type="object"/>
-                    <button name="action_set_collection_done" string="Collection Done" type="object"/>
-                    <button name="action_set_refill_done" string="Refill Done" type="object"/>
-                    <button name="action_set_ready_to_close" string="Ready To Close" type="object"/>
-                    <button name="action_set_done_process" string="Finish Process" type="object" class="btn-success"/>
-                    <button name="action_set_cancelled_process" string="Cancel Process" type="object" class="btn-secondary"/>
+                    <button
+                        name="action_load_previous_balance"
+                        string="Load Previous Balance"
+                        type="object"
+                        class="btn-primary"
+                        invisible="line_ids or visit_process_state in ('done', 'cancelled')"
+                    />
+                    <button
+                        name="action_set_checked_in"
+                        string="Check In"
+                        type="object"
+                        invisible="visit_process_state != 'pending'"
+                    />
+                    <button
+                        name="action_set_counting"
+                        string="Start Count"
+                        type="object"
+                        invisible="visit_process_state != 'checked_in'"
+                    />
+                    <button
+                        name="action_set_reconciled"
+                        string="Reconcile"
+                        type="object"
+                        invisible="visit_process_state != 'counting'"
+                    />
+                    <button
+                        name="action_confirm_all_payments"
+                        string="Confirm All Payments"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+                    <button
+                        name="action_skip_collection"
+                        string="Skip Collection"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+                    <button
+                        name="action_update_outlet_balance"
+                        string="Update Outlet Balance"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'collection_done'"
+                    />
+                    <button
+                        name="action_set_ready_to_close"
+                        string="Ready To Close"
+                        type="object"
+                        invisible="visit_process_state != 'refill_done'"
+                    />
+                    <button
+                        name="action_set_done_process"
+                        string="Finish Process"
+                        type="object"
+                        class="btn-success"
+                        invisible="visit_process_state != 'ready_to_close'"
+                    />
+                    <button
+                        name="action_set_cancelled_process"
+                        string="Cancel Process"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state in ('done', 'cancelled')"
+                    />
 
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
                 </header>
