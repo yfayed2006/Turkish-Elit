@@ -20,6 +20,19 @@ class RouteVisit(models.Model):
         readonly=True,
     )
 
+    source_location_id = fields.Many2one(
+        "stock.location",
+        string="Source Location",
+        domain="[('usage', '=', 'internal')]",
+    )
+
+    refill_backorder_id = fields.Many2one(
+        "route.refill.backorder",
+        string="Pending Refill",
+        readonly=True,
+        copy=False,
+    )
+
     check_in_datetime = fields.Datetime(string="Check In")
     count_start_datetime = fields.Datetime(string="Count Start")
     count_end_datetime = fields.Datetime(string="Count End")
@@ -74,6 +87,11 @@ class RouteVisit(models.Model):
     )
     new_balance_total_qty = fields.Float(
         string="New Balance Total Qty",
+        compute="_compute_visit_totals",
+        store=True,
+    )
+    pending_refill_total_qty = fields.Float(
+        string="Pending Refill Total Qty",
         compute="_compute_visit_totals",
         store=True,
     )
@@ -154,6 +172,11 @@ class RouteVisit(models.Model):
         compute="_compute_flags",
         store=True,
     )
+    has_pending_refill = fields.Boolean(
+        string="Has Pending Refill",
+        compute="_compute_flags",
+        store=True,
+    )
     is_ready_to_close = fields.Boolean(
         string="Ready To Close",
         compute="_compute_flags",
@@ -184,6 +207,7 @@ class RouteVisit(models.Model):
         "line_ids.sold_qty",
         "line_ids.supplied_qty",
         "line_ids.new_balance_qty",
+        "line_ids.pending_refill_qty",
         "line_ids.previous_value",
         "line_ids.counted_value",
         "line_ids.sold_amount",
@@ -200,6 +224,7 @@ class RouteVisit(models.Model):
             rec.sold_total_qty = sum(rec.line_ids.mapped("sold_qty"))
             rec.supplied_total_qty = sum(rec.line_ids.mapped("supplied_qty"))
             rec.new_balance_total_qty = sum(rec.line_ids.mapped("new_balance_qty"))
+            rec.pending_refill_total_qty = sum(rec.line_ids.mapped("pending_refill_qty"))
 
             rec.previous_stock_value = sum(rec.line_ids.mapped("previous_value"))
             rec.counted_stock_value = sum(rec.line_ids.mapped("counted_value"))
@@ -223,7 +248,7 @@ class RouteVisit(models.Model):
         "payment_ids.state",
         "line_ids.return_qty",
         "line_ids.supplied_qty",
-        "line_ids.counted_qty",
+        "line_ids.pending_refill_qty",
         "visit_process_state",
         "collection_skip_reason",
         "refill_datetime",
@@ -233,9 +258,58 @@ class RouteVisit(models.Model):
             rec.has_collection = any(p.state == "confirmed" for p in rec.payment_ids)
             rec.has_returns = any(qty > 0 for qty in rec.line_ids.mapped("return_qty"))
             rec.has_refill = any(qty > 0 for qty in rec.line_ids.mapped("supplied_qty"))
+            rec.has_pending_refill = any(qty > 0 for qty in rec.line_ids.mapped("pending_refill_qty"))
             rec.is_ready_to_close = bool(rec.line_ids) and bool(rec.refill_datetime) and (
                 rec.has_collection or bool(rec.collection_skip_reason)
             )
+
+    def _get_available_qty_in_source_location(self, product):
+        self.ensure_one()
+        if not self.source_location_id:
+            return 0.0
+
+        quants = self.env["stock.quant"].search([
+            ("location_id", "child_of", self.source_location_id.id),
+            ("product_id", "=", product.id),
+        ])
+        return sum(quants.mapped("quantity"))
+
+    def _create_pending_refill_backorder(self):
+        self.ensure_one()
+
+        pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
+        if not pending_lines:
+            return False
+
+        if self.refill_backorder_id:
+            return self.refill_backorder_id
+
+        backorder = self.env["route.refill.backorder"].create({
+            "visit_id": self.id,
+            "outlet_id": self.outlet_id.id,
+            "partner_id": self.partner_id.id,
+            "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+            "source_location_id": self.source_location_id.id if self.source_location_id else False,
+            "company_id": self.company_id.id,
+            "note": "Created automatically from route visit pending refill.",
+        })
+
+        line_vals = []
+        for line in pending_lines:
+            line_vals.append({
+                "backorder_id": backorder.id,
+                "product_id": line.product_id.id,
+                "needed_qty": line.sold_qty,
+                "available_qty_at_visit": line.vehicle_available_qty,
+                "delivered_qty": line.supplied_qty,
+                "pending_qty": line.pending_refill_qty,
+                "unit_price": line.unit_price,
+                "note": line.note,
+            })
+
+        self.env["route.refill.backorder.line"].create(line_vals)
+        self.refill_backorder_id = backorder.id
+        return backorder
 
     def action_load_previous_balance(self):
         OutletStockBalance = self.env["outlet.stock.balance"]
@@ -280,6 +354,25 @@ class RouteVisit(models.Model):
                 "visit_process_state": "checked_in",
                 "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
             })
+
+    def action_generate_refill_proposal(self):
+        for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError("Refill proposal can only be generated when the visit is in Reconciled state.")
+
+            if not rec.line_ids:
+                raise UserError("There are no visit lines to generate a refill proposal.")
+
+            if not rec.source_location_id:
+                raise UserError("Please select Source Location before generating refill proposal.")
+
+            for line in rec.line_ids:
+                available_qty = rec._get_available_qty_in_source_location(line.product_id)
+                proposed_qty = min(line.sold_qty, available_qty) if line.sold_qty > 0 else 0.0
+                line.write({
+                    "vehicle_available_qty": available_qty,
+                    "supplied_qty": proposed_qty,
+                })
 
     def action_confirm_all_payments(self):
         for rec in self:
@@ -393,48 +486,13 @@ class RouteVisit(models.Model):
                 "reconciliation_datetime": fields.Datetime.now(),
             })
 
-    def action_set_collection_done(self):
-        for rec in self:
-            if rec.visit_process_state != "reconciled":
-                raise UserError("Collection Done is only allowed after Reconcile.")
-
-            rec.write({
-                "visit_process_state": "collection_done",
-                "collection_datetime": fields.Datetime.now(),
-            })
-
-    def action_set_refill_done(self):
-        for rec in self:
-            if rec.visit_process_state != "collection_done":
-                raise UserError("Refill Done is only allowed after Collection Done.")
-
-            rec.write({
-                "visit_process_state": "refill_done",
-                "refill_datetime": fields.Datetime.now(),
-            })
-
-    def action_set_ready_to_close(self):
-        for rec in self:
-            if rec.visit_process_state != "refill_done":
-                raise UserError("Ready To Close is only allowed after Refill Done.")
-
-            if not rec.line_ids:
-                raise UserError("You cannot close a visit without visit lines.")
-
-            if not rec.refill_datetime:
-                raise UserError("Please update outlet balance before moving to Ready To Close.")
-
-            if not (rec.has_collection or rec.collection_skip_reason):
-                raise UserError("Please confirm payments or enter Collection Skip Reason before closing.")
-
-            rec.write({
-                "visit_process_state": "ready_to_close",
-            })
-
     def action_set_done_process(self):
         for rec in self:
             if rec.visit_process_state != "ready_to_close":
                 raise UserError("Finish Process is only allowed when the visit is Ready To Close.")
+
+            if rec.has_pending_refill and not rec.refill_backorder_id:
+                rec._create_pending_refill_backorder()
 
             rec.write({
                 "visit_process_state": "done",
