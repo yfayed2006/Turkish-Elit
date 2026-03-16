@@ -96,4 +96,30 @@ class RouteVisit(models.Model):
             "default_location_id": self._get_vehicle_stock_location().id,
             "default_location_dest_id": self._get_outlet_stock_location().id,
         }
+
+        if self.picking_count == 1:
+            action["res_id"] = self.picking_ids[:1].id
+            action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+
+        return action
+
+    def action_prepare_stock_transfer(self):
+        self.ensure_one()
+
+        if self.state != "in_progress":
+            raise UserError(
+                _("You can only prepare stock transfer when the visit is in progress.")
+            )
+
+        picking = self._create_route_internal_picking_with_moves()
+
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["res_id"] = picking.id
+        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        action["context"] = {
+            "default_route_visit_id": self.id,
+            "default_picking_type_id": picking.picking_type_id.id,
+            "default_location_id": picking.location_id.id,
+            "default_location_dest_id": picking.location_dest_id.id,
+        }
         return action
