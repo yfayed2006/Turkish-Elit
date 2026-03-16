@@ -355,7 +355,7 @@ class RouteVisit(models.Model):
                     })
 
             rec.write({
-                "visit_process_state": "refill_done",
+                "visit_process_state": "ready_to_close",
                 "refill_datetime": fields.Datetime.now(),
             })
 
