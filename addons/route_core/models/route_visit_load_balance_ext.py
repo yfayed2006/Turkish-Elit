@@ -7,6 +7,38 @@ from odoo.exceptions import UserError
 class RouteVisit(models.Model):
     _inherit = "route.visit"
 
+    def _get_default_source_location(self):
+        self.ensure_one()
+        return self.source_location_id or self.vehicle_id.stock_location_id
+
+    def _sync_source_location_from_vehicle(self):
+        for rec in self:
+            source_location = rec._get_default_source_location()
+            if source_location and rec.source_location_id != source_location:
+                rec.source_location_id = source_location
+
+    def _get_vehicle_available_qty_for_product(self, product):
+        self.ensure_one()
+
+        source_location = self._get_default_source_location()
+        if not source_location or not product:
+            return 0.0
+
+        quants = self.env["stock.quant"].search([
+            ("location_id", "child_of", source_location.id),
+            ("product_id", "=", product.id),
+        ])
+        return sum(quants.mapped("quantity"))
+
+    def _update_vehicle_available_on_lines(self, lines=None):
+        for rec in self:
+            rec._sync_source_location_from_vehicle()
+            target_lines = lines if lines is not None else rec.line_ids
+            for line in target_lines.filtered(lambda l: l.product_id):
+                line.vehicle_available_qty = rec._get_vehicle_available_qty_for_product(
+                    line.product_id
+                )
+
     def _get_outlet_previous_balance_from_stock_location(self):
         self.ensure_one()
 
@@ -77,15 +109,27 @@ class RouteVisit(models.Model):
 
         for rec in self:
             if rec.visit_process_state not in ("pending",):
-                raise UserError(_("Previous balance can only be loaded while the visit is Pending."))
+                raise UserError(
+                    _("Previous balance can only be loaded while the visit is Pending.")
+                )
 
             if not rec.outlet_id:
                 raise UserError(_("Please set an outlet before loading previous balance."))
+
+            if not rec.vehicle_id:
+                raise UserError(_("Please set a vehicle before loading previous balance."))
+
+            if not rec.vehicle_id.stock_location_id:
+                raise UserError(
+                    _("The selected vehicle does not have a Vehicle Stock Location.")
+                )
 
             if rec.line_ids:
                 raise UserError(_(
                     "This visit already has lines. Remove existing lines first if you want to reload previous balance."
                 ))
+
+            rec._sync_source_location_from_vehicle()
 
             balance_rows = rec._get_outlet_previous_balance_from_stock_location()
 
@@ -98,9 +142,7 @@ class RouteVisit(models.Model):
                         "No previous stock balance was found for this outlet. "
                         "The linked outlet stock location exists, but no positive quantities were found in it."
                     ))
-                raise UserError(_(
-                    "No previous stock balance was found for this outlet."
-                ))
+                raise UserError(_("No previous stock balance was found for this outlet."))
 
             if (
                 hasattr(rec.outlet_id, "default_commission_rate")
@@ -110,17 +152,46 @@ class RouteVisit(models.Model):
 
             line_vals_list = []
             for row in balance_rows:
+                product = self.env["product.product"].browse(row["product_id"])
+                vehicle_available_qty = rec._get_vehicle_available_qty_for_product(product)
+
                 line_vals_list.append({
                     "visit_id": rec.id,
                     "company_id": rec.company_id.id,
                     "product_id": row["product_id"],
                     "previous_qty": row["qty"],
                     "unit_price": row["unit_price"],
+                    "vehicle_available_qty": vehicle_available_qty,
                 })
 
-            RouteVisitLine.create(line_vals_list)
+            created_lines = RouteVisitLine.create(line_vals_list)
+            rec._update_vehicle_available_on_lines(created_lines)
 
             rec.write({
                 "visit_process_state": "checked_in",
                 "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
             })
+
+    def action_generate_refill_proposal(self):
+        for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError(
+                    _("Refill proposal can only be generated when the visit is in Reconciled state.")
+                )
+
+            if not rec.line_ids:
+                raise UserError(_("There are no visit lines to generate a refill proposal."))
+
+            rec._sync_source_location_from_vehicle()
+
+            if not rec.source_location_id:
+                raise UserError(_("Please select Source Location before generating refill proposal."))
+
+            rec._update_vehicle_available_on_lines()
+
+            for line in rec.line_ids:
+                available_qty = line.vehicle_available_qty
+                proposed_qty = min(line.sold_qty, available_qty) if line.sold_qty > 0 else 0.0
+                line.write({
+                    "supplied_qty": proposed_qty,
+                })
