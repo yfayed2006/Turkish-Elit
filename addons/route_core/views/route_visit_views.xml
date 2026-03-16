@@ -13,10 +13,14 @@
                 <field name="area_id"/>
                 <field name="vehicle_id"/>
                 <field name="user_id"/>
+                <field name="visit_process_state" widget="badge"/>
                 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
                 <field name="sale_order_id"/>
                 <field name="start_datetime"/>
                 <field name="end_datetime"/>
+                <field name="net_due_amount"/>
+                <field name="collected_amount"/>
+                <field name="remaining_due_amount"/>
             </list>
         </field>
     </record>
@@ -25,8 +29,17 @@
         <field name="name">route.visit.form</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <form string="Route Visit" edit="0" create="0" delete="0">
+            <form string="Route Visit" create="0" delete="0">
                 <header>
+                    <button name="action_set_checked_in" string="Check In" type="object" class="btn-primary"/>
+                    <button name="action_set_counting" string="Start Count" type="object"/>
+                    <button name="action_set_reconciled" string="Reconcile" type="object"/>
+                    <button name="action_set_collection_done" string="Collection Done" type="object"/>
+                    <button name="action_set_refill_done" string="Refill Done" type="object"/>
+                    <button name="action_set_ready_to_close" string="Ready To Close" type="object"/>
+                    <button name="action_set_done_process" string="Finish Process" type="object" class="btn-success"/>
+                    <button name="action_set_cancelled_process" string="Cancel Process" type="object" class="btn-secondary"/>
+
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancel"/>
                 </header>
 
@@ -53,18 +66,109 @@
                             <field name="vehicle_id" readonly="1"/>
                             <field name="user_id" readonly="1"/>
                             <field name="state" readonly="1"/>
+                            <field name="visit_process_state"/>
                         </group>
                         <group>
                             <field name="sale_order_id" readonly="1"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
+                            <field name="check_in_datetime" readonly="1"/>
+                            <field name="count_start_datetime" readonly="1"/>
+                            <field name="count_end_datetime" readonly="1"/>
+                            <field name="reconciliation_datetime" readonly="1"/>
+                            <field name="collection_datetime" readonly="1"/>
+                            <field name="refill_datetime" readonly="1"/>
+                            <field name="check_out_datetime" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Visit Process">
+                        <group>
+                            <field name="commission_rate"/>
+                            <field name="no_refill"/>
+                            <field name="has_collection" readonly="1"/>
+                            <field name="has_returns" readonly="1"/>
+                            <field name="has_refill" readonly="1"/>
+                            <field name="is_ready_to_close" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="collection_skip_reason"/>
+                            <field name="no_refill_reason" invisible="not no_refill"/>
+                            <field name="cancel_reason"/>
                         </group>
                     </group>
 
                     <notebook>
-                        <page string="Notes">
-                            <field name="notes" placeholder="Internal notes..." readonly="1"/>
+                        <page string="Visit Lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="previous_qty"/>
+                                    <field name="counted_qty"/>
+                                    <field name="return_qty"/>
+                                    <field name="sold_qty" readonly="1"/>
+                                    <field name="supplied_qty"/>
+                                    <field name="new_balance_qty" readonly="1"/>
+                                    <field name="unit_price"/>
+                                    <field name="sold_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                    <field name="supply_value" readonly="1"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
                         </page>
+
+                        <page string="Payments">
+                            <field name="payment_ids">
+                                <list editable="bottom">
+                                    <field name="payment_date"/>
+                                    <field name="payment_mode"/>
+                                    <field name="amount"/>
+                                    <field name="reference"/>
+                                    <field name="bank_name"/>
+                                    <field name="pos_terminal"/>
+                                    <field name="state"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Summary">
+                            <group string="Quantity Summary">
+                                <group>
+                                    <field name="previous_total_qty" readonly="1"/>
+                                    <field name="counted_total_qty" readonly="1"/>
+                                    <field name="returned_total_qty" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="sold_total_qty" readonly="1"/>
+                                    <field name="supplied_total_qty" readonly="1"/>
+                                    <field name="new_balance_total_qty" readonly="1"/>
+                                </group>
+                            </group>
+
+                            <group string="Financial Summary">
+                                <group>
+                                    <field name="previous_stock_value" readonly="1"/>
+                                    <field name="counted_stock_value" readonly="1"/>
+                                    <field name="gross_sales_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                    <field name="commission_amount" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="net_due_amount" readonly="1"/>
+                                    <field name="collected_amount" readonly="1"/>
+                                    <field name="remaining_due_amount" readonly="1"/>
+                                    <field name="supplied_value" readonly="1"/>
+                                    <field name="new_balance_value" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+
                         <page string="No Sale Reason" invisible="not no_sale_reason">
                             <field name="no_sale_reason" readonly="1"/>
                         </page>
@@ -88,6 +192,7 @@
                 <field name="vehicle_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
+                <field name="visit_process_state"/>
 
                 <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
                 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
@@ -95,6 +200,16 @@
                 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
                 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
                 <filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+
+                <separator/>
+
+                <filter name="filter_process_pending" string="Process Pending" domain="[('visit_process_state', '=', 'pending')]"/>
+                <filter name="filter_process_checked_in" string="Checked In" domain="[('visit_process_state', '=', 'checked_in')]"/>
+                <filter name="filter_process_counting" string="Counting" domain="[('visit_process_state', '=', 'counting')]"/>
+                <filter name="filter_process_reconciled" string="Reconciled" domain="[('visit_process_state', '=', 'reconciled')]"/>
+                <filter name="filter_process_collection_done" string="Collection Done" domain="[('visit_process_state', '=', 'collection_done')]"/>
+                <filter name="filter_process_refill_done" string="Refill Done" domain="[('visit_process_state', '=', 'refill_done')]"/>
+                <filter name="filter_process_ready_to_close" string="Ready To Close" domain="[('visit_process_state', '=', 'ready_to_close')]"/>
             </search>
         </field>
     </record>
@@ -109,13 +224,13 @@
                 'search_default_filter_my_visits': 1,
                 'search_default_filter_today': 1,
                 'create': 0,
-                'edit': 0,
+                'edit': 1,
                 'delete': 0
             }
         </field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Visit History is for review only.
+                Visit History is for review and operational settlement.
             </p>
         </field>
     </record>
