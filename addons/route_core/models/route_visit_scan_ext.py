@@ -1,21 +1,9 @@
-from odoo import fields, models, _
+from odoo import models, _
 from odoo.exceptions import UserError
 
 
 class RouteVisit(models.Model):
     _inherit = "route.visit"
-
-    scan_barcode_input = fields.Char(
-        string="Scan Barcode",
-        copy=False,
-        help="Type or paste a barcode here, then click Scan / Add.",
-    )
-
-    last_scanned_barcode = fields.Char(
-        string="Last Scanned Barcode",
-        readonly=True,
-        copy=False,
-    )
 
     def _get_scan_source_location(self):
         self.ensure_one()
@@ -85,54 +73,64 @@ class RouteVisit(models.Model):
             "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
         }
 
-    def action_scan_barcode_input(self):
+    def _process_scanned_barcode(self, barcode):
+        self.ensure_one()
+
         RouteVisitLine = self.env["route.visit.line"]
 
-        for rec in self:
-            if rec.visit_process_state not in ("checked_in", "counting", "reconciled"):
-                raise UserError(
-                    _(
-                        "Barcode scanning is only allowed when the visit is Checked In, Counting, or Reconciled."
-                    )
+        if self.visit_process_state not in ("checked_in", "counting", "reconciled"):
+            raise UserError(
+                _(
+                    "Barcode scanning is only allowed when the visit is Checked In, Counting, or Reconciled."
                 )
+            )
 
-            if not rec.vehicle_id:
-                raise UserError(_("Please set a vehicle before scanning."))
+        if not self.vehicle_id:
+            raise UserError(_("Please set a vehicle before scanning."))
 
-            if not rec.vehicle_id.stock_location_id:
-                raise UserError(_("The selected vehicle does not have a Vehicle Stock Location."))
+        if not self.vehicle_id.stock_location_id:
+            raise UserError(_("The selected vehicle does not have a Vehicle Stock Location."))
 
-            rec._sync_source_location_from_vehicle()
+        self._sync_source_location_from_vehicle()
 
-            if not rec.source_location_id:
-                raise UserError(_("No source location is available for this visit."))
+        if not self.source_location_id:
+            raise UserError(_("No source location is available for this visit."))
 
-            barcode = (rec.scan_barcode_input or "").strip()
-            product = rec._get_product_from_scanned_barcode(barcode)
+        barcode = (barcode or "").strip()
+        product = self._get_product_from_scanned_barcode(barcode)
 
-            if not rec._is_product_available_in_vehicle(product):
-                raise UserError(
-                    _(
-                        "Product '%s' is not currently available in the van stock."
-                    )
-                    % product.display_name
-                )
+        if not self._is_product_available_in_vehicle(product):
+            raise UserError(
+                _("Product '%s' is not currently available in the van stock.")
+                % product.display_name
+            )
 
-            line = rec._find_visit_line_for_product(product)
+        line = self._find_visit_line_for_product(product)
 
-            if line:
-                new_counted_qty = (line.counted_qty or 0.0) + 1.0
-                line.write({
-                    "counted_qty": new_counted_qty,
-                    "vehicle_available_qty": rec._get_vehicle_available_qty_for_scan_product(product),
-                })
-            else:
-                line = RouteVisitLine.create([rec._prepare_visit_line_from_scan(product)])
+        if line:
+            new_counted_qty = (line.counted_qty or 0.0) + 1.0
+            line.write({
+                "counted_qty": new_counted_qty,
+                "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+            })
+        else:
+            line = RouteVisitLine.create([self._prepare_visit_line_from_scan(product)])
 
-            rec.last_scanned_barcode = barcode
-            rec.scan_barcode_input = False
+        if self.visit_process_state == "checked_in":
+            self.visit_process_state = "counting"
 
-            if rec.visit_process_state == "checked_in":
-                rec.visit_process_state = "counting"
+        return line
 
-        return True
+    def action_open_scan_wizard(self):
+        self.ensure_one()
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Scan Barcode"),
+            "res_model": "route.visit.scan.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
