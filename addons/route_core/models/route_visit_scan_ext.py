@@ -5,7 +5,7 @@ from odoo.exceptions import UserError
 class RouteVisit(models.Model):
     _inherit = "route.visit"
 
-    # Keep these fields for compatibility with any existing inherited views
+    # Compatibility fields for any older inherited views
     scan_barcode_input = fields.Char(
         string="Scan Barcode",
         copy=False,
@@ -135,6 +135,12 @@ class RouteVisit(models.Model):
             self.visit_process_state = "counting"
 
         return line
+
+    def action_scan_barcode_input(self):
+        for rec in self:
+            rec._process_scanned_barcode(rec.scan_barcode_input)
+            rec.scan_barcode_input = False
+        return True
 
     def action_open_scan_wizard(self):
         self.ensure_one()
