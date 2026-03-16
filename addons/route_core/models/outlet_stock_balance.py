@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -33,7 +33,11 @@ class OutletStockBalance(models.Model):
 
     qty = fields.Float(string="Quantity", default=0.0, required=True)
 
-    unit_price = fields.Monetary(string="Unit Price", currency_field="currency_id", default=0.0)
+    unit_price = fields.Monetary(
+        string="Unit Price",
+        currency_field="currency_id",
+        default=0.0,
+    )
 
     last_visit_id = fields.Many2one(
         "route.visit",
@@ -76,24 +80,21 @@ class OutletStockBalance(models.Model):
             result.append((rec.id, name))
         return result
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            vals.setdefault("last_updated_at", fields.Datetime.now())
+        return super().create(vals_list)
+
     def write(self, vals):
         vals = dict(vals or {})
         vals["last_updated_at"] = fields.Datetime.now()
         return super().write(vals)
 
-    @classmethod
-    def create(cls, vals_list):
-        for vals in vals_list:
-            vals.setdefault("last_updated_at", fields.Datetime.now())
-        return super().create(vals_list)
-
+    @api.constrains("qty", "unit_price")
     def _check_non_negative_qty_and_price(self):
         for rec in self:
             if rec.qty < 0:
                 raise ValidationError("Quantity cannot be negative.")
             if rec.unit_price < 0:
                 raise ValidationError("Unit Price cannot be negative.")
-
-    _constraints = [
-        (_check_non_negative_qty_and_price, "Quantity and Unit Price must be zero or greater.", ["qty", "unit_price"])
-    ]
