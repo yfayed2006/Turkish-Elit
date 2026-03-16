@@ -280,6 +280,33 @@ class RouteVisit(models.Model):
             if vals:
                 rec.write(vals)
 
+    def action_confirm_all_payments(self):
+        for rec in self:
+            if not rec.payment_ids:
+                raise UserError("There are no payments on this visit.")
+
+            draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft")
+            if not draft_payments:
+                raise UserError("There are no draft payments to confirm on this visit.")
+
+            for payment in draft_payments:
+                payment.action_confirm()
+
+            rec.write({
+                "visit_process_state": "collection_done",
+                "collection_datetime": fields.Datetime.now(),
+            })
+
+    def action_skip_collection(self):
+        for rec in self:
+            if not rec.collection_skip_reason:
+                raise UserError("Please enter Collection Skip Reason before skipping collection.")
+
+            rec.write({
+                "visit_process_state": "collection_done",
+                "collection_datetime": fields.Datetime.now(),
+            })
+
     def action_update_outlet_balance(self):
         OutletStockBalance = self.env["outlet.stock.balance"]
 
