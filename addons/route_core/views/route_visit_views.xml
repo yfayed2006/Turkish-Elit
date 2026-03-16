@@ -12,6 +12,7 @@
                 <field name="partner_id"/>
                 <field name="area_id"/>
                 <field name="vehicle_id"/>
+                <field name="source_location_id"/>
                 <field name="user_id"/>
                 <field name="visit_process_state" widget="badge"/>
                 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
@@ -55,6 +56,13 @@
                         string="Reconcile"
                         type="object"
                         invisible="visit_process_state != 'counting'"
+                    />
+                    <button
+                        name="action_generate_refill_proposal"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="visit_process_state != 'reconciled'"
                     />
                     <button
                         name="action_confirm_all_payments"
@@ -116,12 +124,14 @@
                             <field name="partner_id" readonly="1"/>
                             <field name="area_id" readonly="1"/>
                             <field name="vehicle_id" readonly="1"/>
+                            <field name="source_location_id"/>
                             <field name="user_id" readonly="1"/>
                             <field name="state" readonly="1"/>
                             <field name="visit_process_state"/>
                         </group>
                         <group>
                             <field name="sale_order_id" readonly="1"/>
+                            <field name="refill_backorder_id" readonly="1"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
@@ -141,6 +151,7 @@
                             <field name="has_collection" readonly="1"/>
                             <field name="has_returns" readonly="1"/>
                             <field name="has_refill" readonly="1"/>
+                            <field name="has_pending_refill" readonly="1"/>
                             <field name="is_ready_to_close" readonly="1"/>
                         </group>
                         <group>
@@ -160,7 +171,9 @@
                                     <field name="counted_qty"/>
                                     <field name="return_qty"/>
                                     <field name="sold_qty" readonly="1"/>
+                                    <field name="vehicle_available_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
+                                    <field name="pending_refill_qty" readonly="1"/>
                                     <field name="new_balance_qty" readonly="1"/>
                                     <field name="unit_price"/>
                                     <field name="sold_amount" readonly="1"/>
@@ -191,6 +204,7 @@
                                     <field name="previous_total_qty" readonly="1"/>
                                     <field name="counted_total_qty" readonly="1"/>
                                     <field name="returned_total_qty" readonly="1"/>
+                                    <field name="pending_refill_total_qty" readonly="1"/>
                                 </group>
                                 <group>
                                     <field name="sold_total_qty" readonly="1"/>
@@ -242,6 +256,7 @@
                 <field name="partner_id"/>
                 <field name="area_id"/>
                 <field name="vehicle_id"/>
+                <field name="source_location_id"/>
                 <field name="user_id"/>
                 <field name="date"/>
                 <field name="visit_process_state"/>
