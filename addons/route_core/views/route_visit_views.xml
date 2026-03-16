@@ -32,6 +32,8 @@
             <form string="Route Visit" create="0" delete="0">
                 <header>
                     <button name="action_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary"/>
+                    <button name="action_confirm_all_payments" string="Confirm All Payments" type="object" class="btn-primary"/>
+                    <button name="action_skip_collection" string="Skip Collection" type="object" class="btn-secondary"/>
                     <button name="action_update_outlet_balance" string="Update Outlet Balance" type="object" class="btn-secondary"/>
                     <button name="action_set_checked_in" string="Check In" type="object"/>
                     <button name="action_set_counting" string="Start Count" type="object"/>
