@@ -18,3 +18,5 @@ from . import route_outlet_location_ext
 from . import route_visit_stock_ext
 from . import stock_picking_route_visit_ext
 from . import route_visit_picking_ext
+from . import stock_move_route_visit_ext
+from . import route_visit_move_ext
