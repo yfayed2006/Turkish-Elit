@@ -31,7 +31,8 @@
         <field name="arch" type="xml">
             <form string="Route Visit" create="0" delete="0">
                 <header>
-                    <button name="action_set_checked_in" string="Check In" type="object" class="btn-primary"/>
+                    <button name="action_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary"/>
+                    <button name="action_set_checked_in" string="Check In" type="object"/>
                     <button name="action_set_counting" string="Start Count" type="object"/>
                     <button name="action_set_reconciled" string="Reconcile" type="object"/>
                     <button name="action_set_collection_done" string="Collection Done" type="object"/>
