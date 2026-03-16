@@ -18,15 +18,14 @@ class RouteVisitLine(models.Model):
     company_id = fields.Many2one(
         "res.company",
         string="Company",
-        related="visit_id.company_id",
-        store=True,
-        readonly=True,
+        default=lambda self: self.env.company,
+        required=True,
     )
 
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
-        related="visit_id.currency_id",
+        related="company_id.currency_id",
         store=True,
         readonly=True,
     )
@@ -80,7 +79,11 @@ class RouteVisitLine(models.Model):
         store=True,
     )
 
-    unit_price = fields.Monetary(string="Unit Price", currency_field="currency_id", default=0.0)
+    unit_price = fields.Monetary(
+        string="Unit Price",
+        currency_field="currency_id",
+        default=0.0,
+    )
 
     previous_value = fields.Monetary(
         string="Previous Value",
