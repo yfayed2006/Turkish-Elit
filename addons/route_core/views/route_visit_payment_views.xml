@@ -1,1 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_route_visit_payment_tree" model="ir.ui.view">
+        <field name="name">route.visit.payment.tree</field>
+        <field name="model">route.visit.payment</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="visit_id"/>
+                <field name="payment_date"/>
+                <field name="payment_mode"/>
+                <field name="amount"/>
+                <field name="reference"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
 
+    <record id="view_route_visit_payment_form" model="ir.ui.view">
+        <field name="name">route.visit.payment.form</field>
+        <field name="model">route.visit.payment</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="visit_id"/>
+                            <field name="payment_date"/>
+                            <field name="payment_mode"/>
+                            <field name="amount"/>
+                        </group>
+                        <group>
+                            <field name="reference"/>
+                            <field name="bank_name"/>
+                            <field name="pos_terminal"/>
+                            <field name="state"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_route_visit_payment" model="ir.actions.act_window">
+        <field name="name">Visit Payments</field>
+        <field name="res_model">route.visit.payment</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_route_visit_payment"
+        name="Visit Payments"
+        parent="route_core.menu_route_root"
+        action="action_route_visit_payment"
+        sequence="61"/>
+</odoo>
