@@ -225,14 +225,16 @@ class RouteVisit(models.Model):
         "line_ids.supplied_qty",
         "line_ids.counted_qty",
         "visit_process_state",
+        "collection_skip_reason",
+        "refill_datetime",
     )
     def _compute_flags(self):
         for rec in self:
             rec.has_collection = any(p.state == "confirmed" for p in rec.payment_ids)
             rec.has_returns = any(qty > 0 for qty in rec.line_ids.mapped("return_qty"))
             rec.has_refill = any(qty > 0 for qty in rec.line_ids.mapped("supplied_qty"))
-            rec.is_ready_to_close = bool(rec.line_ids) and (
-                rec.visit_process_state in ("refill_done", "ready_to_close", "done")
+            rec.is_ready_to_close = bool(rec.line_ids) and bool(rec.refill_datetime) and (
+                rec.has_collection or bool(rec.collection_skip_reason)
             )
 
     def action_load_previous_balance(self):
@@ -240,6 +242,9 @@ class RouteVisit(models.Model):
         RouteVisitLine = self.env["route.visit.line"]
 
         for rec in self:
+            if rec.visit_process_state not in ("pending",):
+                raise UserError("Previous balance can only be loaded while the visit is Pending.")
+
             if not rec.outlet_id:
                 raise UserError("Please set an outlet before loading previous balance.")
 
@@ -271,17 +276,16 @@ class RouteVisit(models.Model):
 
             RouteVisitLine.create(line_vals_list)
 
-            vals = {}
-            if rec.visit_process_state == "pending":
-                vals["visit_process_state"] = "checked_in"
-            if not rec.check_in_datetime:
-                vals["check_in_datetime"] = fields.Datetime.now()
-
-            if vals:
-                rec.write(vals)
+            rec.write({
+                "visit_process_state": "checked_in",
+                "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
+            })
 
     def action_confirm_all_payments(self):
         for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError("Payments can only be confirmed when the visit is in Reconciled state.")
+
             if not rec.payment_ids:
                 raise UserError("There are no payments on this visit.")
 
@@ -299,6 +303,9 @@ class RouteVisit(models.Model):
 
     def action_skip_collection(self):
         for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError("Collection can only be skipped when the visit is in Reconciled state.")
+
             if not rec.collection_skip_reason:
                 raise UserError("Please enter Collection Skip Reason before skipping collection.")
 
@@ -311,6 +318,9 @@ class RouteVisit(models.Model):
         OutletStockBalance = self.env["outlet.stock.balance"]
 
         for rec in self:
+            if rec.visit_process_state != "collection_done":
+                raise UserError("Outlet balance can only be updated after collection is completed.")
+
             if not rec.outlet_id:
                 raise UserError("Please set an outlet before updating outlet balance.")
 
@@ -351,6 +361,9 @@ class RouteVisit(models.Model):
 
     def action_set_checked_in(self):
         for rec in self:
+            if rec.visit_process_state != "pending":
+                raise UserError("Check In is only allowed while the visit is Pending.")
+
             rec.write({
                 "visit_process_state": "checked_in",
                 "check_in_datetime": fields.Datetime.now(),
@@ -358,6 +371,9 @@ class RouteVisit(models.Model):
 
     def action_set_counting(self):
         for rec in self:
+            if rec.visit_process_state != "checked_in":
+                raise UserError("Start Count is only allowed after Check In.")
+
             rec.write({
                 "visit_process_state": "counting",
                 "count_start_datetime": fields.Datetime.now(),
@@ -365,6 +381,12 @@ class RouteVisit(models.Model):
 
     def action_set_reconciled(self):
         for rec in self:
+            if rec.visit_process_state != "counting":
+                raise UserError("Reconcile is only allowed while the visit is in Counting state.")
+
+            if not rec.line_ids:
+                raise UserError("You cannot reconcile a visit without visit lines.")
+
             rec.write({
                 "visit_process_state": "reconciled",
                 "count_end_datetime": rec.count_end_datetime or fields.Datetime.now(),
@@ -373,6 +395,9 @@ class RouteVisit(models.Model):
 
     def action_set_collection_done(self):
         for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError("Collection Done is only allowed after Reconcile.")
+
             rec.write({
                 "visit_process_state": "collection_done",
                 "collection_datetime": fields.Datetime.now(),
@@ -380,6 +405,9 @@ class RouteVisit(models.Model):
 
     def action_set_refill_done(self):
         for rec in self:
+            if rec.visit_process_state != "collection_done":
+                raise UserError("Refill Done is only allowed after Collection Done.")
+
             rec.write({
                 "visit_process_state": "refill_done",
                 "refill_datetime": fields.Datetime.now(),
@@ -387,12 +415,27 @@ class RouteVisit(models.Model):
 
     def action_set_ready_to_close(self):
         for rec in self:
+            if rec.visit_process_state != "refill_done":
+                raise UserError("Ready To Close is only allowed after Refill Done.")
+
+            if not rec.line_ids:
+                raise UserError("You cannot close a visit without visit lines.")
+
+            if not rec.refill_datetime:
+                raise UserError("Please update outlet balance before moving to Ready To Close.")
+
+            if not (rec.has_collection or rec.collection_skip_reason):
+                raise UserError("Please confirm payments or enter Collection Skip Reason before closing.")
+
             rec.write({
                 "visit_process_state": "ready_to_close",
             })
 
     def action_set_done_process(self):
         for rec in self:
+            if rec.visit_process_state != "ready_to_close":
+                raise UserError("Finish Process is only allowed when the visit is Ready To Close.")
+
             rec.write({
                 "visit_process_state": "done",
                 "check_out_datetime": fields.Datetime.now(),
@@ -400,6 +443,9 @@ class RouteVisit(models.Model):
 
     def action_set_cancelled_process(self):
         for rec in self:
+            if rec.visit_process_state == "done":
+                raise UserError("You cannot cancel a visit that is already Done.")
+
             rec.write({
                 "visit_process_state": "cancelled",
             })
