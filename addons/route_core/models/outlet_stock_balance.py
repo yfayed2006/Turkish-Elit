@@ -80,15 +80,32 @@ class OutletStockBalance(models.Model):
             result.append((rec.id, name))
         return result
 
+    @api.onchange("product_id")
+    def _onchange_product_id_set_unit_price(self):
+        for rec in self:
+            if rec.product_id:
+                rec.unit_price = rec.product_id.lst_price or 0.0
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             vals.setdefault("last_updated_at", fields.Datetime.now())
+
+            product_id = vals.get("product_id")
+            if product_id and not vals.get("unit_price"):
+                product = self.env["product.product"].browse(product_id)
+                vals["unit_price"] = product.lst_price or 0.0
+
         return super().create(vals_list)
 
     def write(self, vals):
         vals = dict(vals or {})
         vals["last_updated_at"] = fields.Datetime.now()
+
+        if vals.get("product_id") and not vals.get("unit_price"):
+            product = self.env["product.product"].browse(vals["product_id"])
+            vals["unit_price"] = product.lst_price or 0.0
+
         return super().write(vals)
 
     @api.constrains("qty", "unit_price")
