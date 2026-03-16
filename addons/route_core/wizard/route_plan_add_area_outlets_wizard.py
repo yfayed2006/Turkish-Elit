@@ -28,6 +28,23 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
         for rec in self:
             rec.outlet_ids = [(5, 0, 0)]
 
+    def action_select_all_outlets(self):
+        self.ensure_one()
+
+        if not self.area_id:
+            raise UserError(_("Please select an area first."))
+
+        outlets = self.env["route.outlet"].search([("area_id", "=", self.area_id.id)])
+        self.outlet_ids = [(6, 0, outlets.ids)]
+
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "route.plan.add.area.outlets.wizard",
+            "view_mode": "form",
+            "res_id": self.id,
+            "target": "new",
+        }
+
     def action_add_selected_outlets(self):
         self.ensure_one()
 
