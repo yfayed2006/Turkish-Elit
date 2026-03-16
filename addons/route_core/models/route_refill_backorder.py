@@ -1,4 +1,5 @@
-from odoo import fields, models
+from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class RouteRefillBackorder(models.Model):
@@ -7,6 +8,7 @@ class RouteRefillBackorder(models.Model):
     _order = "create_date desc, id desc"
 
     name = fields.Char(string="Reference", required=True, copy=False, default="New")
+
     visit_id = fields.Many2one(
         "route.visit",
         string="Visit",
@@ -14,32 +16,38 @@ class RouteRefillBackorder(models.Model):
         ondelete="cascade",
         index=True,
     )
+
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
         required=True,
         index=True,
     )
+
     partner_id = fields.Many2one(
         "res.partner",
         string="Customer",
         required=True,
     )
+
     vehicle_id = fields.Many2one(
         "route.vehicle",
         string="Vehicle",
     )
+
     source_location_id = fields.Many2one(
         "stock.location",
         string="Source Location",
         domain="[('usage', '=', 'internal')]",
     )
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
         required=True,
         default=lambda self: self.env.company,
     )
+
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
@@ -47,6 +55,7 @@ class RouteRefillBackorder(models.Model):
         store=True,
         readonly=True,
     )
+
     state = fields.Selection(
         [
             ("pending", "Pending"),
@@ -57,7 +66,9 @@ class RouteRefillBackorder(models.Model):
         default="pending",
         required=True,
     )
+
     note = fields.Text(string="Notes")
+
     line_ids = fields.One2many(
         "route.refill.backorder.line",
         "backorder_id",
@@ -79,10 +90,10 @@ class RouteRefillBackorder(models.Model):
     def unlink(self):
         for rec in self:
             if rec.state == "done":
-                raise models.ValidationError("You cannot delete a done backorder.")
+                raise ValidationError("You cannot delete a done backorder.")
         return super().unlink()
 
-    @models.api.model_create_multi
+    @api.model_create_multi
     def create(self, vals_list):
         seq = self.env["ir.sequence"]
         for vals in vals_list:
