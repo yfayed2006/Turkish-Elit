@@ -280,6 +280,48 @@ class RouteVisit(models.Model):
             if vals:
                 rec.write(vals)
 
+    def action_update_outlet_balance(self):
+        OutletStockBalance = self.env["outlet.stock.balance"]
+
+        for rec in self:
+            if not rec.outlet_id:
+                raise UserError("Please set an outlet before updating outlet balance.")
+
+            if not rec.line_ids:
+                raise UserError("There are no visit lines to update.")
+
+            for line in rec.line_ids:
+                balance = OutletStockBalance.search(
+                    [
+                        ("outlet_id", "=", rec.outlet_id.id),
+                        ("product_id", "=", line.product_id.id),
+                    ],
+                    limit=1,
+                )
+
+                vals = {
+                    "qty": line.new_balance_qty,
+                    "unit_price": line.unit_price,
+                    "last_visit_id": rec.id,
+                }
+
+                if balance:
+                    balance.write(vals)
+                else:
+                    OutletStockBalance.create({
+                        "outlet_id": rec.outlet_id.id,
+                        "product_id": line.product_id.id,
+                        "qty": line.new_balance_qty,
+                        "unit_price": line.unit_price,
+                        "last_visit_id": rec.id,
+                        "company_id": rec.company_id.id,
+                    })
+
+            rec.write({
+                "visit_process_state": "refill_done",
+                "refill_datetime": fields.Datetime.now(),
+            })
+
     def action_set_checked_in(self):
         for rec in self:
             rec.write({
