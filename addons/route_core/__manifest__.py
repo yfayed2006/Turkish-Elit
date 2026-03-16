@@ -19,6 +19,7 @@
         "views/route_visit_views.xml",
         "views/route_visit_picking_views.xml",
         "views/route_visit_vehicle_line_views.xml",
+        "views/route_visit_scan_views.xml",
         "views/outlet_stock_balance_views.xml",
         "views/route_visit_payment_views.xml",
         "views/route_refill_backorder_views.xml",
