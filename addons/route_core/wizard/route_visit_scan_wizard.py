@@ -15,7 +15,6 @@ class RouteVisitScanWizard(models.TransientModel):
 
     barcode = fields.Char(
         string="Barcode",
-        required=True,
     )
 
     last_product_id = fields.Many2one(
@@ -35,21 +34,22 @@ class RouteVisitScanWizard(models.TransientModel):
         if not self.visit_id:
             raise UserError(_("Visit is required."))
 
-        line = self.visit_id._process_scanned_barcode(self.barcode)
+        if not self.barcode or not self.barcode.strip():
+            raise UserError(_("Please enter or scan a barcode first."))
 
-        new_wizard = self.create({
-            "visit_id": self.visit_id.id,
-            "last_product_id": line.product_id.id,
-            "last_counted_qty": line.counted_qty,
-        })
+        line = self.visit_id._process_scanned_barcode(self.barcode)
 
         return {
             "type": "ir.actions.act_window",
             "name": _("Scan Barcode"),
             "res_model": "route.visit.scan.wizard",
-            "res_id": new_wizard.id,
             "view_mode": "form",
             "target": "new",
+            "context": {
+                "default_visit_id": self.visit_id.id,
+                "default_last_product_id": line.product_id.id,
+                "default_last_counted_qty": line.counted_qty,
+            },
         }
 
     def action_done(self):
