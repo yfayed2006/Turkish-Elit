@@ -7,9 +7,12 @@
         <field name="arch" type="xml">
             <list string="Outlets">
                 <field name="code"/>
+                <field name="barcode"/>
                 <field name="name"/>
                 <field name="area_id"/>
                 <field name="partner_id"/>
+                <field name="default_commission_rate"/>
+                <field name="active_stock_tracking"/>
                 <field name="last_visit_date"/>
                 <field name="last_sale_order_id"/>
                 <field name="visit_count"/>
@@ -46,6 +49,7 @@
                     <group>
                         <group>
                             <field name="code" readonly="1"/>
+                            <field name="barcode"/>
                             <field name="area_id"/>
                             <field name="partner_id"
                                    domain="[('is_company', '=', True)]"
@@ -56,6 +60,8 @@
                         <group>
                             <field name="phone"/>
                             <field name="mobile"/>
+                            <field name="default_commission_rate"/>
+                            <field name="active_stock_tracking"/>
                         </group>
                     </group>
 
@@ -63,6 +69,7 @@
                         <group>
                             <field name="last_visit_id" readonly="1"/>
                             <field name="last_visit_date" readonly="1"/>
+                            <field name="last_settlement_date" readonly="1"/>
                         </group>
                         <group>
                             <field name="last_sale_order_id" readonly="1"/>
@@ -97,7 +104,11 @@
                                     <field name="area_id"/>
                                     <field name="user_id"/>
                                     <field name="state"/>
+                                    <field name="visit_process_state"/>
                                     <field name="sale_order_id"/>
+                                    <field name="net_due_amount"/>
+                                    <field name="collected_amount"/>
+                                    <field name="remaining_due_amount"/>
                                 </list>
                             </field>
                         </page>
