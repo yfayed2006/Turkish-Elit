@@ -2,6 +2,8 @@
     "name": "Route Core",
     "version": "19.0.1.0.0",
     "summary": "Sales representative route visits",
+    "author": "Yasser Fayed",
+    "license": "LGPL-3",
     "depends": ["base", "sale", "mail", "stock", "contacts"],
     "data": [
         "security/ir.model.access.csv",
@@ -15,6 +17,7 @@
         "views/route_plan_views.xml",
         "views/route_vehicle_views.xml",
         "views/route_visit_views.xml",
+        "views/route_visit_picking_views.xml",
         "views/outlet_stock_balance_views.xml",
         "views/route_visit_payment_views.xml",
         "views/route_refill_backorder_views.xml",
