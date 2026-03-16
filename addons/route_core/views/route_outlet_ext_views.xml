@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_route_outlet_form_ext_route_sales" model="ir.ui.view">
+        <field name="name">route.outlet.form.ext.route.sales</field>
+        <field name="model">route.outlet</field>
+        <field name="inherit_id" ref="route_core.view_route_outlet_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Route Sales Settings">
+                    <group>
+                        <field name="code"/>
+                        <field name="barcode"/>
+                        <field name="default_commission_rate"/>
+                    </group>
+                    <group>
+                        <field name="active_stock_tracking"/>
+                        <field name="last_visit_id"/>
+                        <field name="last_settlement_date"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
