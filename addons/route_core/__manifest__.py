@@ -9,6 +9,7 @@
         "data/route_outlet_sequence.xml",
         "data/route_vehicle_sequence.xml",
         "data/route_plan_sequence.xml",
+        "data/route_refill_backorder_sequence.xml",
         "views/route_area_views.xml",
         "views/route_outlet_views.xml",
         "views/route_plan_views.xml",
