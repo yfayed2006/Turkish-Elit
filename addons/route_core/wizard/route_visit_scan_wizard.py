@@ -37,20 +37,19 @@ class RouteVisitScanWizard(models.TransientModel):
 
         line = self.visit_id._process_scanned_barcode(self.barcode)
 
-        self.write({
+        new_wizard = self.create({
+            "visit_id": self.visit_id.id,
             "last_product_id": line.product_id.id,
             "last_counted_qty": line.counted_qty,
-            "barcode": False,
         })
 
         return {
             "type": "ir.actions.act_window",
             "name": _("Scan Barcode"),
             "res_model": "route.visit.scan.wizard",
-            "res_id": self.id,
+            "res_id": new_wizard.id,
             "view_mode": "form",
             "target": "new",
-            "context": dict(self.env.context),
         }
 
     def action_done(self):
