@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_route_refill_backorder_list" model="ir.ui.view">
+        <field name="name">route.refill.backorder.list</field>
+        <field name="model">route.refill.backorder</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="visit_id"/>
+                <field name="outlet_id"/>
+                <field name="partner_id"/>
+                <field name="vehicle_id"/>
+                <field name="source_location_id"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_route_refill_backorder_form" model="ir.ui.view">
+        <field name="name">route.refill.backorder.form</field>
+        <field name="model">route.refill.backorder</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_mark_done" string="Mark Done" type="object" class="btn-success" invisible="state != 'pending'"/>
+                    <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state == 'cancelled'"/>
+                    <button name="action_reset_to_pending" string="Reset To Pending" type="object" invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,done,cancelled"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="visit_id" readonly="1"/>
+                            <field name="outlet_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="vehicle_id" readonly="1"/>
+                            <field name="source_location_id" readonly="1"/>
+                            <field name="company_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                    <notebook>
+                        <page string="Lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="needed_qty" readonly="1"/>
+                                    <field name="available_qty_at_visit" readonly="1"/>
+                                    <field name="delivered_qty" readonly="1"/>
+                                    <field name="pending_qty"/>
+                                    <field name="unit_price" readonly="1"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_route_refill_backorder" model="ir.actions.act_window">
+        <field name="name">Pending Refills</field>
+        <field name="res_model">route.refill.backorder</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_route_refill_backorder"
+        name="Pending Refills"
+        parent="menu_route_visit_root"
+        action="action_route_refill_backorder"
+        sequence="62"
+    />
+
+</odoo>
