@@ -20,23 +20,6 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self.source_location_id or self.vehicle_id.stock_location_id
 
-    def _get_product_from_scanned_barcode(self, barcode):
-        self.ensure_one()
-
-        barcode = (barcode or "").strip()
-        if not barcode:
-            raise UserError(_("Please enter or scan a barcode first."))
-
-        product = self.env["product.product"].search(
-            [("barcode", "=", barcode)],
-            limit=1,
-        )
-
-        if not product:
-            raise UserError(_("No product was found with barcode '%s'.") % barcode)
-
-        return product
-
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
 
@@ -46,19 +29,21 @@ class RouteVisit(models.Model):
 
         Packaging = self.env["product.packaging"]
 
-        packaging = Packaging.search(
-            [("barcode", "=", barcode)],
-            limit=1,
-        )
-        if packaging and packaging.product_id:
-            factor = packaging.qty or 1.0
-            return {
-                "product": packaging.product_id,
-                "scan_type": "packaging",
-                "scan_type_label": packaging.display_name or _("Packaging"),
-                "factor": factor,
-                "packaging": packaging,
-            }
+        # Only try packaging barcode if that field really exists in this database
+        if "barcode" in Packaging._fields:
+            packaging = Packaging.search(
+                [("barcode", "=", barcode)],
+                limit=1,
+            )
+            if packaging and packaging.product_id:
+                factor = packaging.qty or 1.0
+                return {
+                    "product": packaging.product_id,
+                    "scan_type": "packaging",
+                    "scan_type_label": packaging.display_name or _("Packaging"),
+                    "factor": factor,
+                    "packaging": packaging,
+                }
 
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
@@ -73,7 +58,9 @@ class RouteVisit(models.Model):
                 "packaging": self.env["product.packaging"],
             }
 
-        raise UserError(_("No product or packaging was found with barcode '%s'.") % barcode)
+        raise UserError(
+            _("No product or packaging was found with barcode '%s'.") % barcode
+        )
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
