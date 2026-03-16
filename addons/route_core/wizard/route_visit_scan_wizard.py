@@ -37,13 +37,6 @@ class RouteVisitScanWizard(models.TransientModel):
     scanned_uom_id = fields.Many2one(
         "uom.uom",
         string="Count As UoM",
-        domain="[('category_id', '=', base_uom_category_id)]",
-    )
-
-    base_uom_category_id = fields.Many2one(
-        "uom.category",
-        string="Base UoM Category",
-        readonly=True,
     )
 
     detected_scan_type = fields.Char(
@@ -72,7 +65,6 @@ class RouteVisitScanWizard(models.TransientModel):
         for rec in self:
             rec.detected_product_id = False
             rec.base_uom_id = False
-            rec.base_uom_category_id = False
             rec.detected_scan_type = False
             rec.counted_increase = 0.0
 
@@ -89,15 +81,17 @@ class RouteVisitScanWizard(models.TransientModel):
             product = scan_info["product"]
             rec.detected_product_id = product.id
             rec.base_uom_id = product.uom_id.id
-            rec.base_uom_category_id = product.uom_id.category_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
 
-            if not rec.scanned_uom_id or rec.scanned_uom_id.category_id != product.uom_id.category_id:
+            if not rec.scanned_uom_id:
                 rec.scanned_uom_id = product.uom_id.id
 
             qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
             if qty and rec.scanned_uom_id:
-                rec.counted_increase = rec.scanned_uom_id._compute_quantity(qty, product.uom_id)
+                try:
+                    rec.counted_increase = rec.scanned_uom_id._compute_quantity(qty, product.uom_id)
+                except Exception:
+                    rec.counted_increase = 0.0
             else:
                 rec.counted_increase = 0.0
 
@@ -134,7 +128,6 @@ class RouteVisitScanWizard(models.TransientModel):
                 "default_last_counted_qty": line.counted_qty,
                 "default_detected_product_id": product.id,
                 "default_base_uom_id": product.uom_id.id,
-                "default_base_uom_category_id": product.uom_id.category_id.id,
                 "default_scanned_uom_id": product.uom_id.id,
                 "default_detected_scan_type": False,
                 "default_counted_increase": 0.0,
