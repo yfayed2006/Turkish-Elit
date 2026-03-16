@@ -45,6 +45,18 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
             "target": "new",
         }
 
+    def action_clear_selection(self):
+        self.ensure_one()
+        self.outlet_ids = [(5, 0, 0)]
+
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "route.plan.add.area.outlets.wizard",
+            "view_mode": "form",
+            "res_id": self.id,
+            "target": "new",
+        }
+
     def action_add_selected_outlets(self):
         self.ensure_one()
 
