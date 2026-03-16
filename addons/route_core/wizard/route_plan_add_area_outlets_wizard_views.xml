@@ -14,6 +14,7 @@
                     </group>
                 </sheet>
                 <footer>
+                    <button name="action_select_all_outlets" string="Select All Outlets" type="object" class="btn-secondary"/>
                     <button name="action_add_selected_outlets" string="Add Visits" type="object" class="btn-primary"/>
                     <button string="Cancel" special="cancel" class="btn-secondary"/>
                 </footer>
