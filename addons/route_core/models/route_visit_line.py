@@ -79,6 +79,17 @@ class RouteVisitLine(models.Model):
         store=True,
     )
 
+    vehicle_available_qty = fields.Float(
+        string="Vehicle Available Qty",
+        default=0.0,
+    )
+
+    pending_refill_qty = fields.Float(
+        string="Pending Refill Qty",
+        compute="_compute_pending_refill_qty",
+        store=True,
+    )
+
     unit_price = fields.Monetary(
         string="Unit Price",
         currency_field="currency_id",
@@ -144,6 +155,12 @@ class RouteVisitLine(models.Model):
             line.sold_qty = sold_qty if sold_qty > 0 else 0.0
             line.new_balance_qty = line.counted_qty + line.supplied_qty
 
+    @api.depends("sold_qty", "supplied_qty")
+    def _compute_pending_refill_qty(self):
+        for line in self:
+            pending = line.sold_qty - line.supplied_qty
+            line.pending_refill_qty = pending if pending > 0 else 0.0
+
     @api.depends(
         "previous_qty",
         "counted_qty",
@@ -178,7 +195,7 @@ class RouteVisitLine(models.Model):
             vals["unit_price"] = product.lst_price or 0.0
         return super().write(vals)
 
-    @api.constrains("previous_qty", "counted_qty", "return_qty", "supplied_qty", "unit_price")
+    @api.constrains("previous_qty", "counted_qty", "return_qty", "supplied_qty", "unit_price", "vehicle_available_qty")
     def _check_non_negative_values(self):
         for line in self:
             if line.previous_qty < 0:
@@ -189,6 +206,8 @@ class RouteVisitLine(models.Model):
                 raise ValidationError("Return Qty cannot be negative.")
             if line.supplied_qty < 0:
                 raise ValidationError("Supplied Qty cannot be negative.")
+            if line.vehicle_available_qty < 0:
+                raise ValidationError("Vehicle Available Qty cannot be negative.")
             if line.unit_price < 0:
                 raise ValidationError("Unit Price cannot be negative.")
 
@@ -199,4 +218,12 @@ class RouteVisitLine(models.Model):
             if sold_qty_raw < 0:
                 raise ValidationError(
                     "Sold Qty cannot be negative. Please check Previous Qty, Counted Qty, and Return Qty."
+                )
+
+    @api.constrains("supplied_qty", "vehicle_available_qty")
+    def _check_supplied_qty_vs_vehicle(self):
+        for line in self:
+            if line.supplied_qty > line.vehicle_available_qty:
+                raise ValidationError(
+                    "Supplied Qty cannot be greater than Vehicle Available Qty."
                 )
