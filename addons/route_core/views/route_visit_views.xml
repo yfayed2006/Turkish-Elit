@@ -76,13 +76,6 @@
                                 <span class="ms-1"><field name="visit_process_state"/></span>
                             </div>
 
-                            <t t-if="record.sale_order_id.raw_value">
-                                <div class="mb-2">
-                                    <span class="text-muted">Sale Order:</span>
-                                    <span class="ms-1"><field name="sale_order_id"/></span>
-                                </div>
-                            </t>
-
                             <div class="mt-3">
                                 <a type="open" class="btn btn-primary w-100">Open Visit</a>
                             </div>
@@ -104,78 +97,43 @@
                         string="Load Previous Balance"
                         type="object"
                         class="btn-primary"
-                        invisible="line_ids or visit_process_state in ('done', 'cancelled')"
+                        invisible="visit_process_state != 'pending' or line_ids"
                     />
                     <button
                         name="action_set_checked_in"
                         string="Check In"
                         type="object"
-                        invisible="visit_process_state != 'pending' or line_ids"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'pending' or not line_ids"
                     />
                     <button
                         name="action_set_counting"
                         string="Start Count"
                         type="object"
+                        class="btn-primary"
                         invisible="visit_process_state != 'checked_in'"
                     />
                     <button
                         name="action_set_reconciled"
                         string="Reconcile"
                         type="object"
+                        class="btn-primary"
                         invisible="visit_process_state != 'counting'"
                     />
                     <button
-                        name="action_generate_refill_proposal"
-                        string="Generate Refill Proposal"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state != 'reconciled'"
-                    />
-                    <button
                         name="action_confirm_all_payments"
-                        string="Confirm All Payments"
+                        string="Confirm Payments"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'reconciled'"
-                    />
-                    <button
-                        name="action_skip_collection"
-                        string="Skip Collection"
-                        type="object"
-                        class="btn-secondary"
                         invisible="visit_process_state != 'reconciled'"
                     />
                     <button
                         name="action_update_outlet_balance"
-                        string="Update Outlet Balance"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state != 'collection_done'"
-                    />
-
-                    <button
-                        name="action_create_sale_order"
-                        string="Create Sale Order"
+                        string="Update Balance"
                         type="object"
                         class="btn-primary"
-                        invisible="state != 'in_progress' or sale_order_id"
+                        invisible="visit_process_state != 'collection_done'"
                     />
-                    <button
-                        name="action_end_visit"
-                        string="End Visit"
-                        type="object"
-                        class="btn-success"
-                        invisible="state != 'in_progress'"
-                    />
-
-                    <button
-                        name="action_view_pending_refill"
-                        string="Pending Refill"
-                        type="object"
-                        class="btn-warning"
-                        invisible="not has_pending_refill and not refill_backorder_id"
-                    />
-
                     <button
                         name="action_set_done_process"
                         string="Finish Process"
@@ -359,42 +317,60 @@
         <field name="arch" type="xml">
             <form string="PDA Visit" create="0" delete="0">
                 <header>
-                    <field name="ux_primary_action" invisible="1"/>
-
                     <button
-                        name="action_ux_start_visit"
-                        string="Start Visit"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'start_visit'"
-                    />
-                    <button
-                        name="action_ux_load_previous_balance"
+                        name="action_load_previous_balance"
                         string="Load Previous Balance"
                         type="object"
                         class="btn-primary"
-                        invisible="ux_primary_action != 'load_previous_balance'"
+                        invisible="visit_process_state != 'pending' or line_ids"
                     />
+
                     <button
-                        name="action_ux_scan_shelf"
-                        string="Scan Shelf"
+                        name="action_set_checked_in"
+                        string="Check In"
                         type="object"
                         class="btn-primary"
-                        invisible="ux_primary_action != 'scan_shelf'"
+                        invisible="visit_process_state != 'pending' or not line_ids"
                     />
+
                     <button
-                        name="action_ux_reconcile_count"
-                        string="Reconcile Count"
+                        name="action_set_counting"
+                        string="Start Count"
                         type="object"
                         class="btn-primary"
-                        invisible="ux_primary_action != 'reconcile_count'"
+                        invisible="visit_process_state != 'checked_in'"
                     />
+
                     <button
-                        name="action_ux_finalize_visit"
-                        string="Finalize Visit"
+                        name="action_set_reconciled"
+                        string="Reconcile"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'counting'"
+                    />
+
+                    <button
+                        name="action_confirm_all_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'reconciled'"
+                    />
+
+                    <button
+                        name="action_update_outlet_balance"
+                        string="Update Balance"
+                        type="object"
+                        class="btn-primary"
+                        invisible="visit_process_state != 'collection_done'"
+                    />
+
+                    <button
+                        name="action_set_done_process"
+                        string="Finish Process"
                         type="object"
                         class="btn-success"
-                        invisible="ux_primary_action != 'finalize_visit'"
+                        invisible="visit_process_state != 'ready_to_close'"
                     />
 
                     <button
@@ -406,12 +382,6 @@
                     />
 
                     <field
-                        name="ux_stage"
-                        widget="statusbar"
-                        statusbar_visible="arrival,load_balance,count,reconcile,settlement,done"
-                    />
-
-                    <field
                         name="visit_process_state"
                         widget="statusbar"
                         statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancelled"
@@ -419,15 +389,6 @@
                 </header>
 
                 <sheet>
-                    <div class="alert alert-info mb-3" role="alert">
-                        <div class="fw-bold">
-                            <field name="ux_stage_title" nolabel="1" readonly="1"/>
-                        </div>
-                        <div>
-                            <field name="ux_stage_help" nolabel="1" readonly="1"/>
-                        </div>
-                    </div>
-
                     <div class="oe_button_box" name="button_box">
                         <button
                             name="action_view_sale_order"
