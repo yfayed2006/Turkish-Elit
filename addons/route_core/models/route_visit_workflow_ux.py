@@ -131,9 +131,16 @@ class RouteVisit(models.Model):
             draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft")
             confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
 
-            # المهم هنا:
-            # refill يعتبر "تم" فقط إذا تم تنفيذ step التوليد فعليًا
-            refill_generated = bool(rec.refill_datetime or rec.no_refill)
+            # هنا التصحيح المهم:
+            # refill يعتبر تم لو:
+            # - اتسجل refill_datetime
+            # - أو has_refill صار True
+            # - أو no_refill اختير
+            refill_generated = bool(
+                rec.refill_datetime
+                or rec.has_refill
+                or rec.no_refill
+            )
 
             collection_ready = bool(
                 draft_payments or confirmed_payments or rec.collection_skip_reason
@@ -310,7 +317,15 @@ class RouteVisit(models.Model):
 
     def action_ux_generate_refill(self):
         self.ensure_one()
+
         self.action_generate_refill_proposal()
+
+        # نسجل refill time يدويًا لو الدالة الأصلية لم تسجلها
+        if not self.refill_datetime:
+            self.write({
+                "refill_datetime": fields.Datetime.now(),
+            })
+
         return {
             "type": "ir.actions.act_window",
             "name": _("Visit"),
@@ -374,8 +389,11 @@ class RouteVisit(models.Model):
             if self.sold_total_qty > 0 and not self.sale_order_id:
                 self.action_create_sale_order()
 
-            if not self.refill_datetime and not self.no_refill:
+            if not self.refill_datetime and not self.has_refill and not self.no_refill:
                 self.action_generate_refill_proposal()
+                self.write({
+                    "refill_datetime": fields.Datetime.now(),
+                })
 
             draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
             confirmed_payments = self.payment_ids.filtered(lambda p: p.state == "confirmed")
