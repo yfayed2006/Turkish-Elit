@@ -124,18 +124,17 @@ class RouteVisit(models.Model):
         "has_refill",
         "no_refill",
         "refill_backorder_id",
+        "refill_datetime",
     )
     def _compute_ux_workflow(self):
         for rec in self:
             draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft")
             confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
 
-            refill_prepared = bool(
-                rec.no_refill
-                or rec.has_refill
-                or rec.has_pending_refill
-                or rec.refill_backorder_id
-            )
+            # المهم هنا:
+            # refill يعتبر "تم" فقط إذا تم تنفيذ step التوليد فعليًا
+            refill_generated = bool(rec.refill_datetime or rec.no_refill)
+
             collection_ready = bool(
                 draft_payments or confirmed_payments or rec.collection_skip_reason
             )
@@ -145,14 +144,13 @@ class RouteVisit(models.Model):
                 "counting",
             )
 
-            # لم نعد نحتاج إنشاء يدوي للمندوب
             rec.ux_can_create_sale_order = False
-
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
             rec.ux_can_generate_refill = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and not refill_generated
             )
 
             rec.ux_can_open_pending_refill = bool(
@@ -162,7 +160,7 @@ class RouteVisit(models.Model):
             rec.ux_can_collect_payment = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
-                and refill_prepared
+                and refill_generated
             )
 
             rec.ux_can_confirm_payments = bool(
@@ -174,11 +172,13 @@ class RouteVisit(models.Model):
             rec.ux_can_skip_collection = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and refill_generated
             )
 
             rec.ux_can_open_payments = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and refill_generated
             )
 
             rec.ux_can_finish_visit = bool(
@@ -187,7 +187,7 @@ class RouteVisit(models.Model):
                     rec.visit_process_state in ("collection_done", "ready_to_close")
                     or (
                         rec.visit_process_state == "reconciled"
-                        and refill_prepared
+                        and refill_generated
                         and collection_ready
                     )
                 )
@@ -229,11 +229,11 @@ class RouteVisit(models.Model):
                 continue
 
             if rec.visit_process_state == "reconciled":
-                if not refill_prepared:
+                if not refill_generated:
                     rec.ux_stage = "refill"
                     rec.ux_primary_action = "generate_refill"
                     rec.ux_stage_title = "Generate refill proposal"
-                    rec.ux_stage_help = "Calculate how much can be supplied from the vehicle and what remains pending."
+                    rec.ux_stage_help = "Calculate the suggested supply from vehicle stock and the remaining pending refill."
                     continue
 
                 if draft_payments:
@@ -290,14 +290,11 @@ class RouteVisit(models.Model):
     def action_ux_reconcile_count(self):
         self.ensure_one()
 
-        # 1) عمل Reconcile
-        result = self.action_set_reconciled()
+        self.action_set_reconciled()
 
-        # 2) توليد أمر البيع أوتوماتيك إذا وُجدت مبيعات ولم يوجد أمر بيع
         if self.visit_process_state == "reconciled" and self.sold_total_qty > 0 and not self.sale_order_id:
             self.action_create_sale_order()
 
-        # 3) إعادة فتح نفس الزيارة لتحديث الواجهة
         return {
             "type": "ir.actions.act_window",
             "name": _("Visit"),
@@ -329,12 +326,12 @@ class RouteVisit(models.Model):
             "type": "ir.actions.act_window",
             "name": _("Visit Payments"),
             "res_model": "route.visit.payment",
-            "view_mode": "list,form",
-            "domain": [("visit_id", "=", self.id)],
+            "view_mode": "form",
+            "target": "new",
             "context": {
                 "default_visit_id": self.id,
+                "default_payment_date": fields.Date.context_today(self),
             },
-            "target": "current",
         }
 
     def action_ux_collect_payment(self):
@@ -374,11 +371,11 @@ class RouteVisit(models.Model):
         self.ensure_one()
 
         if self.visit_process_state == "reconciled":
-            # sale order صار أوتوماتيك، لكن نتحقق احتياطيًا
             if self.sold_total_qty > 0 and not self.sale_order_id:
                 self.action_create_sale_order()
 
-            self.action_generate_refill_proposal()
+            if not self.refill_datetime and not self.no_refill:
+                self.action_generate_refill_proposal()
 
             draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
             confirmed_payments = self.payment_ids.filtered(lambda p: p.state == "confirmed")
