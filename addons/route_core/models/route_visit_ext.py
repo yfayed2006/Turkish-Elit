@@ -273,6 +273,32 @@ class RouteVisit(models.Model):
         action["views"] = [(False, "form")]
         return action
 
+    def _set_main_visit_state_in_progress(self):
+        for rec in self:
+            vals = {}
+            if rec.state != "in_progress":
+                vals["state"] = "in_progress"
+            if not rec.start_datetime:
+                vals["start_datetime"] = fields.Datetime.now()
+            if vals:
+                rec.with_context(route_visit_force_write=True).write(vals)
+
+    def _set_main_visit_state_done(self):
+        for rec in self:
+            vals = {
+                "state": "done",
+                "end_datetime": fields.Datetime.now(),
+            }
+            rec.with_context(route_visit_force_write=True).write(vals)
+
+    def _set_main_visit_state_cancel(self):
+        for rec in self:
+            vals = {
+                "state": "cancel",
+                "end_datetime": fields.Datetime.now(),
+            }
+            rec.with_context(route_visit_force_write=True).write(vals)
+
     def _get_available_qty_in_source_location(self, product):
         self.ensure_one()
         if not self.source_location_id:
@@ -364,6 +390,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "checked_in",
                 "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_generate_refill_proposal(self):
         for rec in self:
@@ -375,6 +402,8 @@ class RouteVisit(models.Model):
 
             if not rec.source_location_id:
                 raise UserError("Please select Source Location before generating refill proposal.")
+
+            rec._set_main_visit_state_in_progress()
 
             for line in rec.line_ids:
                 available_qty = rec._get_available_qty_in_source_location(line.product_id)
@@ -403,6 +432,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "collection_done",
                 "collection_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_skip_collection(self):
         for rec in self:
@@ -416,6 +446,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "collection_done",
                 "collection_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_update_outlet_balance(self):
         OutletStockBalance = self.env["outlet.stock.balance"]
@@ -461,6 +492,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "ready_to_close",
                 "refill_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_set_checked_in(self):
         for rec in self:
@@ -471,6 +503,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "checked_in",
                 "check_in_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_set_counting(self):
         for rec in self:
@@ -481,6 +514,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "counting",
                 "count_start_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_set_reconciled(self):
         for rec in self:
@@ -495,6 +529,7 @@ class RouteVisit(models.Model):
                 "count_end_datetime": rec.count_end_datetime or fields.Datetime.now(),
                 "reconciliation_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_in_progress()
 
     def action_set_done_process(self):
         for rec in self:
@@ -508,11 +543,17 @@ class RouteVisit(models.Model):
                 "visit_process_state": "done",
                 "check_out_datetime": fields.Datetime.now(),
             })
+            rec._set_main_visit_state_done()
 
     def action_set_cancelled_process(self):
         for rec in self:
             if rec.visit_process_state == "done":
                 raise UserError("You cannot cancel a visit that is already Done.")
+
+            rec.write({
+                "visit_process_state": "cancelled",
+            })
+            rec._set_main_visit_state_cancel()
 
             rec.write({
                 "visit_process_state": "cancelled",
