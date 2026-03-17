@@ -353,330 +353,62 @@
     </record>
 
     <record id="view_route_visit_pda_form" model="ir.ui.view">
-    <field name="name">route.visit.pda.form</field>
-    <field name="model">route.visit</field>
-    <field name="priority" eval="90"/>
-    <field name="arch" type="xml">
-        <form string="PDA Visit" create="0" delete="0">
-            <header>
-                <field name="ux_primary_action" invisible="1"/>
-
-                <button
-                    name="action_ux_start_visit"
-                    string="Start Visit"
-                    type="object"
-                    class="btn-primary"
-                    invisible="ux_primary_action != 'start_visit'"
-                />
-                <button
-                    name="action_ux_load_previous_balance"
-                    string="Load Previous Balance"
-                    type="object"
-                    class="btn-primary"
-                    invisible="ux_primary_action != 'load_previous_balance'"
-                />
-                <button
-                    name="action_ux_scan_shelf"
-                    string="Scan Shelf"
-                    type="object"
-                    class="btn-primary"
-                    invisible="ux_primary_action != 'scan_shelf'"
-                />
-                <button
-                    name="action_ux_reconcile_count"
-                    string="Reconcile Count"
-                    type="object"
-                    class="btn-primary"
-                    invisible="ux_primary_action != 'reconcile_count'"
-                />
-                <button
-                    name="action_ux_finalize_visit"
-                    string="Finalize Visit"
-                    type="object"
-                    class="btn-success"
-                    invisible="ux_primary_action != 'finalize_visit'"
-                />
-
-                <button
-                    name="action_set_cancelled_process"
-                    string="Cancel Process"
-                    type="object"
-                    class="btn-secondary"
-                    invisible="visit_process_state in ('done', 'cancelled')"
-                />
-
-                <field
-                    name="ux_stage"
-                    widget="statusbar"
-                    statusbar_visible="arrival,load_balance,count,reconcile,settlement,done"
-                />
-
-                <field
-                    name="visit_process_state"
-                    widget="statusbar"
-                    statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancelled"
-                />
-            </header>
-
-            <sheet>
-                <div class="alert alert-info mb-3" role="alert">
-                    <div class="fw-bold">
-                        <field name="ux_stage_title" nolabel="1" readonly="1"/>
-                    </div>
-                    <div>
-                        <field name="ux_stage_help" nolabel="1" readonly="1"/>
-                    </div>
-                </div>
-
-                <div class="oe_button_box" name="button_box">
-                    <button
-                        name="action_view_sale_order"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-shopping-cart"
-                        invisible="sale_order_count == 0"
-                    >
-                        <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
-                    </button>
-
-                    <button
-                        name="action_view_pending_refill"
-                        string="Pending Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-refresh"
-                        invisible="not has_pending_refill and not refill_backorder_id"
-                    />
-                </div>
-
-                <div class="oe_title">
-                    <h1>
-                        <field name="outlet_id" readonly="1"/>
-                    </h1>
-                    <div class="mt8">
-                        <field name="partner_id" readonly="1"/>
-                    </div>
-                    <div class="mt8">
-                        <field name="visit_process_state" readonly="1"/>
-                    </div>
-                </div>
-
-                <group col="2">
-                    <group string="Main Info">
-                        <field name="name" readonly="1"/>
-                        <field name="date" readonly="1"/>
-                        <field name="area_id" readonly="1"/>
-                        <field name="vehicle_id" readonly="1"/>
-                        <field name="user_id" readonly="1"/>
-                        <field name="source_location_id"/>
-                    </group>
-                    <group string="Current Status">
-                        <field name="sale_order_id" readonly="1"/>
-                        <field name="refill_backorder_id" readonly="1"/>
-                        <field name="check_in_datetime" readonly="1"/>
-                        <field name="collection_datetime" readonly="1"/>
-                        <field name="check_out_datetime" readonly="1"/>
-                    </group>
-                </group>
-
-                <group string="Quick Summary" col="4">
-                    <group>
-                        <field name="previous_total_qty" readonly="1"/>
-                        <field name="counted_total_qty" readonly="1"/>
-                        <field name="sold_total_qty" readonly="1"/>
-                    </group>
-                    <group>
-                        <field name="supplied_total_qty" readonly="1"/>
-                        <field name="pending_refill_total_qty" readonly="1"/>
-                        <field name="new_balance_total_qty" readonly="1"/>
-                    </group>
-                    <group>
-                        <field name="gross_sales_amount" readonly="1"/>
-                        <field name="commission_amount" readonly="1"/>
-                        <field name="net_due_amount" readonly="1"/>
-                    </group>
-                    <group>
-                        <field name="collected_amount" readonly="1"/>
-                        <field name="remaining_due_amount" readonly="1"/>
-                    </group>
-                </group>
-
-                <notebook>
-                    <page string="Count">
-                        <field name="line_ids">
-                            <list editable="bottom">
-                                <field name="product_id"/>
-                                <field name="barcode" readonly="1"/>
-                                <field name="uom_id" readonly="1"/>
-                                <field name="previous_qty"/>
-                                <field name="counted_qty"/>
-                                <field name="return_qty"/>
-                                <field name="sold_qty" readonly="1"/>
-                                <field name="vehicle_available_qty" readonly="1"/>
-                                <field name="supplied_qty"/>
-                                <field name="pending_refill_qty" readonly="1"/>
-                                <field name="new_balance_qty" readonly="1"/>
-                                <field name="unit_price"/>
-                                <field name="note"/>
-                            </list>
-                        </field>
-                    </page>
-
-                    <page string="Payments">
-                        <field name="payment_ids">
-                            <list editable="bottom">
-                                <field name="payment_date"/>
-                                <field name="payment_mode"/>
-                                <field name="amount"/>
-                                <field name="reference"/>
-                                <field name="bank_name"/>
-                                <field name="pos_terminal"/>
-                                <field name="note"/>
-                                <field name="state"/>
-                            </list>
-                        </field>
-                    </page>
-
-                    <page string="Summary">
-                        <group string="Quantity Summary">
-                            <group>
-                                <field name="previous_total_qty" readonly="1"/>
-                                <field name="counted_total_qty" readonly="1"/>
-                                <field name="returned_total_qty" readonly="1"/>
-                                <field name="pending_refill_total_qty" readonly="1"/>
-                            </group>
-                            <group>
-                                <field name="sold_total_qty" readonly="1"/>
-                                <field name="supplied_total_qty" readonly="1"/>
-                                <field name="new_balance_total_qty" readonly="1"/>
-                            </group>
-                        </group>
-
-                        <group string="Financial Summary">
-                            <group>
-                                <field name="gross_sales_amount" readonly="1"/>
-                                <field name="return_amount" readonly="1"/>
-                                <field name="commission_amount" readonly="1"/>
-                            </group>
-                            <group>
-                                <field name="net_due_amount" readonly="1"/>
-                                <field name="collected_amount" readonly="1"/>
-                                <field name="remaining_due_amount" readonly="1"/>
-                            </group>
-                        </group>
-                    </page>
-
-                    <page string="Notes">
-                        <field name="notes" placeholder="Internal notes..."/>
-                    </page>
-
-                    <page string="No Sale Reason" invisible="not no_sale_reason">
-                        <field name="no_sale_reason" readonly="1"/>
-                    </page>
-                </notebook>
-            </sheet>
-        </form>
-    </field>
-</record>
         <field name="name">route.visit.pda.form</field>
         <field name="model">route.visit</field>
         <field name="priority" eval="90"/>
         <field name="arch" type="xml">
             <form string="PDA Visit" create="0" delete="0">
                 <header>
-                    <button
-                        name="action_load_previous_balance"
-                        string="1. Load Balance"
-                        type="object"
-                        class="btn-primary"
-                        invisible="line_ids or visit_process_state in ('done', 'cancelled')"
-                    />
-                    <button
-                        name="action_set_checked_in"
-                        string="2. Check In"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'pending' or line_ids"
-                    />
-                    <button
-                        name="action_set_counting"
-                        string="3. Start Count"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'checked_in'"
-                    />
-                    <button
-                        name="action_set_reconciled"
-                        string="4. Reconcile"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'counting'"
-                    />
-                    <button
-                        name="action_confirm_all_payments"
-                        string="5. Confirm Payments"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'reconciled'"
-                    />
-                    <button
-                        name="action_skip_collection"
-                        string="Skip Collection"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state != 'reconciled'"
-                    />
-                    <button
-                        name="action_generate_refill_proposal"
-                        string="6. Refill Proposal"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state != 'reconciled'"
-                    />
-                    <button
-                        name="action_update_outlet_balance"
-                        string="7. Update Balance"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state != 'collection_done'"
-                    />
+                    <field name="ux_primary_action" invisible="1"/>
 
                     <button
-                        name="action_create_sale_order"
-                        string="Create Sale Order"
+                        name="action_ux_start_visit"
+                        string="Start Visit"
                         type="object"
                         class="btn-primary"
-                        invisible="state != 'in_progress' or sale_order_id"
+                        invisible="ux_primary_action != 'start_visit'"
                     />
                     <button
-                        name="action_end_visit"
-                        string="End Visit"
+                        name="action_ux_load_previous_balance"
+                        string="Load Previous Balance"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'load_previous_balance'"
+                    />
+                    <button
+                        name="action_ux_scan_shelf"
+                        string="Scan Shelf"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'scan_shelf'"
+                    />
+                    <button
+                        name="action_ux_reconcile_count"
+                        string="Reconcile Count"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'reconcile_count'"
+                    />
+                    <button
+                        name="action_ux_finalize_visit"
+                        string="Finalize Visit"
                         type="object"
                         class="btn-success"
-                        invisible="state != 'in_progress'"
+                        invisible="ux_primary_action != 'finalize_visit'"
                     />
 
-                    <button
-                        name="action_view_pending_refill"
-                        string="Pending Refill"
-                        type="object"
-                        class="btn-warning"
-                        invisible="not has_pending_refill and not refill_backorder_id"
-                    />
-
-                    <button
-                        name="action_set_done_process"
-                        string="8. Finish Process"
-                        type="object"
-                        class="btn-success"
-                        invisible="visit_process_state != 'ready_to_close'"
-                    />
                     <button
                         name="action_set_cancelled_process"
                         string="Cancel Process"
                         type="object"
                         class="btn-secondary"
                         invisible="visit_process_state in ('done', 'cancelled')"
+                    />
+
+                    <field
+                        name="ux_stage"
+                        widget="statusbar"
+                        statusbar_visible="arrival,load_balance,count,reconcile,settlement,done"
                     />
 
                     <field
@@ -687,6 +419,15 @@
                 </header>
 
                 <sheet>
+                    <div class="alert alert-info mb-3" role="alert">
+                        <div class="fw-bold">
+                            <field name="ux_stage_title" nolabel="1" readonly="1"/>
+                        </div>
+                        <div>
+                            <field name="ux_stage_help" nolabel="1" readonly="1"/>
+                        </div>
+                    </div>
+
                     <div class="oe_button_box" name="button_box">
                         <button
                             name="action_view_sale_order"
