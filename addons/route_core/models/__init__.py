@@ -23,3 +23,4 @@ from . import route_visit_move_ext
 from . import route_visit_load_balance_ext
 from . import route_visit_line_vehicle_ext
 from . import route_visit_scan_ext
+from . import route_visit_workflow_ux
