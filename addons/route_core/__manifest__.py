@@ -5,6 +5,13 @@
     "author": "Yasser Fayed",
     "license": "LGPL-3",
     "depends": ["base", "sale", "mail", "stock", "contacts"],
+    "data": {
+    "name": "Route Core",
+    "version": "19.0.1.0.0",
+    "summary": "Sales representative route visits",
+    "author": "Yasser Fayed",
+    "license": "LGPL-3",
+    "depends": ["base", "sale", "mail", "stock", "contacts"],
     "data": [
         "security/ir.model.access.csv",
         "data/route_visit_sequence.xml",
@@ -12,21 +19,20 @@
         "data/route_vehicle_sequence.xml",
         "data/route_plan_sequence.xml",
         "data/route_refill_backorder_sequence.xml",
+
         "views/route_area_views.xml",
         "views/route_outlet_views.xml",
         "views/route_plan_views.xml",
         "views/route_vehicle_views.xml",
         "views/route_visit_views.xml",
-        "views/route_visit_picking_views.xml",
-        "views/route_visit_vehicle_line_views.xml",
-        "views/route_visit_scan_views.xml",
+
         "views/outlet_stock_balance_views.xml",
-        "views/route_visit_payment_views.xml",
-        "views/route_refill_backorder_views.xml",
         "views/route_location_link_views.xml",
+
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
         "wizard/route_visit_scan_wizard_views.xml",
+
         "views/route_visit_workflow_ux_views.xml",
     ],
     "installable": True,
