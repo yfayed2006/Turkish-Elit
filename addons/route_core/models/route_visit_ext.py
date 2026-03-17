@@ -11,6 +11,7 @@ class RouteVisit(models.Model):
         default=lambda self: self.env.company,
         required=True,
     )
+
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
@@ -18,11 +19,13 @@ class RouteVisit(models.Model):
         store=True,
         readonly=True,
     )
+
     source_location_id = fields.Many2one(
         "stock.location",
         string="Source Location",
         domain="[('usage', '=', 'internal')]",
     )
+
     refill_backorder_id = fields.Many2one(
         "route.refill.backorder",
         string="Pending Refill",
@@ -50,6 +53,7 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Visit Lines",
     )
+
     payment_ids = fields.One2many(
         "route.visit.payment",
         "visit_id",
@@ -221,12 +225,14 @@ class RouteVisit(models.Model):
             rec.supplied_total_qty = sum(rec.line_ids.mapped("supplied_qty"))
             rec.new_balance_total_qty = sum(rec.line_ids.mapped("new_balance_qty"))
             rec.pending_refill_total_qty = sum(rec.line_ids.mapped("pending_refill_qty"))
+
             rec.previous_stock_value = sum(rec.line_ids.mapped("previous_value"))
             rec.counted_stock_value = sum(rec.line_ids.mapped("counted_value"))
             rec.gross_sales_amount = sum(rec.line_ids.mapped("sold_amount"))
             rec.return_amount = sum(rec.line_ids.mapped("return_amount"))
             rec.supplied_value = sum(rec.line_ids.mapped("supply_value"))
             rec.new_balance_value = sum(rec.line_ids.mapped("new_balance_value"))
+
             rec.commission_amount = rec.gross_sales_amount * (rec.commission_rate / 100.0)
             rec.net_due_amount = rec.gross_sales_amount - rec.commission_amount - rec.return_amount
 
@@ -260,7 +266,7 @@ class RouteVisit(models.Model):
     def action_view_pending_refill(self):
         self.ensure_one()
         if not self.refill_backorder_id:
-            raise UserError("There is no pending refill document linked to this visit.")
+            raise UserError("There is no pending refill linked to this visit.")
 
         action = self.env.ref("route_core.action_route_refill_backorder").read()[0]
         action["res_id"] = self.refill_backorder_id.id
@@ -271,6 +277,7 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self.source_location_id:
             return 0.0
+
         quants = self.env["stock.quant"].search([
             ("location_id", "child_of", self.source_location_id.id),
             ("product_id", "=", product.id),
@@ -279,9 +286,11 @@ class RouteVisit(models.Model):
 
     def _create_pending_refill_backorder(self):
         self.ensure_one()
+
         pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
         if not pending_lines:
             return False
+
         if self.refill_backorder_id:
             return self.refill_backorder_id
 
@@ -307,6 +316,7 @@ class RouteVisit(models.Model):
                 "unit_price": line.unit_price,
                 "note": line.note,
             })
+
         self.env["route.refill.backorder.line"].create(line_vals)
         self.refill_backorder_id = backorder.id
         return backorder
@@ -318,8 +328,10 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state not in ("pending",):
                 raise UserError("Previous balance can only be loaded while the visit is Pending.")
+
             if not rec.outlet_id:
                 raise UserError("Please set an outlet before loading previous balance.")
+
             if rec.line_ids:
                 raise UserError(
                     "This visit already has lines. Remove existing lines first if you want to reload previous balance."
@@ -329,6 +341,7 @@ class RouteVisit(models.Model):
                 ("outlet_id", "=", rec.outlet_id.id),
                 ("qty", ">", 0),
             ])
+
             if not balances:
                 raise UserError("No previous stock balance was found for this outlet.")
 
@@ -344,6 +357,7 @@ class RouteVisit(models.Model):
                     "previous_qty": balance.qty,
                     "unit_price": balance.unit_price,
                 })
+
             RouteVisitLine.create(line_vals_list)
 
             rec.write({
@@ -355,8 +369,10 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "reconciled":
                 raise UserError("Refill proposal can only be generated when the visit is in Reconciled state.")
+
             if not rec.line_ids:
                 raise UserError("There are no visit lines to generate a refill proposal.")
+
             if not rec.source_location_id:
                 raise UserError("Please select Source Location before generating refill proposal.")
 
@@ -372,6 +388,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "reconciled":
                 raise UserError("Payments can only be confirmed when the visit is in Reconciled state.")
+
             if not rec.payment_ids:
                 raise UserError("There are no payments on this visit.")
 
@@ -391,6 +408,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "reconciled":
                 raise UserError("Collection can only be skipped when the visit is in Reconciled state.")
+
             if not rec.collection_skip_reason:
                 raise UserError("Please enter Collection Skip Reason before skipping collection.")
 
@@ -405,8 +423,10 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "collection_done":
                 raise UserError("Outlet balance can only be updated after collection is completed.")
+
             if not rec.outlet_id:
                 raise UserError("Please set an outlet before updating outlet balance.")
+
             if not rec.line_ids:
                 raise UserError("There are no visit lines to update.")
 
@@ -418,11 +438,13 @@ class RouteVisit(models.Model):
                     ],
                     limit=1,
                 )
+
                 vals = {
                     "qty": line.new_balance_qty,
                     "unit_price": line.unit_price,
                     "last_visit_id": rec.id,
                 }
+
                 if balance:
                     balance.write(vals)
                 else:
@@ -444,6 +466,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "pending":
                 raise UserError("Check In is only allowed while the visit is Pending.")
+
             rec.write({
                 "visit_process_state": "checked_in",
                 "check_in_datetime": fields.Datetime.now(),
@@ -453,6 +476,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "checked_in":
                 raise UserError("Start Count is only allowed after Check In.")
+
             rec.write({
                 "visit_process_state": "counting",
                 "count_start_datetime": fields.Datetime.now(),
@@ -462,6 +486,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "counting":
                 raise UserError("Reconcile is only allowed while the visit is in Counting state.")
+
             if not rec.line_ids:
                 raise UserError("You cannot reconcile a visit without visit lines.")
 
@@ -488,4 +513,7 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state == "done":
                 raise UserError("You cannot cancel a visit that is already Done.")
-            rec.write({"visit_process_state": "cancelled"})
+
+            rec.write({
+                "visit_process_state": "cancelled",
+            })
