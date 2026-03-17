@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- Inherit the ORIGINAL PDA visit form and replace its noisy header -->
     <record id="view_route_visit_pda_form_stepflow_inherit" model="ir.ui.view">
         <field name="name">route.visit.pda.form.stepflow.inherit</field>
         <field name="model">route.visit</field>
         <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
         <field name="arch" type="xml">
 
-            <!-- Replace the whole old header -->
             <xpath expr="//form/header" position="replace">
                 <header>
                     <field name="ux_primary_action" invisible="1"/>
@@ -46,7 +44,6 @@
                             class="btn btn-primary"
                             invisible="ux_primary_action != 'finalize_visit'"/>
 
-                    <!-- keep backend state visible as secondary information -->
                     <field name="visit_process_state"
                            widget="statusbar"
                            statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done"/>
@@ -58,7 +55,6 @@
                 </header>
             </xpath>
 
-            <!-- Add guidance card under the header -->
             <xpath expr="//form/sheet" position="inside">
                 <div class="alert alert-info mb-3" role="alert">
                     <div class="fw-bold">
@@ -68,11 +64,6 @@
                         <field name="ux_stage_help" nolabel="1" readonly="1"/>
                     </div>
                 </div>
-            </xpath>
-
-            <!-- Optional: hide duplicate process-state field in body if present -->
-            <xpath expr="//field[@name='visit_process_state']" position="attributes">
-                <attribute name="readonly">1</attribute>
             </xpath>
 
         </field>
