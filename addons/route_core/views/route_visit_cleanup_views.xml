@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Disable old inherited views that keep re-injecting header buttons -->
+    <record id="view_route_visit_scan_form_inherit" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record id="view_route_visit_picking_form_inherit" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record id="view_route_visit_payment_form_inherit" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record id="view_route_visit_vehicle_line_form_inherit" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record id="view_route_refill_backorder_form_inherit" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
+
+</odoo>
