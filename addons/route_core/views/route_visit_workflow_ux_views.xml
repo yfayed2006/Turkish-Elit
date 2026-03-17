@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- PDA Step-by-Step Form -->
+    <record id="view_route_visit_pda_form_stepflow" model="ir.ui.view">
+        <field name="name">route.visit.pda.form.stepflow</field>
+        <field name="model">route.visit</field>
+        <field name="arch" type="xml">
+            <form string="PDA Visit" create="0" edit="1" delete="0">
+                <header>
+                    <field name="ux_stage"
+                           widget="statusbar"
+                           statusbar_visible="arrival,load_balance,count,reconcile,settlement,done"/>
+
+                    <button name="action_ux_start_visit"
+                            type="object"
+                            string="Start Visit"
+                            class="btn btn-primary"
+                            invisible="ux_primary_action != 'start_visit'"/>
+
+                    <button name="action_ux_load_previous_balance"
+                            type="object"
+                            string="Load Previous Balance"
+                            class="btn btn-primary"
+                            invisible="ux_primary_action != 'load_previous_balance'"/>
+
+                    <button name="action_ux_scan_shelf"
+                            type="object"
+                            string="Scan Shelf"
+                            class="btn btn-primary"
+                            invisible="ux_primary_action != 'scan_shelf'"/>
+
+                    <button name="action_ux_reconcile_count"
+                            type="object"
+                            string="Reconcile Count"
+                            class="btn btn-primary"
+                            invisible="ux_primary_action != 'reconcile_count'"/>
+
+                    <button name="action_ux_finalize_visit"
+                            type="object"
+                            string="Finalize Visit"
+                            class="btn btn-primary"
+                            invisible="ux_primary_action != 'finalize_visit'"/>
+
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="draft,in_progress,done,cancel"/>
+                </header>
+
+                <sheet>
+                    <field name="ux_primary_action" invisible="1"/>
+                    <field name="visit_process_state" invisible="1"/>
+
+                    <div class="alert alert-info mb-3" role="alert">
+                        <div class="fw-bold">
+                            <field name="ux_stage_title" nolabel="1" readonly="1"/>
+                        </div>
+                        <div>
+                            <field name="ux_stage_help" nolabel="1" readonly="1"/>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="date" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="vehicle_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="outlet_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="area_id" readonly="1"/>
+                            <field name="source_location_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Visit Progress">
+                        <group>
+                            <field name="check_in_datetime" readonly="1"/>
+                            <field name="count_start_datetime" readonly="1"/>
+                            <field name="count_end_datetime" readonly="1"/>
+                            <field name="reconciliation_datetime" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="collection_datetime" readonly="1"/>
+                            <field name="refill_datetime" readonly="1"/>
+                            <field name="check_out_datetime" readonly="1"/>
+                            <field name="commission_rate"/>
+                        </group>
+                    </group>
+
+                    <group string="Financial Summary" col="4">
+                        <field name="gross_sales_amount" readonly="1"/>
+                        <field name="return_amount" readonly="1"/>
+                        <field name="commission_amount" readonly="1"/>
+                        <field name="net_due_amount" readonly="1"/>
+                        <field name="collected_amount" readonly="1"/>
+                        <field name="remaining_due_amount" readonly="1"/>
+                        <field name="supplied_value" readonly="1"/>
+                        <field name="new_balance_value" readonly="1"/>
+                    </group>
+
+                    <notebook>
+                        <page string="Shelf Count">
+                            <group string="Quick Totals" col="4">
+                                <field name="previous_total_qty" readonly="1"/>
+                                <field name="counted_total_qty" readonly="1"/>
+                                <field name="sold_total_qty" readonly="1"/>
+                                <field name="supplied_total_qty" readonly="1"/>
+                                <field name="new_balance_total_qty" readonly="1"/>
+                                <field name="pending_refill_total_qty" readonly="1"/>
+                            </group>
+
+                            <field name="line_ids" nolabel="1">
+                                <tree editable="bottom">
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="uom_id" readonly="1"/>
+                                    <field name="previous_qty" readonly="1"/>
+                                    <field name="counted_qty"/>
+                                    <field name="return_qty"/>
+                                    <field name="sold_qty" readonly="1"/>
+                                    <field name="vehicle_available_qty" readonly="1"/>
+                                    <field name="supplied_qty"/>
+                                    <field name="pending_refill_qty" readonly="1"/>
+                                    <field name="new_balance_qty" readonly="1"/>
+                                    <field name="unit_price"/>
+                                    <field name="sold_amount" readonly="1"/>
+                                    <field name="note"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Collection">
+                            <group>
+                                <group>
+                                    <field name="collection_skip_reason"
+                                           placeholder="Enter reason only if no collection will be taken"/>
+                                </group>
+                                <group>
+                                    <field name="has_collection" readonly="1"/>
+                                    <field name="remaining_due_amount" readonly="1"/>
+                                </group>
+                            </group>
+
+                            <field name="payment_ids" nolabel="1">
+                                <tree editable="bottom">
+                                    <field name="payment_date"/>
+                                    <field name="payment_mode"/>
+                                    <field name="amount"/>
+                                    <field name="reference"/>
+                                    <field name="bank_name"/>
+                                    <field name="pos_terminal"/>
+                                    <field name="state" readonly="1"/>
+                                    <field name="note"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page string="Settlement">
+                            <group>
+                                <group>
+                                    <field name="has_returns" readonly="1"/>
+                                    <field name="has_refill" readonly="1"/>
+                                    <field name="has_pending_refill" readonly="1"/>
+                                    <field name="is_ready_to_close" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="no_refill"/>
+                                    <field name="no_refill_reason"
+                                           invisible="no_refill = False"/>
+                                    <field name="refill_backorder_id" readonly="1"/>
+                                </group>
+                            </group>
+
+                            <group string="Sale Order">
+                                <group>
+                                    <field name="sale_order_id" readonly="1"/>
+                                </group>
+                                <group>
+                                    <button name="action_ux_create_sale_order"
+                                            type="object"
+                                            string="Create Sale Order"
+                                            class="btn-secondary"
+                                            invisible="ux_can_create_sale_order = False"/>
+
+                                    <button name="action_ux_view_sale_order"
+                                            type="object"
+                                            string="Open Sale Order"
+                                            class="btn-secondary"
+                                            invisible="sale_order_id = False"/>
+
+                                    <button name="action_view_pending_refill"
+                                            type="object"
+                                            string="Open Pending Refill"
+                                            class="btn-secondary"
+                                            invisible="refill_backorder_id = False"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Notes">
+                            <field name="notes" placeholder="Internal visit notes..."/>
+                            <field name="cancel_reason" invisible="state != 'cancel'"/>
+                            <field name="no_sale_reason" readonly="1" invisible="no_sale_reason = False"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Make this form the preferred PDA form -->
+    <record id="action_route_visit_pda_form_stepflow_bind" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_route_visit_pda_form_stepflow"/>
+        <field name="act_window_id" ref="route_core.action_route_visit_pda"/>
+    </record>
+
+</odoo>
