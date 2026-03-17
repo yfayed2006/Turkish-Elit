@@ -21,8 +21,8 @@
         "views/route_location_link_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
-        "wizard/route_visit_scan_wizard_views.xml",
-        "views/route_visit_cleanup_views.xml"
+        "wizard/route_visit_scan_wizard_views.xml"
+        
     ],
     "installable": True,
     "application": True,
