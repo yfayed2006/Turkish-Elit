@@ -265,6 +265,10 @@ class RouteVisit(models.Model):
 
     def action_view_pending_refill(self):
         self.ensure_one()
+
+        if not self.refill_backorder_id and self.has_pending_refill:
+            self._create_pending_refill_backorder()
+
         if not self.refill_backorder_id:
             raise UserError("There is no pending refill linked to this visit.")
 
@@ -554,7 +558,3 @@ class RouteVisit(models.Model):
                 "visit_process_state": "cancelled",
             })
             rec._set_main_visit_state_cancel()
-
-            rec.write({
-                "visit_process_state": "cancelled",
-            })
