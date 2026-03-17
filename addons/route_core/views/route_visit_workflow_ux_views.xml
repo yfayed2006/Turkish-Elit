@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- PDA Step-by-Step Form -->
     <record id="view_route_visit_pda_form_stepflow" model="ir.ui.view">
         <field name="name">route.visit.pda.form.stepflow</field>
         <field name="model">route.visit</field>
@@ -113,7 +112,7 @@
                             </group>
 
                             <field name="line_ids" nolabel="1">
-                                <tree editable="bottom">
+                                <list editable="bottom">
                                     <field name="product_id" readonly="1"/>
                                     <field name="barcode" readonly="1"/>
                                     <field name="uom_id" readonly="1"/>
@@ -128,7 +127,7 @@
                                     <field name="unit_price"/>
                                     <field name="sold_amount" readonly="1"/>
                                     <field name="note"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
 
@@ -145,7 +144,7 @@
                             </group>
 
                             <field name="payment_ids" nolabel="1">
-                                <tree editable="bottom">
+                                <list editable="bottom">
                                     <field name="payment_date"/>
                                     <field name="payment_mode"/>
                                     <field name="amount"/>
@@ -154,7 +153,7 @@
                                     <field name="pos_terminal"/>
                                     <field name="state" readonly="1"/>
                                     <field name="note"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
 
@@ -169,7 +168,7 @@
                                 <group>
                                     <field name="no_refill"/>
                                     <field name="no_refill_reason"
-                                           invisible="no_refill = False"/>
+                                           invisible="no_refill == False"/>
                                     <field name="refill_backorder_id" readonly="1"/>
                                 </group>
                             </group>
@@ -183,19 +182,19 @@
                                             type="object"
                                             string="Create Sale Order"
                                             class="btn-secondary"
-                                            invisible="ux_can_create_sale_order = False"/>
+                                            invisible="ux_can_create_sale_order == False"/>
 
                                     <button name="action_ux_view_sale_order"
                                             type="object"
                                             string="Open Sale Order"
                                             class="btn-secondary"
-                                            invisible="sale_order_id = False"/>
+                                            invisible="sale_order_id == False"/>
 
                                     <button name="action_view_pending_refill"
                                             type="object"
                                             string="Open Pending Refill"
                                             class="btn-secondary"
-                                            invisible="refill_backorder_id = False"/>
+                                            invisible="refill_backorder_id == False"/>
                                 </group>
                             </group>
                         </page>
@@ -203,7 +202,7 @@
                         <page string="Notes">
                             <field name="notes" placeholder="Internal visit notes..."/>
                             <field name="cancel_reason" invisible="state != 'cancel'"/>
-                            <field name="no_sale_reason" readonly="1" invisible="no_sale_reason = False"/>
+                            <field name="no_sale_reason" readonly="1" invisible="no_sale_reason == False"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -211,7 +210,6 @@
         </field>
     </record>
 
-    <!-- Make this form the preferred PDA form -->
     <record id="action_route_visit_pda_form_stepflow_bind" model="ir.actions.act_window.view">
         <field name="sequence" eval="1"/>
         <field name="view_mode">form</field>
