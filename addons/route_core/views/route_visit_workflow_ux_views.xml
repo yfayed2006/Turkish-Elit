@@ -210,11 +210,4 @@
         </field>
     </record>
 
-    <record id="action_route_visit_pda_form_stepflow_bind" model="ir.actions.act_window.view">
-        <field name="sequence" eval="1"/>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_route_visit_pda_form_stepflow"/>
-        <field name="act_window_id" ref="route_core.action_route_visit_pda"/>
-    </record>
-
 </odoo>
