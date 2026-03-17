@@ -200,6 +200,15 @@ class RouteVisit(models.Model):
         tracking=True,
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get("partner_id") and vals.get("outlet_id"):
+                outlet = self.env["route.outlet"].browse(vals["outlet_id"])
+                if hasattr(outlet, "partner_id") and outlet.partner_id:
+                    vals["partner_id"] = outlet.partner_id.commercial_partner_id.id
+        return super().create(vals_list)
+
     @api.depends(
         "line_ids.previous_qty",
         "line_ids.counted_qty",
@@ -315,53 +324,54 @@ class RouteVisit(models.Model):
         return sum(quants.mapped("quantity"))
 
     def _create_pending_refill_backorder(self):
-    self.ensure_one()
+        self.ensure_one()
 
-    pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
-    if not pending_lines:
-        return False
+        pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
+        if not pending_lines:
+            return False
 
-    if self.refill_backorder_id:
-        return self.refill_backorder_id
+        if self.refill_backorder_id:
+            return self.refill_backorder_id
 
-    partner = self.partner_id
-    if not partner and self.outlet_id and hasattr(self.outlet_id, "partner_id"):
-        partner = self.outlet_id.partner_id
-    if partner and hasattr(partner, "commercial_partner_id"):
-        partner = partner.commercial_partner_id
+        partner = self.partner_id
+        if not partner and self.outlet_id and hasattr(self.outlet_id, "partner_id"):
+            partner = self.outlet_id.partner_id
+        if partner and hasattr(partner, "commercial_partner_id"):
+            partner = partner.commercial_partner_id
 
-    if not partner:
-        raise UserError(
-            "Cannot create Pending Refill because Customer is empty on this visit.\n"
-            "Please set a customer on the visit or ensure the outlet is linked to a customer."
-        )
+        if not partner:
+            raise UserError(
+                "Cannot create Pending Refill because Customer is empty on this visit.\n"
+                "Please set a customer on the visit or ensure the outlet is linked to a customer."
+            )
 
-    backorder = self.env["route.refill.backorder"].create({
-        "visit_id": self.id,
-        "outlet_id": self.outlet_id.id,
-        "partner_id": partner.id,
-        "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
-        "source_location_id": self.source_location_id.id if self.source_location_id else False,
-        "company_id": self.company_id.id,
-        "note": "Created automatically from route visit pending refill.",
-    })
-
-    line_vals = []
-    for line in pending_lines:
-        line_vals.append({
-            "backorder_id": backorder.id,
-            "product_id": line.product_id.id,
-            "needed_qty": line.sold_qty,
-            "available_qty_at_visit": line.vehicle_available_qty,
-            "delivered_qty": line.supplied_qty,
-            "pending_qty": line.pending_refill_qty,
-            "unit_price": line.unit_price,
-            "note": line.note,
+        backorder = self.env["route.refill.backorder"].create({
+            "visit_id": self.id,
+            "outlet_id": self.outlet_id.id,
+            "partner_id": partner.id,
+            "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+            "source_location_id": self.source_location_id.id if self.source_location_id else False,
+            "company_id": self.company_id.id,
+            "note": "Created automatically from route visit pending refill.",
         })
 
-    self.env["route.refill.backorder.line"].create(line_vals)
-    self.refill_backorder_id = backorder.id
-    return backorder
+        line_vals = []
+        for line in pending_lines:
+            line_vals.append({
+                "backorder_id": backorder.id,
+                "product_id": line.product_id.id,
+                "needed_qty": line.sold_qty,
+                "available_qty_at_visit": line.vehicle_available_qty,
+                "delivered_qty": line.supplied_qty,
+                "pending_qty": line.pending_refill_qty,
+                "unit_price": line.unit_price,
+                "note": line.note,
+            })
+
+        self.env["route.refill.backorder.line"].create(line_vals)
+        self.refill_backorder_id = backorder.id
+        return backorder
+
     def action_load_previous_balance(self):
         OutletStockBalance = self.env["outlet.stock.balance"]
         RouteVisitLine = self.env["route.visit.line"]
@@ -388,6 +398,9 @@ class RouteVisit(models.Model):
 
             if hasattr(rec.outlet_id, "default_commission_rate") and rec.outlet_id.default_commission_rate:
                 rec.commission_rate = rec.outlet_id.default_commission_rate
+
+            if not rec.partner_id and hasattr(rec.outlet_id, "partner_id") and rec.outlet_id.partner_id:
+                rec.partner_id = rec.outlet_id.partner_id.commercial_partner_id
 
             line_vals_list = []
             for balance in balances:
@@ -567,5 +580,7 @@ class RouteVisit(models.Model):
 
             rec.write({
                 "visit_process_state": "cancelled",
+                "cancel_reason": rec.cancel_reason or "Cancelled by user",
+                "check_out_datetime": fields.Datetime.now(),
             })
             rec._set_main_visit_state_cancel()
