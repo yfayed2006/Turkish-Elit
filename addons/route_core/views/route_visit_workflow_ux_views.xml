@@ -31,17 +31,45 @@
                     />
                     <button
                         name="action_ux_reconcile_count"
-                        string="Reconcile"
+                        string="Reconcile Count"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
-                        name="action_ux_finalize_visit"
-                        string="Finish Process"
+                        name="action_ux_create_sale_order"
+                        string="Create Sale Order"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'create_sale_order'"
+                    />
+                    <button
+                        name="action_ux_generate_refill"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'generate_refill'"
+                    />
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Collect Payment"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'collect_payment'"
+                    />
+                    <button
+                        name="action_ux_confirm_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_payments'"
+                    />
+                    <button
+                        name="action_ux_finish_visit"
+                        string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="ux_primary_action != 'finalize_visit'"
+                        invisible="ux_primary_action != 'finish_visit'"
                     />
                     <button
                         name="action_set_cancelled_process"
@@ -64,10 +92,17 @@
                 <field name="ux_stage" invisible="1"/>
                 <field name="ux_stage_title" invisible="1"/>
                 <field name="ux_stage_help" invisible="1"/>
+
                 <field name="ux_can_scan_barcode" invisible="1"/>
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
+                <field name="ux_can_generate_refill" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
+                <field name="ux_can_collect_payment" invisible="1"/>
+                <field name="ux_can_confirm_payments" invisible="1"/>
+                <field name="ux_can_skip_collection" invisible="1"/>
+                <field name="ux_can_open_payments" invisible="1"/>
+                <field name="ux_can_finish_visit" invisible="1"/>
 
                 <div class="alert alert-info mb-3" role="alert">
                     <strong>
@@ -81,6 +116,7 @@
 
             <xpath expr="//div[@name='button_box']" position="replace">
                 <div class="oe_button_box" name="button_box">
+
                     <button
                         name="action_ux_scan_shelf"
                         string="Scan Barcode"
@@ -106,17 +142,63 @@
                         icon="fa-external-link"
                         invisible="not ux_can_view_sale_order"
                     >
-                        <field name="sale_order_count" string="View Sale Order" widget="statinfo"/>
+                        <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                     </button>
+
+                    <button
+                        name="action_ux_generate_refill"
+                        string="Generate Refill"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-refresh"
+                        invisible="not ux_can_generate_refill"
+                    />
 
                     <button
                         name="action_view_pending_refill"
                         string="Pending Refill"
                         type="object"
                         class="oe_stat_button"
-                        icon="fa-refresh"
+                        icon="fa-exchange"
                         invisible="not ux_can_open_pending_refill"
                     />
+
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Add Payment"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-money"
+                        invisible="not ux_can_collect_payment"
+                    />
+
+                    <button
+                        name="action_ux_confirm_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-check-circle"
+                        invisible="not ux_can_confirm_payments"
+                    />
+
+                    <button
+                        name="action_ux_open_payments"
+                        string="Payments"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-credit-card"
+                        invisible="not ux_can_open_payments"
+                    />
+
+                    <button
+                        name="action_ux_skip_collection"
+                        string="Skip Collection"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-forward"
+                        invisible="not ux_can_skip_collection or not collection_skip_reason"
+                    />
+
                 </div>
             </xpath>
         </field>
@@ -152,17 +234,45 @@
                     />
                     <button
                         name="action_ux_reconcile_count"
-                        string="Reconcile"
+                        string="Reconcile Count"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
-                        name="action_ux_finalize_visit"
-                        string="Finish Process"
+                        name="action_ux_create_sale_order"
+                        string="Create Sale Order"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'create_sale_order'"
+                    />
+                    <button
+                        name="action_ux_generate_refill"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'generate_refill'"
+                    />
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Collect Payment"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'collect_payment'"
+                    />
+                    <button
+                        name="action_ux_confirm_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_payments'"
+                    />
+                    <button
+                        name="action_ux_finish_visit"
+                        string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="ux_primary_action != 'finalize_visit'"
+                        invisible="ux_primary_action != 'finish_visit'"
                     />
                     <button
                         name="action_set_cancelled_process"
@@ -185,10 +295,17 @@
                 <field name="ux_stage" invisible="1"/>
                 <field name="ux_stage_title" invisible="1"/>
                 <field name="ux_stage_help" invisible="1"/>
+
                 <field name="ux_can_scan_barcode" invisible="1"/>
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
+                <field name="ux_can_generate_refill" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
+                <field name="ux_can_collect_payment" invisible="1"/>
+                <field name="ux_can_confirm_payments" invisible="1"/>
+                <field name="ux_can_skip_collection" invisible="1"/>
+                <field name="ux_can_open_payments" invisible="1"/>
+                <field name="ux_can_finish_visit" invisible="1"/>
 
                 <div class="alert alert-info mb-3" role="alert">
                     <strong>
@@ -202,6 +319,7 @@
 
             <xpath expr="//div[@name='button_box']" position="replace">
                 <div class="oe_button_box" name="button_box">
+
                     <button
                         name="action_ux_scan_shelf"
                         string="Scan Barcode"
@@ -227,17 +345,63 @@
                         icon="fa-external-link"
                         invisible="not ux_can_view_sale_order"
                     >
-                        <field name="sale_order_count" string="View Sale Order" widget="statinfo"/>
+                        <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                     </button>
+
+                    <button
+                        name="action_ux_generate_refill"
+                        string="Generate Refill"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-refresh"
+                        invisible="not ux_can_generate_refill"
+                    />
 
                     <button
                         name="action_view_pending_refill"
                         string="Pending Refill"
                         type="object"
                         class="oe_stat_button"
-                        icon="fa-refresh"
+                        icon="fa-exchange"
                         invisible="not ux_can_open_pending_refill"
                     />
+
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Add Payment"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-money"
+                        invisible="not ux_can_collect_payment"
+                    />
+
+                    <button
+                        name="action_ux_confirm_payments"
+                        string="Confirm Payments"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-check-circle"
+                        invisible="not ux_can_confirm_payments"
+                    />
+
+                    <button
+                        name="action_ux_open_payments"
+                        string="Payments"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-credit-card"
+                        invisible="not ux_can_open_payments"
+                    />
+
+                    <button
+                        name="action_ux_skip_collection"
+                        string="Skip Collection"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-forward"
+                        invisible="not ux_can_skip_collection or not collection_skip_reason"
+                    />
+
                 </div>
             </xpath>
         </field>
