@@ -1,4 +1,4 @@
-from odoo import api, models, _
+from odoo import _, api, models
 from odoo.exceptions import UserError
 
 
@@ -25,9 +25,9 @@ class RouteVisit(models.Model):
 
     def _get_resolved_customer_partner(self):
         self.ensure_one()
-
         partner = self.partner_id
-        if not partner and self.outlet_id and self.outlet_id.partner_id:
+
+        if not partner and self.outlet_id and getattr(self.outlet_id, "partner_id", False):
             partner = self.outlet_id.partner_id
 
         return partner.commercial_partner_id if partner else False
@@ -68,6 +68,9 @@ class RouteVisit(models.Model):
         self._ensure_customer_partner(raise_if_missing=True)
         return super().action_create_sale_order()
 
+    def _create_pending_refill_backorder(self):
+        self._ensure_customer_partner(raise_if_missing=True)
+        return super()._create_pending_refill_backorder()
     def _create_pending_refill_backorder(self):
         self._ensure_customer_partner(raise_if_missing=True)
         return super()._create_pending_refill_backorder()
