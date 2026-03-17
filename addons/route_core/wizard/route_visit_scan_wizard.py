@@ -12,38 +12,27 @@ class RouteVisitScanWizard(models.TransientModel):
         required=True,
         readonly=True,
     )
-
-    barcode = fields.Char(
-        string="Barcode",
-    )
-
-    quantity = fields.Float(
-        string="Quantity",
-        default=1.0,
-    )
+    barcode = fields.Char(string="Barcode")
+    quantity = fields.Float(string="Quantity", default=1.0)
 
     detected_product_id = fields.Many2one(
         "product.product",
         string="Detected Product",
         readonly=True,
     )
-
     base_uom_id = fields.Many2one(
         "uom.uom",
         string="Base UoM",
         readonly=True,
     )
-
     scanned_uom_id = fields.Many2one(
         "uom.uom",
         string="Count As UoM",
     )
-
     detected_scan_type = fields.Char(
         string="Detected Source",
         readonly=True,
     )
-
     counted_increase = fields.Float(
         string="Count Increase",
         readonly=True,
@@ -54,7 +43,6 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Last Product",
         readonly=True,
     )
-
     last_counted_qty = fields.Float(
         string="Last Counted Qty",
         readonly=True,
@@ -89,7 +77,9 @@ class RouteVisitScanWizard(models.TransientModel):
             qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
             if qty and rec.scanned_uom_id:
                 try:
-                    rec.counted_increase = rec.scanned_uom_id._compute_quantity(qty, product.uom_id)
+                    rec.counted_increase = rec.scanned_uom_id._compute_quantity(
+                        qty, product.uom_id
+                    )
                 except Exception:
                     rec.counted_increase = 0.0
             else:
@@ -100,10 +90,8 @@ class RouteVisitScanWizard(models.TransientModel):
 
         if not self.visit_id:
             raise UserError(_("Visit is required."))
-
         if not self.barcode or not self.barcode.strip():
             raise UserError(_("Please enter or scan a barcode first."))
-
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
 
@@ -136,4 +124,12 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def action_done(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window_close"}
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.visit_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
