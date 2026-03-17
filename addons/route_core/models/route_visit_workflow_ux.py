@@ -32,6 +32,7 @@ class RouteVisit(models.Model):
             ("generate_refill", "Generate Refill Proposal"),
             ("collect_payment", "Collect Payment"),
             ("confirm_payments", "Confirm Payments"),
+            ("finalize_visit", "Finalize Visit"),
             ("finish_visit", "Finish Visit"),
             ("none", "No Action"),
         ],
@@ -264,21 +265,21 @@ class RouteVisit(models.Model):
                     continue
 
                 rec.ux_stage = "ready_to_close"
-                rec.ux_primary_action = "finish_visit"
+                rec.ux_primary_action = "finalize_visit"
                 rec.ux_stage_title = "Finish visit"
                 rec.ux_stage_help = "Settlement is ready. Update balances and complete the visit."
                 continue
 
             if rec.visit_process_state == "collection_done":
                 rec.ux_stage = "ready_to_close"
-                rec.ux_primary_action = "finish_visit"
+                rec.ux_primary_action = "finalize_visit"
                 rec.ux_stage_title = "Finish visit"
                 rec.ux_stage_help = "Payments are complete. Update balances and close the visit."
                 continue
 
             if rec.visit_process_state == "ready_to_close":
                 rec.ux_stage = "ready_to_close"
-                rec.ux_primary_action = "finish_visit"
+                rec.ux_primary_action = "finalize_visit"
                 rec.ux_stage_title = "Finish visit"
                 rec.ux_stage_help = "The visit is ready to close."
                 continue
@@ -367,7 +368,7 @@ class RouteVisit(models.Model):
             "target": "current",
         }
 
-    def action_ux_finish_visit(self):
+    def _action_finish_visit_core(self):
         self.ensure_one()
 
         if self.visit_process_state == "reconciled":
@@ -407,6 +408,12 @@ class RouteVisit(models.Model):
             "The visit is not yet ready for closing.\n"
             "Current process state: %s"
         ) % (self.visit_process_state or "-"))
+
+    def action_ux_finish_visit(self):
+        return self._action_finish_visit_core()
+
+    def action_ux_finalize_visit(self):
+        return self._action_finish_visit_core()
 
     def action_ux_view_sale_order(self):
         self.ensure_one()
