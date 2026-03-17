@@ -12,16 +12,12 @@
                 <field name="partner_id"/>
                 <field name="area_id"/>
                 <field name="vehicle_id"/>
-                <field name="source_location_id"/>
                 <field name="user_id"/>
-                <field name="visit_process_state" widget="badge"/>
-                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+                <field name="visit_process_state"/>
+                <field name="state"/>
                 <field name="sale_order_id"/>
                 <field name="start_datetime"/>
                 <field name="end_datetime"/>
-                <field name="net_due_amount"/>
-                <field name="collected_amount"/>
-                <field name="remaining_due_amount"/>
             </list>
         </field>
     </record>
@@ -238,7 +234,6 @@
                             <field name="vehicle_id" readonly="1"/>
                             <field name="source_location_id"/>
                             <field name="user_id" readonly="1"/>
-                            <field name="state" readonly="1"/>
                             <field name="visit_process_state"/>
                         </group>
                         <group>
@@ -279,6 +274,7 @@
                                 <list editable="bottom">
                                     <field name="product_id"/>
                                     <field name="barcode" readonly="1"/>
+                                    <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
                                     <field name="return_qty"/>
@@ -305,6 +301,7 @@
                                     <field name="reference"/>
                                     <field name="bank_name"/>
                                     <field name="pos_terminal"/>
+                                    <field name="note"/>
                                     <field name="state"/>
                                 </list>
                             </field>
@@ -485,7 +482,7 @@
                             <field name="partner_id" readonly="1"/>
                         </div>
                         <div class="mt8">
-                            <field name="visit_process_state" widget="badge"/>
+                            <field name="visit_process_state"/>
                         </div>
                     </div>
 
@@ -496,6 +493,7 @@
                             <field name="area_id" readonly="1"/>
                             <field name="vehicle_id" readonly="1"/>
                             <field name="user_id" readonly="1"/>
+                            <field name="source_location_id"/>
                         </group>
                         <group string="Current Status">
                             <field name="sale_order_id" readonly="1"/>
@@ -534,6 +532,7 @@
                                 <list editable="bottom">
                                     <field name="product_id"/>
                                     <field name="barcode" readonly="1"/>
+                                    <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
                                     <field name="return_qty"/>
@@ -543,6 +542,7 @@
                                     <field name="pending_refill_qty" readonly="1"/>
                                     <field name="new_balance_qty" readonly="1"/>
                                     <field name="unit_price"/>
+                                    <field name="note"/>
                                 </list>
                             </field>
                         </page>
@@ -556,6 +556,7 @@
                                     <field name="reference"/>
                                     <field name="bank_name"/>
                                     <field name="pos_terminal"/>
+                                    <field name="note"/>
                                     <field name="state"/>
                                 </list>
                             </field>
@@ -616,19 +617,18 @@
                 <field name="vehicle_id"/>
                 <field name="user_id"/>
                 <field name="state"/>
-                <field name="visit_process_state"/>
 
                 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
                 <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
                 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 
-                <group expand="0" string="Group By">
-                    <filter name="group_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
-                    <filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
-                    <filter name="group_state" string="Visit State" context="{'group_by': 'state'}"/>
-                    <filter name="group_process" string="Process" context="{'group_by': 'visit_process_state'}"/>
-                    <filter name="group_date" string="Date" context="{'group_by': 'date'}"/>
-                </group>
+                <separator/>
+
+                <filter name="group_by_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
+                <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+                <filter name="group_by_state" string="Visit State" context="{'group_by': 'state'}"/>
+                <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
             </search>
         </field>
     </record>
