@@ -11,7 +11,6 @@ class RouteVisit(models.Model):
             ("load_balance", "Load Balance"),
             ("count", "Count Shelf"),
             ("reconcile", "Reconcile"),
-            ("sale_order", "Sale Order"),
             ("refill", "Refill"),
             ("collection", "Collection"),
             ("ready_to_close", "Ready to Close"),
@@ -28,7 +27,6 @@ class RouteVisit(models.Model):
             ("load_previous_balance", "Load Previous Balance"),
             ("scan_shelf", "Scan Shelf"),
             ("reconcile_count", "Reconcile Count"),
-            ("create_sale_order", "Create Sale Order"),
             ("generate_refill", "Generate Refill Proposal"),
             ("collect_payment", "Collect Payment"),
             ("confirm_payments", "Confirm Payments"),
@@ -147,19 +145,14 @@ class RouteVisit(models.Model):
                 "counting",
             )
 
-            rec.ux_can_create_sale_order = bool(
-                rec.state == "in_progress"
-                and rec.visit_process_state == "reconciled"
-                and rec.sold_total_qty > 0
-                and not rec.sale_order_id
-            )
+            # لم نعد نحتاج إنشاء يدوي للمندوب
+            rec.ux_can_create_sale_order = False
 
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
             rec.ux_can_generate_refill = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
-                and not rec.ux_can_create_sale_order
             )
 
             rec.ux_can_open_pending_refill = bool(
@@ -232,17 +225,10 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "reconcile"
                 rec.ux_primary_action = "reconcile_count"
                 rec.ux_stage_title = "Reconcile counted stock"
-                rec.ux_stage_help = "After finishing the shelf count, confirm reconciliation to calculate sold quantities."
+                rec.ux_stage_help = "After finishing the shelf count, confirm reconciliation to calculate sold quantities and auto-create the sale order."
                 continue
 
             if rec.visit_process_state == "reconciled":
-                if rec.ux_can_create_sale_order:
-                    rec.ux_stage = "sale_order"
-                    rec.ux_primary_action = "create_sale_order"
-                    rec.ux_stage_title = "Create sales order"
-                    rec.ux_stage_help = "The sold quantities are ready. Create the sale order before settlement."
-                    continue
-
                 if not refill_prepared:
                     rec.ux_stage = "refill"
                     rec.ux_primary_action = "generate_refill"
@@ -303,11 +289,27 @@ class RouteVisit(models.Model):
 
     def action_ux_reconcile_count(self):
         self.ensure_one()
-        return self.action_set_reconciled()
+
+        # 1) عمل Reconcile
+        result = self.action_set_reconciled()
+
+        # 2) توليد أمر البيع أوتوماتيك إذا وُجدت مبيعات ولم يوجد أمر بيع
+        if self.visit_process_state == "reconciled" and self.sold_total_qty > 0 and not self.sale_order_id:
+            self.action_create_sale_order()
+
+        # 3) إعادة فتح نفس الزيارة لتحديث الواجهة
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
     def action_ux_create_sale_order(self):
         self.ensure_one()
-        return self.action_create_sale_order()
+        return self.action_view_sale_order() if self.sale_order_id else self.action_create_sale_order()
 
     def action_ux_generate_refill(self):
         self.ensure_one()
@@ -372,8 +374,9 @@ class RouteVisit(models.Model):
         self.ensure_one()
 
         if self.visit_process_state == "reconciled":
+            # sale order صار أوتوماتيك، لكن نتحقق احتياطيًا
             if self.sold_total_qty > 0 and not self.sale_order_id:
-                raise UserError(_("Please create the Sale Order before finishing the visit."))
+                self.action_create_sale_order()
 
             self.action_generate_refill_proposal()
 
