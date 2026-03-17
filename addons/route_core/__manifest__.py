@@ -17,6 +17,7 @@
         "views/route_plan_views.xml",
         "views/route_vehicle_views.xml",
         "views/route_visit_views.xml",
+        "views/route_visit_workflow_ux_views.xml",
         "views/route_visit_picking_views.xml",
         "views/route_visit_vehicle_line_views.xml",
         "views/route_visit_scan_views.xml",
