@@ -4,12 +4,14 @@
     <record id="view_route_visit_pda_form_stepflow_inherit" model="ir.ui.view">
         <field name="name">route.visit.pda.form.stepflow.inherit</field>
         <field name="model">route.visit</field>
+        <field name="priority" eval="1000"/>
         <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
         <field name="arch" type="xml">
 
             <xpath expr="//form/header" position="replace">
                 <header>
                     <field name="ux_primary_action" invisible="1"/>
+
                     <field name="ux_stage"
                            widget="statusbar"
                            statusbar_visible="arrival,load_balance,count,reconcile,settlement,done"/>
@@ -48,10 +50,7 @@
                            widget="statusbar"
                            statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done"/>
 
-                    <field name="state"
-                           widget="statusbar"
-                           statusbar_visible="draft,in_progress,done,cancel"
-                           invisible="1"/>
+                    <field name="state" invisible="1"/>
                 </header>
             </xpath>
 
