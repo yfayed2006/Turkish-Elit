@@ -51,21 +51,50 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    ux_can_scan_barcode = fields.Boolean(
+        string="Can Scan Barcode",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_view_sale_order = fields.Boolean(
+        string="Can View Sale Order",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_open_pending_refill = fields.Boolean(
+        string="Can Open Pending Refill",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
     @api.depends(
         "state",
         "visit_process_state",
         "sale_order_id",
+        "sale_order_count",
         "sold_total_qty",
         "payment_ids.state",
         "collection_skip_reason",
         "remaining_due_amount",
+        "has_pending_refill",
+        "refill_backorder_id",
     )
     def _compute_ux_workflow(self):
         for rec in self:
+            rec.ux_can_scan_barcode = rec.state == "in_progress" and rec.visit_process_state in (
+                "checked_in",
+                "counting",
+            )
             rec.ux_can_create_sale_order = bool(
                 rec.state == "in_progress"
                 and rec.sold_total_qty > 0
                 and not rec.sale_order_id
+            )
+            rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
+            rec.ux_can_open_pending_refill = bool(
+                rec.has_pending_refill or rec.refill_backorder_id
             )
 
             if rec.state in ("done", "cancel") or rec.visit_process_state in ("done", "cancelled"):
@@ -93,7 +122,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "count"
                 rec.ux_primary_action = "scan_shelf"
                 rec.ux_stage_title = "Scan shelf stock"
-                rec.ux_stage_help = "Use barcode scanning to record the remaining shelf quantities."
+                rec.ux_stage_help = "Use Scan Barcode to record shelf quantities, then continue when counting is complete."
                 continue
 
             if rec.visit_process_state == "counting":
@@ -117,10 +146,6 @@ class RouteVisit(models.Model):
             rec.ux_stage_title = "Start the visit"
             rec.ux_stage_help = "Begin the visit to continue the workflow."
 
-    # ---------------------------------------------------------
-    # Single-button UX wrappers
-    # ---------------------------------------------------------
-
     def action_ux_start_visit(self):
         self.ensure_one()
         return self.action_start_visit()
@@ -138,34 +163,17 @@ class RouteVisit(models.Model):
         return self.action_set_reconciled()
 
     def action_ux_finalize_visit(self):
-        """
-        Final single-button step after reconciliation:
-        - from reconciled:
-            * generate refill proposal
-            * confirm payments if any draft payments exist
-              OR skip collection if a skip reason was entered
-            * update outlet balance
-            * finish process
-        - from collection_done:
-            * update outlet balance
-            * finish process
-        - from ready_to_close:
-            * finish directly
-        """
         self.ensure_one()
 
         if self.visit_process_state == "reconciled":
-            # 1) Refill proposal
             self.action_generate_refill_proposal()
 
-            # 2) Collection
             draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
             confirmed_payments = self.payment_ids.filtered(lambda p: p.state == "confirmed")
 
             if draft_payments:
                 self.action_confirm_all_payments()
             elif confirmed_payments:
-                # already collected, push state forward manually
                 self.write({
                     "visit_process_state": "collection_done",
                     "collection_datetime": fields.Datetime.now(),
@@ -179,7 +187,6 @@ class RouteVisit(models.Model):
                     "- enter a Collection Skip Reason."
                 ))
 
-            # refresh after collection step
             self.flush_recordset()
 
         if self.visit_process_state == "collection_done":
@@ -194,10 +201,6 @@ class RouteVisit(models.Model):
         ) % (self.visit_process_state or "-"))
 
     def action_ux_create_sale_order(self):
-        """
-        Kept as secondary action, not the primary workflow button,
-        because the current sale.order confirm logic closes the visit directly.
-        """
         self.ensure_one()
         return self.action_create_sale_order()
 
