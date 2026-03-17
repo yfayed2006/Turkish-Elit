@@ -93,53 +93,67 @@
             <form string="Route Visit" create="0" delete="0">
                 <header>
                     <button
-                        name="action_load_previous_balance"
+                        name="action_ux_start_visit"
+                        string="Start Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'start_visit'"
+                    />
+                    <button
+                        name="action_ux_load_previous_balance"
                         string="Load Previous Balance"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'pending' or line_ids"
+                        invisible="ux_primary_action != 'load_previous_balance'"
                     />
                     <button
-                        name="action_set_checked_in"
-                        string="Check In"
+                        name="action_ux_scan_shelf"
+                        string="Scan Shelf"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'pending' or not line_ids"
+                        invisible="ux_primary_action != 'scan_shelf'"
                     />
                     <button
-                        name="action_set_counting"
-                        string="Start Count"
+                        name="action_ux_reconcile_count"
+                        string="Reconcile Count"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'checked_in'"
+                        invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
-                        name="action_set_reconciled"
-                        string="Reconcile"
+                        name="action_ux_create_sale_order"
+                        string="Create Sale Order"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'counting'"
+                        invisible="ux_primary_action != 'create_sale_order'"
                     />
                     <button
-                        name="action_confirm_all_payments"
+                        name="action_ux_generate_refill"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'generate_refill'"
+                    />
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Collect Payment"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'collect_payment'"
+                    />
+                    <button
+                        name="action_ux_confirm_payments"
                         string="Confirm Payments"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'reconciled'"
+                        invisible="ux_primary_action != 'confirm_payments'"
                     />
                     <button
-                        name="action_update_outlet_balance"
-                        string="Update Balance"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'collection_done'"
-                    />
-                    <button
-                        name="action_set_done_process"
-                        string="Finish Process"
+                        name="action_ux_finish_visit"
+                        string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="visit_process_state != 'ready_to_close'"
+                        invisible="ux_primary_action != 'finish_visit'"
                     />
                     <button
                         name="action_set_cancelled_process"
@@ -157,24 +171,112 @@
                 </header>
 
                 <sheet>
+                    <field name="ux_primary_action" invisible="1"/>
+                    <field name="ux_stage" invisible="1"/>
+                    <field name="ux_stage_title" invisible="1"/>
+                    <field name="ux_stage_help" invisible="1"/>
+
+                    <field name="ux_can_scan_barcode" invisible="1"/>
+                    <field name="ux_can_create_sale_order" invisible="1"/>
+                    <field name="ux_can_view_sale_order" invisible="1"/>
+                    <field name="ux_can_generate_refill" invisible="1"/>
+                    <field name="ux_can_open_pending_refill" invisible="1"/>
+                    <field name="ux_can_collect_payment" invisible="1"/>
+                    <field name="ux_can_confirm_payments" invisible="1"/>
+                    <field name="ux_can_skip_collection" invisible="1"/>
+                    <field name="ux_can_open_payments" invisible="1"/>
+                    <field name="ux_can_finish_visit" invisible="1"/>
+
+                    <div class="alert alert-info mb-3" role="alert">
+                        <strong>
+                            <field name="ux_stage_title" readonly="1" nolabel="1"/>
+                        </strong>
+                        <div class="mt-1">
+                            <field name="ux_stage_help" readonly="1" nolabel="1"/>
+                        </div>
+                    </div>
+
                     <div class="oe_button_box" name="button_box">
                         <button
-                            name="action_view_sale_order"
+                            name="action_ux_scan_shelf"
+                            string="Scan Barcode"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-barcode"
+                            invisible="not ux_can_scan_barcode"
+                        />
+
+                        <button
+                            name="action_ux_create_sale_order"
+                            string="Create Sale Order"
                             type="object"
                             class="oe_stat_button"
                             icon="fa-shopping-cart"
-                            invisible="sale_order_count == 0"
+                            invisible="not ux_can_create_sale_order"
+                        />
+
+                        <button
+                            name="action_ux_view_sale_order"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_sale_order"
                         >
                             <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                         </button>
+
+                        <button
+                            name="action_ux_generate_refill"
+                            string="Generate Refill"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-refresh"
+                            invisible="not ux_can_generate_refill"
+                        />
 
                         <button
                             name="action_view_pending_refill"
                             string="Pending Refill"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-refresh"
-                            invisible="not has_pending_refill and not refill_backorder_id"
+                            icon="fa-exchange"
+                            invisible="not ux_can_open_pending_refill"
+                        />
+
+                        <button
+                            name="action_ux_collect_payment"
+                            string="Add Payment"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-money"
+                            invisible="not ux_can_collect_payment"
+                        />
+
+                        <button
+                            name="action_ux_confirm_payments"
+                            string="Confirm Payments"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check-circle"
+                            invisible="not ux_can_confirm_payments"
+                        />
+
+                        <button
+                            name="action_ux_open_payments"
+                            string="Payments"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-credit-card"
+                            invisible="not ux_can_open_payments"
+                        />
+
+                        <button
+                            name="action_ux_skip_collection"
+                            string="Skip Collection"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-forward"
+                            invisible="not ux_can_skip_collection or not collection_skip_reason"
                         />
                     </div>
 
@@ -318,61 +420,68 @@
             <form string="PDA Visit" create="0" delete="0">
                 <header>
                     <button
-                        name="action_load_previous_balance"
+                        name="action_ux_start_visit"
+                        string="Start Visit"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'start_visit'"
+                    />
+                    <button
+                        name="action_ux_load_previous_balance"
                         string="Load Previous Balance"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'pending' or line_ids"
+                        invisible="ux_primary_action != 'load_previous_balance'"
                     />
-
                     <button
-                        name="action_set_checked_in"
-                        string="Check In"
+                        name="action_ux_scan_shelf"
+                        string="Scan Shelf"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'pending' or not line_ids"
+                        invisible="ux_primary_action != 'scan_shelf'"
                     />
-
                     <button
-                        name="action_set_counting"
-                        string="Start Count"
+                        name="action_ux_reconcile_count"
+                        string="Reconcile Count"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'checked_in'"
+                        invisible="ux_primary_action != 'reconcile_count'"
                     />
-
                     <button
-                        name="action_set_reconciled"
-                        string="Reconcile"
+                        name="action_ux_create_sale_order"
+                        string="Create Sale Order"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'counting'"
+                        invisible="ux_primary_action != 'create_sale_order'"
                     />
-
                     <button
-                        name="action_confirm_all_payments"
+                        name="action_ux_generate_refill"
+                        string="Generate Refill Proposal"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'generate_refill'"
+                    />
+                    <button
+                        name="action_ux_collect_payment"
+                        string="Collect Payment"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'collect_payment'"
+                    />
+                    <button
+                        name="action_ux_confirm_payments"
                         string="Confirm Payments"
                         type="object"
                         class="btn-primary"
-                        invisible="visit_process_state != 'reconciled'"
+                        invisible="ux_primary_action != 'confirm_payments'"
                     />
-
                     <button
-                        name="action_update_outlet_balance"
-                        string="Update Balance"
-                        type="object"
-                        class="btn-primary"
-                        invisible="visit_process_state != 'collection_done'"
-                    />
-
-                    <button
-                        name="action_set_done_process"
-                        string="Finish Process"
+                        name="action_ux_finish_visit"
+                        string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="visit_process_state != 'ready_to_close'"
+                        invisible="ux_primary_action != 'finish_visit'"
                     />
-
                     <button
                         name="action_set_cancelled_process"
                         string="Cancel Process"
@@ -389,24 +498,112 @@
                 </header>
 
                 <sheet>
+                    <field name="ux_primary_action" invisible="1"/>
+                    <field name="ux_stage" invisible="1"/>
+                    <field name="ux_stage_title" invisible="1"/>
+                    <field name="ux_stage_help" invisible="1"/>
+
+                    <field name="ux_can_scan_barcode" invisible="1"/>
+                    <field name="ux_can_create_sale_order" invisible="1"/>
+                    <field name="ux_can_view_sale_order" invisible="1"/>
+                    <field name="ux_can_generate_refill" invisible="1"/>
+                    <field name="ux_can_open_pending_refill" invisible="1"/>
+                    <field name="ux_can_collect_payment" invisible="1"/>
+                    <field name="ux_can_confirm_payments" invisible="1"/>
+                    <field name="ux_can_skip_collection" invisible="1"/>
+                    <field name="ux_can_open_payments" invisible="1"/>
+                    <field name="ux_can_finish_visit" invisible="1"/>
+
+                    <div class="alert alert-info mb-3" role="alert">
+                        <strong>
+                            <field name="ux_stage_title" readonly="1" nolabel="1"/>
+                        </strong>
+                        <div class="mt-1">
+                            <field name="ux_stage_help" readonly="1" nolabel="1"/>
+                        </div>
+                    </div>
+
                     <div class="oe_button_box" name="button_box">
                         <button
-                            name="action_view_sale_order"
+                            name="action_ux_scan_shelf"
+                            string="Scan Barcode"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-barcode"
+                            invisible="not ux_can_scan_barcode"
+                        />
+
+                        <button
+                            name="action_ux_create_sale_order"
+                            string="Create Sale Order"
                             type="object"
                             class="oe_stat_button"
                             icon="fa-shopping-cart"
-                            invisible="sale_order_count == 0"
+                            invisible="not ux_can_create_sale_order"
+                        />
+
+                        <button
+                            name="action_ux_view_sale_order"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_sale_order"
                         >
                             <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                         </button>
+
+                        <button
+                            name="action_ux_generate_refill"
+                            string="Generate Refill"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-refresh"
+                            invisible="not ux_can_generate_refill"
+                        />
 
                         <button
                             name="action_view_pending_refill"
                             string="Pending Refill"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-refresh"
-                            invisible="not has_pending_refill and not refill_backorder_id"
+                            icon="fa-exchange"
+                            invisible="not ux_can_open_pending_refill"
+                        />
+
+                        <button
+                            name="action_ux_collect_payment"
+                            string="Add Payment"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-money"
+                            invisible="not ux_can_collect_payment"
+                        />
+
+                        <button
+                            name="action_ux_confirm_payments"
+                            string="Confirm Payments"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check-circle"
+                            invisible="not ux_can_confirm_payments"
+                        />
+
+                        <button
+                            name="action_ux_open_payments"
+                            string="Payments"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-credit-card"
+                            invisible="not ux_can_open_payments"
+                        />
+
+                        <button
+                            name="action_ux_skip_collection"
+                            string="Skip Collection"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-forward"
+                            invisible="not ux_can_skip_collection or not collection_skip_reason"
                         />
                     </div>
 
@@ -459,6 +656,23 @@
                         <group>
                             <field name="collected_amount" readonly="1"/>
                             <field name="remaining_due_amount" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Visit Process">
+                        <group>
+                            <field name="commission_rate"/>
+                            <field name="no_refill"/>
+                            <field name="has_collection" readonly="1"/>
+                            <field name="has_returns" readonly="1"/>
+                            <field name="has_refill" readonly="1"/>
+                            <field name="has_pending_refill" readonly="1"/>
+                            <field name="is_ready_to_close" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="collection_skip_reason"/>
+                            <field name="no_refill_reason" invisible="not no_refill"/>
+                            <field name="cancel_reason"/>
                         </group>
                     </group>
 
