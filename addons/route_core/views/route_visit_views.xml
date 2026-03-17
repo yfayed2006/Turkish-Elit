@@ -114,18 +114,18 @@
                         invisible="ux_primary_action != 'scan_shelf'"
                     />
                     <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
+                    />
+                    <button
                         name="action_ux_reconcile_count"
                         string="Reconcile Count"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'reconcile_count'"
-                    />
-                    <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'create_sale_order'"
                     />
                     <button
                         name="action_ux_generate_refill"
@@ -149,11 +149,11 @@
                         invisible="ux_primary_action != 'confirm_payments'"
                     />
                     <button
-                        name="action_ux_finish_visit"
+                        name="action_ux_finalize_visit"
                         string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="ux_primary_action != 'finish_visit'"
+                        invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
                     <button
                         name="action_set_cancelled_process"
@@ -176,7 +176,12 @@
                     <field name="ux_stage_title" invisible="1"/>
                     <field name="ux_stage_help" invisible="1"/>
 
+                    <field name="returns_step_done" invisible="1"/>
+                    <field name="has_returns_declared" invisible="1"/>
+
                     <field name="ux_can_scan_barcode" invisible="1"/>
+                    <field name="ux_can_scan_returns" invisible="1"/>
+                    <field name="ux_can_no_returns" invisible="1"/>
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
@@ -207,12 +212,21 @@
                         />
 
                         <button
-                            name="action_ux_create_sale_order"
-                            string="Create Sale Order"
+                            name="action_ux_returns_step"
+                            string="Scan Returns"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-shopping-cart"
-                            invisible="not ux_can_create_sale_order"
+                            icon="fa-undo"
+                            invisible="not ux_can_scan_returns"
+                        />
+
+                        <button
+                            name="action_ux_no_returns"
+                            string="No Returns"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check"
+                            invisible="not ux_can_no_returns"
                         />
 
                         <button
@@ -441,18 +455,18 @@
                         invisible="ux_primary_action != 'scan_shelf'"
                     />
                     <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
+                    />
+                    <button
                         name="action_ux_reconcile_count"
                         string="Reconcile Count"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'reconcile_count'"
-                    />
-                    <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'create_sale_order'"
                     />
                     <button
                         name="action_ux_generate_refill"
@@ -476,11 +490,11 @@
                         invisible="ux_primary_action != 'confirm_payments'"
                     />
                     <button
-                        name="action_ux_finish_visit"
+                        name="action_ux_finalize_visit"
                         string="Finish Visit"
                         type="object"
                         class="btn-success"
-                        invisible="ux_primary_action != 'finish_visit'"
+                        invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
                     <button
                         name="action_set_cancelled_process"
@@ -503,7 +517,12 @@
                     <field name="ux_stage_title" invisible="1"/>
                     <field name="ux_stage_help" invisible="1"/>
 
+                    <field name="returns_step_done" invisible="1"/>
+                    <field name="has_returns_declared" invisible="1"/>
+
                     <field name="ux_can_scan_barcode" invisible="1"/>
+                    <field name="ux_can_scan_returns" invisible="1"/>
+                    <field name="ux_can_no_returns" invisible="1"/>
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
@@ -534,12 +553,21 @@
                         />
 
                         <button
-                            name="action_ux_create_sale_order"
-                            string="Create Sale Order"
+                            name="action_ux_returns_step"
+                            string="Scan Returns"
                             type="object"
                             class="oe_stat_button"
-                            icon="fa-shopping-cart"
-                            invisible="not ux_can_create_sale_order"
+                            icon="fa-undo"
+                            invisible="not ux_can_scan_returns"
+                        />
+
+                        <button
+                            name="action_ux_no_returns"
+                            string="No Returns"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check"
+                            invisible="not ux_can_no_returns"
                         />
 
                         <button
