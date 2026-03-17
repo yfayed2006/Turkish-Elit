@@ -125,7 +125,6 @@ class RouteVisit(models.Model):
         "has_refill",
         "no_refill",
         "refill_backorder_id",
-        "ready_to_close",
     )
     def _compute_ux_workflow(self):
         for rec in self:
@@ -138,45 +137,56 @@ class RouteVisit(models.Model):
                 or rec.has_pending_refill
                 or rec.refill_backorder_id
             )
-            collection_ready = bool(draft_payments or confirmed_payments or rec.collection_skip_reason)
+            collection_ready = bool(
+                draft_payments or confirmed_payments or rec.collection_skip_reason
+            )
 
             rec.ux_can_scan_barcode = rec.state == "in_progress" and rec.visit_process_state in (
                 "checked_in",
                 "counting",
             )
+
             rec.ux_can_create_sale_order = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and rec.sold_total_qty > 0
                 and not rec.sale_order_id
             )
+
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
+
             rec.ux_can_generate_refill = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and not rec.ux_can_create_sale_order
             )
+
             rec.ux_can_open_pending_refill = bool(
                 rec.has_pending_refill or rec.refill_backorder_id
             )
+
             rec.ux_can_collect_payment = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and refill_prepared
             )
+
             rec.ux_can_confirm_payments = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and bool(draft_payments)
             )
+
             rec.ux_can_skip_collection = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
             )
+
             rec.ux_can_open_payments = bool(
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
             )
+
             rec.ux_can_finish_visit = bool(
                 rec.state == "in_progress"
                 and (
