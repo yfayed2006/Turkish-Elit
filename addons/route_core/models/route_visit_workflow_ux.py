@@ -11,7 +11,10 @@ class RouteVisit(models.Model):
             ("load_balance", "Load Balance"),
             ("count", "Count Shelf"),
             ("reconcile", "Reconcile"),
-            ("settlement", "Settlement"),
+            ("sale_order", "Sale Order"),
+            ("refill", "Refill"),
+            ("collection", "Collection"),
+            ("ready_to_close", "Ready to Close"),
             ("done", "Done"),
         ],
         string="Workflow Stage",
@@ -25,7 +28,11 @@ class RouteVisit(models.Model):
             ("load_previous_balance", "Load Previous Balance"),
             ("scan_shelf", "Scan Shelf"),
             ("reconcile_count", "Reconcile Count"),
-            ("finalize_visit", "Finalize Visit"),
+            ("create_sale_order", "Create Sale Order"),
+            ("generate_refill", "Generate Refill Proposal"),
+            ("collect_payment", "Collect Payment"),
+            ("confirm_payments", "Confirm Payments"),
+            ("finish_visit", "Finish Visit"),
             ("none", "No Action"),
         ],
         string="Primary Action",
@@ -45,14 +52,14 @@ class RouteVisit(models.Model):
         store=False,
     )
 
-    ux_can_create_sale_order = fields.Boolean(
-        string="Can Create Sale Order",
+    ux_can_scan_barcode = fields.Boolean(
+        string="Can Scan Barcode",
         compute="_compute_ux_workflow",
         store=False,
     )
 
-    ux_can_scan_barcode = fields.Boolean(
-        string="Can Scan Barcode",
+    ux_can_create_sale_order = fields.Boolean(
+        string="Can Create Sale Order",
         compute="_compute_ux_workflow",
         store=False,
     )
@@ -63,8 +70,44 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    ux_can_generate_refill = fields.Boolean(
+        string="Can Generate Refill",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
     ux_can_open_pending_refill = fields.Boolean(
         string="Can Open Pending Refill",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_collect_payment = fields.Boolean(
+        string="Can Collect Payment",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_confirm_payments = fields.Boolean(
+        string="Can Confirm Payments",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_skip_collection = fields.Boolean(
+        string="Can Skip Collection",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_open_payments = fields.Boolean(
+        string="Can Open Payments",
+        compute="_compute_ux_workflow",
+        store=False,
+    )
+
+    ux_can_finish_visit = fields.Boolean(
+        string="Can Finish Visit",
         compute="_compute_ux_workflow",
         store=False,
     )
@@ -79,22 +122,71 @@ class RouteVisit(models.Model):
         "collection_skip_reason",
         "remaining_due_amount",
         "has_pending_refill",
+        "has_refill",
+        "no_refill",
         "refill_backorder_id",
+        "ready_to_close",
     )
     def _compute_ux_workflow(self):
         for rec in self:
+            draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft")
+            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
+
+            refill_prepared = bool(
+                rec.no_refill
+                or rec.has_refill
+                or rec.has_pending_refill
+                or rec.refill_backorder_id
+            )
+            collection_ready = bool(draft_payments or confirmed_payments or rec.collection_skip_reason)
+
             rec.ux_can_scan_barcode = rec.state == "in_progress" and rec.visit_process_state in (
                 "checked_in",
                 "counting",
             )
             rec.ux_can_create_sale_order = bool(
                 rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
                 and rec.sold_total_qty > 0
                 and not rec.sale_order_id
             )
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
+            rec.ux_can_generate_refill = bool(
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and not rec.ux_can_create_sale_order
+            )
             rec.ux_can_open_pending_refill = bool(
                 rec.has_pending_refill or rec.refill_backorder_id
+            )
+            rec.ux_can_collect_payment = bool(
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and refill_prepared
+            )
+            rec.ux_can_confirm_payments = bool(
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and bool(draft_payments)
+            )
+            rec.ux_can_skip_collection = bool(
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+            )
+            rec.ux_can_open_payments = bool(
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+            )
+            rec.ux_can_finish_visit = bool(
+                rec.state == "in_progress"
+                and (
+                    rec.visit_process_state in ("collection_done", "ready_to_close")
+                    or (
+                        rec.visit_process_state == "reconciled"
+                        and refill_prepared
+                        and collection_ready
+                    )
+                )
             )
 
             if rec.state in ("done", "cancel") or rec.visit_process_state in ("done", "cancelled"):
@@ -132,13 +224,53 @@ class RouteVisit(models.Model):
                 rec.ux_stage_help = "After finishing the shelf count, confirm reconciliation to calculate sold quantities."
                 continue
 
-            if rec.visit_process_state in ("reconciled", "collection_done", "ready_to_close"):
-                rec.ux_stage = "settlement"
-                rec.ux_primary_action = "finalize_visit"
-                rec.ux_stage_title = "Finalize settlement"
-                rec.ux_stage_help = (
-                    "Review refill, payment, and outlet balance, then complete the visit in one guided step."
-                )
+            if rec.visit_process_state == "reconciled":
+                if rec.ux_can_create_sale_order:
+                    rec.ux_stage = "sale_order"
+                    rec.ux_primary_action = "create_sale_order"
+                    rec.ux_stage_title = "Create sales order"
+                    rec.ux_stage_help = "The sold quantities are ready. Create the sale order before settlement."
+                    continue
+
+                if not refill_prepared:
+                    rec.ux_stage = "refill"
+                    rec.ux_primary_action = "generate_refill"
+                    rec.ux_stage_title = "Generate refill proposal"
+                    rec.ux_stage_help = "Calculate how much can be supplied from the vehicle and what remains pending."
+                    continue
+
+                if draft_payments:
+                    rec.ux_stage = "collection"
+                    rec.ux_primary_action = "confirm_payments"
+                    rec.ux_stage_title = "Confirm collected payments"
+                    rec.ux_stage_help = "Review the entered payment lines and confirm them before closing the visit."
+                    continue
+
+                if not confirmed_payments and not rec.collection_skip_reason:
+                    rec.ux_stage = "collection"
+                    rec.ux_primary_action = "collect_payment"
+                    rec.ux_stage_title = "Collect payment or skip collection"
+                    rec.ux_stage_help = "Add a payment line or enter a Collection Skip Reason to continue."
+                    continue
+
+                rec.ux_stage = "ready_to_close"
+                rec.ux_primary_action = "finish_visit"
+                rec.ux_stage_title = "Finish visit"
+                rec.ux_stage_help = "Settlement is ready. Update balances and complete the visit."
+                continue
+
+            if rec.visit_process_state == "collection_done":
+                rec.ux_stage = "ready_to_close"
+                rec.ux_primary_action = "finish_visit"
+                rec.ux_stage_title = "Finish visit"
+                rec.ux_stage_help = "Payments are complete. Update balances and close the visit."
+                continue
+
+            if rec.visit_process_state == "ready_to_close":
+                rec.ux_stage = "ready_to_close"
+                rec.ux_primary_action = "finish_visit"
+                rec.ux_stage_title = "Finish visit"
+                rec.ux_stage_help = "The visit is ready to close."
                 continue
 
             rec.ux_stage = "arrival"
@@ -162,10 +294,76 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self.action_set_reconciled()
 
-    def action_ux_finalize_visit(self):
+    def action_ux_create_sale_order(self):
+        self.ensure_one()
+        return self.action_create_sale_order()
+
+    def action_ux_generate_refill(self):
+        self.ensure_one()
+        self.action_generate_refill_proposal()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_ux_open_payments(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit Payments"),
+            "res_model": "route.visit.payment",
+            "view_mode": "list,form",
+            "domain": [("visit_id", "=", self.id)],
+            "context": {
+                "default_visit_id": self.id,
+            },
+            "target": "current",
+        }
+
+    def action_ux_collect_payment(self):
+        self.ensure_one()
+        return self.action_ux_open_payments()
+
+    def action_ux_confirm_payments(self):
+        self.ensure_one()
+        draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+        if not draft_payments:
+            raise UserError(_("There are no draft payments to confirm."))
+        self.action_confirm_all_payments()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_ux_skip_collection(self):
+        self.ensure_one()
+        if not self.collection_skip_reason:
+            raise UserError(_("Please enter Collection Skip Reason first."))
+        self.action_skip_collection()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_ux_finish_visit(self):
         self.ensure_one()
 
         if self.visit_process_state == "reconciled":
+            if self.sold_total_qty > 0 and not self.sale_order_id:
+                raise UserError(_("Please create the Sale Order before finishing the visit."))
+
             self.action_generate_refill_proposal()
 
             draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
@@ -182,7 +380,7 @@ class RouteVisit(models.Model):
                 self.action_skip_collection()
             else:
                 raise UserError(_(
-                    "Before finalizing the visit, either:\n"
+                    "Before finishing the visit, either:\n"
                     "- add/confirm payment(s), or\n"
                     "- enter a Collection Skip Reason."
                 ))
@@ -196,13 +394,9 @@ class RouteVisit(models.Model):
             return self.action_set_done_process()
 
         raise UserError(_(
-            "The visit is not yet ready for finalization.\n"
+            "The visit is not yet ready for closing.\n"
             "Current process state: %s"
         ) % (self.visit_process_state or "-"))
-
-    def action_ux_create_sale_order(self):
-        self.ensure_one()
-        return self.action_create_sale_order()
 
     def action_ux_view_sale_order(self):
         self.ensure_one()
