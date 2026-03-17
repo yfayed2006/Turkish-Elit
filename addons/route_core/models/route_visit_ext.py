@@ -315,42 +315,53 @@ class RouteVisit(models.Model):
         return sum(quants.mapped("quantity"))
 
     def _create_pending_refill_backorder(self):
-        self.ensure_one()
+    self.ensure_one()
 
-        pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
-        if not pending_lines:
-            return False
+    pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
+    if not pending_lines:
+        return False
 
-        if self.refill_backorder_id:
-            return self.refill_backorder_id
+    if self.refill_backorder_id:
+        return self.refill_backorder_id
 
-        backorder = self.env["route.refill.backorder"].create({
-            "visit_id": self.id,
-            "outlet_id": self.outlet_id.id,
-            "partner_id": self.partner_id.id,
-            "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
-            "source_location_id": self.source_location_id.id if self.source_location_id else False,
-            "company_id": self.company_id.id,
-            "note": "Created automatically from route visit pending refill.",
+    partner = self.partner_id
+    if not partner and self.outlet_id and hasattr(self.outlet_id, "partner_id"):
+        partner = self.outlet_id.partner_id
+    if partner and hasattr(partner, "commercial_partner_id"):
+        partner = partner.commercial_partner_id
+
+    if not partner:
+        raise UserError(
+            "Cannot create Pending Refill because Customer is empty on this visit.\n"
+            "Please set a customer on the visit or ensure the outlet is linked to a customer."
+        )
+
+    backorder = self.env["route.refill.backorder"].create({
+        "visit_id": self.id,
+        "outlet_id": self.outlet_id.id,
+        "partner_id": partner.id,
+        "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+        "source_location_id": self.source_location_id.id if self.source_location_id else False,
+        "company_id": self.company_id.id,
+        "note": "Created automatically from route visit pending refill.",
+    })
+
+    line_vals = []
+    for line in pending_lines:
+        line_vals.append({
+            "backorder_id": backorder.id,
+            "product_id": line.product_id.id,
+            "needed_qty": line.sold_qty,
+            "available_qty_at_visit": line.vehicle_available_qty,
+            "delivered_qty": line.supplied_qty,
+            "pending_qty": line.pending_refill_qty,
+            "unit_price": line.unit_price,
+            "note": line.note,
         })
 
-        line_vals = []
-        for line in pending_lines:
-            line_vals.append({
-                "backorder_id": backorder.id,
-                "product_id": line.product_id.id,
-                "needed_qty": line.sold_qty,
-                "available_qty_at_visit": line.vehicle_available_qty,
-                "delivered_qty": line.supplied_qty,
-                "pending_qty": line.pending_refill_qty,
-                "unit_price": line.unit_price,
-                "note": line.note,
-            })
-
-        self.env["route.refill.backorder.line"].create(line_vals)
-        self.refill_backorder_id = backorder.id
-        return backorder
-
+    self.env["route.refill.backorder.line"].create(line_vals)
+    self.refill_backorder_id = backorder.id
+    return backorder
     def action_load_previous_balance(self):
         OutletStockBalance = self.env["outlet.stock.balance"]
         RouteVisitLine = self.env["route.visit.line"]
