@@ -1,21 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
     <record id="view_route_visit_tree" model="ir.ui.view">
         <field name="name">route.visit.tree</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <list string="Route Visits" create="0" delete="0" default_order="visit_date desc,id desc">
+            <list string="Route Visits" create="0" delete="0">
                 <field name="name"/>
-                <field name="route_plan_id"/>
-                <field name="salesperson_id"/>
-                <field name="partner_id"/>
+                <field name="date"/>
                 <field name="outlet_id"/>
+                <field name="partner_id"/>
                 <field name="area_id"/>
-                <field name="visit_date"/>
-                <field name="state"/>
-                <field name="visit_process_state"/>
+                <field name="vehicle_id"/>
+                <field name="source_location_id"/>
+                <field name="user_id"/>
+                <field name="visit_process_state" widget="badge"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
                 <field name="sale_order_id"/>
+                <field name="start_datetime"/>
+                <field name="end_datetime"/>
+                <field name="net_due_amount"/>
+                <field name="collected_amount"/>
+                <field name="remaining_due_amount"/>
             </list>
         </field>
     </record>
@@ -24,72 +30,76 @@
         <field name="name">route.visit.pda.kanban</field>
         <field name="model">route.visit</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile" create="0" delete="0" default_group_by="state">
+            <kanban class="o_kanban_mobile" create="0" delete="0">
                 <field name="name"/>
-                <field name="partner_id"/>
+                <field name="date"/>
                 <field name="outlet_id"/>
+                <field name="partner_id"/>
                 <field name="area_id"/>
-                <field name="visit_date"/>
-                <field name="state"/>
+                <field name="user_id"/>
                 <field name="visit_process_state"/>
+                <field name="state"/>
                 <field name="sale_order_id"/>
+
                 <templates>
                     <t t-name="card">
-                        <div class="oe_kanban_global_click p-3">
-                            <div class="fw-bold fs-5">
-                                <field name="outlet_id"/>
+                        <div class="oe_kanban_global_click o_kanban_record">
+                            <div class="mb-2">
+                                <strong class="fs-5">
+                                    <field name="outlet_id"/>
+                                </strong>
                             </div>
 
-                            <div class="mt-2">
-                                <div>
-                                    <span class="text-muted">Visit:</span>
-                                    <span class="ms-1">
-                                        <field name="name"/>
-                                    </span>
-                                </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Visit:</span>
+                                <span class="ms-1">
+                                    <field name="name"/>
+                                </span>
+                            </div>
 
-                                <div>
-                                    <span class="text-muted">Customer:</span>
-                                    <span class="ms-1">
-                                        <field name="partner_id"/>
-                                    </span>
-                                </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Customer:</span>
+                                <span class="ms-1">
+                                    <field name="partner_id"/>
+                                </span>
+                            </div>
 
-                                <div>
-                                    <span class="text-muted">Area:</span>
-                                    <span class="ms-1">
-                                        <field name="area_id"/>
-                                    </span>
-                                </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Area:</span>
+                                <span class="ms-1">
+                                    <field name="area_id"/>
+                                </span>
+                            </div>
 
-                                <div>
-                                    <span class="text-muted">Date:</span>
-                                    <span class="ms-1">
-                                        <field name="visit_date"/>
-                                    </span>
-                                </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Date:</span>
+                                <span class="ms-1">
+                                    <field name="date"/>
+                                </span>
+                            </div>
 
-                                <div>
-                                    <span class="text-muted">Visit State:</span>
-                                    <span class="ms-1">
-                                        <field name="state"/>
-                                    </span>
-                                </div>
+                            <div class="mb-1">
+                                <span class="text-muted">Visit State:</span>
+                                <span class="ms-1">
+                                    <field name="state"/>
+                                </span>
+                            </div>
 
-                                <div>
-                                    <span class="text-muted">Process:</span>
-                                    <span class="ms-1">
-                                        <field name="visit_process_state"/>
-                                    </span>
-                                </div>
+                            <div class="mb-2">
+                                <span class="text-muted">Process:</span>
+                                <span class="ms-1">
+                                    <field name="visit_process_state"/>
+                                </span>
+                            </div>
 
-                                <div>
+                            <t t-if="record.sale_order_id.raw_value">
+                                <div class="mb-2">
                                     <span class="text-muted">Sale Order:</span>
                                     <span class="ms-1">
                                         <field name="sale_order_id"/>
                                     </span>
                                 </div>
-                            </div>
+                            </t>
 
                             <div class="mt-3">
                                 <a type="open" class="btn btn-primary w-100">
@@ -116,28 +126,24 @@
                         class="btn-primary"
                         invisible="line_ids or visit_process_state in ('done', 'cancelled')"
                     />
-
                     <button
                         name="action_set_checked_in"
                         string="Check In"
                         type="object"
                         invisible="visit_process_state != 'pending' or line_ids"
                     />
-
                     <button
                         name="action_set_counting"
                         string="Start Count"
                         type="object"
                         invisible="visit_process_state != 'checked_in'"
                     />
-
                     <button
                         name="action_set_reconciled"
                         string="Reconcile"
                         type="object"
                         invisible="visit_process_state != 'counting'"
                     />
-
                     <button
                         name="action_generate_refill_proposal"
                         string="Generate Refill Proposal"
@@ -145,7 +151,6 @@
                         class="btn-secondary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_confirm_all_payments"
                         string="Confirm All Payments"
@@ -153,7 +158,6 @@
                         class="btn-primary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_skip_collection"
                         string="Skip Collection"
@@ -161,7 +165,6 @@
                         class="btn-secondary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_update_outlet_balance"
                         string="Update Outlet Balance"
@@ -177,7 +180,6 @@
                         class="btn-primary"
                         invisible="state != 'in_progress' or sale_order_id"
                     />
-
                     <button
                         name="action_end_visit"
                         string="End Visit"
@@ -193,7 +195,6 @@
                         class="btn-success"
                         invisible="visit_process_state != 'ready_to_close'"
                     />
-
                     <button
                         name="action_set_cancelled_process"
                         string="Cancel Process"
@@ -219,35 +220,32 @@
 
                         <button
                             name="action_view_pending_refill"
+                            string="Pending Refill"
                             type="object"
                             class="oe_stat_button"
                             icon="fa-refresh"
                             invisible="not refill_backorder_id"
-                        >
-                            <field name="refill_backorder_id" string="Pending Refill"/>
-                        </button>
-                    </div>
-
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1"/>
-                        </h1>
+                        />
                     </div>
 
                     <group>
                         <group>
-                            <field name="route_plan_id" readonly="1"/>
-                            <field name="salesperson_id" readonly="1"/>
-                            <field name="partner_id" readonly="1"/>
+                            <field name="name" readonly="1"/>
+                            <field name="date" readonly="1"/>
                             <field name="outlet_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
                             <field name="area_id" readonly="1"/>
                             <field name="vehicle_id" readonly="1"/>
                             <field name="source_location_id"/>
-                            <field name="visit_date" readonly="1"/>
-                            <field name="sale_order_id" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="state" readonly="1"/>
+                            <field name="visit_process_state"/>
                         </group>
                         <group>
-                            <field name="visit_process_state" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="refill_backorder_id" readonly="1"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
                             <field name="count_start_datetime" readonly="1"/>
                             <field name="count_end_datetime" readonly="1"/>
@@ -258,21 +256,41 @@
                         </group>
                     </group>
 
+                    <group string="Visit Process">
+                        <group>
+                            <field name="commission_rate"/>
+                            <field name="no_refill"/>
+                            <field name="has_collection" readonly="1"/>
+                            <field name="has_returns" readonly="1"/>
+                            <field name="has_refill" readonly="1"/>
+                            <field name="has_pending_refill" readonly="1"/>
+                            <field name="is_ready_to_close" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="collection_skip_reason"/>
+                            <field name="no_refill_reason" invisible="not no_refill"/>
+                            <field name="cancel_reason"/>
+                        </group>
+                    </group>
+
                     <notebook>
                         <page string="Visit Lines">
                             <field name="line_ids">
-                                <list editable="bottom" delete="0">
-                                    <field name="product_id" readonly="1"/>
-                                    <field name="uom_id" optional="show"/>
-                                    <field name="unit_price"/>
-                                    <field name="previous_qty" readonly="1"/>
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="previous_qty"/>
                                     <field name="counted_qty"/>
-                                    <field name="return_qty" readonly="1"/>
+                                    <field name="return_qty"/>
                                     <field name="sold_qty" readonly="1"/>
                                     <field name="vehicle_available_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
                                     <field name="pending_refill_qty" readonly="1"/>
                                     <field name="new_balance_qty" readonly="1"/>
+                                    <field name="unit_price"/>
+                                    <field name="sold_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                    <field name="supply_value" readonly="1"/>
                                     <field name="note"/>
                                 </list>
                             </field>
@@ -280,35 +298,42 @@
 
                         <page string="Payments">
                             <field name="payment_ids">
-                                <list editable="bottom" delete="0">
+                                <list editable="bottom">
                                     <field name="payment_date"/>
-                                    <field name="payment_method"/>
+                                    <field name="payment_mode"/>
                                     <field name="amount"/>
-                                    <field name="state" readonly="1"/>
-                                    <field name="note"/>
+                                    <field name="reference"/>
+                                    <field name="bank_name"/>
+                                    <field name="pos_terminal"/>
+                                    <field name="state"/>
                                 </list>
                             </field>
                         </page>
 
                         <page string="Summary">
-                            <group>
-                                <group string="Quantity Totals">
+                            <group string="Quantity Summary">
+                                <group>
                                     <field name="previous_total_qty" readonly="1"/>
                                     <field name="counted_total_qty" readonly="1"/>
                                     <field name="returned_total_qty" readonly="1"/>
+                                    <field name="pending_refill_total_qty" readonly="1"/>
+                                </group>
+                                <group>
                                     <field name="sold_total_qty" readonly="1"/>
                                     <field name="supplied_total_qty" readonly="1"/>
-                                    <field name="pending_refill_total_qty" readonly="1"/>
                                     <field name="new_balance_total_qty" readonly="1"/>
                                 </group>
+                            </group>
 
-                                <group string="Amount Totals">
-                                    <field name="commission_rate"/>
+                            <group string="Financial Summary">
+                                <group>
                                     <field name="previous_stock_value" readonly="1"/>
                                     <field name="counted_stock_value" readonly="1"/>
                                     <field name="gross_sales_amount" readonly="1"/>
                                     <field name="return_amount" readonly="1"/>
                                     <field name="commission_amount" readonly="1"/>
+                                </group>
+                                <group>
                                     <field name="net_due_amount" readonly="1"/>
                                     <field name="collected_amount" readonly="1"/>
                                     <field name="remaining_due_amount" readonly="1"/>
@@ -319,16 +344,16 @@
                         </page>
 
                         <page string="Notes">
-                            <group>
-                                <field name="notes"/>
-                                <field name="collection_skip_reason"/>
-                                <field name="no_refill"/>
-                                <field name="no_refill_reason" invisible="not no_refill"/>
-                                <field name="cancel_reason"/>
-                            </group>
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+
+                        <page string="No Sale Reason" invisible="not no_sale_reason">
+                            <field name="no_sale_reason" readonly="1"/>
                         </page>
                     </notebook>
                 </sheet>
+
+                <chatter/>
             </form>
         </field>
     </record>
@@ -336,8 +361,9 @@
     <record id="view_route_visit_pda_form" model="ir.ui.view">
         <field name="name">route.visit.pda.form</field>
         <field name="model">route.visit</field>
+        <field name="priority" eval="90"/>
         <field name="arch" type="xml">
-            <form string="Route Visit PDA" create="0" delete="0">
+            <form string="PDA Visit" create="0" delete="0">
                 <header>
                     <button
                         name="action_load_previous_balance"
@@ -346,7 +372,6 @@
                         class="btn-primary"
                         invisible="line_ids or visit_process_state in ('done', 'cancelled')"
                     />
-
                     <button
                         name="action_set_checked_in"
                         string="2. Check In"
@@ -354,7 +379,6 @@
                         class="btn-primary"
                         invisible="visit_process_state != 'pending' or line_ids"
                     />
-
                     <button
                         name="action_set_counting"
                         string="3. Start Count"
@@ -362,7 +386,6 @@
                         class="btn-primary"
                         invisible="visit_process_state != 'checked_in'"
                     />
-
                     <button
                         name="action_set_reconciled"
                         string="4. Reconcile"
@@ -370,7 +393,6 @@
                         class="btn-primary"
                         invisible="visit_process_state != 'counting'"
                     />
-
                     <button
                         name="action_confirm_all_payments"
                         string="5. Confirm Payments"
@@ -378,7 +400,6 @@
                         class="btn-primary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_skip_collection"
                         string="Skip Collection"
@@ -386,7 +407,6 @@
                         class="btn-secondary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_generate_refill_proposal"
                         string="6. Refill Proposal"
@@ -394,7 +414,6 @@
                         class="btn-secondary"
                         invisible="visit_process_state != 'reconciled'"
                     />
-
                     <button
                         name="action_update_outlet_balance"
                         string="7. Update Balance"
@@ -410,7 +429,6 @@
                         class="btn-primary"
                         invisible="state != 'in_progress' or sale_order_id"
                     />
-
                     <button
                         name="action_end_visit"
                         string="End Visit"
@@ -426,7 +444,6 @@
                         class="btn-success"
                         invisible="visit_process_state != 'ready_to_close'"
                     />
-
                     <button
                         name="action_set_cancelled_process"
                         string="Cancel Process"
@@ -452,13 +469,12 @@
 
                         <button
                             name="action_view_pending_refill"
+                            string="Pending Refill"
                             type="object"
                             class="oe_stat_button"
                             icon="fa-refresh"
                             invisible="not refill_backorder_id"
-                        >
-                            <field name="refill_backorder_id" string="Pending Refill"/>
-                        </button>
+                        />
                     </div>
 
                     <div class="oe_title">
@@ -466,69 +482,107 @@
                             <field name="outlet_id" readonly="1"/>
                         </h1>
                         <div class="mt8">
-                            <field name="name" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                        </div>
+                        <div class="mt8">
+                            <field name="visit_process_state" widget="badge"/>
                         </div>
                     </div>
 
-                    <group>
-                        <group>
-                            <field name="partner_id" readonly="1"/>
+                    <group col="2">
+                        <group string="Main Info">
+                            <field name="name" readonly="1"/>
+                            <field name="date" readonly="1"/>
                             <field name="area_id" readonly="1"/>
                             <field name="vehicle_id" readonly="1"/>
-                            <field name="source_location_id"/>
-                            <field name="visit_process_state" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
                         </group>
-                        <group>
-                            <field name="visit_date" readonly="1"/>
+                        <group string="Current Status">
                             <field name="sale_order_id" readonly="1"/>
+                            <field name="refill_backorder_id" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
-                            <field name="count_end_datetime" readonly="1"/>
                             <field name="collection_datetime" readonly="1"/>
                             <field name="check_out_datetime" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Quick Summary" col="4">
+                        <group>
+                            <field name="previous_total_qty" readonly="1"/>
+                            <field name="counted_total_qty" readonly="1"/>
+                            <field name="sold_total_qty" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="supplied_total_qty" readonly="1"/>
+                            <field name="pending_refill_total_qty" readonly="1"/>
+                            <field name="new_balance_total_qty" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="gross_sales_amount" readonly="1"/>
+                            <field name="commission_amount" readonly="1"/>
+                            <field name="net_due_amount" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="collected_amount" readonly="1"/>
+                            <field name="remaining_due_amount" readonly="1"/>
                         </group>
                     </group>
 
                     <notebook>
                         <page string="Count">
                             <field name="line_ids">
-                                <list editable="bottom" delete="0">
-                                    <field name="product_id" readonly="1"/>
-                                    <field name="uom_id" optional="show"/>
-                                    <field name="previous_qty" readonly="1"/>
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="barcode" readonly="1"/>
+                                    <field name="previous_qty"/>
                                     <field name="counted_qty"/>
+                                    <field name="return_qty"/>
                                     <field name="sold_qty" readonly="1"/>
                                     <field name="vehicle_available_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
                                     <field name="pending_refill_qty" readonly="1"/>
                                     <field name="new_balance_qty" readonly="1"/>
+                                    <field name="unit_price"/>
                                 </list>
                             </field>
                         </page>
 
                         <page string="Payments">
                             <field name="payment_ids">
-                                <list editable="bottom" delete="0">
+                                <list editable="bottom">
                                     <field name="payment_date"/>
-                                    <field name="payment_method"/>
+                                    <field name="payment_mode"/>
                                     <field name="amount"/>
-                                    <field name="state" readonly="1"/>
+                                    <field name="reference"/>
+                                    <field name="bank_name"/>
+                                    <field name="pos_terminal"/>
+                                    <field name="state"/>
                                 </list>
                             </field>
                         </page>
 
-                        <page string="Totals">
-                            <group>
+                        <page string="Summary">
+                            <group string="Quantity Summary">
                                 <group>
                                     <field name="previous_total_qty" readonly="1"/>
                                     <field name="counted_total_qty" readonly="1"/>
-                                    <field name="sold_total_qty" readonly="1"/>
-                                    <field name="supplied_total_qty" readonly="1"/>
+                                    <field name="returned_total_qty" readonly="1"/>
                                     <field name="pending_refill_total_qty" readonly="1"/>
-                                    <field name="new_balance_total_qty" readonly="1"/>
                                 </group>
                                 <group>
+                                    <field name="sold_total_qty" readonly="1"/>
+                                    <field name="supplied_total_qty" readonly="1"/>
+                                    <field name="new_balance_total_qty" readonly="1"/>
+                                </group>
+                            </group>
+
+                            <group string="Financial Summary">
+                                <group>
                                     <field name="gross_sales_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
                                     <field name="commission_amount" readonly="1"/>
+                                </group>
+                                <group>
                                     <field name="net_due_amount" readonly="1"/>
                                     <field name="collected_amount" readonly="1"/>
                                     <field name="remaining_due_amount" readonly="1"/>
@@ -537,13 +591,11 @@
                         </page>
 
                         <page string="Notes">
-                            <group>
-                                <field name="notes"/>
-                                <field name="collection_skip_reason"/>
-                                <field name="no_refill"/>
-                                <field name="no_refill_reason" invisible="not no_refill"/>
-                                <field name="cancel_reason"/>
-                            </group>
+                            <field name="notes" placeholder="Internal notes..."/>
+                        </page>
+
+                        <page string="No Sale Reason" invisible="not no_sale_reason">
+                            <field name="no_sale_reason" readonly="1"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -557,26 +609,25 @@
         <field name="arch" type="xml">
             <search string="Route Visits">
                 <field name="name"/>
-                <field name="route_plan_id"/>
-                <field name="salesperson_id"/>
-                <field name="partner_id"/>
+                <field name="date"/>
                 <field name="outlet_id"/>
+                <field name="partner_id"/>
                 <field name="area_id"/>
                 <field name="vehicle_id"/>
-                <field name="visit_date"/>
+                <field name="user_id"/>
                 <field name="state"/>
                 <field name="visit_process_state"/>
 
-                <filter name="filter_today" string="Today" domain="[('visit_date', '=', context_today())]"/>
-                <filter name="filter_my_visits" string="My Visits" domain="[('salesperson_id.user_id', '=', uid)]"/>
+                <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
+                <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
                 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
 
                 <group expand="0" string="Group By">
-                    <filter name="group_salesperson" string="Salesperson" context="{'group_by': 'salesperson_id'}"/>
+                    <filter name="group_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
                     <filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
                     <filter name="group_state" string="Visit State" context="{'group_by': 'state'}"/>
                     <filter name="group_process" string="Process" context="{'group_by': 'visit_process_state'}"/>
-                    <filter name="group_date" string="Date" context="{'group_by': 'visit_date'}"/>
+                    <filter name="group_date" string="Date" context="{'group_by': 'date'}"/>
                 </group>
             </search>
         </field>
