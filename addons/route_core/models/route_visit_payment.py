@@ -100,30 +100,44 @@ class RouteVisitPayment(models.Model):
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
         visit_id = self.env.context.get("default_visit_id")
-        if visit_id and "amount" in fields_list:
+        if visit_id:
             visit = self.env["route.visit"].browse(visit_id)
-            vals["amount"] = max(visit.remaining_due_amount, 0.0)
+            vals.setdefault("visit_id", visit_id)
+            if "amount" in fields_list:
+                vals["amount"] = max(visit.remaining_due_amount, 0.0)
+            if "collection_type" in fields_list:
+                vals.setdefault("collection_type", "full")
         return vals
 
     @api.onchange("visit_id")
     def _onchange_visit_id_set_amount(self):
         for rec in self:
-            if rec.visit_id and rec.collection_type == "full":
-                rec.amount = max(rec.visit_id.remaining_due_amount, 0.0)
+            due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+            if rec.collection_type == "full":
+                rec.amount = due
+            elif rec.collection_type == "partial":
+                if due > 0 and (rec.amount <= 0 or rec.amount >= due):
+                    rec.amount = due / 2.0
 
     @api.onchange("collection_type")
     def _onchange_collection_type(self):
         for rec in self:
             due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+
             if rec.collection_type == "full":
                 rec.amount = due
                 rec.due_date = False
+
             elif rec.collection_type == "partial":
-                if rec.amount <= 0 or rec.amount > due:
-                    rec.amount = due
                 rec.due_date = False
+                if due <= 0:
+                    rec.amount = 0.0
+                elif rec.amount <= 0 or rec.amount >= due:
+                    rec.amount = due / 2.0
+
             elif rec.collection_type == "defer_date":
                 rec.amount = 0.0
+
             elif rec.collection_type == "next_visit":
                 rec.amount = 0.0
                 rec.due_date = False
@@ -141,6 +155,8 @@ class RouteVisitPayment(models.Model):
                     raise ValidationError("There is no remaining due amount on this visit.")
                 if rec.amount <= 0:
                     raise ValidationError("Full payment amount must be greater than zero.")
+                if rec.amount > due:
+                    raise ValidationError("Full payment cannot be more than the remaining due amount.")
 
             elif rec.collection_type == "partial":
                 if due <= 0:
@@ -148,7 +164,9 @@ class RouteVisitPayment(models.Model):
                 if rec.amount <= 0:
                     raise ValidationError("Partial payment amount must be greater than zero.")
                 if rec.amount >= due:
-                    raise ValidationError("Partial payment must be less than the remaining due amount. Use Full Payment instead.")
+                    raise ValidationError(
+                        "Partial payment must be less than the remaining due amount. Use Full Payment instead."
+                    )
 
             elif rec.collection_type == "defer_date":
                 if rec.amount != 0:
