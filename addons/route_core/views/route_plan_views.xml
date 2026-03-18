@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
@@ -10,7 +11,8 @@
                 <field name="date"/>
                 <field name="user_id"/>
                 <field name="vehicle_id"/>
-                <field name="area_id"/>
+                <field name="area_summary" string="Areas"/>
+                <field name="outlet_summary" string="Outlets"/>
                 <field name="line_count"/>
                 <field name="visited_count"/>
                 <field name="pending_count"/>
@@ -71,8 +73,8 @@
                         </group>
                         <group>
                             <field name="area_id"/>
-                            <field name="line_count" readonly="1"/>
-                            <field name="visit_count" readonly="1"/>
+                            <field name="area_summary" readonly="1"/>
+                            <field name="outlet_summary" readonly="1"/>
                         </group>
                     </group>
 
