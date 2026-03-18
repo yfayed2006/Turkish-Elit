@@ -166,12 +166,14 @@ class RouteVisitLine(models.Model):
             if line.return_qty > 0 and not line.return_route:
                 line.return_route = "vehicle"
 
-    @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
+   @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
     def _compute_quantities(self):
         for line in self:
-            sold_qty = line.previous_qty - line.counted_qty - line.return_qty
+            sold_qty = line.previous_qty - line.counted_qty
             line.sold_qty = sold_qty if sold_qty > 0 else 0.0
-            line.new_balance_qty = line.counted_qty + line.supplied_qty
+
+            new_balance_qty = line.counted_qty - line.return_qty + line.supplied_qty
+            line.new_balance_qty = new_balance_qty if new_balance_qty > 0 else 0.0
 
     @api.depends("sold_qty", "supplied_qty")
     def _compute_pending_refill_qty(self):
