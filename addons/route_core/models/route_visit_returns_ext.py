@@ -45,6 +45,7 @@ class RouteVisit(models.Model):
             "context": {
                 "default_visit_id": self.id,
                 "default_quantity": 1.0,
+                "default_return_route": "vehicle",
             },
         }
 
@@ -87,16 +88,23 @@ class RouteVisit(models.Model):
             "barcode": product.barcode or "",
             "uom_id": product.uom_id.id,
             "unit_price": getattr(product, "lst_price", 0.0),
+            "return_route": "vehicle",
         })
 
-    def _add_return_qty(self, product, qty):
+    def _add_return_qty(self, product, qty, return_route="vehicle"):
         self.ensure_one()
 
         if qty <= 0:
             raise UserError(_("Return quantity must be greater than zero."))
 
+        if return_route not in ("vehicle", "damaged", "near_expiry"):
+            raise UserError(_("Invalid return route."))
+
         line = self._find_or_create_visit_line_for_product(product)
-        line.return_qty = (line.return_qty or 0.0) + qty
+        line.write({
+            "return_qty": (line.return_qty or 0.0) + qty,
+            "return_route": return_route or "vehicle",
+        })
 
         self.write({
             "has_returns_declared": True,
