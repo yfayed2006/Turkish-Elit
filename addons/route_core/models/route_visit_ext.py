@@ -433,7 +433,7 @@ class RouteVisit(models.Model):
             "origin": self.name,
             "move_type": "direct",
             "route_visit_id": self.id,
-            "is_return_transfer": True,
+            
         })
 
         for line in lines:
