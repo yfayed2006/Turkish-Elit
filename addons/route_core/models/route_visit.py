@@ -251,6 +251,35 @@ class RouteVisit(models.Model):
                 "no_sale_reason": False,
             })
 
+    def _prepare_sale_order_line_vals(self):
+        self.ensure_one()
+        line_vals = []
+
+        sale_lines = self.line_ids.filtered(
+            lambda l: l.product_id and (l.sold_qty or 0.0) > 0
+        )
+
+        for line in sale_lines:
+            line_vals.append((0, 0, {
+                "product_id": line.product_id.id,
+                "name": line.product_id.display_name,
+                "product_uom_qty": line.sold_qty,
+                "price_unit": line.unit_price or line.product_id.lst_price or 0.0,
+            }))
+
+        return line_vals
+
+    def _sync_sale_order_lines(self, sale_order):
+        self.ensure_one()
+
+        line_vals = self._prepare_sale_order_line_vals()
+        if not line_vals:
+            raise UserError(_("No sold quantities were found to create sale order lines."))
+
+        # reset old lines then rebuild from visit lines
+        sale_order.order_line.unlink()
+        sale_order.write({"order_line": line_vals})
+
     def action_create_sale_order(self):
         self.ensure_one()
 
@@ -260,7 +289,12 @@ class RouteVisit(models.Model):
         if not self.partner_id:
             raise UserError(_("Please set a customer on the visit before creating a sale order."))
 
+        if not self.line_ids.filtered(lambda l: (l.sold_qty or 0.0) > 0):
+            raise UserError(_("There are no sold quantities on this visit to create a sale order."))
+
         if self.sale_order_id:
+            self._sync_sale_order_lines(self.sale_order_id)
+
             action = self.env.ref("sale.action_orders").read()[0]
             action["res_id"] = self.sale_order_id.id
             action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
@@ -271,6 +305,7 @@ class RouteVisit(models.Model):
             "partner_id": self.partner_id.id,
             "user_id": self.user_id.id,
             "origin": self.name,
+            "order_line": self._prepare_sale_order_line_vals(),
         })
 
         self.sale_order_id = sale_order.id
