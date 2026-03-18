@@ -12,6 +12,7 @@ class RouteVisit(models.Model):
             ("count", "Count Shelf"),
             ("returns", "Returns"),
             ("reconcile", "Reconcile"),
+            ("return_transfer", "Return Transfer"),
             ("refill", "Refill"),
             ("collection", "Collection"),
             ("ready_to_close", "Ready to Close"),
@@ -28,6 +29,7 @@ class RouteVisit(models.Model):
             ("scan_shelf", "Scan Shelf"),
             ("returns_step", "Scan Returns"),
             ("reconcile_count", "Reconcile Count"),
+            ("confirm_return_transfers", "Confirm Return Transfers"),
             ("generate_refill", "Generate Refill Proposal"),
             ("confirm_refill", "Confirm Refill"),
             ("collect_payment", "Collect Payment"),
@@ -50,6 +52,9 @@ class RouteVisit(models.Model):
     ux_can_create_sale_order = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_view_sale_order = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
+    ux_can_confirm_return_transfers = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_view_return_transfers = fields.Boolean(compute="_compute_ux_workflow", store=False)
+
     ux_can_generate_refill = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_confirm_refill = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_view_refill_transfer = fields.Boolean(compute="_compute_ux_workflow", store=False)
@@ -71,17 +76,23 @@ class RouteVisit(models.Model):
         "collection_skip_reason",
         "has_pending_refill",
         "has_refill",
+        "has_returns",
         "no_refill",
         "refill_backorder_id",
         "refill_datetime",
         "returns_step_done",
         "refill_picking_id",
         "refill_picking_count",
+        "return_picking_ids",
+        "return_picking_count",
         "line_ids.supplied_qty",
+        "line_ids.return_qty",
     )
     def _compute_ux_workflow(self):
         for rec in self:
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
+            has_return_qty = any((line.return_qty or 0.0) > 0 for line in rec.line_ids)
+            has_return_transfers = bool(rec.return_picking_ids or rec.return_picking_count)
 
             can_enter_collection = (
                 rec.state == "in_progress"
@@ -111,15 +122,26 @@ class RouteVisit(models.Model):
             rec.ux_can_create_sale_order = False
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
+            rec.ux_can_confirm_return_transfers = (
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and has_return_qty
+                and not has_return_transfers
+            )
+
+            rec.ux_can_view_return_transfers = has_return_transfers
+
             rec.ux_can_generate_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and not rec.refill_datetime
             )
 
             rec.ux_can_confirm_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and bool(rec.refill_datetime)
                 and has_supplied_qty
                 and not rec.refill_picking_id
@@ -178,7 +200,21 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Reconcile counted stock"
                 rec.ux_stage_help = "Confirm reconciliation."
 
-            elif rec.visit_process_state == "reconciled" and not rec.refill_datetime:
+            elif (
+                rec.visit_process_state == "reconciled"
+                and has_return_qty
+                and not has_return_transfers
+            ):
+                rec.ux_stage = "return_transfer"
+                rec.ux_primary_action = "confirm_return_transfers"
+                rec.ux_stage_title = "Confirm return transfers"
+                rec.ux_stage_help = "Create the internal transfers for returned products."
+
+            elif (
+                rec.visit_process_state == "reconciled"
+                and not rec.refill_datetime
+                and (not has_return_qty or has_return_transfers)
+            ):
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "generate_refill"
                 rec.ux_stage_title = "Generate refill proposal"
@@ -186,6 +222,7 @@ class RouteVisit(models.Model):
 
             elif (
                 rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and bool(rec.refill_datetime)
                 and has_supplied_qty
                 and not rec.refill_picking_id
@@ -262,6 +299,22 @@ class RouteVisit(models.Model):
             "view_mode": "form",
             "target": "current",
         }
+
+    def action_ux_confirm_return_transfers(self):
+        self.ensure_one()
+        self.action_confirm_return_transfers()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_ux_view_return_transfers(self):
+        self.ensure_one()
+        return self.action_view_return_transfers()
 
     def action_ux_generate_refill(self):
         self.ensure_one()
