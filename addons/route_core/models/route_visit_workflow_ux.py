@@ -96,31 +96,37 @@ class RouteVisit(models.Model):
             rec.ux_can_create_sale_order = False
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
+           has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
+
             rec.ux_can_generate_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and not (rec.refill_datetime or rec.has_refill or rec.no_refill)
             )
-
+            
             rec.ux_can_confirm_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
-                and bool(rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and bool(rec.refill_datetime)
+                and has_supplied_qty
                 and not rec.refill_picking_id
             )
-
-            rec.ux_can_view_refill_transfer = bool(rec.refill_picking_id or rec.refill_picking_count)
-
+            
+            rec.ux_can_view_refill_transfer = bool(
+                rec.refill_picking_id or rec.refill_picking_count
+            )
+            
             rec.ux_can_open_pending_refill = bool(
                 rec.has_pending_refill or rec.refill_backorder_id
             )
-
+            
             rec.ux_can_collect_payment = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and (
                     bool(rec.refill_picking_id)
-                    or not (rec.refill_datetime or rec.has_refill or rec.no_refill)
+                    or bool(rec.no_refill)
+                    or (bool(rec.refill_datetime) and not has_supplied_qty)
                 )
             )
             rec.ux_can_confirm_payments = (
