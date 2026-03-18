@@ -370,25 +370,16 @@ class RouteVisit(models.Model):
 
     def _get_return_destination_location(self, return_route):
         self.ensure_one()
-
+    
         if return_route == "vehicle":
             if not self.vehicle_id or not self.vehicle_id.stock_location_id:
                 raise UserError("The selected vehicle does not have a stock location for return transfer destination.")
             return self.vehicle_id.stock_location_id
-
-        if return_route == "damaged":
-            location = getattr(self.company_id, "return_damaged_location_id", False)
-            if not location:
-                raise UserError("Please configure Return Damaged Location on the company first.")
-            return location
-
-        if return_route == "near_expiry":
-            location = getattr(self.company_id, "return_near_expiry_location_id", False)
-            if not location:
-                raise UserError("Please configure Return Near Expiry Location on the company first.")
-            return location
-
-        raise UserError("Invalid return route on visit lines.")
+    
+        raise UserError(
+            "Return destination locations for damaged and near expiry are not activated yet. "
+            "Please keep return route as Vehicle for now."
+        )
 
     def _get_internal_picking_type(self):
         self.ensure_one()
