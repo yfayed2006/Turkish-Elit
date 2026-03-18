@@ -7,16 +7,19 @@
         <field name="arch" type="xml">
             <form string="Scan Returns">
                 <group>
-                    <field name="visit_id" readonly="1"/>
-                    <field name="barcode"/>
-                    <field name="product_id"/>
-                    <field name="quantity"/>
-                </group>
-
-                <group string="Preview">
-                    <field name="detected_product_id" readonly="1"/>
-                    <field name="last_product_id" readonly="1"/>
-                    <field name="last_return_qty" readonly="1"/>
+                    <group>
+                        <field name="visit_id" readonly="1"/>
+                        <field name="barcode"/>
+                        <field name="product_id"/>
+                        <field name="quantity"/>
+                        <field name="return_route"/>
+                    </group>
+                    <group string="Preview">
+                        <field name="detected_product_id" readonly="1"/>
+                        <field name="last_product_id" readonly="1"/>
+                        <field name="last_return_qty" readonly="1"/>
+                        <field name="last_return_route" readonly="1"/>
+                    </group>
                 </group>
 
                 <footer>
