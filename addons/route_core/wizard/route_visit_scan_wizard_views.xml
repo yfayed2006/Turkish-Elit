@@ -5,27 +5,39 @@
         <field name="name">route.visit.scan.wizard.form</field>
         <field name="model">route.visit.scan.wizard</field>
         <field name="arch" type="xml">
-            <form string="Scan Barcode">
+            <form string="Scan Barcode / Returns">
                 <group>
                     <group>
                         <field name="visit_id" readonly="1"/>
+                        <field name="scan_mode" readonly="1"/>
                         <field name="barcode" placeholder="Type or paste barcode here"/>
                         <field name="quantity"/>
                         <field name="scanned_uom_id"/>
+                        <field name="return_route" invisible="scan_mode != 'return'"/>
                     </group>
                     <group>
                         <field name="detected_product_id" readonly="1"/>
                         <field name="base_uom_id" readonly="1"/>
                         <field name="detected_scan_type" readonly="1"/>
-                        <field name="counted_increase" readonly="1"/>
+                        <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
                     </group>
                 </group>
-                <group string="Last Scan Result">
+
+                <group string="Last Scan Result" invisible="scan_mode != 'count'">
                     <group>
                         <field name="last_product_id" readonly="1"/>
                         <field name="last_counted_qty" readonly="1"/>
                     </group>
                 </group>
+
+                <group string="Last Return Result" invisible="scan_mode != 'return'">
+                    <group>
+                        <field name="last_product_id" readonly="1"/>
+                        <field name="last_return_qty" readonly="1"/>
+                        <field name="last_return_route" readonly="1"/>
+                    </group>
+                </group>
+
                 <footer>
                     <button
                         name="action_scan_and_add"
