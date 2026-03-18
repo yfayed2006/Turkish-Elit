@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
@@ -128,6 +129,13 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Confirm Return Transfers"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_return_transfers'"
+                    />
+                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -191,6 +199,8 @@
                     <field name="ux_can_no_returns" invisible="1"/>
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
+                    <field name="ux_can_confirm_return_transfers" invisible="1"/>
+                    <field name="ux_can_view_return_transfers" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
                     <field name="ux_can_confirm_refill" invisible="1"/>
                     <field name="ux_can_view_refill_transfer" invisible="1"/>
@@ -246,6 +256,25 @@
                             invisible="not ux_can_view_sale_order"
                         >
                             <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+                        </button>
+
+                        <button
+                            name="action_ux_confirm_return_transfers"
+                            string="Confirm Return Transfers"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-truck"
+                            invisible="not ux_can_confirm_return_transfers"
+                        />
+
+                        <button
+                            name="action_ux_view_return_transfers"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_return_transfers"
+                        >
+                            <field name="return_picking_count" string="Return Transfers" widget="statinfo"/>
                         </button>
 
                         <button
@@ -339,6 +368,7 @@
                             <field name="sale_order_id" readonly="1"/>
                             <field name="refill_backorder_id" readonly="1"/>
                             <field name="refill_picking_id" readonly="1"/>
+                            <field name="return_picking_ids" readonly="1" widget="many2many_tags"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
@@ -378,6 +408,7 @@
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
                                     <field name="return_qty"/>
+                                    <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
                                     <field name="vehicle_available_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
@@ -397,7 +428,9 @@
                                 <list editable="bottom">
                                     <field name="payment_date"/>
                                     <field name="payment_mode"/>
+                                    <field name="collection_type"/>
                                     <field name="amount"/>
+                                    <field name="due_date"/>
                                     <field name="reference"/>
                                     <field name="bank_name"/>
                                     <field name="pos_terminal"/>
@@ -498,6 +531,13 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Confirm Return Transfers"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_return_transfers'"
+                    />
+                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -561,6 +601,8 @@
                     <field name="ux_can_no_returns" invisible="1"/>
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
+                    <field name="ux_can_confirm_return_transfers" invisible="1"/>
+                    <field name="ux_can_view_return_transfers" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
                     <field name="ux_can_confirm_refill" invisible="1"/>
                     <field name="ux_can_view_refill_transfer" invisible="1"/>
@@ -616,6 +658,25 @@
                             invisible="not ux_can_view_sale_order"
                         >
                             <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+                        </button>
+
+                        <button
+                            name="action_ux_confirm_return_transfers"
+                            string="Confirm Return Transfers"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-truck"
+                            invisible="not ux_can_confirm_return_transfers"
+                        />
+
+                        <button
+                            name="action_ux_view_return_transfers"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_return_transfers"
+                        >
+                            <field name="return_picking_count" string="Return Transfers" widget="statinfo"/>
                         </button>
 
                         <button
@@ -717,6 +778,7 @@
                             <field name="sale_order_id" readonly="1"/>
                             <field name="refill_backorder_id" readonly="1"/>
                             <field name="refill_picking_id" readonly="1"/>
+                            <field name="return_picking_ids" readonly="1" widget="many2many_tags"/>
                             <field name="check_in_datetime" readonly="1"/>
                             <field name="collection_datetime" readonly="1"/>
                             <field name="check_out_datetime" readonly="1"/>
@@ -730,6 +792,7 @@
                             <field name="sold_total_qty" readonly="1"/>
                         </group>
                         <group>
+                            <field name="returned_total_qty" readonly="1"/>
                             <field name="supplied_total_qty" readonly="1"/>
                             <field name="pending_refill_total_qty" readonly="1"/>
                             <field name="new_balance_total_qty" readonly="1"/>
@@ -772,6 +835,7 @@
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
                                     <field name="return_qty"/>
+                                    <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
                                     <field name="vehicle_available_qty" readonly="1"/>
                                     <field name="supplied_qty"/>
@@ -788,7 +852,9 @@
                                 <list editable="bottom">
                                     <field name="payment_date"/>
                                     <field name="payment_mode"/>
+                                    <field name="collection_type"/>
                                     <field name="amount"/>
+                                    <field name="due_date"/>
                                     <field name="reference"/>
                                     <field name="bank_name"/>
                                     <field name="pos_terminal"/>
