@@ -28,10 +28,13 @@ class RouteVisit(models.Model):
             "target": "current",
         }
 
-    def action_ux_returns_step(self):
+    def _action_open_returns_scan_wizard(self):
         self.ensure_one()
+
         if self.visit_process_state != "counting":
-            raise UserError(_("Returns can only be recorded during the counting stage."))
+            raise UserError(
+                _("Returns can only be recorded during the counting stage.")
+            )
 
         return {
             "type": "ir.actions.act_window",
@@ -45,19 +48,35 @@ class RouteVisit(models.Model):
             },
         }
 
-    def action_ux_no_returns(self):
+    def _action_mark_no_returns(self):
         self.ensure_one()
+
         if self.visit_process_state != "counting":
-            raise UserError(_("No Returns can only be confirmed during the counting stage."))
+            raise UserError(
+                _("No Returns can only be confirmed during the counting stage.")
+            )
+
+        if self.line_ids:
+            self.line_ids.write({"return_qty": 0.0})
 
         self.write({
             "has_returns_declared": False,
             "returns_step_done": True,
         })
+
         return self._action_reopen_visit_form()
+
+    def action_ux_returns_step(self):
+        self.ensure_one()
+        return self._action_open_returns_scan_wizard()
+
+    def action_ux_no_returns(self):
+        self.ensure_one()
+        return self._action_mark_no_returns()
 
     def _find_or_create_visit_line_for_product(self, product):
         self.ensure_one()
+
         line = self.line_ids.filtered(lambda l: l.product_id == product)[:1]
         if line:
             return line
@@ -81,5 +100,7 @@ class RouteVisit(models.Model):
 
         self.write({
             "has_returns_declared": True,
+            "returns_step_done": False,
         })
+
         return line
