@@ -268,4 +268,3 @@ class RouteVisitLine(models.Model):
                 raise ValidationError(
                     "Please select Return Route when Return Qty is greater than zero."
                 )
-                )
