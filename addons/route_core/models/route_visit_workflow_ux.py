@@ -29,6 +29,7 @@ class RouteVisit(models.Model):
             ("returns_step", "Scan Returns"),
             ("reconcile_count", "Reconcile Count"),
             ("generate_refill", "Generate Refill Proposal"),
+            ("confirm_refill", "Confirm Refill"),
             ("collect_payment", "Collect Payment"),
             ("confirm_payments", "Confirm Payments"),
             ("finalize_visit", "Finalize Visit"),
@@ -50,6 +51,8 @@ class RouteVisit(models.Model):
     ux_can_view_sale_order = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     ux_can_generate_refill = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_confirm_refill = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_view_refill_transfer = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_pending_refill = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     ux_can_collect_payment = fields.Boolean(compute="_compute_ux_workflow", store=False)
@@ -72,6 +75,8 @@ class RouteVisit(models.Model):
         "refill_backorder_id",
         "refill_datetime",
         "returns_step_done",
+        "refill_picking_id",
+        "refill_picking_count",
     )
     def _compute_ux_workflow(self):
         for rec in self:
@@ -95,6 +100,16 @@ class RouteVisit(models.Model):
                 and rec.visit_process_state == "reconciled"
                 and not (rec.refill_datetime or rec.has_refill or rec.no_refill)
             )
+
+            rec.ux_can_confirm_refill = (
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and bool(rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and not rec.refill_picking_id
+            )
+
+            rec.ux_can_view_refill_transfer = bool(rec.refill_picking_id or rec.refill_picking_count)
+
             rec.ux_can_open_pending_refill = bool(
                 rec.has_pending_refill or rec.refill_backorder_id
             )
@@ -102,7 +117,10 @@ class RouteVisit(models.Model):
             rec.ux_can_collect_payment = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
-                and bool(rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and (
+                    bool(rec.refill_picking_id)
+                    or not (rec.refill_datetime or rec.has_refill or rec.no_refill)
+                )
             )
             rec.ux_can_confirm_payments = (
                 rec.state == "in_progress"
@@ -154,6 +172,16 @@ class RouteVisit(models.Model):
                 rec.ux_primary_action = "generate_refill"
                 rec.ux_stage_title = "Generate refill proposal"
                 rec.ux_stage_help = "Generate the suggested refill."
+
+            elif (
+                rec.visit_process_state == "reconciled"
+                and bool(rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and not rec.refill_picking_id
+            ):
+                rec.ux_stage = "refill"
+                rec.ux_primary_action = "confirm_refill"
+                rec.ux_stage_title = "Confirm refill transfer"
+                rec.ux_stage_help = "Create the internal transfer from van to outlet."
 
             elif (
                 rec.visit_process_state == "reconciled"
@@ -232,6 +260,22 @@ class RouteVisit(models.Model):
             "view_mode": "form",
             "target": "current",
         }
+
+    def action_ux_confirm_refill(self):
+        self.ensure_one()
+        self.action_confirm_refill_transfer()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_ux_view_refill_transfer(self):
+        self.ensure_one()
+        return self.action_view_refill_transfer()
 
     def action_ux_open_payments(self):
         self.ensure_one()
