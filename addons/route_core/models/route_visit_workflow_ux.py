@@ -81,6 +81,8 @@ class RouteVisit(models.Model):
     )
     def _compute_ux_workflow(self):
         for rec in self:
+            has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
+
             rec.ux_can_scan_barcode = (
                 rec.state == "in_progress"
                 and rec.visit_process_state in ("checked_in", "counting")
@@ -96,14 +98,12 @@ class RouteVisit(models.Model):
             rec.ux_can_create_sale_order = False
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
-           has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
-
             rec.ux_can_generate_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
-                and not (rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and not rec.refill_datetime
             )
-            
+
             rec.ux_can_confirm_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
@@ -111,15 +111,15 @@ class RouteVisit(models.Model):
                 and has_supplied_qty
                 and not rec.refill_picking_id
             )
-            
+
             rec.ux_can_view_refill_transfer = bool(
                 rec.refill_picking_id or rec.refill_picking_count
             )
-            
+
             rec.ux_can_open_pending_refill = bool(
                 rec.has_pending_refill or rec.refill_backorder_id
             )
-            
+
             rec.ux_can_collect_payment = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
@@ -129,11 +129,13 @@ class RouteVisit(models.Model):
                     or (bool(rec.refill_datetime) and not has_supplied_qty)
                 )
             )
+
             rec.ux_can_confirm_payments = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
             )
+
             rec.ux_can_skip_collection = rec.ux_can_collect_payment
             rec.ux_can_open_payments = rec.ux_can_collect_payment
 
@@ -203,6 +205,7 @@ class RouteVisit(models.Model):
                 rec.ux_primary_action = "collect_payment"
                 rec.ux_stage_title = "Collect payment"
                 rec.ux_stage_help = "Add a payment or skip collection."
+
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
                 rec.ux_primary_action = "finalize_visit"
