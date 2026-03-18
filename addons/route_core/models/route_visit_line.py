@@ -67,6 +67,18 @@ class RouteVisitLine(models.Model):
     return_qty = fields.Float(string="Return Qty", default=0.0)
     supplied_qty = fields.Float(string="Supplied Qty", default=0.0)
 
+    return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Return Route",
+        default="vehicle",
+        required=True,
+        help="حدد مسار المرتجع لهذا الصنف. الافتراضي هو الإرجاع إلى السيارة.",
+    )
+
     sold_qty = fields.Float(
         string="Sold Qty",
         compute="_compute_quantities",
@@ -148,6 +160,12 @@ class RouteVisitLine(models.Model):
             if line.product_id:
                 line.unit_price = line.product_id.lst_price or 0.0
 
+    @api.onchange("return_qty")
+    def _onchange_return_qty_set_default_route(self):
+        for line in self:
+            if line.return_qty > 0 and not line.return_route:
+                line.return_route = "vehicle"
+
     @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
     def _compute_quantities(self):
         for line in self:
@@ -186,6 +204,10 @@ class RouteVisitLine(models.Model):
             if product_id and not vals.get("unit_price"):
                 product = self.env["product.product"].browse(product_id)
                 vals["unit_price"] = product.lst_price or 0.0
+
+            if vals.get("return_qty", 0.0) > 0 and not vals.get("return_route"):
+                vals["return_route"] = "vehicle"
+
         return super().create(vals_list)
 
     def write(self, vals):
@@ -193,9 +215,20 @@ class RouteVisitLine(models.Model):
         if vals.get("product_id") and not vals.get("unit_price"):
             product = self.env["product.product"].browse(vals["product_id"])
             vals["unit_price"] = product.lst_price or 0.0
+
+        if vals.get("return_qty", 0.0) > 0 and not vals.get("return_route"):
+            vals["return_route"] = "vehicle"
+
         return super().write(vals)
 
-    @api.constrains("previous_qty", "counted_qty", "return_qty", "supplied_qty", "unit_price", "vehicle_available_qty")
+    @api.constrains(
+        "previous_qty",
+        "counted_qty",
+        "return_qty",
+        "supplied_qty",
+        "unit_price",
+        "vehicle_available_qty",
+    )
     def _check_non_negative_values(self):
         for line in self:
             if line.previous_qty < 0:
@@ -226,4 +259,13 @@ class RouteVisitLine(models.Model):
             if line.supplied_qty > line.vehicle_available_qty:
                 raise ValidationError(
                     "Supplied Qty cannot be greater than Vehicle Available Qty."
+                )
+
+    @api.constrains("return_qty", "return_route")
+    def _check_return_route_when_return_exists(self):
+        for line in self:
+            if line.return_qty > 0 and not line.return_route:
+                raise ValidationError(
+                    "Please select Return Route when Return Qty is greater than zero."
+                )
                 )
