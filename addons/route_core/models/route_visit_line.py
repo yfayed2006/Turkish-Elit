@@ -166,7 +166,7 @@ class RouteVisitLine(models.Model):
             if line.return_qty > 0 and not line.return_route:
                 line.return_route = "vehicle"
 
-   @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
+    @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
     def _compute_quantities(self):
         for line in self:
             sold_qty = line.previous_qty - line.counted_qty
@@ -246,13 +246,26 @@ class RouteVisitLine(models.Model):
             if line.unit_price < 0:
                 raise ValidationError("Unit Price cannot be negative.")
 
-    @api.constrains("previous_qty", "counted_qty", "return_qty")
+    @api.constrains("previous_qty", "counted_qty")
     def _check_sold_qty_not_negative(self):
         for line in self:
-            sold_qty_raw = line.previous_qty - line.counted_qty - line.return_qty
+            sold_qty_raw = line.previous_qty - line.counted_qty
             if sold_qty_raw < 0:
                 raise ValidationError(
-                    "Sold Qty cannot be negative. Please check Previous Qty, Counted Qty, and Return Qty."
+                    "Sold Qty cannot be negative. Please check Previous Qty and Counted Qty."
+                )
+
+    @api.constrains("counted_qty", "return_qty", "supplied_qty")
+    def _check_return_qty_not_more_than_counted(self):
+        for line in self:
+            if line.return_qty > line.counted_qty:
+                raise ValidationError(
+                    "Return Qty cannot be greater than Counted Qty because returns are taken from the counted shelf stock."
+                )
+
+            if (line.counted_qty - line.return_qty + line.supplied_qty) < 0:
+                raise ValidationError(
+                    "New Balance Qty cannot be negative. Please check Counted Qty, Return Qty, and Supplied Qty."
                 )
 
     @api.constrains("supplied_qty", "vehicle_available_qty")
