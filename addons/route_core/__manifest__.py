@@ -16,6 +16,7 @@
         "views/route_outlet_views.xml",
         "views/route_plan_views.xml",
         "views/route_vehicle_views.xml",
+        "views/route_return_settings_views.xml",
         "views/route_visit_views.xml",
         "views/outlet_stock_balance_views.xml",
         "views/route_location_link_views.xml",
