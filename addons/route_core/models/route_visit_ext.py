@@ -456,7 +456,6 @@ class RouteVisit(models.Model):
                 continue
 
             self.env["stock.move"].create({
-                "name": f"{line.product_id.display_name} - {route_label}",
                 "product_id": line.product_id.id,
                 "product_uom_qty": line.return_qty,
                 "product_uom": line.uom_id.id,
