@@ -370,16 +370,25 @@ class RouteVisit(models.Model):
 
     def _get_return_destination_location(self, return_route):
         self.ensure_one()
-    
+
         if return_route == "vehicle":
             if not self.vehicle_id or not self.vehicle_id.stock_location_id:
-                raise UserError("The selected vehicle does not have a stock location for return transfer destination.")
+                raise UserError(
+                    "The selected vehicle does not have a stock location for return transfer destination."
+                )
             return self.vehicle_id.stock_location_id
-    
-        raise UserError(
-            "Return destination locations for damaged and near expiry are not activated yet. "
-            "Please keep return route as Vehicle for now."
-        )
+
+        if return_route == "damaged":
+            if not self.company_id.return_damaged_location_id:
+                raise UserError("Return Damaged Location is not configured on the company.")
+            return self.company_id.return_damaged_location_id
+
+        if return_route == "near_expiry":
+            if not self.company_id.return_near_expiry_location_id:
+                raise UserError("Return Near Expiry Location is not configured on the company.")
+            return self.company_id.return_near_expiry_location_id
+
+        raise UserError("Invalid return route.")
 
     def _get_internal_picking_type(self):
         self.ensure_one()
@@ -426,14 +435,20 @@ class RouteVisit(models.Model):
         dest_location = self._get_return_destination_location(return_route)
         picking_type = self._get_internal_picking_type()
 
+        route_label_map = {
+            "vehicle": "Vehicle Return",
+            "damaged": "Damaged Return",
+            "near_expiry": "Near Expiry Return",
+        }
+        route_label = route_label_map.get(return_route, "Return")
+
         picking = self.env["stock.picking"].create({
             "picking_type_id": picking_type.id,
             "location_id": source_location.id,
             "location_dest_id": dest_location.id,
-            "origin": self.name,
+            "origin": f"{self.name} - {route_label}",
             "move_type": "direct",
             "route_visit_id": self.id,
-            
         })
 
         for line in lines:
@@ -441,7 +456,7 @@ class RouteVisit(models.Model):
                 continue
 
             self.env["stock.move"].create({
-                "name": "%s - Return" % (line.product_id.display_name),
+                "name": f"{line.product_id.display_name} - {route_label}",
                 "product_id": line.product_id.id,
                 "product_uom_qty": line.return_qty,
                 "product_uom": line.uom_id.id,
@@ -449,7 +464,7 @@ class RouteVisit(models.Model):
                 "location_id": source_location.id,
                 "location_dest_id": dest_location.id,
                 "company_id": self.company_id.id,
-                "origin": self.name,
+                "origin": f"{self.name} - {route_label}",
             })
 
         if not picking.move_ids_without_package:
