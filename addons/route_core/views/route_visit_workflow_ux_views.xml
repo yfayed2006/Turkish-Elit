@@ -65,6 +65,13 @@
                         invisible="ux_primary_action != 'generate_refill'"
                     />
                     <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -113,6 +120,8 @@
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
                 <field name="ux_can_generate_refill" invisible="1"/>
+                <field name="ux_can_confirm_refill" invisible="1"/>
+                <field name="ux_can_view_refill_transfer" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
                 <field name="ux_can_collect_payment" invisible="1"/>
                 <field name="ux_can_confirm_payments" invisible="1"/>
@@ -186,6 +195,24 @@
                         class="oe_stat_button"
                         icon="fa-refresh"
                         invisible="not ux_can_generate_refill"
+                    />
+
+                    <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-truck"
+                        invisible="not ux_can_confirm_refill"
+                    />
+
+                    <button
+                        name="action_ux_view_refill_transfer"
+                        string="Refill Transfer"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-external-link-square"
+                        invisible="not ux_can_view_refill_transfer"
                     />
 
                     <button
@@ -302,6 +329,13 @@
                         invisible="ux_primary_action != 'generate_refill'"
                     />
                     <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -350,6 +384,8 @@
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
                 <field name="ux_can_generate_refill" invisible="1"/>
+                <field name="ux_can_confirm_refill" invisible="1"/>
+                <field name="ux_can_view_refill_transfer" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
                 <field name="ux_can_collect_payment" invisible="1"/>
                 <field name="ux_can_confirm_payments" invisible="1"/>
@@ -426,6 +462,24 @@
                     />
 
                     <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-truck"
+                        invisible="not ux_can_confirm_refill"
+                    />
+
+                    <button
+                        name="action_ux_view_refill_transfer"
+                        string="Refill Transfer"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-external-link-square"
+                        invisible="not ux_can_view_refill_transfer"
+                    />
+
+                    <button
                         name="action_view_pending_refill"
                         string="Pending Refill"
                         type="object"
@@ -473,6 +527,9 @@
                 </div>
             </xpath>
         </field>
+    </record>
+
+</odoo>
     </record>
 
 </odoo>
