@@ -33,6 +33,21 @@ class RouteVisit(models.Model):
         copy=False,
     )
 
+    return_picking_ids = fields.Many2many(
+        "stock.picking",
+        "route_visit_return_picking_rel",
+        "visit_id",
+        "picking_id",
+        string="Return Transfers",
+        copy=False,
+        readonly=True,
+    )
+
+    return_picking_count = fields.Integer(
+        string="Return Transfer Count",
+        compute="_compute_return_picking_count",
+    )
+
     check_in_datetime = fields.Datetime(string="Check In")
     count_start_datetime = fields.Datetime(string="Count Start")
     count_end_datetime = fields.Datetime(string="Count End")
@@ -200,6 +215,11 @@ class RouteVisit(models.Model):
         tracking=True,
     )
 
+    @api.depends("return_picking_ids")
+    def _compute_return_picking_count(self):
+        for rec in self:
+            rec.return_picking_count = len(rec.return_picking_ids)
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -261,6 +281,7 @@ class RouteVisit(models.Model):
         "visit_process_state",
         "collection_skip_reason",
         "refill_datetime",
+        "return_picking_ids",
     )
     def _compute_flags(self):
         for rec in self:
@@ -284,6 +305,22 @@ class RouteVisit(models.Model):
         action = self.env.ref("route_core.action_route_refill_backorder").read()[0]
         action["res_id"] = self.refill_backorder_id.id
         action["views"] = [(False, "form")]
+        return action
+
+    def action_view_return_transfers(self):
+        self.ensure_one()
+
+        if not self.return_picking_ids:
+            raise UserError("There are no return transfers linked to this visit.")
+
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+
+        if len(self.return_picking_ids) == 1:
+            action["views"] = [(False, "form")]
+            action["res_id"] = self.return_picking_ids.id
+        else:
+            action["domain"] = [("id", "in", self.return_picking_ids.ids)]
+
         return action
 
     def _set_main_visit_state_in_progress(self):
@@ -322,6 +359,143 @@ class RouteVisit(models.Model):
             ("product_id", "=", product.id),
         ])
         return sum(quants.mapped("quantity"))
+
+    def _get_return_source_location(self):
+        self.ensure_one()
+
+        if not self.outlet_id or not getattr(self.outlet_id, "stock_location_id", False):
+            raise UserError("The selected outlet does not have a stock location for return transfer source.")
+
+        return self.outlet_id.stock_location_id
+
+    def _get_return_destination_location(self, return_route):
+        self.ensure_one()
+
+        if return_route == "vehicle":
+            if not self.vehicle_id or not self.vehicle_id.stock_location_id:
+                raise UserError("The selected vehicle does not have a stock location for return transfer destination.")
+            return self.vehicle_id.stock_location_id
+
+        if return_route == "damaged":
+            location = getattr(self.company_id, "return_damaged_location_id", False)
+            if not location:
+                raise UserError("Please configure Return Damaged Location on the company first.")
+            return location
+
+        if return_route == "near_expiry":
+            location = getattr(self.company_id, "return_near_expiry_location_id", False)
+            if not location:
+                raise UserError("Please configure Return Near Expiry Location on the company first.")
+            return location
+
+        raise UserError("Invalid return route on visit lines.")
+
+    def _get_internal_picking_type(self):
+        self.ensure_one()
+
+        warehouse = self.env["stock.warehouse"].search(
+            [("company_id", "=", self.company_id.id)],
+            limit=1,
+        )
+        if warehouse and warehouse.int_type_id:
+            return warehouse.int_type_id
+
+        picking_type = self.env["stock.picking.type"].search(
+            [
+                ("code", "=", "internal"),
+                ("warehouse_id.company_id", "=", self.company_id.id),
+            ],
+            limit=1,
+        )
+        if picking_type:
+            return picking_type
+
+        raise UserError("No Internal Transfer operation type was found for this company.")
+
+    def _get_return_lines_grouped_by_route(self):
+        self.ensure_one()
+
+        grouped = {}
+        return_lines = self.line_ids.filtered(lambda l: (l.return_qty or 0.0) > 0)
+
+        for line in return_lines:
+            route = line.return_route or "vehicle"
+            grouped.setdefault(route, self.env["route.visit.line"])
+            grouped[route] |= line
+
+        return grouped
+
+    def _create_return_transfer_for_route(self, return_route, lines):
+        self.ensure_one()
+
+        if not lines:
+            return False
+
+        source_location = self._get_return_source_location()
+        dest_location = self._get_return_destination_location(return_route)
+        picking_type = self._get_internal_picking_type()
+
+        picking = self.env["stock.picking"].create({
+            "picking_type_id": picking_type.id,
+            "location_id": source_location.id,
+            "location_dest_id": dest_location.id,
+            "origin": self.name,
+            "move_type": "direct",
+            "route_visit_id": self.id,
+            "is_return_transfer": True,
+        })
+
+        for line in lines:
+            if not line.product_id or (line.return_qty or 0.0) <= 0:
+                continue
+
+            self.env["stock.move"].create({
+                "name": "%s - Return" % (line.product_id.display_name),
+                "product_id": line.product_id.id,
+                "product_uom_qty": line.return_qty,
+                "product_uom": line.uom_id.id,
+                "picking_id": picking.id,
+                "location_id": source_location.id,
+                "location_dest_id": dest_location.id,
+                "company_id": self.company_id.id,
+                "origin": self.name,
+            })
+
+        if not picking.move_ids_without_package:
+            picking.unlink()
+            return False
+
+        picking.action_confirm()
+        picking.action_assign()
+        return picking
+
+    def action_confirm_return_transfers(self):
+        for rec in self:
+            if rec.visit_process_state != "reconciled":
+                raise UserError("Return transfers can only be confirmed when the visit is in Reconciled state.")
+
+            if rec.return_picking_ids:
+                raise UserError("Return transfers have already been created for this visit.")
+
+            return_lines = rec.line_ids.filtered(lambda l: (l.return_qty or 0.0) > 0)
+            if not return_lines:
+                raise UserError("There are no returned quantities on this visit.")
+
+            grouped_lines = rec._get_return_lines_grouped_by_route()
+            created_pickings = self.env["stock.picking"]
+
+            for return_route, lines in grouped_lines.items():
+                picking = rec._create_return_transfer_for_route(return_route, lines)
+                if picking:
+                    created_pickings |= picking
+
+            if not created_pickings:
+                raise UserError("No return transfers were created from the current visit lines.")
+
+            rec.return_picking_ids = [(6, 0, created_pickings.ids)]
+            rec._set_main_visit_state_in_progress()
+
+        return True
 
     def _create_pending_refill_backorder(self):
         self.ensure_one()
@@ -496,6 +670,9 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.visit_process_state != "collection_done":
                 raise UserError("Outlet balance can only be updated after collection is completed.")
+
+            if rec.has_returns and not rec.return_picking_ids:
+                raise UserError("Please confirm return transfers before updating outlet balance.")
 
             if not rec.outlet_id:
                 raise UserError("Please set an outlet before updating outlet balance.")
