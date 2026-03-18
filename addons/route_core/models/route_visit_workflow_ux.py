@@ -77,6 +77,7 @@ class RouteVisit(models.Model):
         "returns_step_done",
         "refill_picking_id",
         "refill_picking_count",
+        "line_ids.supplied_qty",
     )
     def _compute_ux_workflow(self):
         for rec in self:
