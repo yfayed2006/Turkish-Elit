@@ -73,6 +73,7 @@ class RouteVisit(models.Model):
         "sale_order_id",
         "sale_order_count",
         "payment_ids.state",
+        "payment_ids.amount",
         "collection_skip_reason",
         "has_pending_refill",
         "has_refill",
@@ -163,7 +164,9 @@ class RouteVisit(models.Model):
 
             rec.ux_can_confirm_payments = can_enter_collection and has_draft_payments
             rec.ux_can_skip_collection = can_enter_collection
-            rec.ux_can_open_payments = can_enter_collection
+            rec.ux_can_open_payments = (
+                can_enter_collection or has_draft_payments or has_confirmed_payments
+            )
 
             rec.ux_can_finish_visit = (
                 rec.state == "in_progress"
