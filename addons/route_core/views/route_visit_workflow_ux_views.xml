@@ -30,6 +30,20 @@
                         invisible="ux_primary_action != 'scan_shelf'"
                     />
                     <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
+                    />
+                    <button
+                        name="action_ux_no_returns"
+                        string="No Returns"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="not ux_can_no_returns"
+                    />
+                    <button
                         name="action_ux_reconcile_count"
                         string="Reconcile Count"
                         type="object"
@@ -94,6 +108,8 @@
                 <field name="ux_stage_help" invisible="1"/>
 
                 <field name="ux_can_scan_barcode" invisible="1"/>
+                <field name="ux_can_scan_returns" invisible="1"/>
+                <field name="ux_can_no_returns" invisible="1"/>
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
                 <field name="ux_can_generate_refill" invisible="1"/>
@@ -124,6 +140,24 @@
                         class="oe_stat_button"
                         icon="fa-barcode"
                         invisible="not ux_can_scan_barcode"
+                    />
+
+                    <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="not ux_can_scan_returns"
+                    />
+
+                    <button
+                        name="action_ux_no_returns"
+                        string="No Returns"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-check-circle"
+                        invisible="not ux_can_no_returns"
                     />
 
                     <button
@@ -233,6 +267,20 @@
                         invisible="ux_primary_action != 'scan_shelf'"
                     />
                     <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
+                    />
+                    <button
+                        name="action_ux_no_returns"
+                        string="No Returns"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="not ux_can_no_returns"
+                    />
+                    <button
                         name="action_ux_reconcile_count"
                         string="Reconcile Count"
                         type="object"
@@ -297,6 +345,8 @@
                 <field name="ux_stage_help" invisible="1"/>
 
                 <field name="ux_can_scan_barcode" invisible="1"/>
+                <field name="ux_can_scan_returns" invisible="1"/>
+                <field name="ux_can_no_returns" invisible="1"/>
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
                 <field name="ux_can_generate_refill" invisible="1"/>
@@ -327,6 +377,24 @@
                         class="oe_stat_button"
                         icon="fa-barcode"
                         invisible="not ux_can_scan_barcode"
+                    />
+
+                    <button
+                        name="action_ux_returns_step"
+                        string="Scan Returns"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="not ux_can_scan_returns"
+                    />
+
+                    <button
+                        name="action_ux_no_returns"
+                        string="No Returns"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-check-circle"
+                        invisible="not ux_can_no_returns"
                     />
 
                     <button
