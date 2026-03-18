@@ -135,6 +135,13 @@
                         invisible="ux_primary_action != 'generate_refill'"
                     />
                     <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -185,6 +192,8 @@
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
+                    <field name="ux_can_confirm_refill" invisible="1"/>
+                    <field name="ux_can_view_refill_transfer" invisible="1"/>
                     <field name="ux_can_open_pending_refill" invisible="1"/>
                     <field name="ux_can_collect_payment" invisible="1"/>
                     <field name="ux_can_confirm_payments" invisible="1"/>
@@ -249,6 +258,25 @@
                         />
 
                         <button
+                            name="action_ux_confirm_refill"
+                            string="Confirm Refill"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check-square-o"
+                            invisible="not ux_can_confirm_refill"
+                        />
+
+                        <button
+                            name="action_ux_view_refill_transfer"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_refill_transfer"
+                        >
+                            <field name="refill_picking_count" string="Refill Transfer" widget="statinfo"/>
+                        </button>
+
+                        <button
                             name="action_view_pending_refill"
                             string="Pending Refill"
                             type="object"
@@ -310,6 +338,7 @@
                         <group>
                             <field name="sale_order_id" readonly="1"/>
                             <field name="refill_backorder_id" readonly="1"/>
+                            <field name="refill_picking_id" readonly="1"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
@@ -476,6 +505,13 @@
                         invisible="ux_primary_action != 'generate_refill'"
                     />
                     <button
+                        name="action_ux_confirm_refill"
+                        string="Confirm Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -526,6 +562,8 @@
                     <field name="ux_can_create_sale_order" invisible="1"/>
                     <field name="ux_can_view_sale_order" invisible="1"/>
                     <field name="ux_can_generate_refill" invisible="1"/>
+                    <field name="ux_can_confirm_refill" invisible="1"/>
+                    <field name="ux_can_view_refill_transfer" invisible="1"/>
                     <field name="ux_can_open_pending_refill" invisible="1"/>
                     <field name="ux_can_collect_payment" invisible="1"/>
                     <field name="ux_can_confirm_payments" invisible="1"/>
@@ -588,6 +626,25 @@
                             icon="fa-refresh"
                             invisible="not ux_can_generate_refill"
                         />
+
+                        <button
+                            name="action_ux_confirm_refill"
+                            string="Confirm Refill"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-check-square-o"
+                            invisible="not ux_can_confirm_refill"
+                        />
+
+                        <button
+                            name="action_ux_view_refill_transfer"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-external-link"
+                            invisible="not ux_can_view_refill_transfer"
+                        >
+                            <field name="refill_picking_count" string="Refill Transfer" widget="statinfo"/>
+                        </button>
 
                         <button
                             name="action_view_pending_refill"
@@ -659,6 +716,7 @@
                         <group string="Current Status">
                             <field name="sale_order_id" readonly="1"/>
                             <field name="refill_backorder_id" readonly="1"/>
+                            <field name="refill_picking_id" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
                             <field name="collection_datetime" readonly="1"/>
                             <field name="check_out_datetime" readonly="1"/>
