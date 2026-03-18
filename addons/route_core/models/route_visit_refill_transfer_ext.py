@@ -31,11 +31,9 @@ class RouteVisit(models.Model):
 
     def _prepare_refill_picking_vals(self):
         self.ensure_one()
-
         picking_type = self._get_internal_picking_type()
         source_location = self._get_vehicle_stock_location()
         dest_location = self._get_outlet_stock_location()
-
         return {
             "picking_type_id": picking_type.id,
             "location_id": source_location.id,
@@ -48,9 +46,7 @@ class RouteVisit(models.Model):
 
     def _prepare_refill_move_vals(self, picking, line):
         self.ensure_one()
-
         return {
-            "name": line.product_id.display_name or line.product_id.name,
             "product_id": line.product_id.id,
             "product_uom_qty": line.supplied_qty,
             "product_uom": line.uom_id.id or line.product_id.uom_id.id,
@@ -71,7 +67,7 @@ class RouteVisit(models.Model):
                 for ml in move.move_line_ids:
                     if remaining <= 0:
                         break
-                    ml.qty_done = remaining
+                    ml.quantity = remaining
                     remaining = 0.0
             else:
                 self.env["stock.move.line"].create({
@@ -79,7 +75,7 @@ class RouteVisit(models.Model):
                     "picking_id": picking.id,
                     "product_id": move.product_id.id,
                     "product_uom_id": move.product_uom.id,
-                    "qty_done": qty,
+                    "quantity": qty,
                     "location_id": move.location_id.id,
                     "location_dest_id": move.location_dest_id.id,
                 })
@@ -126,7 +122,9 @@ class RouteVisit(models.Model):
         self._fill_move_line_qty_done(picking)
 
         if picking.state not in ("done", "cancel"):
-            picking.button_validate()
+            result = picking.button_validate()
+            if isinstance(result, dict):
+                return result
 
         if picking.state != "done":
             raise UserError(
