@@ -31,7 +31,7 @@
                     />
                     <button
                         name="action_ux_returns_step"
-                        string="Scan Returns"
+                        string="Check Returns"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'returns_step'"
@@ -153,7 +153,7 @@
 
                     <button
                         name="action_ux_returns_step"
-                        string="Scan Returns"
+                        string="Yes, Scan Returns"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-undo"
@@ -295,7 +295,7 @@
                     />
                     <button
                         name="action_ux_returns_step"
-                        string="Scan Returns"
+                        string="Check Returns"
                         type="object"
                         class="btn-primary"
                         invisible="ux_primary_action != 'returns_step'"
@@ -417,7 +417,7 @@
 
                     <button
                         name="action_ux_returns_step"
-                        string="Scan Returns"
+                        string="Yes, Scan Returns"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-undo"
@@ -527,9 +527,6 @@
                 </div>
             </xpath>
         </field>
-    </record>
-
-</odoo>
     </record>
 
 </odoo>
