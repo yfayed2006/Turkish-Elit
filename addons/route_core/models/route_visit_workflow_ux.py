@@ -156,8 +156,8 @@ class RouteVisit(models.Model):
             elif rec.visit_process_state == "counting" and not rec.returns_step_done:
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
-                rec.ux_stage_title = "Returns step"
-                rec.ux_stage_help = "Either scan returns or choose No Returns."
+                rec.ux_stage_title = "Check returns"
+                rec.ux_stage_help = "Are there any returns in this visit? Choose No Returns or Yes, Scan Returns."
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
