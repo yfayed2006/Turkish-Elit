@@ -172,9 +172,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Reconcile counted stock"
                 rec.ux_stage_help = "Confirm reconciliation."
 
-            elif rec.visit_process_state == "reconciled" and not (
-                rec.refill_datetime or rec.has_refill or rec.no_refill
-            ):
+            elif rec.visit_process_state == "reconciled" and not rec.refill_datetime:
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "generate_refill"
                 rec.ux_stage_title = "Generate refill proposal"
@@ -182,7 +180,8 @@ class RouteVisit(models.Model):
 
             elif (
                 rec.visit_process_state == "reconciled"
-                and bool(rec.refill_datetime or rec.has_refill or rec.no_refill)
+                and bool(rec.refill_datetime)
+                and has_supplied_qty
                 and not rec.refill_picking_id
             ):
                 rec.ux_stage = "refill"
@@ -192,6 +191,11 @@ class RouteVisit(models.Model):
 
             elif (
                 rec.visit_process_state == "reconciled"
+                and (
+                    bool(rec.refill_picking_id)
+                    or bool(rec.no_refill)
+                    or (bool(rec.refill_datetime) and not has_supplied_qty)
+                )
                 and not rec.payment_ids.filtered(lambda p: p.state == "confirmed")
                 and not rec.collection_skip_reason
             ):
@@ -199,7 +203,6 @@ class RouteVisit(models.Model):
                 rec.ux_primary_action = "collect_payment"
                 rec.ux_stage_title = "Collect payment"
                 rec.ux_stage_help = "Add a payment or skip collection."
-
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
                 rec.ux_primary_action = "finalize_visit"
