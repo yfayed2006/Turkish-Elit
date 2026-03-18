@@ -180,7 +180,7 @@
                     <field
                         name="visit_process_state"
                         widget="statusbar"
-                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancelled"
+                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,refill_done,ready_to_close,done,cancelled"
                     />
                 </header>
 
@@ -582,7 +582,7 @@
                     <field
                         name="visit_process_state"
                         widget="statusbar"
-                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancelled"
+                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,refill_done,ready_to_close,done,cancelled"
                     />
                 </header>
 
