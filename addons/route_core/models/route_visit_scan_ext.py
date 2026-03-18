@@ -187,5 +187,6 @@ class RouteVisit(models.Model):
             "context": {
                 "default_visit_id": self.id,
                 "default_quantity": 1.0,
+                "default_scan_mode": "count",
             },
         }
