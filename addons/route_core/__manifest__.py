@@ -19,6 +19,7 @@
         "views/route_visit_views.xml",
         "views/outlet_stock_balance_views.xml",
         "views/route_location_link_views.xml",
+        "views/res_company_route_return_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
         "wizard/route_visit_scan_wizard_views.xml",
