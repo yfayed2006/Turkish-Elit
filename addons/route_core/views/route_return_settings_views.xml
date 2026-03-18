@@ -6,7 +6,7 @@
         <field name="model">res.company</field>
         <field name="inherit_id" ref="base.view_company_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//sheet/group" position="after">
+            <xpath expr="//sheet" position="inside">
                 <group string="Route Return Settings">
                     <group>
                         <field name="return_damaged_location_id"/>
