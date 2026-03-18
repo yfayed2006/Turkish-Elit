@@ -12,27 +12,53 @@ class RouteVisitScanWizard(models.TransientModel):
         required=True,
         readonly=True,
     )
+
+    scan_mode = fields.Selection(
+        [
+            ("count", "Count"),
+            ("return", "Return"),
+        ],
+        string="Scan Mode",
+        default="count",
+        required=True,
+        readonly=True,
+    )
+
     barcode = fields.Char(string="Barcode")
     quantity = fields.Float(string="Quantity", default=1.0)
+
+    return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Return Route",
+        default="vehicle",
+    )
 
     detected_product_id = fields.Many2one(
         "product.product",
         string="Detected Product",
         readonly=True,
     )
+
     base_uom_id = fields.Many2one(
         "uom.uom",
         string="Base UoM",
         readonly=True,
     )
+
     scanned_uom_id = fields.Many2one(
         "uom.uom",
         string="Count As UoM",
     )
+
     detected_scan_type = fields.Char(
         string="Detected Source",
         readonly=True,
     )
+
     counted_increase = fields.Float(
         string="Count Increase",
         readonly=True,
@@ -43,8 +69,24 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Last Product",
         readonly=True,
     )
+
     last_counted_qty = fields.Float(
         string="Last Counted Qty",
+        readonly=True,
+    )
+
+    last_return_qty = fields.Float(
+        string="Last Return Qty",
+        readonly=True,
+    )
+
+    last_return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Last Return Route",
         readonly=True,
     )
 
@@ -85,6 +127,20 @@ class RouteVisitScanWizard(models.TransientModel):
             else:
                 rec.counted_increase = 0.0
 
+    def _get_or_create_visit_line(self, product):
+        self.ensure_one()
+
+        line = self.visit_id.line_ids.filtered(lambda l: l.product_id == product)[:1]
+        if line:
+            return line
+
+        return self.env["route.visit.line"].create({
+            "visit_id": self.visit_id.id,
+            "company_id": self.visit_id.company_id.id,
+            "product_id": product.id,
+            "unit_price": product.lst_price or 0.0,
+        })
+
     def action_scan_and_add(self):
         self.ensure_one()
 
@@ -95,32 +151,84 @@ class RouteVisitScanWizard(models.TransientModel):
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
 
-        result = self.visit_id._process_scanned_barcode(
-            self.barcode,
-            scan_qty=self.quantity,
-            scanned_uom=self.scanned_uom_id,
-        )
-        line = result["line"]
-        product = result["product"]
+        if self.scan_mode == "count":
+            result = self.visit_id._process_scanned_barcode(
+                self.barcode,
+                scan_qty=self.quantity,
+                scanned_uom=self.scanned_uom_id,
+            )
+            line = result["line"]
+            product = result["product"]
 
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Scan Barcode"),
-            "res_model": "route.visit.scan.wizard",
-            "view_mode": "form",
-            "target": "new",
-            "context": {
-                "default_visit_id": self.visit_id.id,
-                "default_quantity": 1.0,
-                "default_last_product_id": line.product_id.id,
-                "default_last_counted_qty": line.counted_qty,
-                "default_detected_product_id": product.id,
-                "default_base_uom_id": product.uom_id.id,
-                "default_scanned_uom_id": product.uom_id.id,
-                "default_detected_scan_type": False,
-                "default_counted_increase": 0.0,
-            },
-        }
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("Scan Barcode"),
+                "res_model": "route.visit.scan.wizard",
+                "view_mode": "form",
+                "target": "new",
+                "context": {
+                    "default_visit_id": self.visit_id.id,
+                    "default_scan_mode": "count",
+                    "default_quantity": 1.0,
+                    "default_last_product_id": line.product_id.id,
+                    "default_last_counted_qty": line.counted_qty,
+                    "default_last_return_qty": 0.0,
+                    "default_last_return_route": False,
+                    "default_detected_product_id": product.id,
+                    "default_base_uom_id": product.uom_id.id,
+                    "default_scanned_uom_id": product.uom_id.id,
+                    "default_detected_scan_type": False,
+                    "default_counted_increase": 0.0,
+                },
+            }
+
+        if self.scan_mode == "return":
+            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+            product = scan_info["product"]
+
+            if not self.scanned_uom_id:
+                scanned_uom = product.uom_id
+            else:
+                scanned_uom = self.scanned_uom_id
+
+            try:
+                return_increase = scanned_uom._compute_quantity(self.quantity, product.uom_id)
+            except Exception:
+                raise UserError(_("Could not convert the entered quantity to the product base unit."))
+
+            if return_increase <= 0:
+                raise UserError(_("Return quantity must be greater than zero."))
+
+            line = self._get_or_create_visit_line(product)
+            line.write({
+                "return_qty": (line.return_qty or 0.0) + return_increase,
+                "return_route": self.return_route or "vehicle",
+            })
+
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("Scan Returns"),
+                "res_model": "route.visit.scan.wizard",
+                "view_mode": "form",
+                "target": "new",
+                "context": {
+                    "default_visit_id": self.visit_id.id,
+                    "default_scan_mode": "return",
+                    "default_quantity": 1.0,
+                    "default_return_route": self.return_route or "vehicle",
+                    "default_last_product_id": line.product_id.id,
+                    "default_last_counted_qty": line.counted_qty,
+                    "default_last_return_qty": line.return_qty,
+                    "default_last_return_route": line.return_route,
+                    "default_detected_product_id": product.id,
+                    "default_base_uom_id": product.uom_id.id,
+                    "default_scanned_uom_id": product.uom_id.id,
+                    "default_detected_scan_type": False,
+                    "default_counted_increase": 0.0,
+                },
+            }
+
+        raise UserError(_("Unsupported scan mode."))
 
     def action_done(self):
         self.ensure_one()
