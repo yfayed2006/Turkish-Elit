@@ -451,11 +451,13 @@ class RouteVisit(models.Model):
             "route_visit_id": self.id,
         })
 
+        created_moves = self.env["stock.move"]
+
         for line in lines:
             if not line.product_id or (line.return_qty or 0.0) <= 0:
                 continue
 
-            self.env["stock.move"].create({
+            move = self.env["stock.move"].create({
                 "product_id": line.product_id.id,
                 "product_uom_qty": line.return_qty,
                 "product_uom": line.uom_id.id,
@@ -465,8 +467,9 @@ class RouteVisit(models.Model):
                 "company_id": self.company_id.id,
                 "origin": f"{self.name} - {route_label}",
             })
+            created_moves |= move
 
-        if not picking.move_ids_without_package:
+        if not created_moves:
             picking.unlink()
             return False
 
