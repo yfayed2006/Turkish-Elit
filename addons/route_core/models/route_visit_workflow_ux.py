@@ -83,6 +83,19 @@ class RouteVisit(models.Model):
         for rec in self:
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
 
+            can_enter_collection = (
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and (
+                    bool(rec.refill_picking_id)
+                    or bool(rec.no_refill)
+                    or (bool(rec.refill_datetime) and not has_supplied_qty)
+                )
+            )
+
+            has_draft_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
+            has_confirmed_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "confirmed"))
+
             rec.ux_can_scan_barcode = (
                 rec.state == "in_progress"
                 and rec.visit_process_state in ("checked_in", "counting")
@@ -121,23 +134,14 @@ class RouteVisit(models.Model):
             )
 
             rec.ux_can_collect_payment = (
-                rec.state == "in_progress"
-                and rec.visit_process_state == "reconciled"
-                and (
-                    bool(rec.refill_picking_id)
-                    or bool(rec.no_refill)
-                    or (bool(rec.refill_datetime) and not has_supplied_qty)
-                )
+                can_enter_collection
+                and not has_draft_payments
+                and not rec.collection_skip_reason
             )
 
-            rec.ux_can_confirm_payments = (
-                rec.state == "in_progress"
-                and rec.visit_process_state == "reconciled"
-                and bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
-            )
-
-            rec.ux_can_skip_collection = rec.ux_can_collect_payment
-            rec.ux_can_open_payments = rec.ux_can_collect_payment
+            rec.ux_can_confirm_payments = can_enter_collection and has_draft_payments
+            rec.ux_can_skip_collection = can_enter_collection
+            rec.ux_can_open_payments = can_enter_collection
 
             rec.ux_can_finish_visit = (
                 rec.state == "in_progress"
@@ -191,20 +195,21 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Confirm refill transfer"
                 rec.ux_stage_help = "Create the internal transfer from van to outlet."
 
+            elif can_enter_collection and has_draft_payments:
+                rec.ux_stage = "collection"
+                rec.ux_primary_action = "confirm_payments"
+                rec.ux_stage_title = "Confirm payments"
+                rec.ux_stage_help = "Review and confirm the drafted payment decisions."
+
             elif (
-                rec.visit_process_state == "reconciled"
-                and (
-                    bool(rec.refill_picking_id)
-                    or bool(rec.no_refill)
-                    or (bool(rec.refill_datetime) and not has_supplied_qty)
-                )
-                and not rec.payment_ids.filtered(lambda p: p.state == "confirmed")
+                can_enter_collection
+                and not has_confirmed_payments
                 and not rec.collection_skip_reason
             ):
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "collect_payment"
                 rec.ux_stage_title = "Collect payment"
-                rec.ux_stage_help = "Add a payment or skip collection."
+                rec.ux_stage_help = "Add a full payment, partial payment, deferment, or carry forward."
 
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
@@ -301,6 +306,8 @@ class RouteVisit(models.Model):
             "context": {
                 "default_visit_id": self.id,
                 "default_payment_date": fields.Date.context_today(self),
+                "default_amount": self.remaining_due_amount,
+                "default_collection_type": "full",
             },
         }
 
