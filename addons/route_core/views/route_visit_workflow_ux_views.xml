@@ -153,11 +153,10 @@
 
                     <button
                         name="action_ux_returns_step"
-                        string="Yes, Scan Returns"
+                        string="Check Return"
                         type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_scan_returns"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
                     />
 
                     <button
@@ -417,11 +416,10 @@
 
                     <button
                         name="action_ux_returns_step"
-                        string="Yes, Scan Returns"
+                        string="Check Return"
                         type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_scan_returns"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'returns_step'"
                     />
 
                     <button
