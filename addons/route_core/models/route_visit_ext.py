@@ -243,7 +243,7 @@ class RouteVisit(models.Model):
             rec.new_balance_value = sum(rec.line_ids.mapped("new_balance_value"))
 
             rec.commission_amount = rec.gross_sales_amount * (rec.commission_rate / 100.0)
-            rec.net_due_amount = rec.gross_sales_amount - rec.commission_amount - rec.return_amount
+            rec.net_due_amount = rec.gross_sales_amount - rec.commission_amount
 
     @api.depends("payment_ids.amount", "payment_ids.state", "net_due_amount")
     def _compute_payment_totals(self):
@@ -455,6 +455,20 @@ class RouteVisit(models.Model):
 
             for payment in draft_payments:
                 payment.action_confirm()
+
+            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
+            has_deferred_record = bool(
+                confirmed_payments.filtered(
+                    lambda p: p.collection_type in ("partial", "defer_date", "next_visit")
+                )
+            )
+
+            if rec.remaining_due_amount > 0 and not has_deferred_record and not rec.collection_skip_reason:
+                raise UserError(
+                    "There is still a remaining due amount. Please either collect it fully, "
+                    "add a partial payment with carry forward, defer it to a specific date, "
+                    "or carry it to the next visit."
+                )
 
             rec.write({
                 "visit_process_state": "collection_done",
