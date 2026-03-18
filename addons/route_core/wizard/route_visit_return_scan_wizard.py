@@ -23,6 +23,17 @@ class RouteVisitReturnScanWizard(models.TransientModel):
         default=1.0,
     )
 
+    return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Return Route",
+        required=True,
+        default="vehicle",
+    )
+
     detected_product_id = fields.Many2one(
         "product.product",
         string="Detected Product",
@@ -37,6 +48,16 @@ class RouteVisitReturnScanWizard(models.TransientModel):
 
     last_return_qty = fields.Float(
         string="Last Return Qty",
+        readonly=True,
+    )
+
+    last_return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Last Return Route",
         readonly=True,
     )
 
@@ -76,8 +97,15 @@ class RouteVisitReturnScanWizard(models.TransientModel):
         if self.quantity <= 0:
             raise UserError(_("Return quantity must be greater than zero."))
 
+        if self.return_route not in ("vehicle", "damaged", "near_expiry"):
+            raise UserError(_("Please select a valid return route."))
+
         product = self._get_target_product()
-        line = self.visit_id._add_return_qty(product, self.quantity)
+        line = self.visit_id._add_return_qty(
+            product,
+            self.quantity,
+            return_route=self.return_route,
+        )
 
         return {
             "type": "ir.actions.act_window",
@@ -88,8 +116,10 @@ class RouteVisitReturnScanWizard(models.TransientModel):
             "context": {
                 "default_visit_id": self.visit_id.id,
                 "default_quantity": 1.0,
+                "default_return_route": self.return_route or "vehicle",
                 "default_last_product_id": product.id,
                 "default_last_return_qty": line.return_qty,
+                "default_last_return_route": line.return_route,
             },
         }
 
