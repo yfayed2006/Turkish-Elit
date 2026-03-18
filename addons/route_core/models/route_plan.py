@@ -79,6 +79,17 @@ class RoutePlan(models.Model):
         compute="_compute_line_counts",
     )
 
+    area_summary = fields.Char(
+        string="Areas",
+        compute="_compute_plan_summaries",
+        store=False,
+    )
+    outlet_summary = fields.Char(
+        string="Outlets",
+        compute="_compute_plan_summaries",
+        store=False,
+    )
+
     @api.depends("line_ids", "line_ids.state", "line_ids.visit_id", "line_ids.visit_id.state")
     def _compute_line_counts(self):
         for rec in self:
@@ -91,6 +102,30 @@ class RoutePlan(models.Model):
             rec.in_progress_count = len(
                 lines.filtered(lambda l: l.visit_id and l.visit_id.state == "in_progress")
             )
+
+    @api.depends(
+        "area_id",
+        "line_ids.area_id",
+        "line_ids.outlet_id",
+        "line_ids.sequence",
+    )
+    def _compute_plan_summaries(self):
+        for rec in self:
+            areas = rec.line_ids.mapped("area_id")
+            outlets = rec.line_ids.mapped("outlet_id")
+
+            area_names = [name for name in areas.mapped("name") if name]
+            outlet_names = [name for name in outlets.mapped("name") if name]
+
+            if not area_names and rec.area_id:
+                area_names = [rec.area_id.name]
+
+            # إزالة التكرار مع الحفاظ على الترتيب
+            unique_area_names = list(dict.fromkeys(area_names))
+            unique_outlet_names = list(dict.fromkeys(outlet_names))
+
+            rec.area_summary = ", ".join(unique_area_names) if unique_area_names else ""
+            rec.outlet_summary = ", ".join(unique_outlet_names) if unique_outlet_names else ""
 
     def _sync_state_from_lines(self):
         for rec in self:
