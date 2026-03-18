@@ -27,3 +27,4 @@ from . import route_visit_partner_fix
 from . import route_visit_returns_ext
 from . import route_visit_refill_transfer_ext
 from . import route_visit_workflow_ux
+from . import res_company_route_return_ext
