@@ -11,3 +11,9 @@ class StockPicking(models.Model):
         ondelete="set null",
         help="Route visit linked to this stock transfer.",
     )
+
+    is_return_transfer = fields.Boolean(
+        string="Is Return Transfer",
+        default=False,
+        help="Indicates that this internal transfer was created for returned products from a route visit.",
+    )
