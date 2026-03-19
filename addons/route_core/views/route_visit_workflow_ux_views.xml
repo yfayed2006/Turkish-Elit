@@ -51,13 +51,6 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'create_sale_order'"
-                    />
-                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -167,15 +160,6 @@
                         class="oe_stat_button"
                         icon="fa-check-circle"
                         invisible="not ux_can_no_returns"
-                    />
-
-                    <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-shopping-cart"
-                        invisible="not ux_can_create_sale_order"
                     />
 
                     <button
@@ -315,13 +299,6 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'create_sale_order'"
-                    />
-                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -431,15 +408,6 @@
                         class="oe_stat_button"
                         icon="fa-check-circle"
                         invisible="not ux_can_no_returns"
-                    />
-
-                    <button
-                        name="action_ux_create_sale_order"
-                        string="Create Sale Order"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-shopping-cart"
-                        invisible="not ux_can_create_sale_order"
                     />
 
                     <button
