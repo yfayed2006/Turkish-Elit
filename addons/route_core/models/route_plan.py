@@ -120,12 +120,20 @@ class RoutePlan(models.Model):
             if not area_names and rec.area_id:
                 area_names = [rec.area_id.name]
 
-            # إزالة التكرار مع الحفاظ على الترتيب
             unique_area_names = list(dict.fromkeys(area_names))
             unique_outlet_names = list(dict.fromkeys(outlet_names))
 
-            rec.area_summary = ", ".join(unique_area_names) if unique_area_names else ""
-            rec.outlet_summary = ", ".join(unique_outlet_names) if unique_outlet_names else ""
+            rec.area_summary = self._format_summary_names(unique_area_names, max_items=2)
+            rec.outlet_summary = self._format_summary_names(unique_outlet_names, max_items=2)
+
+    @api.model
+    def _format_summary_names(self, names, max_items=2):
+        names = [n for n in names if n]
+        if not names:
+            return ""
+        if len(names) <= max_items:
+            return ", ".join(names)
+        return "%s ..." % ", ".join(names[:max_items])
 
     def _sync_state_from_lines(self):
         for rec in self:
