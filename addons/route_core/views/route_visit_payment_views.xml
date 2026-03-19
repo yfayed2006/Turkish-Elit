@@ -8,7 +8,9 @@
                 <field name="visit_id"/>
                 <field name="payment_date"/>
                 <field name="payment_mode"/>
+                <field name="collection_type"/>
                 <field name="amount"/>
+                <field name="due_date"/>
                 <field name="reference"/>
                 <field name="state"/>
             </list>
@@ -20,23 +22,57 @@
         <field name="model">route.visit.payment</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button
+                        name="action_confirm"
+                        string="Confirm"
+                        type="object"
+                        class="btn-primary"
+                        invisible="state != 'draft'"
+                    />
+                    <button
+                        name="action_reset_to_draft"
+                        string="Reset to Draft"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state != 'cancelled'"
+                    />
+                    <button
+                        name="action_cancel"
+                        string="Cancel"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state != 'draft'"
+                    />
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
+                </header>
                 <sheet>
-                    <group>
+                    <group string="Visit Financial Status" col="2">
                         <group>
-                            <field name="visit_id"/>
-                            <field name="payment_date"/>
-                            <field name="payment_mode"/>
-                            <field name="amount"/>
+                            <field name="visit_id" readonly="state != 'draft'"/>
+                            <field name="visit_remaining_due" readonly="1"/>
                         </group>
                         <group>
-                            <field name="reference"/>
-                            <field name="bank_name"/>
-                            <field name="pos_terminal"/>
-                            <field name="state"/>
+                            <field name="payment_date" readonly="state != 'draft'"/>
+                            <field name="payment_mode" readonly="state != 'draft'"/>
                         </group>
                     </group>
+
+                    <group string="Collection Decision" col="2">
+                        <group>
+                            <field name="collection_type" readonly="state != 'draft'"/>
+                            <field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
+                            <field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
+                        </group>
+                        <group>
+                            <field name="reference" readonly="state != 'draft'" invisible="payment_mode == 'cash'"/>
+                            <field name="bank_name" readonly="state != 'draft'" invisible="payment_mode != 'bank'"/>
+                            <field name="pos_terminal" readonly="state != 'draft'" invisible="payment_mode != 'pos'"/>
+                        </group>
+                    </group>
+
                     <group>
-                        <field name="note"/>
+                        <field name="note" readonly="state != 'draft'"/>
                     </group>
                 </sheet>
             </form>
