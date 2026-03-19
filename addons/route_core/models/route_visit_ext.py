@@ -220,13 +220,28 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.return_picking_count = len(rec.return_picking_ids)
 
+    def _get_outlet_commission_rate(self):
+        self.ensure_one()
+        return self.outlet_id.commission_rate if self.outlet_id else 0.0
+
+    @api.onchange("outlet_id")
+    def _onchange_outlet_id_set_defaults(self):
+        for rec in self:
+            if rec.outlet_id:
+                rec.commission_rate = rec.outlet_id.commission_rate or 0.0
+                if rec.outlet_id.partner_id:
+                    rec.partner_id = rec.outlet_id.partner_id.commercial_partner_id
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if not vals.get("partner_id") and vals.get("outlet_id"):
+            if vals.get("outlet_id"):
                 outlet = self.env["route.outlet"].browse(vals["outlet_id"])
-                if hasattr(outlet, "partner_id") and outlet.partner_id:
-                    vals["partner_id"] = outlet.partner_id.commercial_partner_id.id
+                if outlet.exists():
+                    if not vals.get("partner_id") and outlet.partner_id:
+                        vals["partner_id"] = outlet.partner_id.commercial_partner_id.id
+                    if not vals.get("commission_rate"):
+                        vals["commission_rate"] = outlet.commission_rate or 0.0
         return super().create(vals_list)
 
     @api.depends(
@@ -578,8 +593,7 @@ class RouteVisit(models.Model):
             if not balances:
                 raise UserError("No previous stock balance was found for this outlet.")
 
-            if hasattr(rec.outlet_id, "default_commission_rate") and rec.outlet_id.default_commission_rate:
-                rec.commission_rate = rec.outlet_id.default_commission_rate
+            rec.commission_rate = rec._get_outlet_commission_rate()
 
             if not rec.partner_id and hasattr(rec.outlet_id, "partner_id") and rec.outlet_id.partner_id:
                 rec.partner_id = rec.outlet_id.partner_id.commercial_partner_id
