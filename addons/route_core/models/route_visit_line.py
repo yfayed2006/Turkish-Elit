@@ -281,5 +281,3 @@ class RouteVisitLine(models.Model):
                     super(RouteVisitLine, line).write({
                         "suggest_near_expiry_return": True,
                     })
-                    
-                    
