@@ -392,6 +392,7 @@
                         </group>
                         <group>
                             <field name="collection_skip_reason"/>
+                            <field name="near_expiry_threshold_days"/>
                             <field name="no_refill_reason" invisible="not no_refill"/>
                             <field name="cancel_reason"/>
                         </group>
@@ -406,6 +407,10 @@
                                     <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
+                                    <field name="expiry_date"/>
+                                    <field name="expiry_days_left" readonly="1"/>
+                                    <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
+                                    <field name="suggest_near_expiry_return" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
@@ -752,56 +757,41 @@
                         />
                     </div>
 
-                    <div class="oe_title">
-                        <h1>
-                            <field name="outlet_id" readonly="1"/>
-                        </h1>
-                        <div class="mt8">
-                            <field name="partner_id" readonly="1"/>
-                        </div>
-                        <div class="mt8">
-                            <field name="visit_process_state" readonly="1"/>
-                        </div>
-                    </div>
-
-                    <group col="2">
-                        <group string="Main Info">
+                    <group>
+                        <group>
                             <field name="name" readonly="1"/>
                             <field name="date" readonly="1"/>
+                            <field name="outlet_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
                             <field name="area_id" readonly="1"/>
                             <field name="vehicle_id" readonly="1"/>
-                            <field name="user_id" readonly="1"/>
                             <field name="source_location_id"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="state" readonly="1"/>
+                            <field name="visit_process_state" readonly="1"/>
                         </group>
-                        <group string="Current Status">
+                        <group>
                             <field name="sale_order_id" readonly="1"/>
-                            <field name="refill_backorder_id" readonly="1"/>
-                            <field name="refill_picking_id" readonly="1"/>
-                            <field name="return_picking_ids" readonly="1" widget="many2many_tags"/>
+                            <field name="start_datetime" readonly="1"/>
+                            <field name="end_datetime" readonly="1"/>
                             <field name="check_in_datetime" readonly="1"/>
+                            <field name="count_start_datetime" readonly="1"/>
+                            <field name="count_end_datetime" readonly="1"/>
+                            <field name="reconciliation_datetime" readonly="1"/>
                             <field name="collection_datetime" readonly="1"/>
+                            <field name="refill_datetime" readonly="1"/>
                             <field name="check_out_datetime" readonly="1"/>
                         </group>
                     </group>
 
-                    <group string="Quick Summary" col="4">
-                        <group>
-                            <field name="previous_total_qty" readonly="1"/>
-                            <field name="counted_total_qty" readonly="1"/>
-                            <field name="sold_total_qty" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="returned_total_qty" readonly="1"/>
-                            <field name="supplied_total_qty" readonly="1"/>
-                            <field name="pending_refill_total_qty" readonly="1"/>
-                            <field name="new_balance_total_qty" readonly="1"/>
-                        </group>
+                    <group string="Financial Summary">
                         <group>
                             <field name="gross_sales_amount" readonly="1"/>
+                            <field name="return_amount" readonly="1"/>
                             <field name="commission_amount" readonly="1"/>
-                            <field name="net_due_amount" readonly="1"/>
                         </group>
                         <group>
+                            <field name="net_due_amount" readonly="1"/>
                             <field name="collected_amount" readonly="1"/>
                             <field name="remaining_due_amount" readonly="1"/>
                         </group>
@@ -819,6 +809,7 @@
                         </group>
                         <group>
                             <field name="collection_skip_reason"/>
+                            <field name="near_expiry_threshold_days"/>
                             <field name="no_refill_reason" invisible="not no_refill"/>
                             <field name="cancel_reason"/>
                         </group>
@@ -833,6 +824,10 @@
                                     <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
+                                    <field name="expiry_date"/>
+                                    <field name="expiry_days_left" readonly="1"/>
+                                    <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
+                                    <field name="suggest_near_expiry_return" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
