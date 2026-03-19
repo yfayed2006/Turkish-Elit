@@ -5,53 +5,51 @@
         <field name="model">route.visit</field>
         <field name="inherit_id" ref="route_core.view_route_visit_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@string='Payments']" position="replace">
-                <page string="Payments">
-                    <group string="Collection Summary">
-                        <group>
-                            <field name="net_due_amount" readonly="1"/>
-                            <field name="collected_amount" readonly="1"/>
-                            <field name="remaining_due_amount" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="collection_skip_reason" readonly="1"/>
-                        </group>
+            <xpath expr="//field[@name='payment_ids']" position="replace">
+                <group string="Collection Summary">
+                    <group>
+                        <field name="net_due_amount" readonly="1"/>
+                        <field name="collected_amount" readonly="1"/>
+                        <field name="remaining_due_amount" readonly="1"/>
                     </group>
+                    <group>
+                        <field name="collection_skip_reason" readonly="1"/>
+                    </group>
+                </group>
 
-                    <field name="payment_ids" readonly="1" context="{'default_visit_id': id}">
-                        <list create="0" delete="0">
-                            <field name="payment_date"/>
-                            <field name="payment_mode"/>
-                            <field name="collection_type"/>
-                            <field name="amount"/>
-                            <field name="due_date"/>
-                            <field name="reference"/>
-                            <field name="state"/>
-                        </list>
-                        <form>
-                            <sheet>
+                <field name="payment_ids" readonly="1" context="{'default_visit_id': id}">
+                    <list create="0" delete="0">
+                        <field name="payment_date"/>
+                        <field name="payment_mode"/>
+                        <field name="collection_type"/>
+                        <field name="amount"/>
+                        <field name="due_date"/>
+                        <field name="reference"/>
+                        <field name="state"/>
+                    </list>
+                    <form>
+                        <sheet>
+                            <group>
                                 <group>
-                                    <group>
-                                        <field name="payment_date" readonly="1"/>
-                                        <field name="payment_mode" readonly="1"/>
-                                        <field name="collection_type" readonly="1"/>
-                                        <field name="amount" readonly="1"/>
-                                        <field name="due_date" readonly="1"/>
-                                    </group>
-                                    <group>
-                                        <field name="reference" readonly="1"/>
-                                        <field name="bank_name" readonly="1"/>
-                                        <field name="pos_terminal" readonly="1"/>
-                                        <field name="state" readonly="1"/>
-                                    </group>
+                                    <field name="payment_date" readonly="1"/>
+                                    <field name="payment_mode" readonly="1"/>
+                                    <field name="collection_type" readonly="1"/>
+                                    <field name="amount" readonly="1"/>
+                                    <field name="due_date" readonly="1"/>
                                 </group>
                                 <group>
-                                    <field name="note" readonly="1"/>
+                                    <field name="reference" readonly="1"/>
+                                    <field name="bank_name" readonly="1"/>
+                                    <field name="pos_terminal" readonly="1"/>
+                                    <field name="state" readonly="1"/>
                                 </group>
-                            </sheet>
-                        </form>
-                    </field>
-                </page>
+                            </group>
+                            <group>
+                                <field name="note" readonly="1"/>
+                            </group>
+                        </sheet>
+                    </form>
+                </field>
             </xpath>
         </field>
     </record>
@@ -61,53 +59,51 @@
         <field name="model">route.visit</field>
         <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@string='Payments']" position="replace">
-                <page string="Payments">
-                    <group string="Collection Summary">
-                        <group>
-                            <field name="net_due_amount" readonly="1"/>
-                            <field name="collected_amount" readonly="1"/>
-                            <field name="remaining_due_amount" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="collection_skip_reason" readonly="1"/>
-                        </group>
+            <xpath expr="//field[@name='payment_ids']" position="replace">
+                <group string="Collection Summary">
+                    <group>
+                        <field name="net_due_amount" readonly="1"/>
+                        <field name="collected_amount" readonly="1"/>
+                        <field name="remaining_due_amount" readonly="1"/>
                     </group>
+                    <group>
+                        <field name="collection_skip_reason" readonly="1"/>
+                    </group>
+                </group>
 
-                    <field name="payment_ids" readonly="1" context="{'default_visit_id': id}">
-                        <list create="0" delete="0">
-                            <field name="payment_date"/>
-                            <field name="payment_mode"/>
-                            <field name="collection_type"/>
-                            <field name="amount"/>
-                            <field name="due_date"/>
-                            <field name="reference"/>
-                            <field name="state"/>
-                        </list>
-                        <form>
-                            <sheet>
+                <field name="payment_ids" readonly="1" context="{'default_visit_id': id}">
+                    <list create="0" delete="0">
+                        <field name="payment_date"/>
+                        <field name="payment_mode"/>
+                        <field name="collection_type"/>
+                        <field name="amount"/>
+                        <field name="due_date"/>
+                        <field name="reference"/>
+                        <field name="state"/>
+                    </list>
+                    <form>
+                        <sheet>
+                            <group>
                                 <group>
-                                    <group>
-                                        <field name="payment_date" readonly="1"/>
-                                        <field name="payment_mode" readonly="1"/>
-                                        <field name="collection_type" readonly="1"/>
-                                        <field name="amount" readonly="1"/>
-                                        <field name="due_date" readonly="1"/>
-                                    </group>
-                                    <group>
-                                        <field name="reference" readonly="1"/>
-                                        <field name="bank_name" readonly="1"/>
-                                        <field name="pos_terminal" readonly="1"/>
-                                        <field name="state" readonly="1"/>
-                                    </group>
+                                    <field name="payment_date" readonly="1"/>
+                                    <field name="payment_mode" readonly="1"/>
+                                    <field name="collection_type" readonly="1"/>
+                                    <field name="amount" readonly="1"/>
+                                    <field name="due_date" readonly="1"/>
                                 </group>
                                 <group>
-                                    <field name="note" readonly="1"/>
+                                    <field name="reference" readonly="1"/>
+                                    <field name="bank_name" readonly="1"/>
+                                    <field name="pos_terminal" readonly="1"/>
+                                    <field name="state" readonly="1"/>
                                 </group>
-                            </sheet>
-                        </form>
-                    </field>
-                </page>
+                            </group>
+                            <group>
+                                <field name="note" readonly="1"/>
+                            </group>
+                        </sheet>
+                    </form>
+                </field>
             </xpath>
         </field>
     </record>
