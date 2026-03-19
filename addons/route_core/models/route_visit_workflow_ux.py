@@ -32,6 +32,7 @@ class RouteVisit(models.Model):
             ("confirm_return_transfers", "Confirm Return Transfers"),
             ("generate_refill", "Generate Refill Proposal"),
             ("confirm_refill", "Confirm Refill"),
+            ("open_pending_refill", "Open Pending Refill"),
             ("collect_payment", "Collect Payment"),
             ("confirm_payments", "Confirm Payments"),
             ("finalize_visit", "Finalize Visit"),
@@ -158,14 +159,26 @@ class RouteVisit(models.Model):
 
             rec.ux_can_collect_payment = (
                 can_enter_collection
+                and not rec.ux_can_open_pending_refill
                 and not has_draft_payments
                 and not rec.collection_skip_reason
             )
 
-            rec.ux_can_confirm_payments = can_enter_collection and has_draft_payments
-            rec.ux_can_skip_collection = can_enter_collection
+            rec.ux_can_confirm_payments = (
+                can_enter_collection
+                and not rec.ux_can_open_pending_refill
+                and has_draft_payments
+            )
+
+            rec.ux_can_skip_collection = (
+                can_enter_collection
+                and not rec.ux_can_open_pending_refill
+            )
+
             rec.ux_can_open_payments = (
-                can_enter_collection or has_draft_payments or has_confirmed_payments
+                (can_enter_collection and not rec.ux_can_open_pending_refill)
+                or has_draft_payments
+                or has_confirmed_payments
             )
 
             rec.ux_can_finish_visit = (
@@ -235,6 +248,12 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Confirm refill transfer"
                 rec.ux_stage_help = "Create the internal transfer from van to outlet."
 
+            elif rec.ux_can_open_pending_refill:
+                rec.ux_stage = "refill"
+                rec.ux_primary_action = "open_pending_refill"
+                rec.ux_stage_title = "Open pending refill"
+                rec.ux_stage_help = "There is a pending refill/backorder that must be reviewed first."
+
             elif can_enter_collection and has_draft_payments:
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "confirm_payments"
@@ -245,6 +264,7 @@ class RouteVisit(models.Model):
                 can_enter_collection
                 and not has_confirmed_payments
                 and not rec.collection_skip_reason
+                and not rec.ux_can_open_pending_refill
             ):
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "collect_payment"
@@ -350,6 +370,10 @@ class RouteVisit(models.Model):
     def action_ux_view_refill_transfer(self):
         self.ensure_one()
         return self.action_view_refill_transfer()
+
+    def action_ux_open_pending_refill(self):
+        self.ensure_one()
+        return self.action_view_pending_refill()
 
     def action_ux_open_payments(self):
         self.ensure_one()
