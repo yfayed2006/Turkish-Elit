@@ -271,12 +271,11 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Collect payment"
                 rec.ux_stage_help = "Add a full payment, partial payment, deferment, or carry forward."
 
-            elif rec.visit_process_state in ("collection_done", "ready_to_close"):
+             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
-                rec.ux_primary_action = "finalize_visit"
+                rec.ux_primary_action = "finish_visit"
                 rec.ux_stage_title = "Finish visit"
                 rec.ux_stage_help = "Close the visit."
-
             else:
                 rec.ux_stage = "done"
                 rec.ux_primary_action = "none"
