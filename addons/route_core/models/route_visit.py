@@ -94,6 +94,22 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
+    def _get_outlet_commission_rate_value(self, outlet):
+        """Support both field names:
+        - commission_rate
+        - default_commission_rate
+        """
+        if not outlet:
+            return 0.0
+
+        if "commission_rate" in outlet._fields:
+            return outlet.commission_rate or 0.0
+
+        if "default_commission_rate" in outlet._fields:
+            return outlet.default_commission_rate or 0.0
+
+        return 0.0
+
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
@@ -101,6 +117,9 @@ class RouteVisit(models.Model):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.partner_id:
                     rec.partner_id = rec.outlet_id.partner_id
+
+                if "commission_rate" in rec._fields:
+                    rec.commission_rate = rec._get_outlet_commission_rate_value(rec.outlet_id)
 
     def _sync_plan_line_state(self):
         plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
@@ -171,6 +190,9 @@ class RouteVisit(models.Model):
                     if not vals.get("partner_id") and outlet.partner_id:
                         vals["partner_id"] = outlet.partner_id.id
 
+                    if "commission_rate" in self._fields and not vals.get("commission_rate"):
+                        vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
+
         records = super().create(vals_list)
         records._sync_plan_line_state()
         return records
@@ -214,6 +236,9 @@ class RouteVisit(models.Model):
                     vals["area_id"] = outlet.area_id.id
                 if not vals.get("partner_id") and outlet.partner_id:
                     vals["partner_id"] = outlet.partner_id.id
+
+                if "commission_rate" in self._fields and not vals.get("commission_rate"):
+                    vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
         result = super().write(vals)
         self._sync_plan_line_state()
