@@ -104,7 +104,7 @@ class RouteVisitPayment(models.Model):
             visit = self.env["route.visit"].browse(visit_id)
             vals.setdefault("visit_id", visit_id)
             if "amount" in fields_list:
-                vals["amount"] = max(visit.remaining_due_amount, 0.0)
+                vals["amount"] = max(visit.remaining_due_amount or 0.0, 0.0)
             if "collection_type" in fields_list:
                 vals.setdefault("collection_type", "full")
         return vals
