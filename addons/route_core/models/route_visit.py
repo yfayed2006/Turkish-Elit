@@ -55,7 +55,6 @@ class RouteVisit(models.Model):
         readonly=True,
         tracking=True,
     )
-
     state = fields.Selection(
         [
             ("draft", "Draft"),
@@ -68,7 +67,6 @@ class RouteVisit(models.Model):
         required=True,
         tracking=True,
     )
-
     start_datetime = fields.Datetime(
         string="Start DateTime",
         readonly=True,
@@ -79,7 +77,6 @@ class RouteVisit(models.Model):
         readonly=True,
         tracking=True,
     )
-
     sale_order_id = fields.Many2one(
         "sale.order",
         string="Sale Order",
@@ -87,7 +84,6 @@ class RouteVisit(models.Model):
         copy=False,
         tracking=True,
     )
-
     sale_order_count = fields.Integer(
         string="Sale Order Count",
         compute="_compute_sale_order_count",
@@ -157,7 +153,8 @@ class RouteVisit(models.Model):
         if not self.env.context.get("route_plan_allow_visit_create"):
             raise UserError(
                 _(
-                    "Route Visits cannot be created manually. They must be generated from Route Plan."
+                    "Route Visits cannot be created manually. "
+                    "They must be generated from Route Plan."
                 )
             )
 
@@ -204,7 +201,10 @@ class RouteVisit(models.Model):
                 disallowed_keys = set(vals.keys()) - allowed_when_locked
                 if disallowed_keys:
                     raise UserError(
-                        _("You cannot modify a visit that is Done or Cancelled. Please reset it first if changes are needed.")
+                        _(
+                            "You cannot modify a visit that is Done or Cancelled. "
+                            "Please reset it first if changes are needed."
+                        )
                     )
 
         if vals.get("outlet_id"):
@@ -239,7 +239,8 @@ class RouteVisit(models.Model):
             if other_in_progress_visit:
                 raise UserError(
                     _(
-                        "Another stop in the same route is already in progress: %s. Please finish it before starting this stop."
+                        "Another stop in the same route is already in progress: %s. "
+                        "Please finish it before starting this stop."
                     )
                     % (other_in_progress_visit.outlet_id.display_name or other_in_progress_visit.name)
                 )
@@ -272,13 +273,42 @@ class RouteVisit(models.Model):
     def _sync_sale_order_lines(self, sale_order):
         self.ensure_one()
 
+        if sale_order.state not in ("draft", "sent"):
+            raise UserError(
+                _(
+                    "The linked Sale Order is already confirmed. "
+                    "Reset or cancel it first if you need to rebuild its lines from the visit."
+                )
+            )
+
         line_vals = self._prepare_sale_order_line_vals()
         if not line_vals:
             raise UserError(_("No sold quantities were found to create sale order lines."))
 
-        # reset old lines then rebuild from visit lines
         sale_order.order_line.unlink()
         sale_order.write({"order_line": line_vals})
+
+    def _prepare_sale_order_vals(self):
+        self.ensure_one()
+
+        vals = {
+            "partner_id": self.partner_id.id,
+            "user_id": self.user_id.id,
+            "origin": self.name,
+            "order_line": self._prepare_sale_order_line_vals(),
+        }
+
+        if "company_id" in self.env["sale.order"]._fields:
+            vals["company_id"] = self.env.company.id
+
+        return vals
+
+    def _get_sale_order_form_action(self, sale_order):
+        action = self.env.ref("sale.action_orders").read()[0]
+        action["res_id"] = sale_order.id
+        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
+        action["context"] = dict(self.env.context, route_visit_id=self.id)
+        return action
 
     def action_create_sale_order(self):
         self.ensure_one()
@@ -294,27 +324,14 @@ class RouteVisit(models.Model):
 
         if self.sale_order_id:
             self._sync_sale_order_lines(self.sale_order_id)
+            self.sale_order_id.action_confirm()
+            return self._get_sale_order_form_action(self.sale_order_id)
 
-            action = self.env.ref("sale.action_orders").read()[0]
-            action["res_id"] = self.sale_order_id.id
-            action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-            action["context"] = dict(self.env.context, route_visit_id=self.id)
-            return action
-
-        sale_order = self.env["sale.order"].create({
-            "partner_id": self.partner_id.id,
-            "user_id": self.user_id.id,
-            "origin": self.name,
-            "order_line": self._prepare_sale_order_line_vals(),
-        })
-
+        sale_order = self.env["sale.order"].create(self._prepare_sale_order_vals())
         self.sale_order_id = sale_order.id
+        sale_order.action_confirm()
 
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = sale_order.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, route_visit_id=self.id)
-        return action
+        return self._get_sale_order_form_action(sale_order)
 
     def action_view_sale_order(self):
         self.ensure_one()
@@ -322,17 +339,21 @@ class RouteVisit(models.Model):
         if not self.sale_order_id:
             raise UserError(_("There is no sale order linked to this visit."))
 
-        action = self.env.ref("sale.action_orders").read()[0]
-        action["res_id"] = self.sale_order_id.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, route_visit_id=self.id)
-        return action
+        return self._get_sale_order_form_action(self.sale_order_id)
 
     def action_end_visit(self):
         self.ensure_one()
 
         if self.state != "in_progress":
             raise UserError(_("Only visits in progress can be ended."))
+
+        if self.sale_order_id and self.sale_order_id.state in ("draft", "sent"):
+            raise UserError(
+                _(
+                    "The linked Sale Order is still not confirmed. "
+                    "Please confirm it first or end the visit without sale using the wizard."
+                )
+            )
 
         if self.sale_order_id:
             self.with_context(route_visit_force_write=True).write({
