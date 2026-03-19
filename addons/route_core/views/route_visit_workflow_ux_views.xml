@@ -65,6 +65,13 @@
                         invisible="ux_primary_action != 'confirm_refill'"
                     />
                     <button
+                        name="action_ux_open_pending_refill"
+                        string="Open Pending Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'open_pending_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -200,7 +207,7 @@
                     />
 
                     <button
-                        name="action_view_pending_refill"
+                        name="action_ux_open_pending_refill"
                         string="Pending Refill"
                         type="object"
                         class="oe_stat_button"
@@ -313,6 +320,13 @@
                         invisible="ux_primary_action != 'confirm_refill'"
                     />
                     <button
+                        name="action_ux_open_pending_refill"
+                        string="Open Pending Refill"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'open_pending_refill'"
+                    />
+                    <button
                         name="action_ux_collect_payment"
                         string="Collect Payment"
                         type="object"
@@ -448,7 +462,7 @@
                     />
 
                     <button
-                        name="action_view_pending_refill"
+                        name="action_ux_open_pending_refill"
                         string="Pending Refill"
                         type="object"
                         class="oe_stat_button"
