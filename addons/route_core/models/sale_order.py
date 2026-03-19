@@ -96,6 +96,23 @@ class SaleOrder(models.Model):
 
         return vals
 
+    def _get_sale_line_uom(self, order_line):
+        self.ensure_one()
+
+        if "product_uom_id" in order_line._fields and order_line.product_uom_id:
+            return order_line.product_uom_id
+
+        if "product_uom" in order_line._fields and order_line.product_uom:
+            return order_line.product_uom
+
+        if order_line.product_id and order_line.product_id.uom_id:
+            return order_line.product_id.uom_id
+
+        raise UserError(
+            _("Could not determine the unit of measure for sale order line: %s")
+            % (order_line.display_name or order_line.id)
+        )
+
     def _prepare_route_delivery_move_vals(
         self,
         picking,
@@ -105,11 +122,13 @@ class SaleOrder(models.Model):
     ):
         self.ensure_one()
 
+        uom = self._get_sale_line_uom(order_line)
+
         vals = {
             "name": order_line.name or order_line.product_id.display_name,
             "product_id": order_line.product_id.id,
             "product_uom_qty": order_line.product_uom_qty,
-            "product_uom": order_line.product_uom.id,
+            "product_uom": uom.id,
             "picking_id": picking.id,
             "location_id": source_location.id,
             "location_dest_id": dest_location.id,
