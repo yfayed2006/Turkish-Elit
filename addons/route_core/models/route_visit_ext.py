@@ -62,6 +62,11 @@ class RouteVisit(models.Model):
     no_refill = fields.Boolean(string="No Refill")
     no_refill_reason = fields.Text(string="No Refill Reason")
     cancel_reason = fields.Text(string="Cancel Reason")
+    near_expiry_threshold_days = fields.Integer(
+        string="Near Expiry Threshold (Days)",
+        default=60,
+        help="Products with expiry dates within this number of days will be flagged as near expiry during the visit.",
+    )
 
     line_ids = fields.One2many(
         "route.visit.line",
