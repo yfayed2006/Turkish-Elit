@@ -125,7 +125,6 @@ class SaleOrder(models.Model):
         uom = self._get_sale_line_uom(order_line)
 
         vals = {
-            "name": order_line.name or order_line.product_id.display_name,
             "product_id": order_line.product_id.id,
             "product_uom_qty": order_line.product_uom_qty,
             "product_uom": uom.id,
