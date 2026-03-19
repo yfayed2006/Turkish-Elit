@@ -51,6 +51,13 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Confirm Return Transfers"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_return_transfers'"
+                    />
+                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -117,16 +124,23 @@
                 <field name="ux_can_scan_barcode" invisible="1"/>
                 <field name="ux_can_scan_returns" invisible="1"/>
                 <field name="ux_can_no_returns" invisible="1"/>
+
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
+
+                <field name="ux_can_confirm_return_transfers" invisible="1"/>
+                <field name="ux_can_view_return_transfers" invisible="1"/>
+
                 <field name="ux_can_generate_refill" invisible="1"/>
                 <field name="ux_can_confirm_refill" invisible="1"/>
                 <field name="ux_can_view_refill_transfer" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
+
                 <field name="ux_can_collect_payment" invisible="1"/>
                 <field name="ux_can_confirm_payments" invisible="1"/>
                 <field name="ux_can_skip_collection" invisible="1"/>
                 <field name="ux_can_open_payments" invisible="1"/>
+
                 <field name="ux_can_finish_visit" invisible="1"/>
 
                 <div class="alert alert-info mb-3" role="alert">
@@ -178,6 +192,24 @@
                     >
                         <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                     </button>
+
+                    <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Return Transfers"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="not ux_can_confirm_return_transfers"
+                    />
+
+                    <button
+                        name="action_ux_view_return_transfers"
+                        string="View Return Transfers"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-external-link-square"
+                        invisible="not ux_can_view_return_transfers"
+                    />
 
                     <button
                         name="action_ux_generate_refill"
@@ -306,6 +338,13 @@
                         invisible="ux_primary_action != 'reconcile_count'"
                     />
                     <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Confirm Return Transfers"
+                        type="object"
+                        class="btn-primary"
+                        invisible="ux_primary_action != 'confirm_return_transfers'"
+                    />
+                    <button
                         name="action_ux_generate_refill"
                         string="Generate Refill Proposal"
                         type="object"
@@ -372,16 +411,23 @@
                 <field name="ux_can_scan_barcode" invisible="1"/>
                 <field name="ux_can_scan_returns" invisible="1"/>
                 <field name="ux_can_no_returns" invisible="1"/>
+
                 <field name="ux_can_create_sale_order" invisible="1"/>
                 <field name="ux_can_view_sale_order" invisible="1"/>
+
+                <field name="ux_can_confirm_return_transfers" invisible="1"/>
+                <field name="ux_can_view_return_transfers" invisible="1"/>
+
                 <field name="ux_can_generate_refill" invisible="1"/>
                 <field name="ux_can_confirm_refill" invisible="1"/>
                 <field name="ux_can_view_refill_transfer" invisible="1"/>
                 <field name="ux_can_open_pending_refill" invisible="1"/>
+
                 <field name="ux_can_collect_payment" invisible="1"/>
                 <field name="ux_can_confirm_payments" invisible="1"/>
                 <field name="ux_can_skip_collection" invisible="1"/>
                 <field name="ux_can_open_payments" invisible="1"/>
+
                 <field name="ux_can_finish_visit" invisible="1"/>
 
                 <div class="alert alert-info mb-3" role="alert">
@@ -433,6 +479,24 @@
                     >
                         <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
                     </button>
+
+                    <button
+                        name="action_ux_confirm_return_transfers"
+                        string="Return Transfers"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-undo"
+                        invisible="not ux_can_confirm_return_transfers"
+                    />
+
+                    <button
+                        name="action_ux_view_return_transfers"
+                        string="View Return Transfers"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-external-link-square"
+                        invisible="not ux_can_view_return_transfers"
+                    />
 
                     <button
                         name="action_ux_generate_refill"
