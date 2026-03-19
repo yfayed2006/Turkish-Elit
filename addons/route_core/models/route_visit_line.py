@@ -62,6 +62,26 @@ class RouteVisitLine(models.Model):
 
     note = fields.Char(string="Note")
 
+    expiry_date = fields.Date(string="Expiry Date")
+
+    expiry_days_left = fields.Integer(
+        string="Days Left",
+        compute="_compute_expiry_status",
+        store=True,
+    )
+
+    is_near_expiry = fields.Boolean(
+        string="Near Expiry",
+        compute="_compute_expiry_status",
+        store=True,
+    )
+
+    suggest_near_expiry_return = fields.Boolean(
+        string="Suggest Near Expiry Return",
+        default=False,
+        help="Enabled automatically when the entered expiry date falls within the visit near-expiry threshold.",
+    )
+
     previous_qty = fields.Float(string="Previous Qty", default=0.0)
     counted_qty = fields.Float(string="Counted Qty", default=0.0)
     return_qty = fields.Float(string="Return Qty", default=0.0)
@@ -153,6 +173,40 @@ class RouteVisitLine(models.Model):
     count_confirmed = fields.Boolean(string="Count Confirmed", default=False)
     return_confirmed = fields.Boolean(string="Return Confirmed", default=False)
     supply_confirmed = fields.Boolean(string="Supply Confirmed", default=False)
+
+    @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days")
+    def _compute_expiry_status(self):
+        for line in self:
+            line.expiry_days_left = 0
+            line.is_near_expiry = False
+
+            if not line.expiry_date:
+                continue
+
+            reference_date = line.visit_id.date or fields.Date.context_today(line)
+            delta_days = (line.expiry_date - reference_date).days
+            line.expiry_days_left = delta_days
+
+            threshold_days = line.visit_id.near_expiry_threshold_days or 0
+            line.is_near_expiry = delta_days <= threshold_days
+
+    @api.onchange("expiry_date")
+    def _onchange_expiry_date_set_suggestion(self):
+        for line in self:
+            if not line.expiry_date:
+                line.suggest_near_expiry_return = False
+                continue
+
+            reference_date = line.visit_id.date or fields.Date.context_today(line)
+            delta_days = (line.expiry_date - reference_date).days
+            threshold_days = line.visit_id.near_expiry_threshold_days or 0
+            line.suggest_near_expiry_return = delta_days <= threshold_days
+
+    @api.onchange("suggest_near_expiry_return")
+    def _onchange_suggest_near_expiry_return(self):
+        for line in self:
+            if line.suggest_near_expiry_return and (line.return_qty or 0.0) > 0:
+                line.return_route = "near_expiry"
 
     @api.onchange("product_id")
     def _onchange_product_id_set_unit_price(self):
@@ -275,6 +329,12 @@ class RouteVisitLine(models.Model):
                 raise ValidationError(
                     "Supplied Qty cannot be greater than Vehicle Available Qty."
                 )
+
+    @api.constrains("expiry_days_left")
+    def _check_expiry_days_left(self):
+        for line in self:
+            if line.expiry_date and line.expiry_days_left < -3650:
+                raise ValidationError("Expiry Date looks invalid.")
 
     @api.constrains("return_qty", "return_route")
     def _check_return_route_when_return_exists(self):
