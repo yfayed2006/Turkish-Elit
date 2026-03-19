@@ -226,7 +226,7 @@
 
                     <button
                         name="action_ux_collect_payment"
-                        string="Add Payment"
+                        string="Collect Payment"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-money"
@@ -244,7 +244,7 @@
 
                     <button
                         name="action_ux_open_payments"
-                        string="Payments"
+                        string="Review Payments"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-credit-card"
@@ -490,7 +490,7 @@
 
                     <button
                         name="action_ux_collect_payment"
-                        string="Add Payment"
+                        string="Collect Payment"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-money"
@@ -508,7 +508,7 @@
 
                     <button
                         name="action_ux_open_payments"
-                        string="Payments"
+                        string="Review Payments"
                         type="object"
                         class="oe_stat_button"
                         icon="fa-credit-card"
