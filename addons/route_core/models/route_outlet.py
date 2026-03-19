@@ -21,8 +21,17 @@ class RouteOutlet(models.Model):
     partner_id = fields.Many2one(
         "res.partner",
         string="Related Contact",
-        ondelete="set null",
-        help="Optional link to an existing contact/customer.",
+        required=True,
+        ondelete="restrict",
+        help="Main related contact/customer for this outlet.",
+    )
+
+    commission_rate = fields.Float(
+        string="Commission %",
+        required=True,
+        default=20.0,
+        digits=(16, 2),
+        help="Outlet commission percentage used to calculate net due collection.",
     )
 
     phone = fields.Char(string="Phone")
@@ -107,11 +116,19 @@ class RouteOutlet(models.Model):
             if record.partner_id and record.partner_id.company_type == "person":
                 raise ValidationError("Related Contact should preferably be a company/customer record.")
 
+    @api.constrains("commission_rate")
+    def _check_commission_rate(self):
+        for record in self:
+            if record.commission_rate < 0 or record.commission_rate > 100:
+                raise ValidationError("Commission % must be between 0 and 100.")
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get("code"):
                 vals["code"] = self.env["ir.sequence"].next_by_code("route.outlet") or "/"
+            if "commission_rate" not in vals:
+                vals["commission_rate"] = 20.0
         return super().create(vals_list)
 
     def action_view_visits(self):
