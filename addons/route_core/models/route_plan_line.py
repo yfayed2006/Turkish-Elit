@@ -123,20 +123,6 @@ class RoutePlanLine(models.Model):
         if not self.plan_id:
             raise UserError(_("Please save the route plan first."))
 
-        other_in_progress_line = self.plan_id.line_ids.filtered(
-            lambda line: line.id != self.id
-            and line.visit_id
-            and line.visit_id.state == "in_progress"
-        )[:1]
-
-        if other_in_progress_line:
-            raise UserError(
-                _(
-                    "Another visit is already in progress in this route plan: %s. Please finish it before starting a new visit."
-                )
-                % (other_in_progress_line.outlet_id.display_name or other_in_progress_line.visit_id.name)
-            )
-
         if self.visit_id:
             action = self.env.ref("route_core.action_route_visit").read()[0]
             action["res_id"] = self.visit_id.id
