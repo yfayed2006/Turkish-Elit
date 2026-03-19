@@ -77,6 +77,20 @@ class RouteVisitLine(models.Model):
 
     unit_price = fields.Float(string="Unit Price", default=0.0)
 
+    previous_value = fields.Monetary(
+        string="Previous Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
+        store=True,
+    )
+
+    counted_value = fields.Monetary(
+        string="Counted Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
+        store=True,
+    )
+
     sold_amount = fields.Monetary(
         string="Sold Amount",
         currency_field="currency_id",
@@ -93,6 +107,13 @@ class RouteVisitLine(models.Model):
 
     supply_value = fields.Monetary(
         string="Supply Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
+        store=True,
+    )
+
+    new_balance_value = fields.Monetary(
+        string="New Balance Value",
         currency_field="currency_id",
         compute="_compute_amounts",
         store=True,
@@ -128,7 +149,7 @@ class RouteVisitLine(models.Model):
     suggest_near_expiry_return = fields.Boolean(
         string="Suggest Near Expiry Return",
         default=False,
-        help="Checked automatically when the entered expiry date is within the visit threshold and no final decision has been taken yet.",
+        help="Checked automatically when the expiry date is within the visit threshold and no final decision has been taken yet.",
     )
 
     near_expiry_action_state = fields.Selection(
@@ -161,13 +182,24 @@ class RouteVisitLine(models.Model):
             line.sold_qty = max((line.previous_qty or 0.0) - (line.counted_qty or 0.0), 0.0)
             line.new_balance_qty = (line.counted_qty or 0.0) + (line.supplied_qty or 0.0) - (line.return_qty or 0.0)
 
-    @api.depends("sold_qty", "return_qty", "supplied_qty", "unit_price")
+    @api.depends(
+        "previous_qty",
+        "counted_qty",
+        "sold_qty",
+        "return_qty",
+        "supplied_qty",
+        "new_balance_qty",
+        "unit_price",
+    )
     def _compute_amounts(self):
         for line in self:
             price = line.unit_price or 0.0
+            line.previous_value = (line.previous_qty or 0.0) * price
+            line.counted_value = (line.counted_qty or 0.0) * price
             line.sold_amount = (line.sold_qty or 0.0) * price
             line.return_amount = (line.return_qty or 0.0) * price
             line.supply_value = (line.supplied_qty or 0.0) * price
+            line.new_balance_value = (line.new_balance_qty or 0.0) * price
 
     @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days")
     def _compute_expiry_info(self):
@@ -266,18 +298,13 @@ class RouteVisitLine(models.Model):
                 continue
 
             if line.return_qty > 0 and line.return_route == "near_expiry":
-                if line.suggest_near_expiry_return or line.keep_near_expiry:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": False,
-                        "keep_near_expiry": False,
-                    })
+                vals = {"suggest_near_expiry_return": False}
+                if line.keep_near_expiry:
+                    vals["keep_near_expiry"] = False
+                super(RouteVisitLine, line).write(vals)
             elif line.keep_near_expiry:
                 if line.suggest_near_expiry_return:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": False,
-                    })
+                    super(RouteVisitLine, line).write({"suggest_near_expiry_return": False})
             else:
                 if not line.suggest_near_expiry_return:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": True,
-                    })
+                    super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
