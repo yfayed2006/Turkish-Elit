@@ -27,6 +27,26 @@ class RouteVisitScanWizard(models.TransientModel):
     barcode = fields.Char(string="Barcode")
     quantity = fields.Float(string="Quantity", default=1.0)
 
+    expiry_date = fields.Date(string="Expiry Date")
+
+    expiry_days_left = fields.Integer(
+        string="Days Left",
+        compute="_compute_expiry_preview",
+        store=False,
+    )
+
+    is_near_expiry = fields.Boolean(
+        string="Near Expiry",
+        compute="_compute_expiry_preview",
+        store=False,
+    )
+
+    add_to_near_expiry_return = fields.Boolean(
+        string="Add This Quantity to Near Expiry Return",
+        default=False,
+        help="When enabled in Count mode, the counted quantity will also be added to return qty with route Near Expiry.",
+    )
+
     return_route = fields.Selection(
         [
             ("vehicle", "To Vehicle"),
@@ -89,6 +109,28 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Last Return Route",
         readonly=True,
     )
+
+    @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days")
+    def _compute_expiry_preview(self):
+        for rec in self:
+            rec.expiry_days_left = 0
+            rec.is_near_expiry = False
+
+            if not rec.expiry_date:
+                continue
+
+            reference_date = rec.visit_id.date or fields.Date.context_today(rec)
+            delta_days = (rec.expiry_date - reference_date).days
+            rec.expiry_days_left = delta_days
+            rec.is_near_expiry = delta_days <= (rec.visit_id.near_expiry_threshold_days or 0)
+
+    @api.onchange("expiry_date")
+    def _onchange_expiry_date_default_near_expiry(self):
+        for rec in self:
+            if rec.scan_mode != "count":
+                rec.add_to_near_expiry_return = False
+                continue
+            rec.add_to_near_expiry_return = bool(rec.is_near_expiry)
 
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id")
     def _onchange_barcode_preview(self):
@@ -160,6 +202,20 @@ class RouteVisitScanWizard(models.TransientModel):
             line = result["line"]
             product = result["product"]
 
+            line_vals = {}
+            if self.expiry_date:
+                line_vals["expiry_date"] = self.expiry_date
+                line_vals["suggest_near_expiry_return"] = self.is_near_expiry
+
+            if self.add_to_near_expiry_return:
+                line_vals["return_qty"] = (line.return_qty or 0.0) + (result["counted_increase"] or 0.0)
+                line_vals["return_route"] = "near_expiry"
+                line_vals["suggest_near_expiry_return"] = False
+
+            if line_vals:
+                line.write(line_vals)
+                line.invalidate_recordset()
+
             return {
                 "type": "ir.actions.act_window",
                 "name": _("Scan Barcode"),
@@ -170,6 +226,8 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_visit_id": self.visit_id.id,
                     "default_scan_mode": "count",
                     "default_quantity": 1.0,
+                    "default_expiry_date": line.expiry_date,
+                    "default_add_to_near_expiry_return": False,
                     "default_last_product_id": line.product_id.id,
                     "default_last_counted_qty": line.counted_qty,
                     "default_last_return_qty": 0.0,
@@ -241,3 +299,4 @@ class RouteVisitScanWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
