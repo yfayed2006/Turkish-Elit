@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class RouteVisitLine(models.Model):
@@ -33,8 +34,15 @@ class RouteVisitLine(models.Model):
         "product.product",
         string="Product",
         required=True,
-        ondelete="restrict",
         index=True,
+    )
+
+    product_tmpl_id = fields.Many2one(
+        "product.template",
+        string="Product Template",
+        related="product_id.product_tmpl_id",
+        store=True,
+        readonly=True,
     )
 
     barcode = fields.Char(
@@ -52,11 +60,44 @@ class RouteVisitLine(models.Model):
         readonly=True,
     )
 
+    note = fields.Char(string="Note")
+
+    expiry_date = fields.Date(string="Expiry Date")
+
+    expiry_days_left = fields.Integer(
+        string="Days Left",
+        compute="_compute_expiry_status",
+        store=True,
+    )
+
+    is_near_expiry = fields.Boolean(
+        string="Near Expiry",
+        compute="_compute_expiry_status",
+        store=True,
+    )
+
+    suggest_near_expiry_return = fields.Boolean(
+        string="Suggest Near Expiry Return",
+        default=False,
+        help="Enabled automatically when the entered expiry date falls within the visit near-expiry threshold.",
+    )
+
     previous_qty = fields.Float(string="Previous Qty", default=0.0)
     counted_qty = fields.Float(string="Counted Qty", default=0.0)
     return_qty = fields.Float(string="Return Qty", default=0.0)
     supplied_qty = fields.Float(string="Supplied Qty", default=0.0)
-    pending_refill_qty = fields.Float(string="Pending Refill Qty", default=0.0)
+
+    return_route = fields.Selection(
+        [
+            ("vehicle", "To Vehicle"),
+            ("damaged", "To Damaged Stock"),
+            ("near_expiry", "To Near Expiry Stock"),
+        ],
+        string="Return Route",
+        default="vehicle",
+        required=True,
+        help="حدد مسار المرتجع لهذا الصنف. الافتراضي هو الإرجاع إلى السيارة.",
+    )
 
     sold_qty = fields.Float(
         string="Sold Qty",
@@ -75,7 +116,31 @@ class RouteVisitLine(models.Model):
         default=0.0,
     )
 
-    unit_price = fields.Float(string="Unit Price", default=0.0)
+    pending_refill_qty = fields.Float(
+        string="Pending Refill Qty",
+        compute="_compute_pending_refill_qty",
+        store=True,
+    )
+
+    unit_price = fields.Monetary(
+        string="Unit Price",
+        currency_field="currency_id",
+        default=0.0,
+    )
+
+    previous_value = fields.Monetary(
+        string="Previous Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
+        store=True,
+    )
+
+    counted_value = fields.Monetary(
+        string="Counted Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
+        store=True,
+    )
 
     sold_amount = fields.Monetary(
         string="Sold Amount",
@@ -98,79 +163,19 @@ class RouteVisitLine(models.Model):
         store=True,
     )
 
-    note = fields.Char(string="Note")
-
-    return_route = fields.Selection(
-        [
-            ("vehicle", "To Vehicle"),
-            ("damaged", "To Damaged Stock"),
-            ("near_expiry", "To Near Expiry Stock"),
-        ],
-        string="Return Route",
-        default="vehicle",
-        required=True,
-    )
-
-    expiry_date = fields.Date(string="Expiry Date")
-
-    expiry_days_left = fields.Integer(
-        string="Days Left",
-        compute="_compute_expiry_info",
+    new_balance_value = fields.Monetary(
+        string="New Balance Value",
+        currency_field="currency_id",
+        compute="_compute_amounts",
         store=True,
     )
 
-    is_near_expiry = fields.Boolean(
-        string="Near Expiry",
-        compute="_compute_expiry_info",
-        store=True,
-    )
-
-    suggest_near_expiry_return = fields.Boolean(
-        string="Suggest Near Expiry Return",
-        default=False,
-        help="Checked automatically when the entered expiry date is within the visit threshold and no final decision has been taken yet.",
-    )
-
-    near_expiry_action_state = fields.Selection(
-        [
-            ("none", "Not Applicable"),
-            ("pending", "Pending Decision"),
-            ("returned", "Returned"),
-            ("kept", "Kept at Outlet"),
-        ],
-        string="Near Expiry Action",
-        compute="_compute_near_expiry_action_state",
-        store=True,
-        default="none",
-    )
-
-    near_expiry_decision_note = fields.Char(
-        string="Near Expiry Decision Note",
-        help="Optional note when the representative decides to keep a near-expiry item at the outlet.",
-    )
-
-    keep_near_expiry = fields.Boolean(
-        string="Keep Near Expiry",
-        default=False,
-        help="Enable this when the near-expiry item is intentionally kept at the outlet instead of being returned.",
-    )
-
-    @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
-    def _compute_quantities(self):
-        for line in self:
-            line.sold_qty = max((line.previous_qty or 0.0) - (line.counted_qty or 0.0), 0.0)
-            line.new_balance_qty = (line.counted_qty or 0.0) + (line.supplied_qty or 0.0) - (line.return_qty or 0.0)
-
-    @api.depends("sold_qty", "return_qty", "supplied_qty", "unit_price")
-    def _compute_amounts(self):
-        for line in self:
-            price = line.unit_price or 0.0
-            line.sold_amount = (line.sold_qty or 0.0) * price
-            line.return_amount = (line.return_qty or 0.0) * price
-            line.supply_value = (line.supplied_qty or 0.0) * price
+    count_confirmed = fields.Boolean(string="Count Confirmed", default=False)
+    return_confirmed = fields.Boolean(string="Return Confirmed", default=False)
+    supply_confirmed = fields.Boolean(string="Supply Confirmed", default=False)
 
     @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days")
-    def _compute_expiry_info(self):
+    def _compute_expiry_status(self):
         for line in self:
             line.expiry_days_left = 0
             line.is_near_expiry = False
@@ -178,106 +183,164 @@ class RouteVisitLine(models.Model):
             if not line.expiry_date:
                 continue
 
-            ref_date = line.visit_id.date or fields.Date.context_today(line)
-            days_left = (line.expiry_date - ref_date).days
-            line.expiry_days_left = days_left
-            line.is_near_expiry = days_left <= (line.visit_id.near_expiry_threshold_days or 0)
+            reference_date = line.visit_id.date or fields.Date.context_today(line)
+            delta_days = (line.expiry_date - reference_date).days
+            line.expiry_days_left = delta_days
 
-    @api.depends(
-        "is_near_expiry",
-        "return_qty",
-        "return_route",
-        "keep_near_expiry",
-        "expiry_date",
-    )
-    def _compute_near_expiry_action_state(self):
-        for line in self:
-            if not line.expiry_date or not line.is_near_expiry:
-                line.near_expiry_action_state = "none"
-            elif line.return_qty > 0 and line.return_route == "near_expiry":
-                line.near_expiry_action_state = "returned"
-            elif line.keep_near_expiry:
-                line.near_expiry_action_state = "kept"
-            else:
-                line.near_expiry_action_state = "pending"
+            threshold_days = line.visit_id.near_expiry_threshold_days or 0
+            line.is_near_expiry = delta_days <= threshold_days
 
     @api.onchange("expiry_date")
-    def _onchange_expiry_date(self):
+    def _onchange_expiry_date_set_suggestion(self):
         for line in self:
             if not line.expiry_date:
                 line.suggest_near_expiry_return = False
-                if not line.is_near_expiry:
-                    line.keep_near_expiry = False
                 continue
 
-            if line.is_near_expiry:
-                if line.return_qty <= 0 and not line.keep_near_expiry:
-                    line.suggest_near_expiry_return = True
-            else:
-                line.suggest_near_expiry_return = False
-                line.keep_near_expiry = False
-                if line.return_route == "near_expiry" and line.return_qty <= 0:
-                    line.return_route = "vehicle"
+            reference_date = line.visit_id.date or fields.Date.context_today(line)
+            delta_days = (line.expiry_date - reference_date).days
+            threshold_days = line.visit_id.near_expiry_threshold_days or 0
+            line.suggest_near_expiry_return = delta_days <= threshold_days
 
-    @api.onchange("return_qty", "return_route")
-    def _onchange_return_near_expiry(self):
+    @api.onchange("suggest_near_expiry_return")
+    def _onchange_suggest_near_expiry_return(self):
         for line in self:
-            if line.return_qty > 0 and line.return_route == "near_expiry":
-                line.suggest_near_expiry_return = False
-                line.keep_near_expiry = False
-                if not line.near_expiry_decision_note:
-                    line.near_expiry_decision_note = "Returned to near expiry stock."
-            elif line.return_qty <= 0 and line.is_near_expiry and not line.keep_near_expiry:
-                line.suggest_near_expiry_return = True
-                if line.near_expiry_decision_note == "Returned to near expiry stock.":
-                    line.near_expiry_decision_note = False
+            if line.suggest_near_expiry_return and (line.return_qty or 0.0) > 0:
+                line.return_route = "near_expiry"
 
-    @api.onchange("keep_near_expiry")
-    def _onchange_keep_near_expiry(self):
+    @api.onchange("product_id")
+    def _onchange_product_id_set_unit_price(self):
         for line in self:
-            if line.keep_near_expiry:
-                line.suggest_near_expiry_return = False
-                if line.return_route == "near_expiry" and line.return_qty <= 0:
-                    line.return_route = "vehicle"
-                if not line.near_expiry_decision_note:
-                    line.near_expiry_decision_note = "Kept at outlet by representative decision."
-            else:
-                if line.is_near_expiry and line.return_qty <= 0:
-                    line.suggest_near_expiry_return = True
-                if line.near_expiry_decision_note == "Kept at outlet by representative decision.":
-                    line.near_expiry_decision_note = False
+            if line.product_id:
+                line.unit_price = line.product_id.lst_price or 0.0
+
+    @api.onchange("return_qty")
+    def _onchange_return_qty_set_default_route(self):
+        for line in self:
+            if line.return_qty > 0 and not line.return_route:
+                line.return_route = "vehicle"
+
+    @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
+    def _compute_quantities(self):
+        for line in self:
+            sold_qty = line.previous_qty - line.counted_qty
+            line.sold_qty = sold_qty if sold_qty > 0 else 0.0
+
+            new_balance_qty = line.counted_qty - line.return_qty + line.supplied_qty
+            line.new_balance_qty = new_balance_qty if new_balance_qty > 0 else 0.0
+
+    @api.depends("sold_qty", "supplied_qty")
+    def _compute_pending_refill_qty(self):
+        for line in self:
+            pending = line.sold_qty - line.supplied_qty
+            line.pending_refill_qty = pending if pending > 0 else 0.0
+
+    @api.depends(
+        "previous_qty",
+        "counted_qty",
+        "return_qty",
+        "supplied_qty",
+        "sold_qty",
+        "new_balance_qty",
+        "unit_price",
+    )
+    def _compute_amounts(self):
+        for line in self:
+            line.previous_value = line.previous_qty * line.unit_price
+            line.counted_value = line.counted_qty * line.unit_price
+            line.sold_amount = line.sold_qty * line.unit_price
+            line.return_amount = line.return_qty * line.unit_price
+            line.supply_value = line.supplied_qty * line.unit_price
+            line.new_balance_value = line.new_balance_qty * line.unit_price
 
     @api.model_create_multi
     def create(self, vals_list):
-        records = super().create(vals_list)
-        records._sync_near_expiry_flags_after_write()
-        return records
+        for vals in vals_list:
+            product_id = vals.get("product_id")
+            if product_id and not vals.get("unit_price"):
+                product = self.env["product.product"].browse(product_id)
+                vals["unit_price"] = product.lst_price or 0.0
+
+            if vals.get("return_qty", 0.0) > 0 and not vals.get("return_route"):
+                vals["return_route"] = "vehicle"
+
+        return super().create(vals_list)
 
     def write(self, vals):
-        result = super().write(vals)
-        self._sync_near_expiry_flags_after_write()
-        return result
+        vals = dict(vals or {})
+        if vals.get("product_id") and not vals.get("unit_price"):
+            product = self.env["product.product"].browse(vals["product_id"])
+            vals["unit_price"] = product.lst_price or 0.0
 
-    def _sync_near_expiry_flags_after_write(self):
+        if vals.get("return_qty", 0.0) > 0 and not vals.get("return_route"):
+            vals["return_route"] = "vehicle"
+
+        return super().write(vals)
+
+    @api.constrains(
+        "previous_qty",
+        "counted_qty",
+        "return_qty",
+        "supplied_qty",
+        "unit_price",
+        "vehicle_available_qty",
+    )
+    def _check_non_negative_values(self):
         for line in self:
-            if not line.expiry_date or not line.is_near_expiry:
-                if line.suggest_near_expiry_return:
-                    super(RouteVisitLine, line).write({"suggest_near_expiry_return": False})
-                continue
+            if line.previous_qty < 0:
+                raise ValidationError("Previous Qty cannot be negative.")
+            if line.counted_qty < 0:
+                raise ValidationError("Counted Qty cannot be negative.")
+            if line.return_qty < 0:
+                raise ValidationError("Return Qty cannot be negative.")
+            if line.supplied_qty < 0:
+                raise ValidationError("Supplied Qty cannot be negative.")
+            if line.vehicle_available_qty < 0:
+                raise ValidationError("Vehicle Available Qty cannot be negative.")
+            if line.unit_price < 0:
+                raise ValidationError("Unit Price cannot be negative.")
 
-            if line.return_qty > 0 and line.return_route == "near_expiry":
-                if line.suggest_near_expiry_return or line.keep_near_expiry:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": False,
-                        "keep_near_expiry": False,
-                    })
-            elif line.keep_near_expiry:
-                if line.suggest_near_expiry_return:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": False,
-                    })
-            else:
-                if not line.suggest_near_expiry_return:
-                    super(RouteVisitLine, line).write({
-                        "suggest_near_expiry_return": True,
-                    })
+    @api.constrains("previous_qty", "counted_qty")
+    def _check_sold_qty_not_negative(self):
+        for line in self:
+            sold_qty_raw = line.previous_qty - line.counted_qty
+            if sold_qty_raw < 0:
+                raise ValidationError(
+                    "Sold Qty cannot be negative. Please check Previous Qty and Counted Qty."
+                )
+
+    @api.constrains("counted_qty", "return_qty", "supplied_qty")
+    def _check_return_qty_not_more_than_counted(self):
+        for line in self:
+            if line.return_qty > line.counted_qty:
+                raise ValidationError(
+                    "Return Qty cannot be greater than Counted Qty because returns are taken from the counted shelf stock."
+                )
+
+            if (line.counted_qty - line.return_qty + line.supplied_qty) < 0:
+                raise ValidationError(
+                    "New Balance Qty cannot be negative. Please check Counted Qty, Return Qty, and Supplied Qty."
+                )
+
+    @api.constrains("supplied_qty", "vehicle_available_qty")
+    def _check_supplied_qty_vs_vehicle(self):
+        for line in self:
+            if line.supplied_qty > line.vehicle_available_qty:
+                raise ValidationError(
+                    "Supplied Qty cannot be greater than Vehicle Available Qty."
+                )
+
+    @api.constrains("expiry_days_left")
+    def _check_expiry_days_left(self):
+        for line in self:
+            if line.expiry_date and line.expiry_days_left < -3650:
+                raise ValidationError("Expiry Date looks invalid.")
+
+    @api.constrains("return_qty", "return_route")
+    def _check_return_route_when_return_exists(self):
+        for line in self:
+            if line.return_qty > 0 and not line.return_route:
+                raise ValidationError(
+                    "Please select Return Route when Return Qty is greater than zero."
+                )
+
