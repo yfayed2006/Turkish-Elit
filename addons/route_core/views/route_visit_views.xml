@@ -411,6 +411,9 @@
                                     <field name="expiry_days_left" readonly="1"/>
                                     <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
                                     <field name="suggest_near_expiry_return" optional="show"/>
+                                    <field name="near_expiry_action_state" readonly="1" optional="show"/>
+                                    <field name="keep_near_expiry" optional="show"/>
+                                    <field name="near_expiry_decision_note" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
@@ -422,6 +425,7 @@
                                     <field name="sold_amount" readonly="1"/>
                                     <field name="return_amount" readonly="1"/>
                                     <field name="supply_value" readonly="1"/>
+                                    <field name="new_balance_value" readonly="1"/>
                                     <field name="note"/>
                                 </list>
                             </field>
@@ -828,6 +832,9 @@
                                     <field name="expiry_days_left" readonly="1"/>
                                     <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
                                     <field name="suggest_near_expiry_return" optional="show"/>
+                                    <field name="near_expiry_action_state" readonly="1" optional="show"/>
+                                    <field name="keep_near_expiry" optional="show"/>
+                                    <field name="near_expiry_decision_note" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
@@ -836,6 +843,10 @@
                                     <field name="pending_refill_qty" readonly="1"/>
                                     <field name="new_balance_qty" readonly="1"/>
                                     <field name="unit_price"/>
+                                    <field name="sold_amount" readonly="1"/>
+                                    <field name="return_amount" readonly="1"/>
+                                    <field name="supply_value" readonly="1"/>
+                                    <field name="new_balance_value" readonly="1"/>
                                     <field name="note"/>
                                 </list>
                             </field>
