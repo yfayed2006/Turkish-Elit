@@ -355,21 +355,33 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Visit Payment"),
+            "name": _("Visit Payments"),
             "res_model": "route.visit.payment",
-            "view_mode": "form",
-            "target": "new",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("visit_id", "=", self.id)],
             "context": {
                 "default_visit_id": self.id,
-                "default_payment_date": fields.Date.context_today(self),
-                "default_amount": self.remaining_due_amount,
-                "default_collection_type": "full",
+                "search_default_visit_id": self.id,
             },
         }
 
     def action_ux_collect_payment(self):
         self.ensure_one()
-        return self.action_ux_open_payments()
+
+        if self.remaining_due_amount <= 0 and not self.collection_skip_reason:
+            raise UserError(_("There is no remaining due amount to collect on this visit."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Collect Payment"),
+            "res_model": "route.visit.collect.payment.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
 
     def action_ux_confirm_payments(self):
         self.ensure_one()
