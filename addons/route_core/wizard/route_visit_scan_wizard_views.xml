@@ -8,6 +8,7 @@
             <form string="Scan Barcode / Returns">
                 <group string="Active Lot" invisible="scan_mode != 'count'">
                     <group>
+                        <field name="focus_target" invisible="1"/>
                         <field name="lot_barcode" placeholder="Scan or type lot code here"/>
                         <field name="active_lot_id" readonly="1"/>
                         <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
