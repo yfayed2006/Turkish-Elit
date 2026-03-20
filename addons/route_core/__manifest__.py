@@ -29,6 +29,11 @@
         "wizard/route_visit_return_scan_wizard_views.xml",
         "wizard/route_visit_collect_payment_wizard_views.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "route_core/static/src/js/route_visit_scan_focus.js",
+        ],
+    },
     "installable": True,
     "application": True,
 }
