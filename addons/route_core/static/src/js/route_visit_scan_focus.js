@@ -25,23 +25,47 @@ patch(FormRenderer.prototype, {
             return;
         }
 
-        let selector = null;
+        const selectors = [];
         if (focusTarget === "lot") {
-            selector = 'div[name="lot_barcode"] input';
+            selectors.push(
+                '.o_field_widget[name="lot_barcode"] input',
+                '[name="lot_barcode"] input',
+                'input[name="lot_barcode"]'
+            );
         } else if (focusTarget === "product") {
-            selector = 'div[name="barcode"] input';
-        }
-
-        if (!selector) {
+            selectors.push(
+                '.o_field_widget[name="barcode"] input',
+                '[name="barcode"] input',
+                'input[name="barcode"]'
+            );
+        } else {
             return;
         }
 
-        setTimeout(() => {
-            const input = this.el?.querySelector(selector);
+        const tryFocus = (attempt = 0) => {
+            let input = null;
+            for (const selector of selectors) {
+                input = this.el?.querySelector(selector);
+                if (input) {
+                    break;
+                }
+            }
+
             if (input) {
+                try {
+                    document.activeElement?.blur?.();
+                } catch (_) {}
+
                 input.focus();
                 input.select?.();
+                return;
             }
-        }, 50);
+
+            if (attempt < 10) {
+                setTimeout(() => tryFocus(attempt + 1), 100);
+            }
+        };
+
+        setTimeout(() => tryFocus(), 50);
     },
 });
