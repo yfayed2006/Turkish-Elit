@@ -123,7 +123,12 @@ class RouteVisit(models.Model):
         self.ensure_one()
         barcode = (barcode or "").strip()
         if not barcode:
-            return self.env["product.packaging"]
+            return False
+
+        # Safe guard: if packaging model is not loaded in this database,
+        # do not break the scan flow.
+        if "product.packaging" not in self.env:
+            return False
 
         Packaging = self.env["product.packaging"]
         domain = [("barcode", "=", barcode)]
