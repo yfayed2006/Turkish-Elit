@@ -25,57 +25,62 @@ class RouteVisit(models.Model):
         if not lot:
             return False
 
-        # Keep this defensive because expiry fields depend on enabled features/modules.
         for field_name in ("expiration_date", "life_date", "use_date"):
             if field_name in lot._fields and lot[field_name]:
                 return fields.Date.to_date(lot[field_name])
 
         return False
 
-    def _find_available_lot_from_barcode(self, barcode):
+    def _find_available_lot_from_code(self, lot_code):
         self.ensure_one()
 
-        barcode = (barcode or "").strip()
-        if not barcode:
-            return False
+        lot_code = (lot_code or "").strip()
+        if not lot_code:
+            raise UserError(_("Please scan or enter a lot/serial code first."))
 
         source_location = self._get_scan_source_location()
         if not source_location:
-            return False
+            raise UserError(_("No source location is available for this visit."))
 
         Lot = self.env["stock.lot"]
         Quant = self.env["stock.quant"]
 
-        lot_domain = [("name", "=", barcode)]
-        if "barcode" in Lot._fields:
-            lot_domain = ["|", ("name", "=", barcode), ("barcode", "=", barcode)]
+        lot = Lot.search([("name", "=", lot_code)], limit=1)
+        if not lot:
+            raise UserError(_("No lot/serial was found with code '%s'.") % lot_code)
 
-        candidate_lots = Lot.search(lot_domain)
-        if not candidate_lots:
-            return False
-
-        quants = Quant.search(
+        quant = Quant.search(
             [
                 ("location_id", "child_of", source_location.id),
-                ("lot_id", "in", candidate_lots.ids),
+                ("lot_id", "=", lot.id),
+                ("quantity", ">", 0),
+            ],
+            limit=1,
+        )
+        if not quant:
+            raise UserError(
+                _("Lot '%s' is not currently available in the van stock.")
+                % lot.display_name
+            )
+
+        return lot
+
+    def _find_available_lots_for_product(self, product):
+        self.ensure_one()
+
+        source_location = self._get_scan_source_location()
+        if not source_location or not product:
+            return self.env["stock.lot"]
+
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+                ("lot_id", "!=", False),
                 ("quantity", ">", 0),
             ]
         )
-        available_lots = quants.mapped("lot_id")
-
-        if not available_lots:
-            return False
-
-        if len(available_lots) > 1:
-            raise UserError(
-                _(
-                    "More than one available lot/serial matches barcode '%s' in the vehicle stock. "
-                    "Please scan a unique lot/serial barcode."
-                )
-                % barcode
-            )
-
-        return available_lots[:1]
+        return quants.mapped("lot_id")
 
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
@@ -84,9 +89,6 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        # Phase C1 safe order:
-        # 1) keep existing product-barcode behavior untouched
-        # 2) then add real lot/serial resolution from available vehicle stock
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -94,23 +96,61 @@ class RouteVisit(models.Model):
         if product:
             return {
                 "product": product,
-                "lot": False,
-                "expiry_date": False,
                 "scan_type": "unit",
                 "scan_type_label": _("Product Barcode"),
             }
 
-        lot = self._find_available_lot_from_barcode(barcode)
-        if lot:
-            return {
-                "product": lot.product_id,
-                "lot": lot,
-                "expiry_date": self._get_lot_expiry_date(lot),
-                "scan_type": "lot",
-                "scan_type_label": _("Lot / Serial Barcode"),
-            }
+        raise UserError(_("No product was found with barcode '%s'.") % barcode)
 
-        raise UserError(_("No product or available lot/serial was found with barcode '%s'.") % barcode)
+    def _is_product_tracked_by_lot(self, product):
+        self.ensure_one()
+        if not product:
+            return False
+        tracking_value = getattr(product, "tracking", "none") or "none"
+        return tracking_value in ("lot", "serial")
+
+    def _resolve_product_active_lot(self, product, active_lot=False):
+        self.ensure_one()
+
+        if not product:
+            return False
+
+        if not self._is_product_tracked_by_lot(product):
+            return False
+
+        if active_lot:
+            if active_lot.product_id != product:
+                raise UserError(
+                    _(
+                        "The active lot '%(lot)s' belongs to product '%(lot_product)s', "
+                        "but the scanned barcode belongs to '%(barcode_product)s'."
+                    )
+                    % {
+                        "lot": active_lot.display_name,
+                        "lot_product": active_lot.product_id.display_name,
+                        "barcode_product": product.display_name,
+                    }
+                )
+            return active_lot
+
+        available_lots = self._find_available_lots_for_product(product)
+
+        if not available_lots:
+            raise UserError(
+                _("Tracked product '%s' has no available lot in the van stock.")
+                % product.display_name
+            )
+
+        if len(available_lots) == 1:
+            return available_lots[:1]
+
+        raise UserError(
+            _(
+                "Product '%s' has more than one available lot in the van stock. "
+                "Please scan/select the lot first."
+            )
+            % product.display_name
+        )
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
@@ -150,7 +190,6 @@ class RouteVisit(models.Model):
 
     def _prepare_visit_line_from_scan(self, product, counted_increase):
         self.ensure_one()
-
         return {
             "visit_id": self.id,
             "company_id": self.company_id.id,
@@ -184,7 +223,7 @@ class RouteVisit(models.Model):
                 % str(e)
             )
 
-    def _process_scanned_barcode(self, barcode, scan_qty=1.0, scanned_uom=False):
+    def _process_scanned_barcode(self, barcode, scan_qty=1.0, scanned_uom=False, active_lot=False):
         self.ensure_one()
 
         RouteVisitLine = self.env["route.visit.line"]
@@ -220,6 +259,9 @@ class RouteVisit(models.Model):
                 % product.display_name
             )
 
+        resolved_lot = self._resolve_product_active_lot(product, active_lot=active_lot)
+        resolved_expiry_date = self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
+
         line = self._find_visit_line_for_product(product)
 
         if line:
@@ -238,13 +280,13 @@ class RouteVisit(models.Model):
         return {
             "line": line,
             "product": product,
-            "lot": scan_info.get("lot"),
-            "expiry_date": scan_info.get("expiry_date"),
             "scan_type": scan_info["scan_type"],
             "scan_type_label": scan_info["scan_type_label"],
             "counted_increase": counted_increase,
             "base_uom": product.uom_id,
             "used_uom": scanned_uom or product.uom_id,
+            "resolved_lot": resolved_lot,
+            "resolved_expiry_date": resolved_expiry_date,
         }
 
     def action_scan_barcode_input(self):
