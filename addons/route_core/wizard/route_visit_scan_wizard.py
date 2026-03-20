@@ -116,8 +116,7 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
-    detected_packaging_id = fields.Many2one(
-        "product.packaging",
+    detected_packaging_name = fields.Char(
         string="Detected Packaging",
         readonly=True,
     )
@@ -209,7 +208,7 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.base_uom_id = False
             rec.detected_scan_type = False
             rec.counted_increase = 0.0
-            rec.detected_packaging_id = False
+            rec.detected_packaging_name = False
             rec.auto_quantity_locked = False
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
@@ -233,7 +232,7 @@ class RouteVisitScanWizard(models.TransientModel):
 
             packaging = scan_info.get("packaging")
             if packaging:
-                rec.detected_packaging_id = packaging.id
+                rec.detected_packaging_name = packaging.display_name
 
             suggested_uom = scan_info.get("default_scanned_uom") or product.uom_id
             suggested_qty = scan_info.get("default_scan_qty") or 1.0
@@ -390,7 +389,7 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_scanned_uom_id": False,
                     "default_detected_scan_type": False,
                     "default_counted_increase": 0.0,
-                    "default_detected_packaging_id": False,
+                    "default_detected_packaging_name": False,
                     "default_auto_quantity_locked": False,
                     "default_active_lot_id": resolved_lot.id if resolved_lot else self.active_lot_id.id,
                     "default_focus_target": "product",
@@ -449,7 +448,7 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_scanned_uom_id": False,
                     "default_detected_scan_type": False,
                     "default_counted_increase": 0.0,
-                    "default_detected_packaging_id": False,
+                    "default_detected_packaging_name": False,
                     "default_auto_quantity_locked": False,
                     "default_active_lot_id": self.active_lot_id.id,
                     "default_focus_target": "product",
