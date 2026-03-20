@@ -79,7 +79,6 @@ class RouteVisitScanWizard(models.TransientModel):
             ("near_expiry", "To Near Expiry Stock"),
         ],
         string="Return Route",
-        default="vehicle",
     )
 
     detected_product_id = fields.Many2one(
@@ -163,7 +162,7 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.expiry_decision_help = False
             elif rec.is_expired:
                 rec.expiry_decision_help = _(
-                    "This product is expired. Return is mandatory and you must choose the return route."
+                    "This product is expired. Return is mandatory. Choose the return route to continue."
                 )
             else:
                 rec.expiry_decision_help = _(
@@ -176,21 +175,26 @@ class RouteVisitScanWizard(models.TransientModel):
             if rec.scan_mode != "count":
                 rec.add_to_near_expiry_return = False
                 rec.near_expiry_decision = False
+                rec.return_route = False
                 continue
 
             if not rec.expiry_date or not rec.is_near_expiry:
                 rec.add_to_near_expiry_return = False
                 rec.near_expiry_decision = False
-                rec.return_route = "vehicle"
+                rec.return_route = False
                 continue
 
             if rec.is_expired:
+                # لا نسمح إلا بالإرجاع، لكن لا نختار route تلقائيًا
                 rec.near_expiry_decision = "return"
                 rec.add_to_near_expiry_return = True
-                if not rec.return_route:
-                    rec.return_route = "vehicle"
+                rec.return_route = False
             else:
-                rec.add_to_near_expiry_return = rec.near_expiry_decision == "return"
+                if rec.near_expiry_decision == "return":
+                    rec.add_to_near_expiry_return = True
+                else:
+                    rec.add_to_near_expiry_return = False
+                    rec.return_route = False
 
     @api.onchange("near_expiry_decision")
     def _onchange_near_expiry_decision(self):
@@ -198,13 +202,19 @@ class RouteVisitScanWizard(models.TransientModel):
             if rec.scan_mode != "count":
                 continue
 
+            if rec.is_expired:
+                rec.near_expiry_decision = "return"
+                rec.add_to_near_expiry_return = True
+                return
+
             if rec.near_expiry_decision == "return":
                 rec.add_to_near_expiry_return = True
-                if not rec.return_route:
-                    rec.return_route = "vehicle"
             elif rec.near_expiry_decision == "keep":
                 rec.add_to_near_expiry_return = False
-                rec.return_route = "vehicle"
+                rec.return_route = False
+            else:
+                rec.add_to_near_expiry_return = False
+                rec.return_route = False
 
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id")
     def _onchange_barcode_preview(self):
@@ -293,18 +303,11 @@ class RouteVisitScanWizard(models.TransientModel):
             "expiry_date": self.expiry_date or line.expiry_date,
         }
 
-        if not self.near_expiry_decision:
-            raise UserError(
-                _("This product is near expiry. Please choose Keep at Outlet or Return before continuing.")
-            )
-
-        if self.is_expired and self.near_expiry_decision != "return":
-            raise UserError(_("This product is expired. Return is mandatory."))
-
-        if self.near_expiry_decision == "return":
+        if self.is_expired:
+            # للمنتهي الصلاحية: فقط Return + route إجباري
             if not self.return_route:
                 raise UserError(
-                    _("Please choose where to return this product: To Vehicle or To Near Expiry Stock.")
+                    _("This product is expired. You must choose the return route before continuing.")
                 )
 
             line_vals.update(
@@ -314,25 +317,46 @@ class RouteVisitScanWizard(models.TransientModel):
                     "suggest_near_expiry_return": False,
                     "keep_near_expiry": False,
                     "near_expiry_decision_note": _(
-                        "Returned from scan popup due to near expiry."
-                    ) if not self.is_expired else _(
                         "Returned from scan popup because the product is expired."
                     ),
                 }
             )
 
-        elif self.near_expiry_decision == "keep":
-            line_vals.update(
-                {
-                    "suggest_near_expiry_return": False,
-                    "keep_near_expiry": True,
-                    "near_expiry_decision_note": _("Kept at outlet from scan popup."),
-                }
-            )
+        else:
+            if not self.near_expiry_decision:
+                raise UserError(
+                    _("This product is near expiry. Please choose Keep at Outlet or Return before continuing.")
+                )
+
+            if self.near_expiry_decision == "return":
+                if not self.return_route:
+                    raise UserError(
+                        _("Please choose where to return this product: To Vehicle or To Near Expiry Stock.")
+                    )
+
+                line_vals.update(
+                    {
+                        "return_qty": (line.return_qty or 0.0) + counted_increase,
+                        "return_route": self.return_route,
+                        "suggest_near_expiry_return": False,
+                        "keep_near_expiry": False,
+                        "near_expiry_decision_note": _(
+                            "Returned from scan popup due to near expiry."
+                        ),
+                    }
+                )
+
+            elif self.near_expiry_decision == "keep":
+                line_vals.update(
+                    {
+                        "suggest_near_expiry_return": False,
+                        "keep_near_expiry": True,
+                        "near_expiry_decision_note": _("Kept at outlet from scan popup."),
+                    }
+                )
 
         line.write(line_vals)
 
-        # ensure line computed fields refresh the same way as normal edits
         if hasattr(line, "_onchange_counted_qty"):
             try:
                 line._onchange_counted_qty()
@@ -358,7 +382,7 @@ class RouteVisitScanWizard(models.TransientModel):
                 "default_visit_id": self.visit_id.id,
                 "default_scan_mode": self.scan_mode,
                 "default_quantity": 1.0,
-                "default_return_route": "vehicle",
+                "default_return_route": False,
                 "default_expiry_date": False,
                 "default_near_expiry_decision": False,
                 "default_add_to_near_expiry_return": False,
@@ -387,10 +411,6 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Quantity must be greater than zero."))
 
         if self.scan_mode == "count":
-            # Phase B rule:
-            # Near expiry / expired products are handled directly in the popup
-            # and must NOT go through the normal _process_scanned_barcode flow,
-            # because that flow validates van stock and causes a false error here.
             if self.expiry_date and self.is_near_expiry:
                 product, line = self._apply_near_expiry_count_decision()
                 return self._reopen_scan_wizard_action(
@@ -399,7 +419,6 @@ class RouteVisitScanWizard(models.TransientModel):
                     line=line,
                 )
 
-            # Normal products far from expiry keep the existing stable flow.
             result = self.visit_id._process_scanned_barcode(
                 self.barcode,
                 scan_qty=self.quantity,
