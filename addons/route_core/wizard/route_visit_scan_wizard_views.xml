@@ -14,16 +14,41 @@
                         <field name="quantity"/>
                         <field name="scanned_uom_id"/>
                         <field name="expiry_date" invisible="scan_mode != 'count'"/>
+
+                        <!-- Return route stays only for dedicated return mode -->
                         <field name="return_route" invisible="scan_mode != 'return'"/>
-                        <field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
                     </group>
+
                     <group>
                         <field name="detected_product_id" readonly="1"/>
                         <field name="base_uom_id" readonly="1"/>
                         <field name="detected_scan_type" readonly="1"/>
                         <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
                         <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+
                         <field name="is_near_expiry" readonly="1" invisible="1"/>
+                        <field name="is_expired" readonly="1" invisible="1"/>
+                        <field name="requires_expiry_decision" readonly="1" invisible="1"/>
+                        <field name="add_to_near_expiry_return" invisible="1"/>
+                    </group>
+                </group>
+
+                <group
+                    string="Expiry Decision"
+                    invisible="scan_mode != 'count' or not requires_expiry_decision"
+                >
+                    <group>
+                        <field
+                            name="expiry_decision_help"
+                            readonly="1"
+                            nolabel="1"
+                            class="text-info"
+                        />
+                        <field
+                            name="near_expiry_decision"
+                            widget="radio"
+                            options="{'horizontal': true}"
+                        />
                     </group>
                 </group>
 
@@ -47,12 +72,15 @@
                         name="action_scan_and_add"
                         type="object"
                         string="Scan / Add"
-                        class="btn-primary"/>
+                        class="btn-primary"
+                    />
                     <button
                         name="action_done"
                         type="object"
                         string="Done"
-                        class="btn-secondary"/>
+                        class="btn-secondary"
+                    />
+                    <button special="cancel" string="Cancel" class="btn-secondary"/>
                 </footer>
             </form>
         </field>
