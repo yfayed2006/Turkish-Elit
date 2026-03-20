@@ -22,10 +22,11 @@
                         <button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary"/>
                     </group>
 
-                    <!-- visual next-step guidance -->
                     <group invisible="not active_lot_id">
                         <separator string="Next Step"/>
-                        <label string="Active lot selected. Now scan the product or box barcode for this lot." colspan="2"/>
+                        <div class="o_form_label">
+                            Active lot selected. Now scan the product or box barcode for this lot.
+                        </div>
                     </group>
                 </group>
 
