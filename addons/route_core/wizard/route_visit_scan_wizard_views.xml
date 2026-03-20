@@ -34,7 +34,16 @@
                 <group string="Expiry Decision" invisible="scan_mode != 'count' or not requires_expiry_decision">
                     <group>
                         <field name="expiry_decision_help" readonly="1" nolabel="1"/>
-                        <field name="near_expiry_decision" widget="radio"/>
+
+                        <!-- حالة المنتج المنتهي الصلاحية -->
+                        <label string="Expiry Decision" invisible="not is_expired"/>
+                        <div invisible="not is_expired">
+                            <span>Return</span>
+                        </div>
+
+                        <!-- حالة المنتج القريب من الانتهاء فقط -->
+                        <field name="near_expiry_decision" widget="radio" invisible="is_expired"/>
+
                         <field
                             name="return_route"
                             invisible="not requires_return_route"
