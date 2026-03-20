@@ -24,6 +24,16 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
+    focus_target = fields.Selection(
+        [
+            ("lot", "Lot"),
+            ("product", "Product"),
+        ],
+        string="Focus Target",
+        default="lot",
+        readonly=True,
+    )
+
     lot_barcode = fields.Char(string="Scan Lot")
 
     active_lot_id = fields.Many2one(
@@ -258,8 +268,11 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Visit is required."))
 
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
-        self.active_lot_id = lot.id
-        self.lot_barcode = False
+        self.write({
+            "active_lot_id": lot.id,
+            "lot_barcode": False,
+            "focus_target": "product",
+        })
 
         return {
             "type": "ir.actions.act_window",
@@ -273,10 +286,13 @@ class RouteVisitScanWizard(models.TransientModel):
     def action_clear_active_lot(self):
         self.ensure_one()
 
-        self.active_lot_id = False
-        self.lot_barcode = False
-        self.expiry_date = False
-        self.add_to_near_expiry_return = False
+        self.write({
+            "active_lot_id": False,
+            "lot_barcode": False,
+            "expiry_date": False,
+            "add_to_near_expiry_return": False,
+            "focus_target": "lot",
+        })
 
         return {
             "type": "ir.actions.act_window",
@@ -363,6 +379,7 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_detected_scan_type": False,
                     "default_counted_increase": 0.0,
                     "default_active_lot_id": resolved_lot.id if resolved_lot else self.active_lot_id.id,
+                    "default_focus_target": "product",
                 },
             }
 
@@ -411,6 +428,7 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_detected_scan_type": False,
                     "default_counted_increase": 0.0,
                     "default_active_lot_id": self.active_lot_id.id,
+                    "default_focus_target": "product",
                 },
             }
 
