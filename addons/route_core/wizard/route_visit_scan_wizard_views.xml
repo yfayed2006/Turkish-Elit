@@ -21,13 +21,19 @@
                         <button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary"/>
                         <button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary"/>
                     </group>
+
+                    <!-- visual next-step guidance -->
+                    <group invisible="not active_lot_id">
+                        <separator string="Next Step"/>
+                        <label string="Active lot selected. Now scan the product or box barcode for this lot." colspan="2"/>
+                    </group>
                 </group>
 
-                <group>
+                <group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
                     <group>
                         <field name="visit_id" readonly="1"/>
                         <field name="scan_mode" readonly="1"/>
-                        <field name="barcode" placeholder="Type or paste barcode here"/>
+                        <field name="barcode" placeholder="Scan product or box barcode here"/>
                         <field name="quantity"/>
                         <field name="scanned_uom_id"/>
                         <field name="expiry_date" invisible="scan_mode != 'count'"/>
