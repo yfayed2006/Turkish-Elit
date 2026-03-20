@@ -6,6 +6,23 @@
         <field name="model">route.visit.scan.wizard</field>
         <field name="arch" type="xml">
             <form string="Scan Barcode / Returns">
+                <group string="Active Lot" invisible="scan_mode != 'count'">
+                    <group>
+                        <field name="lot_barcode" placeholder="Scan or type lot code here"/>
+                        <field name="active_lot_id" readonly="1"/>
+                        <field name="active_lot_product_id" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="active_lot_expiry_date" readonly="1"/>
+                        <field name="active_lot_days_left" readonly="1" invisible="not active_lot_id"/>
+                        <field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
+                    </group>
+                    <group col="4">
+                        <button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary"/>
+                        <button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary"/>
+                    </group>
+                </group>
+
                 <group>
                     <group>
                         <field name="visit_id" readonly="1"/>
@@ -19,7 +36,6 @@
                     </group>
                     <group>
                         <field name="detected_product_id" readonly="1"/>
-                        <field name="detected_lot_id" readonly="1"/>
                         <field name="base_uom_id" readonly="1"/>
                         <field name="detected_scan_type" readonly="1"/>
                         <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
