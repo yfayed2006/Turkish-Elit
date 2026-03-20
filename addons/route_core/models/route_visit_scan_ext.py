@@ -209,20 +209,23 @@ class RouteVisit(models.Model):
         if not self._is_product_tracked_by_lot(product):
             return False
 
-        if active_lot:
-            if active_lot.product_id != product:
-                raise UserError(
-                    _(
-                        "The active lot '%(lot)s' belongs to product '%(lot_product)s', "
-                        "but the scanned barcode belongs to '%(barcode_product)s'."
-                    )
-                    % {
-                        "lot": active_lot.display_name,
-                        "lot_product": active_lot.product_id.display_name,
-                        "barcode_product": product.display_name,
-                    }
-                )
-            return active_lot
+       if active_lot:
+           if active_lot.product_id != product:
+               raise UserError(
+                   _(
+                       "The scanned product does not belong to the active lot.\n\n"
+                       "Active Lot: %(lot)s\n"
+                       "Lot Product: %(lot_product)s\n"
+                       "Scanned Product: %(barcode_product)s\n\n"
+                       "Please clear the current lot first, then scan/select the correct lot for this product."
+                   )
+                   % {
+                       "lot": active_lot.display_name,
+                       "lot_product": active_lot.product_id.display_name,
+                       "barcode_product": product.display_name,
+                   }
+               )
+           return active_lot
 
         available_lots = self._find_available_lots_for_product(product)
         if not available_lots:
