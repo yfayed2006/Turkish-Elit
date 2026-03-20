@@ -20,6 +20,63 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self.source_location_id or self.vehicle_id.stock_location_id
 
+    def _get_lot_expiry_date(self, lot):
+        self.ensure_one()
+        if not lot:
+            return False
+
+        # Keep this defensive because expiry fields depend on enabled features/modules.
+        for field_name in ("expiration_date", "life_date", "use_date"):
+            if field_name in lot._fields and lot[field_name]:
+                return fields.Date.to_date(lot[field_name])
+
+        return False
+
+    def _find_available_lot_from_barcode(self, barcode):
+        self.ensure_one()
+
+        barcode = (barcode or "").strip()
+        if not barcode:
+            return False
+
+        source_location = self._get_scan_source_location()
+        if not source_location:
+            return False
+
+        Lot = self.env["stock.lot"]
+        Quant = self.env["stock.quant"]
+
+        lot_domain = [("name", "=", barcode)]
+        if "barcode" in Lot._fields:
+            lot_domain = ["|", ("name", "=", barcode), ("barcode", "=", barcode)]
+
+        candidate_lots = Lot.search(lot_domain)
+        if not candidate_lots:
+            return False
+
+        quants = Quant.search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("lot_id", "in", candidate_lots.ids),
+                ("quantity", ">", 0),
+            ]
+        )
+        available_lots = quants.mapped("lot_id")
+
+        if not available_lots:
+            return False
+
+        if len(available_lots) > 1:
+            raise UserError(
+                _(
+                    "More than one available lot/serial matches barcode '%s' in the vehicle stock. "
+                    "Please scan a unique lot/serial barcode."
+                )
+                % barcode
+            )
+
+        return available_lots[:1]
+
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
 
@@ -27,6 +84,9 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
+        # Phase C1 safe order:
+        # 1) keep existing product-barcode behavior untouched
+        # 2) then add real lot/serial resolution from available vehicle stock
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -34,11 +94,23 @@ class RouteVisit(models.Model):
         if product:
             return {
                 "product": product,
+                "lot": False,
+                "expiry_date": False,
                 "scan_type": "unit",
                 "scan_type_label": _("Product Barcode"),
             }
 
-        raise UserError(_("No product was found with barcode '%s'.") % barcode)
+        lot = self._find_available_lot_from_barcode(barcode)
+        if lot:
+            return {
+                "product": lot.product_id,
+                "lot": lot,
+                "expiry_date": self._get_lot_expiry_date(lot),
+                "scan_type": "lot",
+                "scan_type_label": _("Lot / Serial Barcode"),
+            }
+
+        raise UserError(_("No product or available lot/serial was found with barcode '%s'.") % barcode)
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
@@ -105,7 +177,10 @@ class RouteVisit(models.Model):
             return scanned_uom._compute_quantity(scan_qty, base_uom)
         except Exception as e:
             raise UserError(
-                _("Could not convert the scanned quantity from the selected UoM to the product base UoM.\n\n%s")
+                _(
+                    "Could not convert the scanned quantity from the selected UoM "
+                    "to the product base UoM.\n\n%s"
+                )
                 % str(e)
             )
 
@@ -132,6 +207,7 @@ class RouteVisit(models.Model):
 
         scan_info = self._resolve_scanned_barcode(barcode)
         product = scan_info["product"]
+
         counted_increase = self._get_scan_counted_increase(
             product,
             scan_qty=scan_qty,
@@ -162,6 +238,8 @@ class RouteVisit(models.Model):
         return {
             "line": line,
             "product": product,
+            "lot": scan_info.get("lot"),
+            "expiry_date": scan_info.get("expiry_date"),
             "scan_type": scan_info["scan_type"],
             "scan_type_label": scan_info["scan_type_label"],
             "counted_increase": counted_increase,
