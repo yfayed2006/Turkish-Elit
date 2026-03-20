@@ -127,7 +127,13 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
-    @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days", "scan_mode", "near_expiry_decision")
+    @api.depends(
+        "expiry_date",
+        "visit_id.date",
+        "visit_id.near_expiry_threshold_days",
+        "scan_mode",
+        "near_expiry_decision",
+    )
     def _compute_expiry_preview(self):
         for rec in self:
             rec.expiry_days_left = 0
@@ -170,7 +176,7 @@ class RouteVisitScanWizard(models.TransientModel):
             if rec.scan_mode != "count":
                 rec.add_to_near_expiry_return = False
                 rec.near_expiry_decision = False
-                return
+                continue
 
             if not rec.expiry_date or not rec.is_near_expiry:
                 rec.add_to_near_expiry_return = False
@@ -254,6 +260,92 @@ class RouteVisitScanWizard(models.TransientModel):
             }
         )
 
+    def _get_scan_product_and_qty(self):
+        self.ensure_one()
+
+        scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+        product = scan_info["product"]
+        scanned_uom = self.scanned_uom_id or product.uom_id
+
+        try:
+            qty_in_base = scanned_uom._compute_quantity(
+                self.quantity,
+                product.uom_id,
+            )
+        except Exception:
+            raise UserError(
+                _("Could not convert the entered quantity to the product base unit.")
+            )
+
+        if qty_in_base <= 0:
+            raise UserError(_("Quantity must be greater than zero."))
+
+        return product, qty_in_base
+
+    def _apply_near_expiry_count_decision(self):
+        self.ensure_one()
+
+        product, counted_increase = self._get_scan_product_and_qty()
+        line = self._get_or_create_visit_line(product)
+
+        line_vals = {
+            "counted_qty": (line.counted_qty or 0.0) + counted_increase,
+            "expiry_date": self.expiry_date or line.expiry_date,
+        }
+
+        if not self.near_expiry_decision:
+            raise UserError(
+                _("This product is near expiry. Please choose Keep at Outlet or Return before continuing.")
+            )
+
+        if self.is_expired and self.near_expiry_decision != "return":
+            raise UserError(_("This product is expired. Return is mandatory."))
+
+        if self.near_expiry_decision == "return":
+            if not self.return_route:
+                raise UserError(
+                    _("Please choose where to return this product: To Vehicle or To Near Expiry Stock.")
+                )
+
+            line_vals.update(
+                {
+                    "return_qty": (line.return_qty or 0.0) + counted_increase,
+                    "return_route": self.return_route,
+                    "suggest_near_expiry_return": False,
+                    "keep_near_expiry": False,
+                    "near_expiry_decision_note": _(
+                        "Returned from scan popup due to near expiry."
+                    ) if not self.is_expired else _(
+                        "Returned from scan popup because the product is expired."
+                    ),
+                }
+            )
+
+        elif self.near_expiry_decision == "keep":
+            line_vals.update(
+                {
+                    "suggest_near_expiry_return": False,
+                    "keep_near_expiry": True,
+                    "near_expiry_decision_note": _("Kept at outlet from scan popup."),
+                }
+            )
+
+        line.write(line_vals)
+
+        # ensure line computed fields refresh the same way as normal edits
+        if hasattr(line, "_onchange_counted_qty"):
+            try:
+                line._onchange_counted_qty()
+            except Exception:
+                pass
+        if hasattr(line, "_onchange_return_qty"):
+            try:
+                line._onchange_return_qty()
+            except Exception:
+                pass
+
+        return product, line
+
     def _reopen_scan_wizard_action(self, *, name, product, line):
         self.ensure_one()
         return {
@@ -295,6 +387,19 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Quantity must be greater than zero."))
 
         if self.scan_mode == "count":
+            # Phase B rule:
+            # Near expiry / expired products are handled directly in the popup
+            # and must NOT go through the normal _process_scanned_barcode flow,
+            # because that flow validates van stock and causes a false error here.
+            if self.expiry_date and self.is_near_expiry:
+                product, line = self._apply_near_expiry_count_decision()
+                return self._reopen_scan_wizard_action(
+                    name=_("Scan Barcode"),
+                    product=product,
+                    line=line,
+                )
+
+            # Normal products far from expiry keep the existing stable flow.
             result = self.visit_id._process_scanned_barcode(
                 self.barcode,
                 scan_qty=self.quantity,
@@ -302,64 +407,16 @@ class RouteVisitScanWizard(models.TransientModel):
             )
             line = result["line"]
             product = result["product"]
-            counted_increase = result.get("counted_increase") or 0.0
-
-            line_vals = {}
 
             if self.expiry_date:
-                line_vals["expiry_date"] = self.expiry_date
-
-            if not self.expiry_date or not self.is_near_expiry:
-                line_vals.update(
+                line.write(
                     {
+                        "expiry_date": self.expiry_date,
                         "suggest_near_expiry_return": False,
                         "keep_near_expiry": False,
                         "near_expiry_decision_note": False,
                     }
                 )
-            else:
-                if not self.near_expiry_decision:
-                    raise UserError(
-                        _("This product is near expiry. Please choose Keep at Outlet or Return before continuing.")
-                    )
-
-                if self.is_expired and self.near_expiry_decision != "return":
-                    raise UserError(
-                        _("This product is expired. Return is mandatory.")
-                    )
-
-                if self.near_expiry_decision == "return":
-                    if not self.return_route:
-                        raise UserError(
-                            _("Please choose where to return this product: To Vehicle or To Near Expiry Stock.")
-                        )
-
-                    line_vals.update(
-                        {
-                            "return_qty": (line.return_qty or 0.0) + counted_increase,
-                            "return_route": self.return_route,
-                            "suggest_near_expiry_return": False,
-                            "keep_near_expiry": False,
-                            "near_expiry_decision_note": _(
-                                "Returned from scan popup due to near expiry."
-                            ) if not self.is_expired else _(
-                                "Returned from scan popup because the product is expired."
-                            ),
-                        }
-                    )
-
-                elif self.near_expiry_decision == "keep":
-                    line_vals.update(
-                        {
-                            "suggest_near_expiry_return": False,
-                            "keep_near_expiry": True,
-                            "near_expiry_decision_note": _("Kept at outlet from scan popup."),
-                        }
-                    )
-
-            if line_vals:
-                line.write(line_vals)
-                line.invalidate_recordset()
 
             return self._reopen_scan_wizard_action(
                 name=_("Scan Barcode"),
@@ -368,23 +425,7 @@ class RouteVisitScanWizard(models.TransientModel):
             )
 
         if self.scan_mode == "return":
-            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
-            product = scan_info["product"]
-
-            scanned_uom = self.scanned_uom_id or product.uom_id
-
-            try:
-                return_increase = scanned_uom._compute_quantity(
-                    self.quantity,
-                    product.uom_id,
-                )
-            except Exception:
-                raise UserError(
-                    _("Could not convert the entered quantity to the product base unit.")
-                )
-
-            if return_increase <= 0:
-                raise UserError(_("Return quantity must be greater than zero."))
+            product, return_increase = self._get_scan_product_and_qty()
 
             if not self.return_route:
                 raise UserError(_("Please choose a return route."))
@@ -396,6 +437,12 @@ class RouteVisitScanWizard(models.TransientModel):
                     "return_route": self.return_route,
                 }
             )
+
+            if hasattr(line, "_onchange_return_qty"):
+                try:
+                    line._onchange_return_qty()
+                except Exception:
+                    pass
 
             return self._reopen_scan_wizard_action(
                 name=_("Scan Returns"),
