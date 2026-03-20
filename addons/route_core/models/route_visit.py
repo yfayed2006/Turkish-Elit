@@ -89,10 +89,41 @@ class RouteVisit(models.Model):
         compute="_compute_sale_order_count",
     )
 
+    near_expiry_line_count = fields.Integer(
+        string="Near Expiry Lines",
+        compute="_compute_near_expiry_status",
+        store=True,
+    )
+    pending_near_expiry_line_count = fields.Integer(
+        string="Pending Near Expiry Lines",
+        compute="_compute_near_expiry_status",
+        store=True,
+    )
+    has_pending_near_expiry = fields.Boolean(
+        string="Has Pending Near Expiry",
+        compute="_compute_near_expiry_status",
+        store=True,
+    )
+
     @api.depends("sale_order_id")
     def _compute_sale_order_count(self):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
+
+    @api.depends(
+        "line_ids.is_near_expiry",
+        "line_ids.near_expiry_action_state",
+    )
+    def _compute_near_expiry_status(self):
+        for rec in self:
+            near_lines = rec.line_ids.filtered(lambda l: l.is_near_expiry)
+            pending_lines = near_lines.filtered(
+                lambda l: l.near_expiry_action_state == "pending"
+            )
+
+            rec.near_expiry_line_count = len(near_lines)
+            rec.pending_near_expiry_line_count = len(pending_lines)
+            rec.has_pending_near_expiry = bool(pending_lines)
 
     def _get_outlet_commission_rate_value(self, outlet):
         """Support both field names:
@@ -135,6 +166,25 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self.env["route.plan.line"].search([("visit_id", "=", self.id)], limit=1)
 
+    def _raise_pending_near_expiry_error(self):
+        self.ensure_one()
+
+        pending_lines = self.line_ids.filtered(
+            lambda l: l.near_expiry_action_state == "pending"
+        )
+        if not pending_lines:
+            return
+
+        product_names = pending_lines.mapped("product_id.display_name")
+        product_lines = "\n- " + "\n- ".join(product_names[:10])
+
+        raise UserError(_(
+            "You still have Near Expiry items pending a decision.\n"
+            "Please either:\n"
+            "- set Return Route = Near Expiry Stock with return quantity, or\n"
+            "- mark the line as Keep Near Expiry.\n"
+            "\nPending items:%s"
+        ) % product_lines)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -323,6 +373,8 @@ class RouteVisit(models.Model):
 
         if self.state != "in_progress":
             raise UserError(_("Only visits in progress can be ended."))
+
+        self._raise_pending_near_expiry_error()
 
         if self.sale_order_id and self.sale_order_id.state in ("draft", "sent"):
             raise UserError(
