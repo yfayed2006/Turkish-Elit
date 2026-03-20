@@ -407,13 +407,6 @@
                                     <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
-                                    <field name="expiry_date"/>
-                                    <field name="expiry_days_left" readonly="1"/>
-                                    <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
-                                    <field name="suggest_near_expiry_return" optional="show"/>
-                                    <field name="near_expiry_action_state" readonly="1" optional="show"/>
-                                    <field name="keep_near_expiry" optional="show"/>
-                                    <field name="near_expiry_decision_note" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
@@ -828,13 +821,6 @@
                                     <field name="uom_id" readonly="1"/>
                                     <field name="previous_qty"/>
                                     <field name="counted_qty"/>
-                                    <field name="expiry_date"/>
-                                    <field name="expiry_days_left" readonly="1"/>
-                                    <field name="is_near_expiry" readonly="1" widget="boolean_toggle" optional="show"/>
-                                    <field name="suggest_near_expiry_return" optional="show"/>
-                                    <field name="near_expiry_action_state" readonly="1" optional="show"/>
-                                    <field name="keep_near_expiry" optional="show"/>
-                                    <field name="near_expiry_decision_note" optional="show"/>
                                     <field name="return_qty"/>
                                     <field name="return_route"/>
                                     <field name="sold_qty" readonly="1"/>
