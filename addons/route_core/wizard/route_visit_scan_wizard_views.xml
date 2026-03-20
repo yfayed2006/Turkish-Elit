@@ -1,86 +1,95 @@
-RPC_ERROR
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
 
-Odoo Server Error
+    <record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
+        <field name="name">route.visit.scan.wizard.form</field>
+        <field name="model">route.visit.scan.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Scan Barcode">
+                <group>
+                    <group>
+                        <field name="visit_id" readonly="1"/>
+                        <field name="scan_mode" readonly="1"/>
+                        <field name="barcode" placeholder="Type or paste barcode here"/>
+                        <field name="quantity"/>
+                        <field name="scanned_uom_id"/>
+                        <field name="expiry_date" invisible="scan_mode != 'count'"/>
+                    </group>
 
-Occured on yfayed2006-turkish-elit.odoo.com on model ir.module.module on 2026-03-20 17:50:23 GMT
+                    <group>
+                        <field name="detected_product_id" readonly="1"/>
+                        <field name="base_uom_id" readonly="1"/>
+                        <field name="detected_scan_type" readonly="1"/>
+                        <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
+                        <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
 
-Traceback (most recent call last):
-  File "/home/odoo/src/odoo/odoo/http.py", line 2298, in _serve_db
-    return service_model.retrying(serve_func, env=self.env)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/service/model.py", line 188, in retrying
-    result = func()
-             ^^^^^^
-  File "/home/odoo/src/odoo/odoo/http.py", line 2353, in _serve_ir_http
-    response = self.dispatcher.dispatch(rule.endpoint, args)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/http.py", line 2568, in dispatch
-    result = self.request.registry['ir.http']._dispatch(endpoint)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/addons/base/models/ir_http.py", line 355, in _dispatch
-    result = endpoint(**request.params)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/http.py", line 808, in route_wrapper
-    result = endpoint(self, *args, **params_ok)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/addons/web/controllers/dataset.py", line 38, in call_button
-    action = call_kw(request.env[model], method, args, kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/service/model.py", line 97, in call_kw
-    result = method(recs, *args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/addons/base/models/ir_module.py", line 72, in check_and_log
-    return method(self, *args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/addons/base/models/ir_module.py", line 696, in button_immediate_upgrade
-    return self._button_immediate_function(self.env.registry[self._name].button_upgrade)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/addons/base/models/ir_module.py", line 633, in _button_immediate_function
-    registry = modules.registry.Registry.new(self.env.cr.dbname, update_module=True)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/tools/func.py", line 88, in locked
-    return func(inst, *args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/odoo/src/odoo/odoo/orm/registry.py", line 199, in new
-    load_modules(
-  File "/home/odoo/src/odoo/odoo/modules/loading.py", line 464, in load_modules
-    load_module_graph(
-  File "/home/odoo/src/odoo/odoo/modules/loading.py", line 224, in load_module_graph
-    load_data(env, idref, mode, kind='data', package=package)
-  File "/home/odoo/src/odoo/odoo/modules/loading.py", line 59, in load_data
-    convert_file(env, package.name, filename, idref, mode, noupdate=kind == 'demo')
-  File "/home/odoo/src/odoo/odoo/tools/convert.py", line 693, in convert_file
-    convert_xml_import(env, module, fp, idref, mode, noupdate)
-  File "/home/odoo/src/odoo/odoo/tools/convert.py", line 792, in convert_xml_import
-    obj.parse(doc.getroot())
-  File "/home/odoo/src/odoo/odoo/tools/convert.py", line 663, in parse
-    self._tag_root(de)
-  File "/home/odoo/src/odoo/odoo/tools/convert.py", line 616, in _tag_root
-    raise ParseError(msg) from None  # Restart with "--log-handler odoo.tools.convert:DEBUG" for complete traceback
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-odoo.tools.convert.ParseError: while parsing /home/odoo/src/user/addons/route_core/wizard/route_visit_scan_wizard_views.xml:4
-Error while validating view near:
+                        <field name="is_near_expiry" readonly="1" invisible="1"/>
+                        <field name="is_expired" readonly="1" invisible="1"/>
+                        <field name="requires_expiry_decision" readonly="1" invisible="1"/>
+                        <field name="requires_return_route" readonly="1" invisible="1"/>
+                        <field name="add_to_near_expiry_return" invisible="1"/>
+                    </group>
+                </group>
 
-                        <!-- حالة المنتج المنتهي الصلاحية -->
-                        <label string="Expiry Decision" invisible="not is_expired"/>
+                <group string="Expiry Decision" invisible="scan_mode != 'count' or not requires_expiry_decision">
+                    <group>
+                        <field name="expiry_decision_help" readonly="1" nolabel="1"/>
+
+                        <!-- Expired product: show fixed Return text only -->
                         <div invisible="not is_expired">
-                            <span>Return</span>
+                            <span class="o_form_label">Expiry Decision</span>
+                            <div class="mt-1">Return</div>
                         </div>
 
-Label tag must contain a "for". To match label style without corresponding field or button, use 'class="o_form_label"'.
+                        <!-- Near expiry only -->
+                        <field name="near_expiry_decision" widget="radio" invisible="is_expired"/>
 
-View error context:
-{'file': '/home/odoo/src/user/addons/route_core/wizard/route_visit_scan_wizard_views.xml',
- 'line': 33,
- 'name': 'route.visit.scan.wizard.form',
- 'view': ir.ui.view(4431,),
- 'view.model': 'route.visit.scan.wizard',
- 'view.parent': ir.ui.view(),
- 'xmlid': 'view_route_visit_scan_wizard_form'}
+                        <field
+                            name="return_route"
+                            invisible="not requires_return_route"
+                            required="requires_return_route"
+                        />
+                    </group>
+                </group>
 
+                <group string="Return Route" invisible="scan_mode != 'return'">
+                    <group>
+                        <field name="return_route"/>
+                    </group>
+                </group>
 
-The above server error caused the following client error:
-RPC_ERROR: Odoo Server Error
-    RPC_ERROR
-        at makeErrorFromResponse (https://yfayed2006-turkish-elit.odoo.com/web/assets/5be4e18/web.assets_web.min.js:3198:165)
-        at XMLHttpRequest.<anonymous> (https://yfayed2006-turkish-elit.odoo.com/web/assets/5be4e18/web.assets_web.min.js:3205:13)
+                <group string="Last Scan Result" invisible="scan_mode != 'count'">
+                    <group>
+                        <field name="last_product_id" readonly="1"/>
+                        <field name="last_counted_qty" readonly="1"/>
+                    </group>
+                </group>
+
+                <group string="Last Return Result" invisible="scan_mode != 'return'">
+                    <group>
+                        <field name="last_product_id" readonly="1"/>
+                        <field name="last_return_qty" readonly="1"/>
+                        <field name="last_return_route" readonly="1"/>
+                    </group>
+                </group>
+
+                <footer>
+                    <button
+                        name="action_scan_and_add"
+                        type="object"
+                        string="Scan / Add"
+                        class="btn-primary"
+                    />
+                    <button
+                        name="action_done"
+                        type="object"
+                        string="Done"
+                        class="btn-secondary"
+                    />
+                    <button special="cancel" string="Cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>
