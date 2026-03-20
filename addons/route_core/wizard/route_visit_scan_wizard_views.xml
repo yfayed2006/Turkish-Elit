@@ -9,7 +9,12 @@
                 <group string="Active Lot" invisible="scan_mode != 'count'">
                     <group>
                         <field name="focus_target" invisible="1"/>
-                        <field name="lot_barcode" placeholder="Scan or type lot code here"/>
+
+                        <!-- show lot input only before selecting a lot -->
+                        <field name="lot_barcode"
+                               placeholder="Scan or type lot code here"
+                               invisible="active_lot_id"/>
+
                         <field name="active_lot_id" readonly="1"/>
                         <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
                     </group>
@@ -19,8 +24,17 @@
                         <field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
                     </group>
                     <group col="4">
-                        <button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary"/>
-                        <button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary"/>
+                        <button name="action_set_active_lot"
+                                type="object"
+                                string="Set Lot"
+                                class="btn-secondary"
+                                invisible="active_lot_id"/>
+
+                        <button name="action_clear_active_lot"
+                                type="object"
+                                string="Clear Lot"
+                                class="btn-secondary"
+                                invisible="not active_lot_id"/>
                     </group>
                 </group>
 
