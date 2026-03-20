@@ -77,6 +77,7 @@ class RouteVisitScanWizard(models.TransientModel):
         [
             ("vehicle", "To Vehicle"),
             ("near_expiry", "To Near Expiry Stock"),
+            ("damaged", "To Damaged Stock"),
         ],
         string="Return Route",
     )
@@ -121,6 +122,7 @@ class RouteVisitScanWizard(models.TransientModel):
         [
             ("vehicle", "To Vehicle"),
             ("near_expiry", "To Near Expiry Stock"),
+            ("damaged", "To Damaged Stock"),
         ],
         string="Last Return Route",
         readonly=True,
@@ -185,7 +187,6 @@ class RouteVisitScanWizard(models.TransientModel):
                 continue
 
             if rec.is_expired:
-                # لا نسمح إلا بالإرجاع، لكن لا نختار route تلقائيًا
                 rec.near_expiry_decision = "return"
                 rec.add_to_near_expiry_return = True
                 rec.return_route = False
@@ -205,7 +206,7 @@ class RouteVisitScanWizard(models.TransientModel):
             if rec.is_expired:
                 rec.near_expiry_decision = "return"
                 rec.add_to_near_expiry_return = True
-                return
+                continue
 
             if rec.near_expiry_decision == "return":
                 rec.add_to_near_expiry_return = True
@@ -304,7 +305,6 @@ class RouteVisitScanWizard(models.TransientModel):
         }
 
         if self.is_expired:
-            # للمنتهي الصلاحية: فقط Return + route إجباري
             if not self.return_route:
                 raise UserError(
                     _("This product is expired. You must choose the return route before continuing.")
@@ -331,7 +331,7 @@ class RouteVisitScanWizard(models.TransientModel):
             if self.near_expiry_decision == "return":
                 if not self.return_route:
                     raise UserError(
-                        _("Please choose where to return this product: To Vehicle or To Near Expiry Stock.")
+                        _("Please choose where to return this product: To Vehicle, To Near Expiry Stock, or To Damaged Stock.")
                     )
 
                 line_vals.update(
