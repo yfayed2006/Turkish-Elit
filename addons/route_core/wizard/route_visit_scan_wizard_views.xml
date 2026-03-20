@@ -6,72 +6,90 @@
         <field name="model">route.visit.scan.wizard</field>
         <field name="arch" type="xml">
             <form string="Scan Barcode">
-                <group>
+                <sheet>
                     <group>
-                        <field name="visit_id" readonly="1"/>
-                        <field name="scan_mode" readonly="1"/>
-                        <field name="barcode" placeholder="Type or paste barcode here"/>
-                        <field name="quantity"/>
-                        <field name="scanned_uom_id"/>
-                        <field name="expiry_date" invisible="scan_mode != 'count'"/>
+                        <group string="Scan Info">
+                            <field name="visit_id" readonly="1"/>
+                            <field name="scan_mode" readonly="1"/>
+                            <field name="barcode" placeholder="Scan or type barcode here"/>
+                            <field name="quantity"/>
+                            <field name="scanned_uom_id"/>
+                            <field name="expiry_date" invisible="scan_mode != 'count'"/>
+                        </group>
+
+                        <group string="Detected Product">
+                            <field name="detected_product_id" readonly="1"/>
+                            <field name="base_uom_id" readonly="1"/>
+                            <field name="detected_scan_type" readonly="1"/>
+                            <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
+                            <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+
+                            <field name="is_near_expiry" readonly="1" invisible="1"/>
+                            <field name="is_expired" readonly="1" invisible="1"/>
+                            <field name="requires_expiry_decision" readonly="1" invisible="1"/>
+                            <field name="requires_return_route" readonly="1" invisible="1"/>
+                            <field name="add_to_near_expiry_return" invisible="1"/>
+                        </group>
                     </group>
 
-                    <group>
-                        <field name="detected_product_id" readonly="1"/>
-                        <field name="base_uom_id" readonly="1"/>
-                        <field name="detected_scan_type" readonly="1"/>
-                        <field name="counted_increase" readonly="1" invisible="scan_mode != 'count'"/>
-                        <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+                    <group
+                        string="Expiry Decision"
+                        invisible="scan_mode != 'count' or not requires_expiry_decision"
+                    >
+                        <group>
+                            <field name="expiry_decision_help" readonly="1" nolabel="1"/>
 
-                        <field name="is_near_expiry" readonly="1" invisible="1"/>
-                        <field name="is_expired" readonly="1" invisible="1"/>
-                        <field name="requires_expiry_decision" readonly="1" invisible="1"/>
-                        <field name="requires_return_route" readonly="1" invisible="1"/>
-                        <field name="add_to_near_expiry_return" invisible="1"/>
+                            <separator string="Expired Product" invisible="not is_expired"/>
+
+                            <div invisible="not is_expired">
+                                <div class="o_form_label">Decision</div>
+                                <div class="mt-1 mb-2">
+                                    <strong>Return</strong>
+                                </div>
+                            </div>
+
+                            <separator string="Near Expiry Product" invisible="is_expired"/>
+
+                            <field
+                                name="near_expiry_decision"
+                                widget="radio"
+                                options="{'horizontal': true}"
+                                invisible="is_expired"
+                            />
+
+                            <field
+                                name="return_route"
+                                invisible="not requires_return_route"
+                                required="requires_return_route"
+                            />
+                        </group>
                     </group>
-                </group>
 
-                <group string="Expiry Decision" invisible="scan_mode != 'count' or not requires_expiry_decision">
-                    <group>
-                        <field name="expiry_decision_help" readonly="1" nolabel="1"/>
-
-                        <!-- Expired product: show fixed Return text only -->
-                        <div invisible="not is_expired">
-                            <span class="o_form_label">Expiry Decision</span>
-                            <div class="mt-1">Return</div>
-                        </div>
-
-                        <!-- Near expiry only -->
-                        <field name="near_expiry_decision" widget="radio" invisible="is_expired"/>
-
-                        <field
-                            name="return_route"
-                            invisible="not requires_return_route"
-                            required="requires_return_route"
-                        />
+                    <group string="Return Route" invisible="scan_mode != 'return'">
+                        <group>
+                            <field name="return_route"/>
+                        </group>
                     </group>
-                </group>
 
-                <group string="Return Route" invisible="scan_mode != 'return'">
-                    <group>
-                        <field name="return_route"/>
+                    <group string="Last Scan Result" invisible="scan_mode != 'count'">
+                        <group>
+                            <field name="last_product_id" readonly="1"/>
+                            <field name="last_counted_qty" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="last_return_qty" readonly="1"/>
+                            <field name="last_return_route" readonly="1"/>
+                        </group>
                     </group>
-                </group>
 
-                <group string="Last Scan Result" invisible="scan_mode != 'count'">
-                    <group>
-                        <field name="last_product_id" readonly="1"/>
-                        <field name="last_counted_qty" readonly="1"/>
+                    <group string="Last Return Result" invisible="scan_mode != 'return'">
+                        <group>
+                            <field name="last_product_id" readonly="1"/>
+                            <field name="last_return_qty" readonly="1"/>
+                            <field name="last_return_route" readonly="1"/>
+                        </group>
                     </group>
-                </group>
-
-                <group string="Last Return Result" invisible="scan_mode != 'return'">
-                    <group>
-                        <field name="last_product_id" readonly="1"/>
-                        <field name="last_return_qty" readonly="1"/>
-                        <field name="last_return_route" readonly="1"/>
-                    </group>
-                </group>
+                </sheet>
 
                 <footer>
                     <button
