@@ -81,7 +81,6 @@ class RouteVisitScanWizard(models.TransientModel):
     add_to_near_expiry_return = fields.Boolean(
         string="Add This Quantity to Near Expiry Return",
         default=False,
-        help="When enabled in Count mode, the counted quantity will also be added to return qty with route Near Expiry.",
     )
     return_route = fields.Selection(
         [
@@ -189,9 +188,7 @@ class RouteVisitScanWizard(models.TransientModel):
             reference_date = rec.visit_id.date or fields.Date.context_today(rec)
             delta_days = (rec.expiry_date - reference_date).days
             rec.expiry_days_left = delta_days
-            rec.is_near_expiry = (
-                delta_days <= (rec.visit_id.near_expiry_threshold_days or 0)
-            )
+            rec.is_near_expiry = delta_days <= (rec.visit_id.near_expiry_threshold_days or 0)
 
     @api.onchange("expiry_date")
     def _onchange_expiry_date_default_near_expiry(self):
@@ -230,15 +227,12 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.base_uom_id = product.uom_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
 
-            packaging = scan_info.get("packaging")
-            if packaging:
-                rec.detected_packaging_name = packaging.display_name
-
             suggested_uom = scan_info.get("default_scanned_uom") or product.uom_id
             suggested_qty = scan_info.get("default_scan_qty") or 1.0
 
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = True
+                rec.detected_packaging_name = "Box"
                 rec.quantity = suggested_qty
                 rec.scanned_uom_id = suggested_uom.id
             else:
@@ -267,9 +261,7 @@ class RouteVisitScanWizard(models.TransientModel):
             except UserError:
                 resolved_lot = False
 
-            rec.expiry_date = (
-                rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
-            )
+            rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
             rec.add_to_near_expiry_return = bool(rec.expiry_date and rec.is_near_expiry)
 
     def action_set_active_lot(self):
@@ -317,7 +309,7 @@ class RouteVisitScanWizard(models.TransientModel):
             return line
         return self.env["route.visit.line"].create({
             "visit_id": self.visit_id.id,
-            "company_id": self.visit_id.company_id.id,
+            "company_id": self.visit_id.company_id.id if "company_id" in self.visit_id._fields else self.env.company.id,
             "product_id": product.id,
             "unit_price": product.lst_price or 0.0,
         })
@@ -352,15 +344,11 @@ class RouteVisitScanWizard(models.TransientModel):
             line_vals["suggest_near_expiry_return"] = self.is_near_expiry
 
             if resolved_lot and self.active_lot_status == "expired":
-                line_vals["return_qty"] = (line.return_qty or 0.0) + (
-                    result["counted_increase"] or 0.0
-                )
+                line_vals["return_qty"] = (line.return_qty or 0.0) + (result["counted_increase"] or 0.0)
                 line_vals["return_route"] = "damaged"
                 line_vals["suggest_near_expiry_return"] = False
             elif self.add_to_near_expiry_return:
-                line_vals["return_qty"] = (line.return_qty or 0.0) + (
-                    result["counted_increase"] or 0.0
-                )
+                line_vals["return_qty"] = (line.return_qty or 0.0) + (result["counted_increase"] or 0.0)
                 line_vals["return_route"] = "near_expiry"
                 line_vals["suggest_near_expiry_return"] = False
 
@@ -410,14 +398,9 @@ class RouteVisitScanWizard(models.TransientModel):
                 qty_to_convert = scan_info.get("default_scan_qty") or 1.0
 
             try:
-                return_increase = scanned_uom._compute_quantity(
-                    qty_to_convert,
-                    product.uom_id,
-                )
+                return_increase = scanned_uom._compute_quantity(qty_to_convert, product.uom_id)
             except Exception:
-                raise UserError(
-                    _("Could not convert the entered quantity to the product base unit.")
-                )
+                raise UserError(_("Could not convert the entered quantity to the product base unit."))
 
             if return_increase <= 0:
                 raise UserError(_("Return quantity must be greater than zero."))
