@@ -74,21 +74,44 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     visit_net_due_amount = fields.Monetary(
         string="Net Due",
         currency_field="currency_id",
-        related="visit_id.net_due_amount",
+        compute="_compute_visit_amounts",
+        store=False,
         readonly=True,
     )
     visit_collected_amount = fields.Monetary(
         string="Collected",
         currency_field="currency_id",
-        related="visit_id.collected_amount",
+        compute="_compute_visit_amounts",
+        store=False,
         readonly=True,
     )
     visit_remaining_due = fields.Monetary(
         string="Remaining Due",
         currency_field="currency_id",
-        related="visit_id.remaining_due_amount",
+        compute="_compute_visit_amounts",
+        store=False,
         readonly=True,
     )
+
+    @api.depends("visit_id")
+    def _compute_visit_amounts(self):
+        for rec in self:
+            visit = rec.visit_id
+            rec.visit_net_due_amount = (
+                visit.net_due_amount
+                if visit and "net_due_amount" in visit._fields
+                else 0.0
+            )
+            rec.visit_collected_amount = (
+                visit.collected_amount
+                if visit and "collected_amount" in visit._fields
+                else 0.0
+            )
+            rec.visit_remaining_due = (
+                visit.remaining_due_amount
+                if visit and "remaining_due_amount" in visit._fields
+                else 0.0
+            )
 
     @api.model
     def default_get(self, fields_list):
@@ -103,13 +126,18 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             if "collection_type" in fields_list:
                 vals.setdefault("collection_type", "full")
             if "amount" in fields_list:
-                vals["amount"] = max(visit.remaining_due_amount or 0.0, 0.0)
+                remaining_due = (
+                    visit.remaining_due_amount
+                    if "remaining_due_amount" in visit._fields
+                    else 0.0
+                )
+                vals["amount"] = max(remaining_due or 0.0, 0.0)
         return vals
 
     @api.onchange("collection_type", "visit_id")
     def _onchange_collection_type(self):
         for rec in self:
-            due = max(rec.visit_id.remaining_due_amount or 0.0, 0.0)
+            due = rec.visit_remaining_due or 0.0
 
             if rec.collection_type == "full":
                 rec.amount = due
@@ -142,7 +170,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
     def _validate_before_create(self):
         self.ensure_one()
-        due = self.visit_id.remaining_due_amount or 0.0
+        due = self.visit_remaining_due or 0.0
 
         if self.amount < 0:
             raise ValidationError(_("Payment amount cannot be negative."))
