@@ -22,6 +22,22 @@ class RouteVisit(models.Model):
         default=fields.Date.context_today,
         tracking=True,
     )
+
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        default=lambda self: self.env.company,
+        required=True,
+        tracking=True,
+    )
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Currency",
+        related="company_id.currency_id",
+        store=False,
+        readonly=True,
+    )
+
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
@@ -57,7 +73,6 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
-
     destination_location_id = fields.Many2one(
         "stock.location",
         string="Destination Location",
@@ -77,7 +92,6 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
-
     no_sale_reason = fields.Text(
         string="Reason for Ending Without Sale",
         readonly=True,
@@ -142,11 +156,29 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Visit Lines",
     )
-
     payment_ids = fields.One2many(
         "route.visit.payment",
         "visit_id",
         string="Payments",
+    )
+
+    net_due_amount = fields.Monetary(
+        string="Net Due Amount",
+        currency_field="currency_id",
+        compute="_compute_payment_totals",
+        store=False,
+    )
+    collected_amount = fields.Monetary(
+        string="Collected Amount",
+        currency_field="currency_id",
+        compute="_compute_payment_totals",
+        store=False,
+    )
+    remaining_due_amount = fields.Monetary(
+        string="Remaining Due Amount",
+        currency_field="currency_id",
+        compute="_compute_payment_totals",
+        store=False,
     )
 
     has_returns = fields.Boolean(
@@ -155,28 +187,24 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
-
     returns_step_done = fields.Boolean(
         string="Returns Step Done",
         default=False,
         tracking=True,
         copy=False,
     )
-
     has_refill = fields.Boolean(
         string="Has Refill",
         default=False,
         tracking=True,
         copy=False,
     )
-
     has_pending_refill = fields.Boolean(
         string="Has Pending Refill",
         default=False,
         tracking=True,
         copy=False,
     )
-
     no_refill = fields.Boolean(
         string="No Refill",
         default=False,
@@ -189,19 +217,16 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
-
     refill_backorder_id = fields.Many2one(
         "route.refill.backorder",
         string="Refill Backorder",
         copy=False,
     )
-
     refill_picking_id = fields.Many2one(
         "stock.picking",
         string="Refill Transfer",
         copy=False,
     )
-
     refill_picking_count = fields.Integer(
         string="Refill Transfer Count",
         compute="_compute_refill_picking_count",
@@ -213,7 +238,6 @@ class RouteVisit(models.Model):
         "route_visit_id",
         string="Return Transfers",
     )
-
     return_picking_count = fields.Integer(
         string="Return Transfer Count",
         compute="_compute_return_picking_count",
@@ -240,6 +264,21 @@ class RouteVisit(models.Model):
     def _compute_sale_order_count(self):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
+
+    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount")
+    def _compute_payment_totals(self):
+        for rec in self:
+            total_sales = 0.0
+            for line in rec.line_ids:
+                sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
+                unit_price = getattr(line, "unit_price", 0.0) or 0.0
+                total_sales += sold_qty * unit_price
+
+            total_collected = sum(rec.payment_ids.mapped("amount")) if rec.payment_ids else 0.0
+
+            rec.net_due_amount = total_sales
+            rec.collected_amount = total_collected
+            rec.remaining_due_amount = max((total_sales or 0.0) - (total_collected or 0.0), 0.0)
 
     def _compute_refill_picking_count(self):
         for rec in self:
@@ -283,9 +322,9 @@ class RouteVisit(models.Model):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.partner_id:
                     rec.partner_id = rec.outlet_id.partner_id
-                if "stock_location_id" in rec.vehicle_id._fields and rec.vehicle_id.stock_location_id:
+                if hasattr(rec.vehicle_id, "stock_location_id") and rec.vehicle_id.stock_location_id:
                     rec.source_location_id = rec.vehicle_id.stock_location_id
-                if "stock_location_id" in rec.outlet_id._fields and rec.outlet_id.stock_location_id:
+                if hasattr(rec.outlet_id, "stock_location_id") and rec.outlet_id.stock_location_id:
                     rec.destination_location_id = rec.outlet_id.stock_location_id
 
                 if "commission_rate" in rec._fields:
@@ -294,7 +333,7 @@ class RouteVisit(models.Model):
     @api.onchange("vehicle_id")
     def _onchange_vehicle_id_set_source_location(self):
         for rec in self:
-            if rec.vehicle_id and "stock_location_id" in rec.vehicle_id._fields:
+            if rec.vehicle_id and hasattr(rec.vehicle_id, "stock_location_id"):
                 rec.source_location_id = rec.vehicle_id.stock_location_id
 
     def _sync_plan_line_state(self):
@@ -355,7 +394,7 @@ class RouteVisit(models.Model):
                         vals["area_id"] = outlet.area_id.id
                     if not vals.get("partner_id") and outlet.partner_id:
                         vals["partner_id"] = outlet.partner_id.id
-                    if not vals.get("destination_location_id") and "stock_location_id" in outlet._fields and outlet.stock_location_id:
+                    if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                         vals["destination_location_id"] = outlet.stock_location_id.id
 
                     if "commission_rate" in self._fields and not vals.get("commission_rate"):
@@ -364,7 +403,7 @@ class RouteVisit(models.Model):
             if vehicle_id:
                 vehicle = self.env["route.vehicle"].browse(vehicle_id)
                 if vehicle.exists():
-                    if not vals.get("source_location_id") and "stock_location_id" in vehicle._fields and vehicle.stock_location_id:
+                    if not vals.get("source_location_id") and hasattr(vehicle, "stock_location_id") and vehicle.stock_location_id:
                         vals["source_location_id"] = vehicle.stock_location_id.id
 
             vals.setdefault("visit_process_state", "draft")
@@ -418,7 +457,7 @@ class RouteVisit(models.Model):
                     vals["area_id"] = outlet.area_id.id
                 if not vals.get("partner_id") and outlet.partner_id:
                     vals["partner_id"] = outlet.partner_id.id
-                if not vals.get("destination_location_id") and "stock_location_id" in outlet._fields and outlet.stock_location_id:
+                if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                     vals["destination_location_id"] = outlet.stock_location_id.id
 
                 if "commission_rate" in self._fields and not vals.get("commission_rate"):
@@ -427,7 +466,7 @@ class RouteVisit(models.Model):
         if vals.get("vehicle_id"):
             vehicle = self.env["route.vehicle"].browse(vals["vehicle_id"])
             if vehicle.exists():
-                if not vals.get("source_location_id") and "stock_location_id" in vehicle._fields and vehicle.stock_location_id:
+                if not vals.get("source_location_id") and hasattr(vehicle, "stock_location_id") and vehicle.stock_location_id:
                     vals["source_location_id"] = vehicle.stock_location_id.id
 
         result = super().write(vals)
@@ -455,8 +494,8 @@ class RouteVisit(models.Model):
                 "has_refill": False,
                 "has_pending_refill": False,
                 "no_refill": False,
-                "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and rec.vehicle_id.stock_location_id else False,
-                "destination_location_id": rec.outlet_id.stock_location_id.id if rec.outlet_id and rec.outlet_id.stock_location_id else False,
+                "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and getattr(rec.vehicle_id, "stock_location_id", False) else False,
+                "destination_location_id": rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False,
             })
 
     def _prepare_sale_order_line_vals(self):
