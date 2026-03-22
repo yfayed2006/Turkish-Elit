@@ -89,6 +89,12 @@ class RouteVisit(models.Model):
         compute="_compute_sale_order_count",
     )
 
+    line_ids = fields.One2many(
+        "route.visit.line",
+        "visit_id",
+        string="Visit Lines",
+    )
+
     near_expiry_line_count = fields.Integer(
         string="Near Expiry Lines",
         compute="_compute_near_expiry_status",
@@ -126,10 +132,6 @@ class RouteVisit(models.Model):
             rec.has_pending_near_expiry = bool(pending_lines)
 
     def _get_outlet_commission_rate_value(self, outlet):
-        """Support both field names:
-        - commission_rate
-        - default_commission_rate
-        """
         if not outlet:
             return 0.0
 
