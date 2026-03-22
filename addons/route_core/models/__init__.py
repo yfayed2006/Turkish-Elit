@@ -28,3 +28,4 @@ from . import res_company_route_return_ext
 from . import route_visit_returns_ext
 from . import route_visit_refill_transfer_ext
 from . import route_visit_workflow_ux
+from . import route_product_barcode
