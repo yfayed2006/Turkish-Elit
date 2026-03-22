@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- route_visit_views.xml: forced real diff for Git/Odoo.sh build refresh -->
+    <!-- route_visit_views.xml: cleaned to avoid missing datetime fields on route.visit -->
 
     <record id="view_route_visit_tree" model="ir.ui.view">
         <field name="name">route.visit.tree</field>
@@ -170,7 +170,6 @@
                         class="btn-success"
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
-                    <!-- safe marker: cancel action updated and kept on action_cancel -->
                     <button
                         name="action_cancel"
                         string="Cancel Process"
@@ -569,7 +568,6 @@
                         class="btn-success"
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
-                    <!-- safe marker: pda cancel action updated and kept on action_cancel -->
                     <button
                         name="action_cancel"
                         string="Cancel Process"
