@@ -67,6 +67,20 @@ class RouteVisit(models.Model):
         required=True,
         tracking=True,
     )
+    visit_process_state = fields.Selection(
+        [
+            ("draft", "Draft"),
+            ("checked_in", "Checked In"),
+            ("counting", "Counting"),
+            ("reconciled", "Reconciled"),
+            ("done", "Done"),
+            ("cancel", "Cancelled"),
+        ],
+        string="Visit Process State",
+        default="draft",
+        tracking=True,
+        copy=False,
+    )
     start_datetime = fields.Datetime(
         string="Start DateTime",
         readonly=True,
@@ -214,6 +228,8 @@ class RouteVisit(models.Model):
                     if "commission_rate" in self._fields and not vals.get("commission_rate"):
                         vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
+            vals.setdefault("visit_process_state", "draft")
+
         records = super().create(vals_list)
         records._sync_plan_line_state()
         return records
@@ -276,6 +292,7 @@ class RouteVisit(models.Model):
 
             rec.write({
                 "state": "in_progress",
+                "visit_process_state": "checked_in",
                 "start_datetime": fields.Datetime.now(),
                 "end_datetime": False,
                 "no_sale_reason": False,
@@ -389,6 +406,7 @@ class RouteVisit(models.Model):
         if self.sale_order_id:
             self.with_context(route_visit_force_write=True).write({
                 "state": "done",
+                "visit_process_state": "done",
                 "end_datetime": fields.Datetime.now(),
             })
             return True
@@ -408,12 +426,16 @@ class RouteVisit(models.Model):
         for rec in self:
             if rec.state == "done":
                 raise UserError(_("You cannot cancel a completed visit."))
-            rec.with_context(route_visit_force_write=True).write({"state": "cancel"})
+            rec.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+            })
 
     def action_reset_to_draft(self):
         for rec in self:
             rec.with_context(route_visit_force_write=True).write({
                 "state": "draft",
+                "visit_process_state": "draft",
                 "start_datetime": False,
                 "end_datetime": False,
                 "sale_order_id": False,
