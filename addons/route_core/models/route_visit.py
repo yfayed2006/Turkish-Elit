@@ -54,6 +54,7 @@ class RouteVisit(models.Model):
     collection_skip_reason = fields.Text(
         string="Collection Skip Reason",
         tracking=True,
+        copy=False,
     )
 
     no_sale_reason = fields.Text(
@@ -81,6 +82,8 @@ class RouteVisit(models.Model):
             ("checked_in", "Checked In"),
             ("counting", "Counting"),
             ("reconciled", "Reconciled"),
+            ("collection_done", "Collection Done"),
+            ("ready_to_close", "Ready To Close"),
             ("done", "Done"),
             ("cancel", "Cancelled"),
         ],
@@ -132,6 +135,13 @@ class RouteVisit(models.Model):
         copy=False,
     )
 
+    returns_step_done = fields.Boolean(
+        string="Returns Step Done",
+        default=False,
+        tracking=True,
+        copy=False,
+    )
+
     has_refill = fields.Boolean(
         string="Has Refill",
         default=False,
@@ -151,6 +161,42 @@ class RouteVisit(models.Model):
         default=False,
         tracking=True,
         copy=False,
+    )
+
+    refill_datetime = fields.Datetime(
+        string="Refill Datetime",
+        tracking=True,
+        copy=False,
+    )
+
+    refill_backorder_id = fields.Many2one(
+        "route.refill.backorder",
+        string="Refill Backorder",
+        copy=False,
+    )
+
+    refill_picking_id = fields.Many2one(
+        "stock.picking",
+        string="Refill Transfer",
+        copy=False,
+    )
+
+    refill_picking_count = fields.Integer(
+        string="Refill Transfer Count",
+        compute="_compute_refill_picking_count",
+        store=False,
+    )
+
+    return_picking_ids = fields.One2many(
+        "stock.picking",
+        "route_visit_id",
+        string="Return Transfers",
+    )
+
+    return_picking_count = fields.Integer(
+        string="Return Transfer Count",
+        compute="_compute_return_picking_count",
+        store=False,
     )
 
     near_expiry_line_count = fields.Integer(
@@ -173,6 +219,14 @@ class RouteVisit(models.Model):
     def _compute_sale_order_count(self):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
+
+    def _compute_refill_picking_count(self):
+        for rec in self:
+            rec.refill_picking_count = 1 if rec.refill_picking_id else 0
+
+    def _compute_return_picking_count(self):
+        for rec in self:
+            rec.return_picking_count = len(rec.return_picking_ids)
 
     @api.depends(
         "line_ids.is_near_expiry",
@@ -274,6 +328,7 @@ class RouteVisit(models.Model):
 
             vals.setdefault("visit_process_state", "draft")
             vals.setdefault("has_returns", False)
+            vals.setdefault("returns_step_done", False)
             vals.setdefault("has_refill", False)
             vals.setdefault("has_pending_refill", False)
             vals.setdefault("no_refill", False)
@@ -346,6 +401,7 @@ class RouteVisit(models.Model):
                 "no_sale_reason": False,
                 "collection_skip_reason": False,
                 "has_returns": False,
+                "returns_step_done": False,
                 "has_refill": False,
                 "has_pending_refill": False,
                 "no_refill": False,
@@ -495,7 +551,11 @@ class RouteVisit(models.Model):
                 "no_sale_reason": False,
                 "collection_skip_reason": False,
                 "has_returns": False,
+                "returns_step_done": False,
                 "has_refill": False,
                 "has_pending_refill": False,
                 "no_refill": False,
+                "refill_datetime": False,
+                "refill_backorder_id": False,
+                "refill_picking_id": False,
             })
