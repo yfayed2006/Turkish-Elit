@@ -51,6 +51,13 @@ class RouteVisit(models.Model):
     )
     notes = fields.Text(string="Notes")
 
+    near_expiry_threshold_days = fields.Integer(
+        string="Near Expiry Threshold Days",
+        default=60,
+        tracking=True,
+        help="If expiry is within this number of days, the line is treated as near expiry.",
+    )
+
     collection_skip_reason = fields.Text(
         string="Collection Skip Reason",
         tracking=True,
@@ -327,6 +334,7 @@ class RouteVisit(models.Model):
                         vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
             vals.setdefault("visit_process_state", "draft")
+            vals.setdefault("near_expiry_threshold_days", 60)
             vals.setdefault("has_returns", False)
             vals.setdefault("returns_step_done", False)
             vals.setdefault("has_refill", False)
