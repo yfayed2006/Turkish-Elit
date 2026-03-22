@@ -1,815 +1,492 @@
-from odoo import api, fields, models
+from odoo import fields, models, _
 from odoo.exceptions import UserError
 
 
 class RouteVisit(models.Model):
     _inherit = "route.visit"
 
-    company_id = fields.Many2one(
-        "res.company",
-        string="Company",
-        default=lambda self: self.env.company,
-        required=True,
+    scan_barcode_input = fields.Char(
+        string="Scan Barcode",
+        copy=False,
     )
-
-    currency_id = fields.Many2one(
-        "res.currency",
-        string="Currency",
-        related="company_id.currency_id",
-        store=True,
-        readonly=True,
-    )
-
-    source_location_id = fields.Many2one(
-        "stock.location",
-        string="Source Location",
-        domain="[('usage', '=', 'internal')]",
-    )
-
-    refill_backorder_id = fields.Many2one(
-        "route.refill.backorder",
-        string="Pending Refill",
+    last_scanned_barcode = fields.Char(
+        string="Last Scanned Barcode",
         readonly=True,
         copy=False,
     )
 
-    return_picking_ids = fields.Many2many(
-        "stock.picking",
-        "route_visit_return_picking_rel",
-        "visit_id",
-        "picking_id",
-        string="Return Transfers",
-        copy=False,
-        readonly=True,
-    )
-
-    return_picking_count = fields.Integer(
-        string="Return Transfer Count",
-        compute="_compute_return_picking_count",
-    )
-
-    check_in_datetime = fields.Datetime(string="Check In")
-    count_start_datetime = fields.Datetime(string="Count Start")
-    count_end_datetime = fields.Datetime(string="Count End")
-    reconciliation_datetime = fields.Datetime(string="Reconciliation Time")
-    collection_datetime = fields.Datetime(string="Collection Time")
-    refill_datetime = fields.Datetime(string="Refill Time")
-    check_out_datetime = fields.Datetime(string="Check Out")
-
-    commission_rate = fields.Float(string="Commission %", default=20.0)
-    notes = fields.Text(string="Notes")
-    collection_skip_reason = fields.Text(string="Collection Skip Reason")
-    no_refill = fields.Boolean(string="No Refill")
-    no_refill_reason = fields.Text(string="No Refill Reason")
-    cancel_reason = fields.Text(string="Cancel Reason")
-    near_expiry_threshold_days = fields.Integer(
-        string="Near Expiry Threshold (Days)",
-        default=60,
-        help="Products with expiry dates within this number of days will be flagged as near expiry during the visit.",
-    )
-
-    line_ids = fields.One2many(
-        "route.visit.line",
-        "visit_id",
-        string="Visit Lines",
-    )
-
-    payment_ids = fields.One2many(
-        "route.visit.payment",
-        "visit_id",
-        string="Payments",
-    )
-
-    previous_total_qty = fields.Float(
-        string="Previous Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    counted_total_qty = fields.Float(
-        string="Counted Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    returned_total_qty = fields.Float(
-        string="Returned Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    sold_total_qty = fields.Float(
-        string="Sold Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    supplied_total_qty = fields.Float(
-        string="Supplied Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    new_balance_total_qty = fields.Float(
-        string="New Balance Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    pending_refill_total_qty = fields.Float(
-        string="Pending Refill Total Qty",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-
-    previous_stock_value = fields.Monetary(
-        string="Previous Stock Value",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    counted_stock_value = fields.Monetary(
-        string="Counted Stock Value",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    gross_sales_amount = fields.Monetary(
-        string="Gross Sales Amount",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    return_amount = fields.Monetary(
-        string="Return Amount",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    commission_amount = fields.Monetary(
-        string="Commission Amount",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    net_due_amount = fields.Monetary(
-        string="Net Due Amount",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    collected_amount = fields.Monetary(
-        string="Collected Amount",
-        currency_field="currency_id",
-        compute="_compute_payment_totals",
-        store=True,
-    )
-    remaining_due_amount = fields.Monetary(
-        string="Remaining Due Amount",
-        currency_field="currency_id",
-        compute="_compute_payment_totals",
-        store=True,
-    )
-    supplied_value = fields.Monetary(
-        string="Supplied Value",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-    new_balance_value = fields.Monetary(
-        string="New Balance Value",
-        currency_field="currency_id",
-        compute="_compute_visit_totals",
-        store=True,
-    )
-
-    has_collection = fields.Boolean(
-        string="Has Collection",
-        compute="_compute_flags",
-        store=True,
-    )
-    has_returns = fields.Boolean(
-        string="Has Returns",
-        compute="_compute_flags",
-        store=True,
-    )
-    has_refill = fields.Boolean(
-        string="Has Refill",
-        compute="_compute_flags",
-        store=True,
-    )
-    has_pending_refill = fields.Boolean(
-        string="Has Pending Refill",
-        compute="_compute_flags",
-        store=True,
-    )
-    is_ready_to_close = fields.Boolean(
-        string="Ready To Close",
-        compute="_compute_flags",
-        store=True,
-    )
-
-    visit_process_state = fields.Selection(
-        [
-            ("pending", "Pending"),
-            ("checked_in", "Checked In"),
-            ("counting", "Counting"),
-            ("reconciled", "Reconciled"),
-            ("collection_done", "Collection Done"),
-            ("refill_done", "Refill Done"),
-            ("ready_to_close", "Ready To Close"),
-            ("done", "Done"),
-            ("cancelled", "Cancelled"),
-        ],
-        string="Visit Process State",
-        default="pending",
-        tracking=True,
-    )
-
-    @api.depends("return_picking_ids")
-    def _compute_return_picking_count(self):
-        for rec in self:
-            rec.return_picking_count = len(rec.return_picking_ids)
-
-    def _get_outlet_default_commission_rate(self):
+    def _get_scan_source_location(self):
         self.ensure_one()
-        if not self.outlet_id:
-            return 0.0
-        if hasattr(self.outlet_id, "default_commission_rate"):
-            return self.outlet_id.default_commission_rate or 0.0
-        if hasattr(self.outlet_id, "commission_rate"):
-            return self.outlet_id.commission_rate or 0.0
-        return 0.0
+        return self.source_location_id or self.vehicle_id.stock_location_id
 
-    @api.onchange("outlet_id")
-    def _onchange_outlet_id_set_defaults(self):
-        for rec in self:
-            if rec.outlet_id:
-                rec.commission_rate = rec._get_outlet_default_commission_rate()
-                if hasattr(rec.outlet_id, "partner_id") and rec.outlet_id.partner_id:
-                    rec.partner_id = rec.outlet_id.partner_id.commercial_partner_id
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get("outlet_id"):
-                outlet = self.env["route.outlet"].browse(vals["outlet_id"])
-                if outlet.exists():
-                    if not vals.get("partner_id") and hasattr(outlet, "partner_id") and outlet.partner_id:
-                        vals["partner_id"] = outlet.partner_id.commercial_partner_id.id
-
-                    if not vals.get("commission_rate"):
-                        if hasattr(outlet, "default_commission_rate"):
-                            vals["commission_rate"] = outlet.default_commission_rate or 0.0
-                        elif hasattr(outlet, "commission_rate"):
-                            vals["commission_rate"] = outlet.commission_rate or 0.0
-
-        return super().create(vals_list)
-
-    @api.depends(
-        "line_ids.previous_qty",
-        "line_ids.counted_qty",
-        "line_ids.return_qty",
-        "line_ids.sold_qty",
-        "line_ids.supplied_qty",
-        "line_ids.new_balance_qty",
-        "line_ids.pending_refill_qty",
-        "line_ids.previous_value",
-        "line_ids.counted_value",
-        "line_ids.sold_amount",
-        "line_ids.return_amount",
-        "line_ids.supply_value",
-        "line_ids.new_balance_value",
-        "commission_rate",
-    )
-    def _compute_visit_totals(self):
-        for rec in self:
-            rec.previous_total_qty = sum(rec.line_ids.mapped("previous_qty"))
-            rec.counted_total_qty = sum(rec.line_ids.mapped("counted_qty"))
-            rec.returned_total_qty = sum(rec.line_ids.mapped("return_qty"))
-            rec.sold_total_qty = sum(rec.line_ids.mapped("sold_qty"))
-            rec.supplied_total_qty = sum(rec.line_ids.mapped("supplied_qty"))
-            rec.new_balance_total_qty = sum(rec.line_ids.mapped("new_balance_qty"))
-            rec.pending_refill_total_qty = sum(rec.line_ids.mapped("pending_refill_qty"))
-
-            rec.previous_stock_value = sum(rec.line_ids.mapped("previous_value"))
-            rec.counted_stock_value = sum(rec.line_ids.mapped("counted_value"))
-            rec.gross_sales_amount = sum(rec.line_ids.mapped("sold_amount"))
-            rec.return_amount = sum(rec.line_ids.mapped("return_amount"))
-            rec.supplied_value = sum(rec.line_ids.mapped("supply_value"))
-            rec.new_balance_value = sum(rec.line_ids.mapped("new_balance_value"))
-
-            rec.commission_amount = rec.gross_sales_amount * (rec.commission_rate / 100.0)
-            rec.net_due_amount = rec.gross_sales_amount - rec.commission_amount
-
-    @api.depends("payment_ids.amount", "payment_ids.state", "net_due_amount")
-    def _compute_payment_totals(self):
-        for rec in self:
-            confirmed = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
-            rec.collected_amount = sum(confirmed.mapped("amount"))
-            rec.remaining_due_amount = rec.net_due_amount - rec.collected_amount
-
-    @api.depends(
-        "payment_ids",
-        "payment_ids.state",
-        "line_ids.return_qty",
-        "line_ids.supplied_qty",
-        "line_ids.pending_refill_qty",
-        "visit_process_state",
-        "collection_skip_reason",
-        "refill_datetime",
-        "return_picking_ids",
-    )
-    def _compute_flags(self):
-        for rec in self:
-            rec.has_collection = any(p.state == "confirmed" for p in rec.payment_ids)
-            rec.has_returns = any(qty > 0 for qty in rec.line_ids.mapped("return_qty"))
-            rec.has_refill = any(qty > 0 for qty in rec.line_ids.mapped("supplied_qty"))
-            rec.has_pending_refill = any(qty > 0 for qty in rec.line_ids.mapped("pending_refill_qty"))
-            rec.is_ready_to_close = bool(rec.line_ids) and bool(rec.refill_datetime) and (
-                rec.has_collection or bool(rec.collection_skip_reason)
-            )
-
-    def action_view_pending_refill(self):
+    def _get_lot_expiry_date(self, lot):
         self.ensure_one()
+        if not lot:
+            return False
+        for field_name in ("expiration_date", "life_date", "use_date"):
+            if field_name in lot._fields and lot[field_name]:
+                return fields.Date.to_date(lot[field_name])
+        return False
 
-        if not self.refill_backorder_id and self.has_pending_refill:
-            self._create_pending_refill_backorder()
-
-        if not self.refill_backorder_id:
-            raise UserError("There is no pending refill linked to this visit.")
-
-        action = self.env.ref("route_core.action_route_refill_backorder").read()[0]
-        action["res_id"] = self.refill_backorder_id.id
-        action["views"] = [(False, "form")]
-        return action
-
-    def action_view_return_transfers(self):
+    def _find_available_lot_from_code(self, lot_code):
         self.ensure_one()
+        lot_code = (lot_code or "").strip()
+        if not lot_code:
+            raise UserError(_("Please scan or enter a lot/serial code first."))
 
-        if not self.return_picking_ids:
-            raise UserError("There are no return transfers linked to this visit.")
+        source_location = self._get_scan_source_location()
+        if not source_location:
+            raise UserError(_("No source location is available for this visit."))
 
-        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        Lot = self.env["stock.lot"]
+        Quant = self.env["stock.quant"]
 
-        if len(self.return_picking_ids) == 1:
-            action["views"] = [(False, "form")]
-            action["res_id"] = self.return_picking_ids.id
-        else:
-            action["domain"] = [("id", "in", self.return_picking_ids.ids)]
+        lot = Lot.search([("name", "=", lot_code)], limit=1)
+        if not lot:
+            raise UserError(_("No lot/serial was found with code '%s'.") % lot_code)
 
-        return action
-
-    def _set_main_visit_state_in_progress(self):
-        for rec in self:
-            vals = {}
-            if rec.state != "in_progress":
-                vals["state"] = "in_progress"
-            if not rec.start_datetime:
-                vals["start_datetime"] = fields.Datetime.now()
-            if vals:
-                rec.with_context(route_visit_force_write=True).write(vals)
-
-    def _set_main_visit_state_done(self):
-        for rec in self:
-            vals = {
-                "state": "done",
-                "end_datetime": fields.Datetime.now(),
-            }
-            rec.with_context(route_visit_force_write=True).write(vals)
-
-    def _set_main_visit_state_cancel(self):
-        for rec in self:
-            vals = {
-                "state": "cancel",
-                "end_datetime": fields.Datetime.now(),
-            }
-            rec.with_context(route_visit_force_write=True).write(vals)
-
-    def _get_available_qty_in_source_location(self, product):
-        self.ensure_one()
-        if not self.source_location_id:
-            return 0.0
-
-        quants = self.env["stock.quant"].search([
-            ("location_id", "child_of", self.source_location_id.id),
-            ("product_id", "=", product.id),
-        ])
-        return sum(quants.mapped("quantity"))
-
-    def _get_return_source_location(self):
-        self.ensure_one()
-
-        if not self.outlet_id or not getattr(self.outlet_id, "stock_location_id", False):
-            raise UserError("The selected outlet does not have a stock location for return transfer source.")
-
-        return self.outlet_id.stock_location_id
-
-    def _get_return_destination_location(self, return_route):
-        self.ensure_one()
-
-        if return_route == "vehicle":
-            if not self.vehicle_id or not self.vehicle_id.stock_location_id:
-                raise UserError(
-                    "The selected vehicle does not have a stock location for return transfer destination."
-                )
-            return self.vehicle_id.stock_location_id
-
-        if return_route == "damaged":
-            if not self.company_id.return_damaged_location_id:
-                raise UserError("Return Damaged Location is not configured on the company.")
-            return self.company_id.return_damaged_location_id
-
-        if return_route == "near_expiry":
-            if not self.company_id.return_near_expiry_location_id:
-                raise UserError("Return Near Expiry Location is not configured on the company.")
-            return self.company_id.return_near_expiry_location_id
-
-        raise UserError("Invalid return route.")
-
-    def _get_internal_picking_type(self):
-        self.ensure_one()
-
-        warehouse = self.env["stock.warehouse"].search(
-            [("company_id", "=", self.company_id.id)],
-            limit=1,
-        )
-        if warehouse and warehouse.int_type_id:
-            return warehouse.int_type_id
-
-        picking_type = self.env["stock.picking.type"].search(
+        quant = Quant.search(
             [
-                ("code", "=", "internal"),
-                ("warehouse_id.company_id", "=", self.company_id.id),
+                ("location_id", "child_of", source_location.id),
+                ("lot_id", "=", lot.id),
+                ("quantity", ">", 0),
             ],
             limit=1,
         )
-        if picking_type:
-            return picking_type
-
-        raise UserError("No Internal Transfer operation type was found for this company.")
-
-    def _get_return_lines_grouped_by_route(self):
-        self.ensure_one()
-
-        grouped = {}
-        return_lines = self.line_ids.filtered(lambda l: (l.return_qty or 0.0) > 0)
-
-        for line in return_lines:
-            route = line.return_route or "vehicle"
-            grouped.setdefault(route, self.env["route.visit.line"])
-            grouped[route] |= line
-
-        return grouped
-
-    def _create_return_transfer_for_route(self, return_route, lines):
-        self.ensure_one()
-
-        if not lines:
-            return False
-
-        source_location = self._get_return_source_location()
-        dest_location = self._get_return_destination_location(return_route)
-        picking_type = self._get_internal_picking_type()
-
-        route_label_map = {
-            "vehicle": "Vehicle Return",
-            "damaged": "Damaged Return",
-            "near_expiry": "Near Expiry Return",
-        }
-        route_label = route_label_map.get(return_route, "Return")
-
-        picking = self.env["stock.picking"].create({
-            "picking_type_id": picking_type.id,
-            "location_id": source_location.id,
-            "location_dest_id": dest_location.id,
-            "origin": f"{self.name} - {route_label}",
-            "move_type": "direct",
-            "route_visit_id": self.id,
-        })
-
-        created_moves = self.env["stock.move"]
-
-        for line in lines:
-            if not line.product_id or (line.return_qty or 0.0) <= 0:
-                continue
-
-            move = self.env["stock.move"].create({
-                "product_id": line.product_id.id,
-                "product_uom_qty": line.return_qty,
-                "product_uom": line.uom_id.id,
-                "picking_id": picking.id,
-                "location_id": source_location.id,
-                "location_dest_id": dest_location.id,
-                "company_id": self.company_id.id,
-                "origin": f"{self.name} - {route_label}",
-            })
-            created_moves |= move
-
-        if not created_moves:
-            picking.unlink()
-            return False
-
-        picking.action_confirm()
-        picking.action_assign()
-        return picking
-
-    def action_confirm_return_transfers(self):
-        for rec in self:
-            if rec.visit_process_state != "reconciled":
-                raise UserError("Return transfers can only be confirmed when the visit is in Reconciled state.")
-
-            if rec.return_picking_ids:
-                raise UserError("Return transfers have already been created for this visit.")
-
-            return_lines = rec.line_ids.filtered(lambda l: (l.return_qty or 0.0) > 0)
-            if not return_lines:
-                raise UserError("There are no returned quantities on this visit.")
-
-            grouped_lines = rec._get_return_lines_grouped_by_route()
-            created_pickings = self.env["stock.picking"]
-
-            for return_route, lines in grouped_lines.items():
-                picking = rec._create_return_transfer_for_route(return_route, lines)
-                if picking:
-                    created_pickings |= picking
-
-            if not created_pickings:
-                raise UserError("No return transfers were created from the current visit lines.")
-
-            rec.return_picking_ids = [(6, 0, created_pickings.ids)]
-            rec._set_main_visit_state_in_progress()
-
-        return True
-
-    def _create_pending_refill_backorder(self):
-        self.ensure_one()
-
-        pending_lines = self.line_ids.filtered(lambda l: l.pending_refill_qty > 0)
-        if not pending_lines:
-            return False
-
-        if self.refill_backorder_id:
-            return self.refill_backorder_id
-
-        partner = self.partner_id
-        if not partner and self.outlet_id and hasattr(self.outlet_id, "partner_id"):
-            partner = self.outlet_id.partner_id
-        if partner and hasattr(partner, "commercial_partner_id"):
-            partner = partner.commercial_partner_id
-
-        if not partner:
+        if not quant:
             raise UserError(
-                "Cannot create Pending Refill because Customer is empty on this visit.\n"
-                "Please set a customer on the visit or ensure the outlet is linked to a customer."
+                _("Lot '%s' is not currently available in the van stock.")
+                % lot.display_name
+            )
+        return lot
+
+    def _find_available_lots_for_product(self, product):
+        self.ensure_one()
+        source_location = self._get_scan_source_location()
+        if not source_location or not product:
+            return self.env["stock.lot"]
+
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+                ("lot_id", "!=", False),
+                ("quantity", ">", 0),
+            ]
+        )
+        return quants.mapped("lot_id")
+
+    def _get_packaging_qty_field_name(self, packaging):
+        self.ensure_one()
+        if not packaging:
+            return False
+        for field_name in ("qty", "quantity", "contained_qty"):
+            if field_name in packaging._fields:
+                return field_name
+        return False
+
+    def _get_packaging_uom_field_name(self, packaging):
+        self.ensure_one()
+        if not packaging:
+            return False
+        for field_name in ("uom_id", "unit_id"):
+            if field_name in packaging._fields:
+                return field_name
+        return False
+
+    def _get_packaging_qty(self, packaging):
+        self.ensure_one()
+        if not packaging:
+            return 0.0
+        qty_field = self._get_packaging_qty_field_name(packaging)
+        if not qty_field:
+            return 0.0
+        return packaging[qty_field] or 0.0
+
+    def _get_packaging_uom(self, packaging, product=False):
+        self.ensure_one()
+        if not packaging:
+            return product.uom_id if product else False
+        uom_field = self._get_packaging_uom_field_name(packaging)
+        if uom_field and packaging[uom_field]:
+            return packaging[uom_field]
+        return product.uom_id if product else False
+
+    def _find_product_packaging_by_barcode(self, barcode):
+        self.ensure_one()
+        barcode = (barcode or "").strip()
+        if not barcode:
+            return False
+
+        if "product.packaging" not in self.env:
+            return False
+
+        Packaging = self.env["product.packaging"]
+
+        try:
+            domain = [("barcode", "=", barcode)]
+            if "company_id" in Packaging._fields:
+                domain = [
+                    ("barcode", "=", barcode),
+                    "|",
+                    ("company_id", "=", False),
+                    ("company_id", "=", self.company_id.id),
+                ]
+            packaging = Packaging.search(domain, limit=1)
+            if packaging:
+                return packaging
+        except Exception:
+            pass
+
+        try:
+            if "barcode" in Packaging._fields:
+                packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
+                if packaging:
+                    return packaging
+        except Exception:
+            pass
+
+        try:
+            for field_name, field in Packaging._fields.items():
+                relation = getattr(field, "comodel_name", False)
+                if (
+                    field.type in ("one2many", "many2many")
+                    and relation
+                    and relation in self.env
+                ):
+                    RelModel = self.env[relation]
+                    if "barcode" not in RelModel._fields:
+                        continue
+
+                    rel_domain = [("barcode", "=", barcode)]
+                    rel_rec = RelModel.search(rel_domain, limit=1)
+                    if not rel_rec:
+                        continue
+
+                    for back_name in ("packaging_id", "product_packaging_id"):
+                        if back_name in RelModel._fields and rel_rec[back_name]:
+                            return rel_rec[back_name]
+
+                    if hasattr(rel_rec, "_name") and rel_rec._name == "product.packaging":
+                        return rel_rec
+        except Exception:
+            pass
+
+        return False
+
+    def _find_route_product_barcode(self, barcode):
+        self.ensure_one()
+        barcode = (barcode or "").strip()
+        if not barcode:
+            return False
+
+        Barcode = self.env["route.product.barcode"]
+        domain = [
+            ("barcode", "=", barcode),
+            ("active", "=", True),
+            "|",
+            ("company_id", "=", False),
+            ("company_id", "=", self.company_id.id),
+        ]
+        return Barcode.search(domain, limit=1)
+
+    def _resolve_scanned_barcode(self, barcode):
+        self.ensure_one()
+        barcode = (barcode or "").strip()
+        if not barcode:
+            raise UserError(_("Please enter or scan a barcode first."))
+
+        # 1) direct product barcode
+        product = self.env["product.product"].search(
+            [("barcode", "=", barcode)],
+            limit=1,
+        )
+        if product:
+            return {
+                "product": product,
+                "scan_type": "piece",
+                "scan_type_label": _("Piece Barcode"),
+                "packaging": False,
+                "default_scan_qty": 1.0,
+                "default_scanned_uom": product.uom_id,
+            }
+
+        # 2) custom route barcode mapping
+        route_barcode = self._find_route_product_barcode(barcode)
+        if route_barcode and route_barcode.product_id:
+            return {
+                "product": route_barcode.product_id,
+                "scan_type": route_barcode.barcode_type or "piece",
+                "scan_type_label": _(
+                    "Box Barcode" if route_barcode.barcode_type == "box" else "Piece Barcode"
+                ),
+                "packaging": False,
+                "default_scan_qty": route_barcode.qty_in_base_uom or 1.0,
+                "default_scanned_uom": route_barcode.product_id.uom_id,
+            }
+
+        # 3) fallback to packaging lookup if available
+        packaging = self._find_product_packaging_by_barcode(barcode)
+        if packaging and packaging.product_id:
+            packaging_qty = self._get_packaging_qty(packaging)
+            if packaging_qty <= 0:
+                raise UserError(
+                    _(
+                        "Packaging '%(packaging)s' has no valid quantity configured."
+                    )
+                    % {"packaging": packaging.display_name}
+                )
+
+            packaging_uom = self._get_packaging_uom(packaging, packaging.product_id)
+            if not packaging_uom:
+                raise UserError(
+                    _(
+                        "Packaging '%(packaging)s' has no valid unit configured."
+                    )
+                    % {"packaging": packaging.display_name}
+                )
+
+            return {
+                "product": packaging.product_id,
+                "scan_type": "box",
+                "scan_type_label": _("Box Barcode"),
+                "packaging": packaging,
+                "default_scan_qty": packaging_qty,
+                "default_scanned_uom": packaging_uom,
+            }
+
+        raise UserError(_("No product was found with barcode '%s'.") % barcode)
+
+    def _is_product_tracked_by_lot(self, product):
+        self.ensure_one()
+        if not product:
+            return False
+        tracking_value = getattr(product, "tracking", "none") or "none"
+        return tracking_value in ("lot", "serial")
+
+    def _resolve_product_active_lot(self, product, active_lot=False):
+        self.ensure_one()
+        if not product:
+            return False
+
+        if not self._is_product_tracked_by_lot(product):
+            return False
+
+        if active_lot:
+            if active_lot.product_id != product:
+                raise UserError(
+                    _(
+                        "The scanned product does not belong to the active lot.\n\n"
+                        "Active Lot: %(lot)s\n"
+                        "Lot Product: %(lot_product)s\n"
+                        "Scanned Product: %(barcode_product)s\n\n"
+                        "Please clear the current lot first, then scan/select the correct lot for this product."
+                    )
+                    % {
+                        "lot": active_lot.display_name,
+                        "lot_product": active_lot.product_id.display_name,
+                        "barcode_product": product.display_name,
+                    }
+                )
+            return active_lot
+
+        available_lots = self._find_available_lots_for_product(product)
+        if not available_lots:
+            raise UserError(
+                _("Tracked product '%s' has no available lot in the van stock.")
+                % product.display_name
             )
 
-        backorder = self.env["route.refill.backorder"].create({
+        if len(available_lots) == 1:
+            return available_lots[:1]
+
+        raise UserError(
+            _(
+                "Product '%s' has more than one available lot in the van stock. "
+                "Please scan/select the lot first."
+            )
+            % product.display_name
+        )
+
+    def _is_product_available_in_vehicle(self, product):
+        self.ensure_one()
+        source_location = self._get_scan_source_location()
+        if not source_location or not product:
+            return False
+
+        quant = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+                ("quantity", ">", 0),
+            ],
+            limit=1,
+        )
+        return bool(quant)
+
+    def _get_vehicle_available_qty_for_scan_product(self, product):
+        self.ensure_one()
+        source_location = self._get_scan_source_location()
+        if not source_location or not product:
+            return 0.0
+
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "=", product.id),
+            ]
+        )
+        return sum(quants.mapped("quantity"))
+
+    def _find_visit_line_for_product(self, product):
+        self.ensure_one()
+        return self.line_ids.filtered(lambda l: l.product_id == product)[:1]
+
+    def _prepare_visit_line_from_scan(self, product, counted_increase):
+        self.ensure_one()
+        return {
             "visit_id": self.id,
-            "outlet_id": self.outlet_id.id,
-            "partner_id": partner.id,
-            "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
-            "source_location_id": self.source_location_id.id if self.source_location_id else False,
             "company_id": self.company_id.id,
-            "note": "Created automatically from route visit pending refill.",
-        })
+            "product_id": product.id,
+            "previous_qty": 0.0,
+            "counted_qty": counted_increase,
+            "unit_price": product.lst_price or 0.0,
+            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(
+                product
+            ),
+        }
 
-        line_vals = []
-        for line in pending_lines:
-            line_vals.append({
-                "backorder_id": backorder.id,
-                "product_id": line.product_id.id,
-                "needed_qty": line.sold_qty,
-                "available_qty_at_visit": line.vehicle_available_qty,
-                "delivered_qty": line.supplied_qty,
-                "pending_qty": line.pending_refill_qty,
-                "unit_price": line.unit_price,
-                "note": line.note,
-            })
+    def _get_scan_counted_increase(self, product, scan_qty=1.0, scanned_uom=False):
+        self.ensure_one()
+        if not product:
+            raise UserError(_("Product is required."))
+        if scan_qty <= 0:
+            raise UserError(_("Quantity must be greater than zero."))
 
-        self.env["route.refill.backorder.line"].create(line_vals)
-        self.refill_backorder_id = backorder.id
-        return backorder
+        base_uom = product.uom_id
+        scanned_uom = scanned_uom or base_uom
 
-    def action_load_previous_balance(self):
-        OutletStockBalance = self.env["outlet.stock.balance"]
+        try:
+            return scanned_uom._compute_quantity(scan_qty, base_uom)
+        except Exception as e:
+            raise UserError(
+                _(
+                    "Could not convert the scanned quantity from the selected UoM "
+                    "to the product base UoM.\n\n%s"
+                )
+                % str(e)
+            )
+
+    def _process_scanned_barcode(
+        self,
+        barcode,
+        scan_qty=1.0,
+        scanned_uom=False,
+        active_lot=False,
+    ):
+        self.ensure_one()
         RouteVisitLine = self.env["route.visit.line"]
 
-        for rec in self:
-            if rec.visit_process_state not in ("pending",):
-                raise UserError("Previous balance can only be loaded while the visit is Pending.")
-
-            if not rec.outlet_id:
-                raise UserError("Please set an outlet before loading previous balance.")
-
-            if rec.line_ids:
-                raise UserError(
-                    "This visit already has lines. Remove existing lines first if you want to reload previous balance."
-                )
-
-            balances = OutletStockBalance.search([
-                ("outlet_id", "=", rec.outlet_id.id),
-                ("qty", ">", 0),
-            ])
-
-            if not balances:
-                raise UserError("No previous stock balance was found for this outlet.")
-
-            rec.commission_rate = rec._get_outlet_default_commission_rate()
-
-            if not rec.partner_id and hasattr(rec.outlet_id, "partner_id") and rec.outlet_id.partner_id:
-                rec.partner_id = rec.outlet_id.partner_id.commercial_partner_id
-
-            line_vals_list = []
-            for balance in balances:
-                line_vals_list.append({
-                    "visit_id": rec.id,
-                    "company_id": rec.company_id.id,
-                    "product_id": balance.product_id.id,
-                    "previous_qty": balance.qty,
-                    "unit_price": balance.unit_price,
-                })
-
-            RouteVisitLine.create(line_vals_list)
-
-            rec.write({
-                "visit_process_state": "checked_in",
-                "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
-
-    def action_generate_refill_proposal(self):
-        for rec in self:
-            if rec.visit_process_state != "reconciled":
-                raise UserError("Refill proposal can only be generated when the visit is in Reconciled state.")
-
-            if not rec.line_ids:
-                raise UserError("There are no visit lines to generate a refill proposal.")
-
-            if not rec.source_location_id:
-                raise UserError("Please select Source Location before generating refill proposal.")
-
-            rec._set_main_visit_state_in_progress()
-
-            for line in rec.line_ids:
-                available_qty = rec._get_available_qty_in_source_location(line.product_id)
-                proposed_qty = min(line.sold_qty, available_qty) if line.sold_qty > 0 else 0.0
-                line.write({
-                    "vehicle_available_qty": available_qty,
-                    "supplied_qty": proposed_qty,
-                })
-
-    def action_confirm_all_payments(self):
-        for rec in self:
-            if rec.visit_process_state != "reconciled":
-                raise UserError("Payments can only be confirmed when the visit is in Reconciled state.")
-
-            if not rec.payment_ids:
-                raise UserError("There are no payments on this visit.")
-
-            draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft")
-            if not draft_payments:
-                raise UserError("There are no draft payments to confirm on this visit.")
-
-            for payment in draft_payments:
-                payment.action_confirm()
-
-            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed")
-            has_deferred_record = bool(
-                confirmed_payments.filtered(
-                    lambda p: p.collection_type in ("partial", "defer_date", "next_visit")
+        if self.visit_process_state not in ("checked_in", "counting", "reconciled"):
+            raise UserError(
+                _(
+                    "Barcode scanning is only allowed when the visit is Checked In, "
+                    "Counting, or Reconciled."
                 )
             )
 
-            if rec.remaining_due_amount > 0 and not has_deferred_record and not rec.collection_skip_reason:
-                raise UserError(
-                    "There is still a remaining due amount. Please either collect it fully, "
-                    "add a partial payment with carry forward, defer it to a specific date, "
-                    "or carry it to the next visit."
-                )
+        if not self.vehicle_id:
+            raise UserError(_("Please set a vehicle before scanning."))
+        if not self.vehicle_id.stock_location_id:
+            raise UserError(
+                _("The selected vehicle does not have a Vehicle Stock Location.")
+            )
 
-            rec.write({
-                "visit_process_state": "collection_done",
-                "collection_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
+        self._sync_source_location_from_vehicle()
+        if not self.source_location_id:
+            raise UserError(_("No source location is available for this visit."))
 
-    def action_skip_collection(self):
-        for rec in self:
-            if rec.visit_process_state != "reconciled":
-                raise UserError("Collection can only be skipped when the visit is in Reconciled state.")
+        scan_info = self._resolve_scanned_barcode(barcode)
+        product = scan_info["product"]
 
-            if not rec.collection_skip_reason:
-                raise UserError("Please enter Collection Skip Reason before skipping collection.")
+        effective_scan_qty = scan_qty
+        effective_scanned_uom = scanned_uom or scan_info.get("default_scanned_uom")
 
-            rec.write({
-                "visit_process_state": "collection_done",
-                "collection_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
+        if (
+            scan_info.get("scan_type") in ("box",)
+            and not scanned_uom
+            and scan_qty == 1.0
+        ):
+            effective_scan_qty = scan_info.get("default_scan_qty") or 1.0
 
-    def action_update_outlet_balance(self):
-        OutletStockBalance = self.env["outlet.stock.balance"]
+        counted_increase = self._get_scan_counted_increase(
+            product,
+            scan_qty=effective_scan_qty,
+            scanned_uom=effective_scanned_uom,
+        )
 
-        for rec in self:
-            if rec.visit_process_state != "collection_done":
-                raise UserError("Outlet balance can only be updated after collection is completed.")
+        if not self._is_product_available_in_vehicle(product):
+            raise UserError(
+                _("Product '%s' is not currently available in the van stock.")
+                % product.display_name
+            )
 
-            if rec.has_returns and not rec.return_picking_ids:
-                raise UserError("Please confirm return transfers before updating outlet balance.")
+        resolved_lot = self._resolve_product_active_lot(product, active_lot=active_lot)
+        resolved_expiry_date = (
+            self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
+        )
 
-            if not rec.outlet_id:
-                raise UserError("Please set an outlet before updating outlet balance.")
-
-            if not rec.line_ids:
-                raise UserError("There are no visit lines to update.")
-
-            for line in rec.line_ids:
-                balance = OutletStockBalance.search(
-                    [
-                        ("outlet_id", "=", rec.outlet_id.id),
-                        ("product_id", "=", line.product_id.id),
-                    ],
-                    limit=1,
-                )
-
-                vals = {
-                    "qty": line.new_balance_qty,
-                    "unit_price": line.unit_price,
-                    "last_visit_id": rec.id,
+        line = self._find_visit_line_for_product(product)
+        if line:
+            line.write(
+                {
+                    "counted_qty": (line.counted_qty or 0.0) + counted_increase,
+                    "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(
+                        product
+                    ),
                 }
+            )
+        else:
+            line = RouteVisitLine.create(
+                [self._prepare_visit_line_from_scan(product, counted_increase)]
+            )
 
-                if balance:
-                    balance.write(vals)
-                else:
-                    OutletStockBalance.create({
-                        "outlet_id": rec.outlet_id.id,
-                        "product_id": line.product_id.id,
-                        "qty": line.new_balance_qty,
-                        "unit_price": line.unit_price,
-                        "last_visit_id": rec.id,
-                        "company_id": rec.company_id.id,
-                    })
+        self.last_scanned_barcode = (barcode or "").strip()
 
-            rec.write({
-                "visit_process_state": "ready_to_close",
-                "refill_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
+        if self.visit_process_state == "checked_in":
+            self.visit_process_state = "counting"
 
-    def action_set_checked_in(self):
+        return {
+            "line": line,
+            "product": product,
+            "scan_type": scan_info["scan_type"],
+            "scan_type_label": scan_info["scan_type_label"],
+            "counted_increase": counted_increase,
+            "base_uom": product.uom_id,
+            "used_uom": effective_scanned_uom or product.uom_id,
+            "resolved_lot": resolved_lot,
+            "resolved_expiry_date": resolved_expiry_date,
+            "packaging": scan_info.get("packaging"),
+            "effective_scan_qty": effective_scan_qty,
+        }
+
+    def action_scan_barcode_input(self):
         for rec in self:
-            if rec.visit_process_state != "pending":
-                raise UserError("Check In is only allowed while the visit is Pending.")
+            rec._process_scanned_barcode(rec.scan_barcode_input, scan_qty=1.0)
+            rec.scan_barcode_input = False
+        return True
 
-            rec.write({
-                "visit_process_state": "checked_in",
-                "check_in_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
-
-    def action_set_counting(self):
-        for rec in self:
-            if rec.visit_process_state != "checked_in":
-                raise UserError("Start Count is only allowed after Check In.")
-
-            rec.write({
-                "visit_process_state": "counting",
-                "count_start_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
-
-    def action_set_reconciled(self):
-        for rec in self:
-            if rec.visit_process_state != "counting":
-                raise UserError("Reconcile is only allowed while the visit is in Counting state.")
-
-            if not rec.line_ids:
-                raise UserError("You cannot reconcile a visit without visit lines.")
-
-            rec.write({
-                "visit_process_state": "reconciled",
-                "count_end_datetime": rec.count_end_datetime or fields.Datetime.now(),
-                "reconciliation_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_in_progress()
-
-    def action_set_done_process(self):
-        for rec in self:
-            if rec.visit_process_state != "ready_to_close":
-                raise UserError("Finish Process is only allowed when the visit is Ready To Close.")
-
-            if rec.has_pending_refill and not rec.refill_backorder_id:
-                rec._create_pending_refill_backorder()
-
-            rec.write({
-                "visit_process_state": "done",
-                "check_out_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_done()
-
-    def action_set_cancelled_process(self):
-        for rec in self:
-            if rec.visit_process_state == "done":
-                raise UserError("You cannot cancel a visit that is already Done.")
-
-            rec.write({
-                "visit_process_state": "cancelled",
-                "cancel_reason": rec.cancel_reason or "Cancelled by user",
-                "check_out_datetime": fields.Datetime.now(),
-            })
-            rec._set_main_visit_state_cancel()
+    def action_open_scan_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Scan Barcode"),
+            "res_model": "route.visit.scan.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+                "default_quantity": 1.0,
+                "default_scan_mode": "count",
+            },
+        }
