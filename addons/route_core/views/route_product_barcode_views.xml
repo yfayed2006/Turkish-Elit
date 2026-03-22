@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_route_product_barcode_tree" model="ir.ui.view">
+        <field name="name">route.product.barcode.tree</field>
+        <field name="model">route.product.barcode</field>
+        <field name="arch" type="xml">
+            <list string="Route Product Barcodes" editable="bottom">
+                <field name="active" optional="show"/>
+                <field name="company_id" optional="show"/>
+                <field name="product_id"/>
+                <field name="barcode"/>
+                <field name="barcode_type"/>
+                <field name="qty_in_base_uom"/>
+                <field name="notes" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_route_product_barcode_form" model="ir.ui.view">
+        <field name="name">route.product.barcode.form</field>
+        <field name="model">route.product.barcode</field>
+        <field name="arch" type="xml">
+            <form string="Route Product Barcode">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="active"/>
+                            <field name="company_id"/>
+                            <field name="product_id"/>
+                            <field name="barcode"/>
+                        </group>
+                        <group>
+                            <field name="barcode_type"/>
+                            <field name="qty_in_base_uom"/>
+                            <field name="notes"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_route_product_barcode" model="ir.actions.act_window">
+        <field name="name">Product Barcodes</field>
+        <field name="res_model">route.product.barcode</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_route_product_barcode"
+        name="Product Barcodes"
+        parent="route_core.menu_route_configuration"
+        action="action_route_product_barcode"
+        sequence="60"
+    />
+</odoo>
