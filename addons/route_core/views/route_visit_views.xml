@@ -372,13 +372,7 @@
                             <field name="return_picking_ids" readonly="1" widget="many2many_tags"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
-                            <field name="check_in_datetime" readonly="1"/>
-                            <field name="count_start_datetime" readonly="1"/>
-                            <field name="count_end_datetime" readonly="1"/>
-                            <field name="reconciliation_datetime" readonly="1"/>
-                            <field name="collection_datetime" readonly="1"/>
                             <field name="refill_datetime" readonly="1"/>
-                            <field name="check_out_datetime" readonly="1"/>
                         </group>
                     </group>
 
@@ -774,13 +768,7 @@
                             <field name="sale_order_id" readonly="1"/>
                             <field name="start_datetime" readonly="1"/>
                             <field name="end_datetime" readonly="1"/>
-                            <field name="check_in_datetime" readonly="1"/>
-                            <field name="count_start_datetime" readonly="1"/>
-                            <field name="count_end_datetime" readonly="1"/>
-                            <field name="reconciliation_datetime" readonly="1"/>
-                            <field name="collection_datetime" readonly="1"/>
                             <field name="refill_datetime" readonly="1"/>
-                            <field name="check_out_datetime" readonly="1"/>
                         </group>
                     </group>
 
