@@ -120,6 +120,13 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Payments",
     )
+    
+    has_pending_refill = fields.Boolean(
+        string="Has Pending Refill",
+        default=False,
+        tracking=True,
+        copy=False,
+    )
 
     near_expiry_line_count = fields.Integer(
         string="Near Expiry Lines",
