@@ -109,7 +109,7 @@
                 <button name="action_set_refill_done" string="Refill Done" type="object"/>
                 <button name="action_set_ready_to_close" string="Ready To Close" type="object"/>
                 <button name="action_set_done_process" string="Finish Process" type="object" class="btn-success"/>
-                <button name="action_set_cancelled_process" string="Cancel Process" type="object" class="btn-secondary"/>
+                <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary"/>
             </xpath>
         </field>
     </record>
