@@ -121,6 +121,13 @@ class RouteVisit(models.Model):
         string="Payments",
     )
     
+    has_refill = fields.Boolean(
+        string="Has Refill",
+        default=False,
+        tracking=True,
+        copy=False,
+    )
+    
     has_pending_refill = fields.Boolean(
         string="Has Pending Refill",
         default=False,
