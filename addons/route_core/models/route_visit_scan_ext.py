@@ -77,10 +77,6 @@ class RouteVisit(models.Model):
         return quants.mapped("lot_id")
 
     def _get_packaging_qty_field_name(self, packaging):
-        """
-        Odoo 19 simplified UoM/Packaging, and field names may differ by edition/customization.
-        We try the common quantity field names in a safe order.
-        """
         self.ensure_one()
         if not packaging:
             return False
@@ -90,9 +86,6 @@ class RouteVisit(models.Model):
         return False
 
     def _get_packaging_uom_field_name(self, packaging):
-        """
-        Try common field names used to point to the packaging unit/reference unit.
-        """
         self.ensure_one()
         if not packaging:
             return False
@@ -125,23 +118,63 @@ class RouteVisit(models.Model):
         if not barcode:
             return False
 
-        # Safe guard: if packaging model is not loaded in this database,
-        # do not break the scan flow.
         if "product.packaging" not in self.env:
             return False
 
         Packaging = self.env["product.packaging"]
-        domain = [("barcode", "=", barcode)]
 
-        if "company_id" in Packaging._fields:
-            domain = [
-                ("barcode", "=", barcode),
-                "|",
-                ("company_id", "=", False),
-                ("company_id", "=", self.company_id.id),
-            ]
+        # 1) direct barcode on packaging record
+        try:
+            domain = [("barcode", "=", barcode)]
+            if "company_id" in Packaging._fields:
+                domain = [
+                    ("barcode", "=", barcode),
+                    "|",
+                    ("company_id", "=", False),
+                    ("company_id", "=", self.company_id.id),
+                ]
+            packaging = Packaging.search(domain, limit=1)
+            if packaging:
+                return packaging
+        except Exception:
+            pass
 
-        return Packaging.search(domain, limit=1)
+        # 2) looser search in case company/domain behavior differs
+        try:
+            if "barcode" in Packaging._fields:
+                packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
+                if packaging:
+                    return packaging
+        except Exception:
+            pass
+
+        # 3) some databases expose packaging barcodes through an auxiliary relation/model.
+        # Try to discover a barcode relation dynamically, then come back to product.packaging.
+        try:
+            for field_name, field in Packaging._fields.items():
+                relation = getattr(field, "comodel_name", False)
+                if field.type in ("one2many", "many2many") and relation and relation in self.env:
+                    RelModel = self.env[relation]
+                    if "barcode" not in RelModel._fields:
+                        continue
+
+                    rel_domain = [("barcode", "=", barcode)]
+                    rel_rec = RelModel.search(rel_domain, limit=1)
+                    if not rel_rec:
+                        continue
+
+                    # try common reverse links back to packaging
+                    for back_name in ("packaging_id", "product_packaging_id"):
+                        if back_name in RelModel._fields and rel_rec[back_name]:
+                            return rel_rec[back_name]
+
+                    # or maybe the relation is actually on packaging side and search returned packaging-like rows
+                    if hasattr(rel_rec, "_name") and rel_rec._name == "product.packaging":
+                        return rel_rec
+        except Exception:
+            pass
+
+        return False
 
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
