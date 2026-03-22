@@ -114,26 +114,34 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Visit Lines",
     )
-    
+
     payment_ids = fields.One2many(
         "route.visit.payment",
         "visit_id",
         string="Payments",
     )
-    
+
+    has_returns = fields.Boolean(
+        string="Has Returns",
+        default=False,
+        tracking=True,
+        copy=False,
+    )
+
     has_refill = fields.Boolean(
         string="Has Refill",
         default=False,
         tracking=True,
         copy=False,
     )
-    
+
     has_pending_refill = fields.Boolean(
         string="Has Pending Refill",
         default=False,
         tracking=True,
         copy=False,
     )
+
     near_expiry_line_count = fields.Integer(
         string="Near Expiry Lines",
         compute="_compute_near_expiry_status",
@@ -254,6 +262,9 @@ class RouteVisit(models.Model):
                         vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
             vals.setdefault("visit_process_state", "draft")
+            vals.setdefault("has_returns", False)
+            vals.setdefault("has_refill", False)
+            vals.setdefault("has_pending_refill", False)
 
         records = super().create(vals_list)
         records._sync_plan_line_state()
@@ -322,6 +333,9 @@ class RouteVisit(models.Model):
                 "end_datetime": False,
                 "no_sale_reason": False,
                 "collection_skip_reason": False,
+                "has_returns": False,
+                "has_refill": False,
+                "has_pending_refill": False,
             })
 
     def _prepare_sale_order_line_vals(self):
@@ -466,4 +480,8 @@ class RouteVisit(models.Model):
                 "end_datetime": False,
                 "sale_order_id": False,
                 "no_sale_reason": False,
+                "collection_skip_reason": False,
+                "has_returns": False,
+                "has_refill": False,
+                "has_pending_refill": False,
             })
