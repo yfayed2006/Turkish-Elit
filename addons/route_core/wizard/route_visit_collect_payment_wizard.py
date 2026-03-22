@@ -16,15 +16,15 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     company_id = fields.Many2one(
         "res.company",
         string="Company",
-        related="visit_id.company_id",
-        store=False,
+        default=lambda self: self.env.company,
+        required=True,
         readonly=True,
     )
 
     currency_id = fields.Many2one(
         "res.currency",
         string="Currency",
-        related="visit_id.currency_id",
+        related="company_id.currency_id",
         store=False,
         readonly=True,
     )
@@ -97,6 +97,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         if visit_id:
             visit = self.env["route.visit"].browse(visit_id)
             vals.setdefault("visit_id", visit.id)
+            vals.setdefault("company_id", self.env.company.id)
             if "payment_date" in fields_list:
                 vals.setdefault("payment_date", fields.Datetime.now())
             if "collection_type" in fields_list:
