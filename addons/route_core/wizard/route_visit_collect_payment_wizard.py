@@ -142,17 +142,14 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             if rec.collection_type == "full":
                 rec.amount = due
                 rec.due_date = False
-
             elif rec.collection_type == "partial":
                 rec.due_date = False
                 if due <= 0:
                     rec.amount = 0.0
                 elif rec.amount <= 0 or rec.amount >= due:
                     rec.amount = due / 2.0
-
             elif rec.collection_type == "defer_date":
                 rec.amount = 0.0
-
             elif rec.collection_type == "next_visit":
                 rec.amount = 0.0
                 rec.due_date = False
