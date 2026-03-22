@@ -51,6 +51,20 @@ class RouteVisit(models.Model):
     )
     notes = fields.Text(string="Notes")
 
+    source_location_id = fields.Many2one(
+        "stock.location",
+        string="Source Location",
+        tracking=True,
+        copy=False,
+    )
+
+    destination_location_id = fields.Many2one(
+        "stock.location",
+        string="Destination Location",
+        tracking=True,
+        copy=False,
+    )
+
     near_expiry_threshold_days = fields.Integer(
         string="Near Expiry Threshold Days",
         default=60,
@@ -269,9 +283,19 @@ class RouteVisit(models.Model):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.partner_id:
                     rec.partner_id = rec.outlet_id.partner_id
+                if "stock_location_id" in rec.vehicle_id._fields and rec.vehicle_id.stock_location_id:
+                    rec.source_location_id = rec.vehicle_id.stock_location_id
+                if "stock_location_id" in rec.outlet_id._fields and rec.outlet_id.stock_location_id:
+                    rec.destination_location_id = rec.outlet_id.stock_location_id
 
                 if "commission_rate" in rec._fields:
                     rec.commission_rate = rec._get_outlet_commission_rate_value(rec.outlet_id)
+
+    @api.onchange("vehicle_id")
+    def _onchange_vehicle_id_set_source_location(self):
+        for rec in self:
+            if rec.vehicle_id and "stock_location_id" in rec.vehicle_id._fields:
+                rec.source_location_id = rec.vehicle_id.stock_location_id
 
     def _sync_plan_line_state(self):
         plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
@@ -322,6 +346,8 @@ class RouteVisit(models.Model):
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.visit") or "New"
 
             outlet_id = vals.get("outlet_id")
+            vehicle_id = vals.get("vehicle_id")
+
             if outlet_id:
                 outlet = self.env["route.outlet"].browse(outlet_id)
                 if outlet.exists():
@@ -329,9 +355,17 @@ class RouteVisit(models.Model):
                         vals["area_id"] = outlet.area_id.id
                     if not vals.get("partner_id") and outlet.partner_id:
                         vals["partner_id"] = outlet.partner_id.id
+                    if not vals.get("destination_location_id") and "stock_location_id" in outlet._fields and outlet.stock_location_id:
+                        vals["destination_location_id"] = outlet.stock_location_id.id
 
                     if "commission_rate" in self._fields and not vals.get("commission_rate"):
                         vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
+
+            if vehicle_id:
+                vehicle = self.env["route.vehicle"].browse(vehicle_id)
+                if vehicle.exists():
+                    if not vals.get("source_location_id") and "stock_location_id" in vehicle._fields and vehicle.stock_location_id:
+                        vals["source_location_id"] = vehicle.stock_location_id.id
 
             vals.setdefault("visit_process_state", "draft")
             vals.setdefault("near_expiry_threshold_days", 60)
@@ -384,9 +418,17 @@ class RouteVisit(models.Model):
                     vals["area_id"] = outlet.area_id.id
                 if not vals.get("partner_id") and outlet.partner_id:
                     vals["partner_id"] = outlet.partner_id.id
+                if not vals.get("destination_location_id") and "stock_location_id" in outlet._fields and outlet.stock_location_id:
+                    vals["destination_location_id"] = outlet.stock_location_id.id
 
                 if "commission_rate" in self._fields and not vals.get("commission_rate"):
                     vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
+
+        if vals.get("vehicle_id"):
+            vehicle = self.env["route.vehicle"].browse(vals["vehicle_id"])
+            if vehicle.exists():
+                if not vals.get("source_location_id") and "stock_location_id" in vehicle._fields and vehicle.stock_location_id:
+                    vals["source_location_id"] = vehicle.stock_location_id.id
 
         result = super().write(vals)
         self._sync_plan_line_state()
@@ -413,6 +455,8 @@ class RouteVisit(models.Model):
                 "has_refill": False,
                 "has_pending_refill": False,
                 "no_refill": False,
+                "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and rec.vehicle_id.stock_location_id else False,
+                "destination_location_id": rec.outlet_id.stock_location_id.id if rec.outlet_id and rec.outlet_id.stock_location_id else False,
             })
 
     def _prepare_sale_order_line_vals(self):
@@ -566,4 +610,6 @@ class RouteVisit(models.Model):
                 "refill_datetime": False,
                 "refill_backorder_id": False,
                 "refill_picking_id": False,
+                "source_location_id": False,
+                "destination_location_id": False,
             })
