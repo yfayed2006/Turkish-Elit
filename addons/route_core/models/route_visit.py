@@ -587,6 +587,36 @@ class RouteVisit(models.Model):
 
         return self._get_sale_order_form_action(self.sale_order_id)
 
+    def action_view_pending_refill(self):
+        self.ensure_one()
+
+        if not self.refill_backorder_id:
+            raise UserError(_("There is no pending refill for this visit."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Pending Refill"),
+            "res_model": "route.refill.backorder",
+            "view_mode": "form",
+            "res_id": self.refill_backorder_id.id,
+            "target": "current",
+        }
+
+    def action_ux_view_refill_transfer(self):
+        self.ensure_one()
+
+        if not self.refill_picking_id:
+            raise UserError(_("There is no refill transfer for this visit."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Refill Transfer"),
+            "res_model": "stock.picking",
+            "view_mode": "form",
+            "res_id": self.refill_picking_id.id,
+            "target": "current",
+        }
+
     def action_end_visit(self):
         self.ensure_one()
 
