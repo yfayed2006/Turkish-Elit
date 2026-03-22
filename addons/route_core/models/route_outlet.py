@@ -21,7 +21,7 @@ class RouteOutlet(models.Model):
     partner_id = fields.Many2one(
         "res.partner",
         string="Related Contact",
-        required=True,
+        required=False,
         ondelete="restrict",
         help="Main related contact/customer for this outlet.",
     )
