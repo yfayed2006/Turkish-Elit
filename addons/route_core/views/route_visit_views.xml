@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <!-- route_visit_views.xml: forced real diff for Git/Odoo.sh build refresh -->
 
     <record id="view_route_visit_tree" model="ir.ui.view">
         <field name="name">route.visit.tree</field>
@@ -76,7 +77,7 @@
                                 <span class="ms-1"><field name="visit_process_state"/></span>
                             </div>
 
-                           <div class="mt-3">
+                            <div class="mt-3">
                                 <a type="open" role="button" class="btn btn-primary w-100">Open Visit</a>
                             </div>
                         </div>
@@ -169,6 +170,7 @@
                         class="btn-success"
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
+                    <!-- safe marker: cancel action updated and kept on action_cancel -->
                     <button
                         name="action_cancel"
                         string="Cancel Process"
@@ -573,6 +575,7 @@
                         class="btn-success"
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
+                    <!-- safe marker: pda cancel action updated and kept on action_cancel -->
                     <button
                         name="action_cancel"
                         string="Cancel Process"
