@@ -50,6 +50,12 @@ class RouteVisit(models.Model):
         tracking=True,
     )
     notes = fields.Text(string="Notes")
+
+    collection_skip_reason = fields.Text(
+        string="Collection Skip Reason",
+        tracking=True,
+    )
+
     no_sale_reason = fields.Text(
         string="Reason for Ending Without Sale",
         readonly=True,
@@ -108,7 +114,7 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Visit Lines",
     )
-   
+
     payment_ids = fields.One2many(
         "route.visit.payment",
         "visit_id",
@@ -302,6 +308,7 @@ class RouteVisit(models.Model):
                 "start_datetime": fields.Datetime.now(),
                 "end_datetime": False,
                 "no_sale_reason": False,
+                "collection_skip_reason": False,
             })
 
     def _prepare_sale_order_line_vals(self):
