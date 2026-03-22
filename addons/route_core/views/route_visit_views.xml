@@ -346,7 +346,7 @@
                             type="object"
                             class="oe_stat_button"
                             icon="fa-forward"
-                            invisible="not ux_can_skip_collection or not collection_skip_reason"
+                            invisible="not ux_can_skip_collection"
                         />
                     </div>
 
@@ -750,7 +750,7 @@
                             type="object"
                             class="oe_stat_button"
                             icon="fa-forward"
-                            invisible="not ux_can_skip_collection or not collection_skip_reason"
+                            invisible="not ux_can_skip_collection"
                         />
                     </div>
 
