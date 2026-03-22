@@ -114,7 +114,7 @@ class RouteVisit(models.Model):
         "visit_id",
         string="Visit Lines",
     )
-
+    
     payment_ids = fields.One2many(
         "route.visit.payment",
         "visit_id",
@@ -127,7 +127,6 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
-
     near_expiry_line_count = fields.Integer(
         string="Near Expiry Lines",
         compute="_compute_near_expiry_status",
