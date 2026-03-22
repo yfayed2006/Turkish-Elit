@@ -170,17 +170,17 @@
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
                     <button
-                        name="action_set_cancelled_process"
+                        name="action_cancel"
                         string="Cancel Process"
                         type="object"
                         class="btn-secondary"
-                        invisible="visit_process_state in ('done', 'cancelled')"
+                        invisible="visit_process_state in ('done', 'cancel')"
                     />
 
                     <field
                         name="visit_process_state"
                         widget="statusbar"
-                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,refill_done,ready_to_close,done,cancelled"
+                        statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"
                     />
                 </header>
 
@@ -574,17 +574,17 @@
                         invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
                     />
                     <button
-                        name="action_set_cancelled_process"
+                        name="action_cancel"
                         string="Cancel Process"
                         type="object"
                         class="btn-secondary"
-                        invisible="visit_process_state in ('done', 'cancelled')"
+                        invisible="visit_process_state in ('done', 'cancel')"
                     />
 
                     <field
                         name="visit_process_state"
                         widget="statusbar"
-                        statusbar_visible="pending,checked_in,counting,reconciled,collection_done,refill_done,ready_to_close,done,cancelled"
+                        statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"
                     />
                 </header>
 
