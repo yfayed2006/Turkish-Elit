@@ -61,6 +61,7 @@ class RouteVisit(models.Model):
         readonly=True,
         tracking=True,
     )
+
     state = fields.Selection(
         [
             ("draft", "Draft"),
@@ -73,6 +74,7 @@ class RouteVisit(models.Model):
         required=True,
         tracking=True,
     )
+
     visit_process_state = fields.Selection(
         [
             ("draft", "Draft"),
@@ -87,6 +89,7 @@ class RouteVisit(models.Model):
         tracking=True,
         copy=False,
     )
+
     start_datetime = fields.Datetime(
         string="Start DateTime",
         readonly=True,
@@ -97,6 +100,7 @@ class RouteVisit(models.Model):
         readonly=True,
         tracking=True,
     )
+
     sale_order_id = fields.Many2one(
         "sale.order",
         string="Sale Order",
@@ -137,6 +141,13 @@ class RouteVisit(models.Model):
 
     has_pending_refill = fields.Boolean(
         string="Has Pending Refill",
+        default=False,
+        tracking=True,
+        copy=False,
+    )
+
+    no_refill = fields.Boolean(
+        string="No Refill",
         default=False,
         tracking=True,
         copy=False,
@@ -265,6 +276,7 @@ class RouteVisit(models.Model):
             vals.setdefault("has_returns", False)
             vals.setdefault("has_refill", False)
             vals.setdefault("has_pending_refill", False)
+            vals.setdefault("no_refill", False)
 
         records = super().create(vals_list)
         records._sync_plan_line_state()
@@ -336,6 +348,7 @@ class RouteVisit(models.Model):
                 "has_returns": False,
                 "has_refill": False,
                 "has_pending_refill": False,
+                "no_refill": False,
             })
 
     def _prepare_sale_order_line_vals(self):
@@ -484,4 +497,5 @@ class RouteVisit(models.Model):
                 "has_returns": False,
                 "has_refill": False,
                 "has_pending_refill": False,
+                "no_refill": False,
             })
