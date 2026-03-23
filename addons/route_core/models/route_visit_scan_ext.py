@@ -315,6 +315,7 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
+        # 1) direct product barcode
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -329,6 +330,32 @@ class RouteVisit(models.Model):
                 "default_scanned_uom": product.uom_id,
             }
 
+        # 2) packaging barcode FIRST
+        packaging = self._find_product_packaging_by_barcode(barcode)
+        if packaging and packaging.product_id:
+            packaging_qty = self._get_packaging_qty(packaging)
+            if packaging_qty <= 0:
+                packaging_qty = 1.0
+
+            packaging_uom = self._get_packaging_uom(packaging, packaging.product_id)
+            if not packaging_uom:
+                packaging_uom = packaging.product_id.uom_id
+
+            return {
+                "product": packaging.product_id,
+                "scan_type": "box",
+                "scan_type_label": _("Box Barcode"),
+                "packaging": packaging,
+                "default_scan_qty": packaging_qty,
+                "default_scanned_uom": packaging_uom,
+            }
+
+        # 3) generic barcode models that may point to packaging
+        generic = self._find_barcode_related_product(barcode)
+        if generic:
+            return generic
+
+        # 4) custom route barcode mapping AFTER packaging checks
         route_barcode = self._find_route_product_barcode(barcode)
         if route_barcode and route_barcode.product_id:
             barcode_type = "piece"
@@ -347,25 +374,6 @@ class RouteVisit(models.Model):
                 "default_scan_qty": qty_in_base_uom,
                 "default_scanned_uom": route_barcode.product_id.uom_id,
             }
-
-        packaging = self._find_product_packaging_by_barcode(barcode)
-        if packaging and packaging.product_id:
-            packaging_qty = self._get_packaging_qty(packaging)
-            if packaging_qty <= 0:
-                packaging_qty = 1.0
-
-            return {
-                "product": packaging.product_id,
-                "scan_type": "box",
-                "scan_type_label": _("Box Barcode"),
-                "packaging": packaging,
-                "default_scan_qty": packaging_qty,
-                "default_scanned_uom": packaging.product_id.uom_id,
-            }
-
-        generic = self._find_barcode_related_product(barcode)
-        if generic:
-            return generic
 
         raise UserError(_("No product was found with barcode '%s'.") % barcode)
 
