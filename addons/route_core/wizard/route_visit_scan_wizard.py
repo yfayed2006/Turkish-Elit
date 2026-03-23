@@ -239,7 +239,10 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.auto_quantity_locked = True
                 rec.auto_uom_locked = True
                 rec.detected_packaging_name = (
-                    scan_info.get("packaging").display_name
+                    rec.visit_id._get_packaging_display_name(
+                        scan_info.get("packaging"),
+                        product=product,
+                    )
                     if scan_info.get("packaging")
                     else "Box"
                 )
