@@ -155,269 +155,101 @@ class RouteVisit(models.Model):
 
         return product.uom_id if product else False
 
-    def _get_packaging_product(self, record):
+    def _get_packaging_product(self, packaging):
         self.ensure_one()
-        if not record:
+        if not packaging:
             return False
 
-        if "product_id" in record._fields and record.product_id:
-            return record.product_id
+        if "product_id" in packaging._fields and packaging.product_id:
+            return packaging.product_id
 
-        if "product_tmpl_id" in record._fields and record.product_tmpl_id:
-            template = record.product_tmpl_id
-            if "product_variant_id" in template._fields and template.product_variant_id:
-                return template.product_variant_id
-            if "product_variant_ids" in template._fields and template.product_variant_ids:
-                return template.product_variant_ids[:1]
+        if "product_tmpl_id" in packaging._fields and packaging.product_tmpl_id:
+            tmpl = packaging.product_tmpl_id
+            if "product_variant_id" in tmpl._fields and tmpl.product_variant_id:
+                return tmpl.product_variant_id
+            if "product_variant_ids" in tmpl._fields and tmpl.product_variant_ids:
+                return tmpl.product_variant_ids[:1]
 
         return False
 
-    def _record_has_packaging_signature(self, rec):
+    def _get_packaging_display_name(self, packaging, product=False):
         self.ensure_one()
-        if not rec:
+        if not packaging:
             return False
 
-        has_product = bool(self._get_packaging_product(rec))
-        has_qty = bool(self._get_packaging_qty_field_name(rec))
-
-        if has_product and has_qty:
-            return True
-
-        # أحيانًا يكون السجل اسمه/موديله يشير للتغليف حتى لو الحقول مختلفة قليلًا
-        model_name = getattr(rec, "_name", "") or ""
-        display_name = ""
         try:
-            display_name = (rec.display_name or "").lower()
+            if packaging.display_name:
+                return packaging.display_name
         except Exception:
-            display_name = ""
+            pass
 
-        if has_product and (
-            "pack" in model_name
-            or "packaging" in model_name
-            or "pack" in display_name
-            or "pcs" in display_name
-        ):
-            return True
-
-        return False
-
-    def _iter_related_records(self, rec):
-        self.ensure_one()
-        if not rec:
-            return []
-
-        related_records = []
-        for field_name, field in rec._fields.items():
-            try:
-                field_type = getattr(field, "type", None)
-                if field_type not in ("many2one", "one2many", "many2many"):
-                    continue
-
-                value = rec[field_name]
-                if not value:
-                    continue
-
-                if field_type == "many2one":
-                    related_records.append(value)
-                else:
-                    related_records.extend(value)
-            except Exception:
-                continue
-
-        return related_records
-
-    def _extract_packaging_from_record(self, rec):
-        self.ensure_one()
-        if not rec:
-            return False
-
-        # 1) السجل نفسه ربما يكون سجل تغليف أو يحمل كمية التغليف
-        if self._record_has_packaging_signature(rec):
-            return rec
-
-        # 2) جرب أي سجل مرتبط
-        for target in self._iter_related_records(rec):
-            try:
-                if self._record_has_packaging_signature(target):
-                    return target
-            except Exception:
-                continue
-
-        # 3) جرب طبقة ثانية من العلاقات
-        for target in self._iter_related_records(rec):
-            try:
-                for sub_target in self._iter_related_records(target):
-                    try:
-                        if self._record_has_packaging_signature(sub_target):
-                            return sub_target
-                    except Exception:
-                        continue
-            except Exception:
-                continue
-
-        return False
+        product = product or self._get_packaging_product(packaging)
+        qty = self._get_packaging_qty(packaging) or 0.0
+        if product and qty:
+            return _("%(product)s x %(qty)s") % {
+                "product": product.display_name,
+                "qty": qty,
+            }
+        if product:
+            return product.display_name
+        return _("Packaging")
 
     def _find_product_packaging_by_barcode(self, barcode):
         self.ensure_one()
         barcode = (barcode or "").strip()
-        if not barcode:
+        if not barcode or "product.packaging" not in self.env:
             return False
 
-        # direct search if classic model exists
-        if "product.packaging" in self.env:
-            Packaging = self.env["product.packaging"]
+        Packaging = self.env["product.packaging"].sudo()
+        if "barcode" not in Packaging._fields:
+            return False
 
-            try:
-                domain = [("barcode", "=", barcode)]
-                if "company_id" in Packaging._fields:
-                    domain = [
+        domains = []
+        if "company_id" in Packaging._fields:
+            domains.extend(
+                [
+                    [
                         ("barcode", "=", barcode),
-                        "|",
-                        ("company_id", "=", False),
                         ("company_id", "=", self.company_id.id),
-                    ]
-                packaging = Packaging.search(domain, limit=1)
-                if packaging:
+                    ],
+                    [
+                        ("barcode", "=", barcode),
+                        ("company_id", "=", False),
+                    ],
+                ]
+            )
+        domains.append([("barcode", "=", barcode)])
+
+        for domain in domains:
+            packagings = Packaging.search(domain)
+            for packaging in packagings:
+                product = self._get_packaging_product(packaging)
+                qty = self._get_packaging_qty(packaging)
+                if product and qty > 0:
                     return packaging
-            except Exception:
-                pass
-
-            try:
-                if "barcode" in Packaging._fields:
-                    packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
-                    if packaging:
-                        return packaging
-            except Exception:
-                pass
-
-        # generic discovery through any barcode model
-        try:
-            for model_name in self.env:
-                try:
-                    Model = self.env[model_name]
-                    if "barcode" not in Model._fields:
-                        continue
-
-                    rec = Model.search([("barcode", "=", barcode)], limit=1)
-                    if not rec:
-                        continue
-
-                    extracted = self._extract_packaging_from_record(rec)
-                    if extracted:
-                        return extracted
-                except Exception:
-                    continue
-        except Exception:
-            pass
 
         return False
 
     def _find_route_product_barcode(self, barcode):
         self.ensure_one()
         barcode = (barcode or "").strip()
-        if not barcode:
-            return False
-
-        if "route.product.barcode" not in self.env:
+        if not barcode or "route.product.barcode" not in self.env:
             return False
 
         Barcode = self.env["route.product.barcode"]
-
         domain = [("barcode", "=", barcode)]
         if "active" in Barcode._fields:
             domain.append(("active", "=", True))
+
         if "company_id" in Barcode._fields:
-            domain.append(("company_id", "=", self.company_id.id))
+            rec = Barcode.search(domain + [("company_id", "=", self.company_id.id)], limit=1)
+            if rec:
+                return rec
+            rec = Barcode.search(domain + [("company_id", "=", False)], limit=1)
+            if rec:
+                return rec
 
-        rec = Barcode.search(domain, limit=1)
-        if rec:
-            return rec
-
-        domain = [("barcode", "=", barcode)]
-        if "active" in Barcode._fields:
-            domain.append(("active", "=", True))
-
-        rec = Barcode.search(domain, limit=1)
-        if rec:
-            return rec
-
-        rec = Barcode.search([("barcode", "=", barcode)], limit=1)
-        if rec:
-            return rec
-
-        return False
-
-    def _find_barcode_related_product(self, barcode):
-        self.ensure_one()
-        barcode = (barcode or "").strip()
-        if not barcode:
-            return False
-
-        weak_fallback = False
-
-        try:
-            for model_name in self.env:
-                try:
-                    Model = self.env[model_name]
-                    if "barcode" not in Model._fields:
-                        continue
-
-                    rec = Model.search([("barcode", "=", barcode)], limit=1)
-                    if not rec:
-                        continue
-
-                    # 1) أفضل حالة: استخرج سجل تغليف أو سجل يحمل qty حقيقية
-                    packaging = self._extract_packaging_from_record(rec)
-                    packaging_product = self._get_packaging_product(packaging)
-                    if packaging and packaging_product:
-                        packaging_qty = self._get_packaging_qty(packaging) or 1.0
-                        packaging_uom = (
-                            self._get_packaging_uom(packaging, packaging_product)
-                            or packaging_product.uom_id
-                        )
-
-                        return {
-                            "product": packaging_product,
-                            "scan_type": "box",
-                            "scan_type_label": _("Box Barcode"),
-                            "packaging": packaging,
-                            "default_scan_qty": packaging_qty,
-                            "default_scanned_uom": packaging_uom,
-                        }
-
-                    # 2) لو السجل نفسه يحمل product + qty
-                    record_product = self._get_packaging_product(rec)
-                    if self._record_has_packaging_signature(rec) and record_product:
-                        qty = self._get_packaging_qty(rec) or 1.0
-                        uom = self._get_packaging_uom(rec, record_product) or record_product.uom_id
-                        return {
-                            "product": record_product,
-                            "scan_type": "box",
-                            "scan_type_label": _("Box Barcode"),
-                            "packaging": rec,
-                            "default_scan_qty": qty,
-                            "default_scanned_uom": uom,
-                        }
-
-                    # 3) fallback ضعيف جدًا: فقط خزنه ولا ترجعه فورًا
-                    # حتى لا يسرق الباركود قبل أن نجد كمية التغليف الحقيقية
-                    fallback_product = self._get_packaging_product(rec)
-                    if not weak_fallback and fallback_product:
-                        weak_fallback = {
-                            "product": fallback_product,
-                            "scan_type": "box",
-                            "scan_type_label": _("Box Barcode"),
-                            "packaging": rec,
-                            "default_scan_qty": 1.0,
-                            "default_scanned_uom": fallback_product.uom_id,
-                        }
-
-                except Exception:
-                    continue
-        except Exception:
-            pass
-
-        return weak_fallback
+        return Barcode.search(domain, limit=1)
 
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
@@ -425,7 +257,6 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        # 1) direct product barcode
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -440,20 +271,29 @@ class RouteVisit(models.Model):
                 "default_scanned_uom": product.uom_id,
             }
 
-        # 2) packaging FIRST
         packaging = self._find_product_packaging_by_barcode(barcode)
-        packaging_product = self._get_packaging_product(packaging)
-        if packaging and packaging_product:
+        if packaging:
+            product = self._get_packaging_product(packaging)
             packaging_qty = self._get_packaging_qty(packaging)
-            if packaging_qty <= 0:
-                packaging_qty = 1.0
+            packaging_uom = self._get_packaging_uom(packaging, product)
 
-            packaging_uom = self._get_packaging_uom(packaging, packaging_product)
+            if not product:
+                raise UserError(
+                    _("The packaging barcode '%s' is linked to packaging without a product.")
+                    % barcode
+                )
+            if packaging_qty <= 0:
+                raise UserError(
+                    _(
+                        "Packaging '%(packaging)s' has no valid quantity configured."
+                    )
+                    % {"packaging": self._get_packaging_display_name(packaging, product)}
+                )
             if not packaging_uom:
-                packaging_uom = packaging_product.uom_id
+                packaging_uom = product.uom_id
 
             return {
-                "product": packaging_product,
+                "product": product,
                 "scan_type": "box",
                 "scan_type_label": _("Box Barcode"),
                 "packaging": packaging,
@@ -461,27 +301,25 @@ class RouteVisit(models.Model):
                 "default_scanned_uom": packaging_uom,
             }
 
-        # 3) any generic barcode model that carries true packaging qty
-        generic = self._find_barcode_related_product(barcode)
-        if generic:
-            return generic
-
-        # 4) custom route barcode LAST
         route_barcode = self._find_route_product_barcode(barcode)
         if route_barcode and route_barcode.product_id:
-            barcode_type = "piece"
-            if "barcode_type" in route_barcode._fields and route_barcode.barcode_type:
-                barcode_type = route_barcode.barcode_type
+            barcode_type = (route_barcode.barcode_type or "piece") if "barcode_type" in route_barcode._fields else "piece"
+            qty_in_base_uom = (route_barcode.qty_in_base_uom or 1.0) if "qty_in_base_uom" in route_barcode._fields else 1.0
 
-            qty_in_base_uom = 1.0
-            if "qty_in_base_uom" in route_barcode._fields and route_barcode.qty_in_base_uom:
-                qty_in_base_uom = route_barcode.qty_in_base_uom
+            if barcode_type == "box":
+                raise UserError(
+                    _(
+                        "Barcode '%(barcode)s' is configured as a box barcode in Route Core, but no original Odoo Packaging barcode was found for it.\n\n"
+                        "Please configure this barcode on Product Packaging in Odoo, then scan again."
+                    )
+                    % {"barcode": barcode}
+                )
 
             return {
                 "product": route_barcode.product_id,
-                "scan_type": barcode_type,
-                "scan_type_label": _("Box Barcode" if barcode_type == "box" else "Piece Barcode"),
-                "packaging": route_barcode,
+                "scan_type": "piece",
+                "scan_type_label": _("Piece Barcode"),
+                "packaging": False,
                 "default_scan_qty": qty_in_base_uom,
                 "default_scanned_uom": route_barcode.product_id.uom_id,
             }
@@ -632,7 +470,7 @@ class RouteVisit(models.Model):
 
         if scan_info.get("scan_type") == "box":
             effective_scan_qty = scan_info.get("default_scan_qty") or 1.0
-            effective_scanned_uom = product.uom_id
+            effective_scanned_uom = scan_info.get("default_scanned_uom") or product.uom_id
 
         counted_increase = self._get_scan_counted_increase(
             product,
