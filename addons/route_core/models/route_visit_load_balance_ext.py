@@ -149,12 +149,6 @@ class RouteVisit(models.Model):
                     ))
                 raise UserError(_("No previous stock balance was found for this outlet."))
 
-            if (
-                hasattr(rec.outlet_id, "default_commission_rate")
-                and rec.outlet_id.default_commission_rate
-            ):
-                rec.commission_rate = rec.outlet_id.default_commission_rate
-
             line_vals_list = []
             for row in balance_rows:
                 product = self.env["product.product"].browse(row["product_id"])
