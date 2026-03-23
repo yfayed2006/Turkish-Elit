@@ -238,15 +238,16 @@ class RouteVisitScanWizard(models.TransientModel):
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = True
                 rec.auto_uom_locked = True
-                rec.detected_packaging_name = (
-                    scan_info.get("packaging_display_name")
-                    or (scan_info.get("packaging").display_name if scan_info.get("packaging") else False)
-                    or (rec.visit_id._get_packaging_display_name(scan_info.get("packaging"))
-                        if hasattr(rec.visit_id, "_get_packaging_display_name") else False)
-                    or "Box"
+                rec.detected_packaging_name = rec.visit_id._get_packaging_display_name(
+                    scan_info.get("packaging"),
+                    product=product,
                 )
                 rec.quantity = 1.0
-                rec.scanned_uom_id = product.uom_id.id
+                rec.scanned_uom_id = (
+                    scan_info.get("default_scanned_uom").id
+                    if scan_info.get("default_scanned_uom")
+                    else product.uom_id.id
+                )
                 rec.counted_increase = suggested_qty
             else:
                 if not rec.scanned_uom_id:
