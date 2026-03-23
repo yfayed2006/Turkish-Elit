@@ -124,6 +124,11 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
         default=False,
     )
+    auto_uom_locked = fields.Boolean(
+        string="Auto UoM Locked",
+        readonly=True,
+        default=False,
+    )
 
     last_product_id = fields.Many2one(
         "product.product",
@@ -207,6 +212,7 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.counted_increase = 0.0
             rec.detected_packaging_name = False
             rec.auto_quantity_locked = False
+            rec.auto_uom_locked = False
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
                 rec.scanned_uom_id = False
@@ -227,31 +233,36 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.base_uom_id = product.uom_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
 
-            suggested_uom = scan_info.get("default_scanned_uom") or product.uom_id
             suggested_qty = scan_info.get("default_scan_qty") or 1.0
 
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = True
-                rec.detected_packaging_name = "Box"
-                rec.quantity = suggested_qty
-                rec.scanned_uom_id = suggested_uom.id
+                rec.auto_uom_locked = True
+                rec.detected_packaging_name = (
+                    scan_info.get("packaging").display_name
+                    if scan_info.get("packaging")
+                    else "Box"
+                )
+                rec.quantity = 1.0
+                rec.scanned_uom_id = product.uom_id.id
+                rec.counted_increase = suggested_qty
             else:
                 if not rec.scanned_uom_id:
-                    rec.scanned_uom_id = suggested_uom.id
+                    rec.scanned_uom_id = product.uom_id.id
                 if rec.quantity <= 0:
                     rec.quantity = 1.0
 
-            qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
-            if qty and rec.scanned_uom_id:
-                try:
-                    rec.counted_increase = rec.scanned_uom_id._compute_quantity(
-                        qty,
-                        product.uom_id,
-                    )
-                except Exception:
+                qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
+                if qty and rec.scanned_uom_id:
+                    try:
+                        rec.counted_increase = rec.scanned_uom_id._compute_quantity(
+                            qty,
+                            product.uom_id,
+                        )
+                    except Exception:
+                        rec.counted_increase = 0.0
+                else:
                     rec.counted_increase = 0.0
-            else:
-                rec.counted_increase = 0.0
 
             try:
                 resolved_lot = rec.visit_id._resolve_product_active_lot(
@@ -324,11 +335,18 @@ class RouteVisitScanWizard(models.TransientModel):
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
 
+        effective_qty = self.quantity
+        effective_uom = self.scanned_uom_id
+
+        if self.detected_scan_type == "Box Barcode":
+            effective_qty = 1.0
+            effective_uom = self.base_uom_id
+
         if self.scan_mode == "count":
             result = self.visit_id._process_scanned_barcode(
                 self.barcode,
-                scan_qty=self.quantity,
-                scanned_uom=self.scanned_uom_id,
+                scan_qty=effective_qty,
+                scanned_uom=effective_uom,
                 active_lot=self.active_lot_id,
             )
 
@@ -364,89 +382,16 @@ class RouteVisitScanWizard(models.TransientModel):
                 "target": "new",
                 "context": {
                     "default_visit_id": self.visit_id.id,
-                    "default_scan_mode": "count",
-                    "default_quantity": 1.0,
-                    "default_expiry_date": False,
-                    "default_add_to_near_expiry_return": False,
-                    "default_last_product_id": line.product_id.id,
-                    "default_last_counted_qty": line.counted_qty,
-                    "default_last_return_qty": 0.0,
-                    "default_last_return_route": False,
-                    "default_detected_product_id": product.id,
-                    "default_base_uom_id": product.uom_id.id,
-                    "default_scanned_uom_id": False,
-                    "default_detected_scan_type": False,
-                    "default_counted_increase": 0.0,
-                    "default_detected_packaging_name": False,
-                    "default_auto_quantity_locked": False,
-                    "default_active_lot_id": resolved_lot.id if resolved_lot else self.active_lot_id.id,
-                    "default_focus_target": "product",
-                },
-            }
-
-        if self.scan_mode == "return":
-            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
-            product = scan_info["product"]
-
-            if not self.scanned_uom_id:
-                scanned_uom = scan_info.get("default_scanned_uom") or product.uom_id
-            else:
-                scanned_uom = self.scanned_uom_id
-
-            qty_to_convert = self.quantity
-            if scan_info.get("scan_type") == "box" and self.quantity == 1.0:
-                qty_to_convert = scan_info.get("default_scan_qty") or 1.0
-
-            try:
-                return_increase = scanned_uom._compute_quantity(qty_to_convert, product.uom_id)
-            except Exception:
-                raise UserError(_("Could not convert the entered quantity to the product base unit."))
-
-            if return_increase <= 0:
-                raise UserError(_("Return quantity must be greater than zero."))
-
-            line = self._get_or_create_visit_line(product)
-            line.write({
-                "return_qty": (line.return_qty or 0.0) + return_increase,
-                "return_route": self.return_route or "vehicle",
-            })
-
-            return {
-                "type": "ir.actions.act_window",
-                "name": _("Scan Returns"),
-                "res_model": "route.visit.scan.wizard",
-                "view_mode": "form",
-                "target": "new",
-                "context": {
-                    "default_visit_id": self.visit_id.id,
-                    "default_scan_mode": "return",
-                    "default_quantity": 1.0,
-                    "default_return_route": self.return_route or "vehicle",
-                    "default_last_product_id": line.product_id.id,
-                    "default_last_counted_qty": line.counted_qty,
-                    "default_last_return_qty": line.return_qty,
-                    "default_last_return_route": line.return_route,
-                    "default_detected_product_id": product.id,
-                    "default_base_uom_id": product.uom_id.id,
-                    "default_scanned_uom_id": False,
-                    "default_detected_scan_type": False,
-                    "default_counted_increase": 0.0,
-                    "default_detected_packaging_name": False,
-                    "default_auto_quantity_locked": False,
+                    "default_scan_mode": self.scan_mode,
                     "default_active_lot_id": self.active_lot_id.id,
-                    "default_focus_target": "product",
+                    "default_focus_target": "product" if self.active_lot_id else "lot",
+                    "default_last_product_id": product.id,
+                    "default_last_counted_qty": result["counted_increase"],
                 },
             }
 
-        raise UserError(_("Unsupported scan mode."))
+        raise UserError(_("Return mode is not handled in this version."))
 
     def action_done(self):
         self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Visit"),
-            "res_model": "route.visit",
-            "res_id": self.visit_id.id,
-            "view_mode": "form",
-            "target": "current",
-        }
+        return {"type": "ir.actions.act_window_close"}
