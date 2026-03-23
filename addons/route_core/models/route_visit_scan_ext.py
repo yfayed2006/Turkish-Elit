@@ -140,9 +140,11 @@ class RouteVisit(models.Model):
         if not barcode:
             return False
 
+        if "product.packaging" not in self.env:
+            return False
+
         Packaging = self.env["product.packaging"]
 
-        # 1) direct barcode on product.packaging
         try:
             domain = [("barcode", "=", barcode)]
             if "company_id" in Packaging._fields:
@@ -158,36 +160,11 @@ class RouteVisit(models.Model):
         except Exception:
             pass
 
-        # 2) sometimes barcode exists directly on packaging without company support
         try:
             if "barcode" in Packaging._fields:
                 packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
                 if packaging:
                     return packaging
-        except Exception:
-            pass
-
-        # 3) dynamic fallback on related barcode models
-        try:
-            for model_name in self.env:
-                try:
-                    RelModel = self.env[model_name]
-                    if "barcode" not in RelModel._fields:
-                        continue
-
-                    rel_domain = [("barcode", "=", barcode)]
-                    rel_rec = RelModel.search(rel_domain, limit=1)
-                    if not rel_rec:
-                        continue
-
-                    for back_name in ("packaging_id", "product_packaging_id"):
-                        if back_name in RelModel._fields and rel_rec[back_name]:
-                            return rel_rec[back_name]
-
-                    if hasattr(rel_rec, "_name") and rel_rec._name == "product.packaging":
-                        return rel_rec
-                except Exception:
-                    continue
         except Exception:
             pass
 
@@ -199,14 +176,22 @@ class RouteVisit(models.Model):
         if not barcode:
             return False
 
+        if "route.product.barcode" not in self.env:
+            return False
+
         Barcode = self.env["route.product.barcode"]
-        domain = [
-            ("barcode", "=", barcode),
-            ("active", "=", True),
-            "|",
-            ("company_id", "=", False),
-            ("company_id", "=", self.company_id.id),
-        ]
+
+        domain = [("barcode", "=", barcode)]
+        if "active" in Barcode._fields:
+            domain.append(("active", "=", True))
+
+        if "company_id" in Barcode._fields:
+            domain = domain + [
+                "|",
+                ("company_id", "=", False),
+                ("company_id", "=", self.company_id.id),
+            ]
+
         return Barcode.search(domain, limit=1)
 
     def _resolve_scanned_barcode(self, barcode):
@@ -215,7 +200,6 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        # 1) direct product barcode
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -230,21 +214,25 @@ class RouteVisit(models.Model):
                 "default_scanned_uom": product.uom_id,
             }
 
-        # 2) custom route barcode mapping (piece / box)
         route_barcode = self._find_route_product_barcode(barcode)
         if route_barcode and route_barcode.product_id:
+            barcode_type = "piece"
+            if "barcode_type" in route_barcode._fields and route_barcode.barcode_type:
+                barcode_type = route_barcode.barcode_type
+
+            qty_in_base_uom = 1.0
+            if "qty_in_base_uom" in route_barcode._fields and route_barcode.qty_in_base_uom:
+                qty_in_base_uom = route_barcode.qty_in_base_uom
+
             return {
                 "product": route_barcode.product_id,
-                "scan_type": route_barcode.barcode_type or "piece",
-                "scan_type_label": _(
-                    "Box Barcode" if route_barcode.barcode_type == "box" else "Piece Barcode"
-                ),
+                "scan_type": barcode_type,
+                "scan_type_label": _("Box Barcode" if barcode_type == "box" else "Piece Barcode"),
                 "packaging": False,
-                "default_scan_qty": route_barcode.qty_in_base_uom or 1.0,
+                "default_scan_qty": qty_in_base_uom,
                 "default_scanned_uom": route_barcode.product_id.uom_id,
             }
 
-        # 3) fallback to packaging barcode
         packaging = self._find_product_packaging_by_barcode(barcode)
         if packaging and packaging.product_id:
             packaging_qty = self._get_packaging_qty(packaging)
