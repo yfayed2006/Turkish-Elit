@@ -87,7 +87,9 @@ class RouteVisit(models.Model):
         "refill_picking_count",
         "return_picking_ids",
         "return_picking_count",
-        "line_ids",
+        "line_ids.product_id",
+        "line_ids.previous_qty",
+        "line_ids.counted_qty",
         "line_ids.supplied_qty",
         "line_ids.return_qty",
     )
@@ -97,6 +99,12 @@ class RouteVisit(models.Model):
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
             has_return_qty = any((line.return_qty or 0.0) > 0 for line in rec.line_ids)
             has_return_transfers = bool(rec.return_picking_ids or rec.return_picking_count)
+
+            load_balance_required = (
+                rec.state == "in_progress"
+                and rec.visit_process_state == "checked_in"
+                and not has_lines
+            )
 
             can_enter_collection = (
                 rec.state == "in_progress"
@@ -195,21 +203,19 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Start the visit"
                 rec.ux_stage_help = "Begin the visit."
 
-            elif (
-                rec.state == "in_progress"
-                and rec.visit_process_state == "checked_in"
-                and not has_lines
-            ):
+            elif rec.state == "in_progress" and rec.visit_process_state == "pending":
                 rec.ux_stage = "load_balance"
                 rec.ux_primary_action = "load_previous_balance"
                 rec.ux_stage_title = "Load previous balance"
-                rec.ux_stage_help = "Load previous shelf quantities before scanning the shelf."
+                rec.ux_stage_help = "Load previous shelf quantities."
 
-            elif (
-                rec.state == "in_progress"
-                and rec.visit_process_state == "checked_in"
-                and has_lines
-            ):
+            elif load_balance_required:
+                rec.ux_stage = "load_balance"
+                rec.ux_primary_action = "load_previous_balance"
+                rec.ux_stage_title = "Load previous balance"
+                rec.ux_stage_help = "Load previous shelf quantities before counting."
+
+            elif rec.visit_process_state == "checked_in":
                 rec.ux_stage = "count"
                 rec.ux_primary_action = "scan_shelf"
                 rec.ux_stage_title = "Scan shelf stock"
@@ -294,7 +300,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage_title = "Visit completed"
                 rec.ux_stage_help = "No action required."
 
-    def _action_open_current_pda_visit(self):
+    def _get_pda_form_action(self):
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
@@ -302,25 +308,25 @@ class RouteVisit(models.Model):
             "res_model": "route.visit",
             "res_id": self.id,
             "view_mode": "form",
-            "views": [(self.env.ref("route_core.view_route_visit_pda_form").id, "form")],
+            "view_id": self.env.ref("route_core.view_route_visit_pda_form").id,
             "target": "current",
             "context": {
+                "pda_mode": True,
                 "create": 0,
                 "edit": 1,
                 "delete": 0,
-                "pda_mode": True,
             },
         }
 
     def action_ux_start_visit(self):
         self.ensure_one()
         self.action_start_visit()
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_load_previous_balance(self):
         self.ensure_one()
         self.action_load_previous_balance()
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_scan_shelf(self):
         self.ensure_one()
@@ -345,12 +351,12 @@ class RouteVisit(models.Model):
         ):
             self.action_create_sale_order()
 
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_confirm_return_transfers(self):
         self.ensure_one()
         self.action_confirm_return_transfers()
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_view_return_transfers(self):
         self.ensure_one()
@@ -363,12 +369,12 @@ class RouteVisit(models.Model):
         if not self.refill_datetime:
             self.write({"refill_datetime": fields.Datetime.now()})
 
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_confirm_refill(self):
         self.ensure_one()
         self.action_confirm_refill_transfer()
-        return self._action_open_current_pda_visit()
+        return self._get_pda_form_action()
 
     def action_ux_view_refill_transfer(self):
         self.ensure_one()
@@ -417,7 +423,8 @@ class RouteVisit(models.Model):
             raise UserError(_("There are no draft payments to confirm."))
 
         self.action_confirm_all_payments()
-        return self._action_open_current_pda_visit()
+
+        return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
         self.ensure_one()
@@ -425,7 +432,8 @@ class RouteVisit(models.Model):
             raise UserError(_("Please enter Collection Skip Reason first."))
 
         self.action_skip_collection()
-        return self._action_open_current_pda_visit()
+
+        return self._get_pda_form_action()
 
     def _action_finish_visit_core(self):
         self.ensure_one()
