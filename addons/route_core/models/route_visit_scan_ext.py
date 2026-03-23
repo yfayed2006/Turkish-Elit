@@ -138,31 +138,60 @@ class RouteVisit(models.Model):
         if not barcode:
             return False
 
-        if "product.packaging" not in self.env:
-            return False
+        # 1) direct product.packaging barcode
+        if "product.packaging" in self.env:
+            Packaging = self.env["product.packaging"]
 
-        Packaging = self.env["product.packaging"]
-
-        try:
-            domain = [("barcode", "=", barcode)]
-            if "company_id" in Packaging._fields:
-                domain = [
-                    ("barcode", "=", barcode),
-                    "|",
-                    ("company_id", "=", False),
-                    ("company_id", "=", self.company_id.id),
-                ]
-            packaging = Packaging.search(domain, limit=1)
-            if packaging:
-                return packaging
-        except Exception:
-            pass
-
-        try:
-            if "barcode" in Packaging._fields:
-                packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
+            try:
+                domain = [("barcode", "=", barcode)]
+                if "company_id" in Packaging._fields:
+                    domain = [
+                        ("barcode", "=", barcode),
+                        "|",
+                        ("company_id", "=", False),
+                        ("company_id", "=", self.company_id.id),
+                    ]
+                packaging = Packaging.search(domain, limit=1)
                 if packaging:
                     return packaging
+            except Exception:
+                pass
+
+            try:
+                if "barcode" in Packaging._fields:
+                    packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
+                    if packaging:
+                        return packaging
+            except Exception:
+                pass
+
+        # 2) generic fallback: barcode stored in a related barcode model
+        # looks for any model with barcode field that links back to packaging
+        # through common field names.
+        try:
+            for model_name in self.env:
+                try:
+                    RelModel = self.env[model_name]
+                    if "barcode" not in RelModel._fields:
+                        continue
+
+                    rel_rec = RelModel.search([("barcode", "=", barcode)], limit=1)
+                    if not rel_rec:
+                        continue
+
+                    for back_name in (
+                        "packaging_id",
+                        "product_packaging_id",
+                        "package_id",
+                        "pack_id",
+                    ):
+                        if back_name in RelModel._fields and rel_rec[back_name]:
+                            return rel_rec[back_name]
+
+                    if hasattr(rel_rec, "_name") and rel_rec._name == "product.packaging":
+                        return rel_rec
+                except Exception:
+                    continue
         except Exception:
             pass
 
@@ -179,6 +208,7 @@ class RouteVisit(models.Model):
 
         Barcode = self.env["route.product.barcode"]
 
+        # current company first
         domain = [("barcode", "=", barcode)]
         if "active" in Barcode._fields:
             domain.append(("active", "=", True))
@@ -189,6 +219,7 @@ class RouteVisit(models.Model):
         if rec:
             return rec
 
+        # any active company
         domain = [("barcode", "=", barcode)]
         if "active" in Barcode._fields:
             domain.append(("active", "=", True))
@@ -197,14 +228,68 @@ class RouteVisit(models.Model):
         if rec:
             return rec
 
+        # any exact record
         rec = Barcode.search([("barcode", "=", barcode)], limit=1)
         if rec:
             return rec
 
-        candidates = Barcode.search([])
-        for candidate in candidates:
-            if (candidate.barcode or "").strip() == barcode:
-                return candidate
+        return False
+
+    def _find_barcode_related_product(self, barcode):
+        self.ensure_one()
+        barcode = (barcode or "").strip()
+        if not barcode:
+            return False
+
+        # last fallback: scan any barcode-carrying model and try to resolve product
+        try:
+            for model_name in self.env:
+                try:
+                    Model = self.env[model_name]
+                    if "barcode" not in Model._fields:
+                        continue
+
+                    rec = Model.search([("barcode", "=", barcode)], limit=1)
+                    if not rec:
+                        continue
+
+                    # direct product on the record
+                    if "product_id" in Model._fields and rec.product_id:
+                        return {
+                            "product": rec.product_id,
+                            "scan_type": "box",
+                            "scan_type_label": _("Box Barcode"),
+                            "packaging": False,
+                            "default_scan_qty": 1.0,
+                            "default_scanned_uom": rec.product_id.uom_id,
+                        }
+
+                    # product through packaging relation
+                    for back_name in (
+                        "packaging_id",
+                        "product_packaging_id",
+                        "package_id",
+                        "pack_id",
+                    ):
+                        if back_name in Model._fields and rec[back_name]:
+                            packaging = rec[back_name]
+                            if hasattr(packaging, "product_id") and packaging.product_id:
+                                packaging_qty = self._get_packaging_qty(packaging) or 1.0
+                                packaging_uom = self._get_packaging_uom(
+                                    packaging, packaging.product_id
+                                ) or packaging.product_id.uom_id
+                                return {
+                                    "product": packaging.product_id,
+                                    "scan_type": "box",
+                                    "scan_type_label": _("Box Barcode"),
+                                    "packaging": packaging,
+                                    "default_scan_qty": packaging_qty,
+                                    "default_scanned_uom": packaging_uom,
+                                }
+                except Exception:
+                    continue
+        except Exception:
+            pass
 
         return False
 
@@ -251,17 +336,11 @@ class RouteVisit(models.Model):
         if packaging and packaging.product_id:
             packaging_qty = self._get_packaging_qty(packaging)
             if packaging_qty <= 0:
-                raise UserError(
-                    _("Packaging '%(packaging)s' has no valid quantity configured.")
-                    % {"packaging": packaging.display_name}
-                )
+                packaging_qty = 1.0
 
             packaging_uom = self._get_packaging_uom(packaging, packaging.product_id)
             if not packaging_uom:
-                raise UserError(
-                    _("Packaging '%(packaging)s' has no valid unit configured.")
-                    % {"packaging": packaging.display_name}
-                )
+                packaging_uom = packaging.product_id.uom_id
 
             return {
                 "product": packaging.product_id,
@@ -271,6 +350,10 @@ class RouteVisit(models.Model):
                 "default_scan_qty": packaging_qty,
                 "default_scanned_uom": packaging_uom,
             }
+
+        generic = self._find_barcode_related_product(barcode)
+        if generic:
+            return generic
 
         raise UserError(_("No product was found with barcode '%s'.") % barcode)
 
