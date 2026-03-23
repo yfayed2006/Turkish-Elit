@@ -1,3 +1,5 @@
+from ast import literal_eval
+
 from odoo import api, _, fields, models
 from odoo.exceptions import UserError, ValidationError
 
@@ -117,15 +119,28 @@ class RoutePlanLine(models.Model):
         if plans:
             plans._sync_state_from_lines()
 
+    def _safe_action_context(self, action):
+        ctx = action.get("context") or {}
+        if isinstance(ctx, str):
+            try:
+                ctx = literal_eval(ctx)
+            except Exception:
+                ctx = {}
+        if not isinstance(ctx, dict):
+            ctx = {}
+        return ctx
+
     def _get_pda_visit_action(self, visit):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit_pda").read()[0]
+        base_context = self._safe_action_context(action)
+
         action["res_id"] = visit.id
         action["view_mode"] = "form"
         action["views"] = [(self.env.ref("route_core.view_route_visit_pda_form").id, "form")]
         action["target"] = "current"
         action["context"] = {
-            **(action.get("context") or {}),
+            **base_context,
             "create": 0,
             "edit": 1,
             "delete": 0,
