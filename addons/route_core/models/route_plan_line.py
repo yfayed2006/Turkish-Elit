@@ -117,24 +117,34 @@ class RoutePlanLine(models.Model):
         if plans:
             plans._sync_state_from_lines()
 
+    def _get_pda_visit_action(self, visit):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_visit_pda").read()[0]
+        action["res_id"] = visit.id
+        action["view_mode"] = "form"
+        action["views"] = [
+            (self.env.ref("route_core.view_route_visit_pda_form").id, "form"),
+        ]
+        action["target"] = "current"
+        action["context"] = {
+            "create": 0,
+            "edit": 1,
+            "delete": 0,
+            "pda_mode": True,
+        }
+        return action
+
     def action_open_or_create_visit(self):
         self.ensure_one()
 
         if not self.plan_id:
             raise UserError(_("Please save the route plan first."))
 
-        if self.visit_id:
-            action = self.env.ref("route_core.action_route_visit").read()[0]
-            action["res_id"] = self.visit_id.id
-            action["views"] = [(False, "form")]
-            return action
+        visit = self.visit_id
+        if not visit:
+            visit = self.plan_id._create_visit_for_line(self)
 
-        visit = self.plan_id._create_visit_for_line(self)
-
-        action = self.env.ref("route_core.action_route_visit").read()[0]
-        action["res_id"] = visit.id
-        action["views"] = [(False, "form")]
-        return action
+        return self._get_pda_visit_action(visit)
 
     @api.model_create_multi
     def create(self, vals_list):
