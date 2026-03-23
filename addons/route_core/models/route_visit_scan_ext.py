@@ -182,15 +182,31 @@ class RouteVisit(models.Model):
         domain = [("barcode", "=", barcode)]
         if "active" in Barcode._fields:
             domain.append(("active", "=", True))
-
         if "company_id" in Barcode._fields:
-            domain = domain + [
-                "|",
-                ("company_id", "=", False),
-                ("company_id", "=", self.company_id.id),
-            ]
+            domain.append(("company_id", "=", self.company_id.id))
 
-        return Barcode.search(domain, limit=1)
+        rec = Barcode.search(domain, limit=1)
+        if rec:
+            return rec
+
+        domain = [("barcode", "=", barcode)]
+        if "active" in Barcode._fields:
+            domain.append(("active", "=", True))
+
+        rec = Barcode.search(domain, limit=1)
+        if rec:
+            return rec
+
+        rec = Barcode.search([("barcode", "=", barcode)], limit=1)
+        if rec:
+            return rec
+
+        candidates = Barcode.search([])
+        for candidate in candidates:
+            if (candidate.barcode or "").strip() == barcode:
+                return candidate
+
+        return False
 
     def _resolve_scanned_barcode(self, barcode):
         self.ensure_one()
