@@ -374,25 +374,7 @@
                             <field name="refill_datetime" readonly="1"/>
                         </group>
                     </group>
-
-                    <group string="Visit Process">
-                        <group>
-                            <field name="commission_rate"/>
-                            <field name="no_refill"/>
-                            <field name="has_collection" readonly="1"/>
-                            <field name="has_returns" readonly="1"/>
-                            <field name="has_refill" readonly="1"/>
-                            <field name="has_pending_refill" readonly="1"/>
-                            <field name="is_ready_to_close" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="collection_skip_reason"/>
-                            <field name="near_expiry_threshold_days"/>
-                            <field name="no_refill_reason" invisible="not no_refill"/>
-                            <field name="cancel_reason"/>
-                        </group>
-                    </group>
-
+                  
                     <notebook>
                         <page string="Visit Lines">
                             <field name="line_ids">
