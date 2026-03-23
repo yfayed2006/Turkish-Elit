@@ -484,16 +484,10 @@ class RouteVisit(models.Model):
             if active_lot.product_id != product:
                 raise UserError(
                     _(
-                        "The scanned product does not belong to the active lot.
-
-"
-                        "Active Lot: %(lot)s
-"
-                        "Lot Product: %(lot_product)s
-"
-                        "Scanned Product: %(barcode_product)s
-
-"
+                        "The scanned product does not belong to the active lot.\n\n"
+                        "Active Lot: %(lot)s\n"
+                        "Lot Product: %(lot_product)s\n"
+                        "Scanned Product: %(barcode_product)s\n\n"
                         "Please clear the current lot first, then scan/select the correct lot for this product."
                     )
                     % {
@@ -579,9 +573,7 @@ class RouteVisit(models.Model):
             return scanned_uom._compute_quantity(scan_qty, base_uom)
         except Exception as e:
             raise UserError(
-                _("Could not convert the scanned quantity from the selected UoM to the product base UoM.
-
-%s")
+                _("Could not convert the scanned quantity from the selected UoM to the product base UoM.\n\n%s")
                 % str(e)
             )
 
