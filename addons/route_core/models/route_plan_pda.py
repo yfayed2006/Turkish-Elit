@@ -16,6 +16,8 @@ class RoutePlan(models.Model):
             "search_default_filter_today": 0,
             "default_user_id": self.user_id.id,
             "default_date": self.date,
+            "default_vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+            "default_plan_id": self.id,
             "pda_mode": True,
             "create": 0,
             "delete": 0,
