@@ -123,40 +123,83 @@ class RouteVisit(models.Model):
             return 0.0
         return packaging[qty_field] or 0.0
 
+    def _get_product_from_packaging(self, packaging):
+        self.ensure_one()
+        if not packaging:
+            return False
+
+        product = False
+        if "product_id" in packaging._fields and packaging.product_id:
+            product = packaging.product_id
+        elif "product_tmpl_id" in packaging._fields and packaging.product_tmpl_id:
+            product = packaging.product_tmpl_id.product_variant_id
+
+        return product
+
     def _get_product_packaging_by_barcode(self, barcode):
         """
-        Clean Odoo-native packaging lookup.
+        Resolve Odoo-native packaging barcode first.
 
-        We intentionally resolve box barcodes from product.packaging first and do not
-        depend on route.product.barcode for box quantities. In Odoo packaging, the
-        packaging barcode represents a packaging type, and scanning it should add the
-        packaging quantity to the counted units.
+        We prefer real Odoo packaging over route.product.barcode for box scans,
+        but keep the lookup robust because some databases expose packaging
+        barcodes directly on product.packaging while others expose them through
+        related barcode lines.
         """
         self.ensure_one()
         barcode = (barcode or "").strip()
         if not barcode or "product.packaging" not in self.env:
             return False
 
-        Packaging = self.env["product.packaging"]
-        domain = [("barcode", "=", barcode)]
+        Packaging = self.env["product.packaging"].sudo()
 
+        domains = []
         if "company_id" in Packaging._fields:
-            domain = [
+            domains.append([
                 ("barcode", "=", barcode),
                 "|",
                 ("company_id", "=", False),
                 ("company_id", "=", self.company_id.id),
-            ]
+            ])
+        domains.append([("barcode", "=", barcode)])
 
-        packaging = Packaging.search(domain, limit=1)
-        if not packaging:
-            packaging = Packaging.search([("barcode", "=", barcode)], limit=1)
+        for domain in domains:
+            try:
+                packaging = Packaging.search(domain, limit=1)
+                if packaging:
+                    return packaging
+            except Exception:
+                continue
 
-        return packaging or False
+        try:
+            for field_name, field in Packaging._fields.items():
+                relation = getattr(field, "comodel_name", False)
+                if field.type not in ("one2many", "many2many") or not relation:
+                    continue
+                if relation not in self.env:
+                    continue
+
+                RelModel = self.env[relation].sudo()
+                if "barcode" not in RelModel._fields:
+                    continue
+
+                rel_rec = RelModel.search([("barcode", "=", barcode)], limit=1)
+                if not rel_rec:
+                    continue
+
+                for back_name in ("packaging_id", "product_packaging_id"):
+                    if back_name in RelModel._fields and rel_rec[back_name]:
+                        return rel_rec[back_name]
+
+                if getattr(rel_rec, "_name", "") == "product.packaging":
+                    return rel_rec
+            return False
+        except Exception:
+            return False
 
     def _get_product_packaging_scan_info(self, packaging):
         self.ensure_one()
-        if not packaging or not getattr(packaging, "product_id", False):
+        product = self._get_product_from_packaging(packaging)
+        if not packaging or not product:
             return False
 
         packaging_qty = self._get_packaging_qty(packaging)
@@ -166,14 +209,11 @@ class RouteVisit(models.Model):
                 % packaging.display_name
             )
 
-        product = packaging.product_id
-
         return {
             "product": product,
             "scan_type": "box",
             "scan_type_label": _("Box Barcode"),
             "packaging": packaging,
-            # Odoo packaging qty is the counted quantity to add in the product base UoM.
             "default_scan_qty": packaging_qty,
             "default_scanned_uom": product.uom_id,
         }
@@ -219,7 +259,6 @@ class RouteVisit(models.Model):
         if not barcode:
             raise UserError(_("Please enter or scan a barcode first."))
 
-        # 1) direct product barcode
         product = self.env["product.product"].search(
             [("barcode", "=", barcode)],
             limit=1,
@@ -234,14 +273,12 @@ class RouteVisit(models.Model):
                 "default_scanned_uom": product.uom_id,
             }
 
-        # 2) Odoo native packaging barcode FIRST for box scans.
         packaging = self._get_product_packaging_by_barcode(barcode)
         if packaging:
-            return self._get_product_packaging_scan_info(packaging)
+            scan_info = self._get_product_packaging_scan_info(packaging)
+            if scan_info:
+                return scan_info
 
-        # 3) route.product.barcode remains only as a fallback mapping.
-        # For box barcodes we intentionally DO NOT trust it as the primary source,
-        # because the requested clean behavior must come from Odoo packaging.
         route_barcode = self._find_route_product_barcode(barcode)
         if route_barcode and route_barcode.product_id:
             barcode_type = "piece"
@@ -253,7 +290,7 @@ class RouteVisit(models.Model):
                     _(
                         "Barcode '%(barcode)s' is configured as a box barcode in Route Product Barcode, "
                         "but no matching Odoo Packaging barcode was found. Please configure this box barcode on "
-                        "the product packaging in Odoo الأصلية."
+                        "the product packaging in Odoo original Packaging."
                     )
                     % {"barcode": barcode}
                 )
@@ -485,4 +522,3 @@ class RouteVisit(models.Model):
                 "default_scan_mode": "count",
             },
         }
-
