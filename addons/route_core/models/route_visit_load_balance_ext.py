@@ -61,13 +61,13 @@ class RouteVisit(models.Model):
         if not qty_by_product:
             return []
 
-        Balance = self.env["outlet.stock.balance"]
+        balance_model = self.env["outlet.stock.balance"]
         result = []
 
         for product_id, qty in qty_by_product.items():
             product = self.env["product.product"].browse(product_id)
 
-            existing_balance = Balance.search([
+            existing_balance = balance_model.search([
                 ("outlet_id", "=", outlet.id),
                 ("product_id", "=", product_id),
             ], limit=1)
@@ -105,12 +105,17 @@ class RouteVisit(models.Model):
         return result
 
     def action_load_previous_balance(self):
-        RouteVisitLine = self.env["route.visit.line"]
+        route_visit_line = self.env["route.visit.line"]
 
         for rec in self:
-            if rec.visit_process_state not in ("pending",):
+            if rec.state != "in_progress":
                 raise UserError(
-                    _("Previous balance can only be loaded while the visit is Pending.")
+                    _("Previous balance can only be loaded while the visit is in progress.")
+                )
+
+            if rec.visit_process_state not in ("pending", "checked_in"):
+                raise UserError(
+                    _("Previous balance can only be loaded right after starting the visit.")
                 )
 
             if not rec.outlet_id:
@@ -164,13 +169,17 @@ class RouteVisit(models.Model):
                     "vehicle_available_qty": vehicle_available_qty,
                 })
 
-            created_lines = RouteVisitLine.create(line_vals_list)
+            created_lines = route_visit_line.create(line_vals_list)
             rec._update_vehicle_available_on_lines(created_lines)
 
-            rec.write({
+            vals = {
                 "visit_process_state": "checked_in",
-                "check_in_datetime": rec.check_in_datetime or fields.Datetime.now(),
-            })
+            }
+            if "check_in_datetime" in rec._fields:
+                vals["check_in_datetime"] = rec.check_in_datetime or fields.Datetime.now()
+            rec.write(vals)
+
+        return True
 
     def action_generate_refill_proposal(self):
         for rec in self:
