@@ -132,6 +132,24 @@ class RouteVisit(models.Model):
             return record[uom_field]
         return product.uom_id if product else False
 
+    def _extract_packaging_from_record(self, rec):
+        self.ensure_one()
+        if not rec:
+            return False
+
+        for field_name, field in rec._fields.items():
+            try:
+                if getattr(field, "type", None) != "many2one":
+                    continue
+                if getattr(field, "comodel_name", "") != "product.packaging":
+                    continue
+                if rec[field_name]:
+                    return rec[field_name]
+            except Exception:
+                continue
+
+        return False
+
     def _find_product_packaging_by_barcode(self, barcode):
         self.ensure_one()
         barcode = (barcode or "").strip()
@@ -245,33 +263,43 @@ class RouteVisit(models.Model):
                     if not rec:
                         continue
 
-                    for back_name in (
-                        "packaging_id",
-                        "product_packaging_id",
-                        "package_id",
-                        "pack_id",
-                    ):
-                        if back_name in Model._fields and rec[back_name]:
-                            packaging = rec[back_name]
-                            if hasattr(packaging, "product_id") and packaging.product_id:
-                                packaging_qty = self._get_packaging_qty(packaging) or 1.0
-                                return {
-                                    "product": packaging.product_id,
-                                    "scan_type": "box",
-                                    "scan_type_label": _("Box Barcode"),
-                                    "packaging": packaging,
-                                    "default_scan_qty": packaging_qty,
-                                    "default_scanned_uom": packaging.product_id.uom_id,
-                                }
+                    packaging = self._extract_packaging_from_record(rec)
+                    if packaging and getattr(packaging, "product_id", False):
+                        packaging_qty = self._get_packaging_qty(packaging) or 1.0
+                        packaging_uom = (
+                            self._get_packaging_uom(packaging, packaging.product_id)
+                            or packaging.product_id.uom_id
+                        )
+
+                        return {
+                            "product": packaging.product_id,
+                            "scan_type": "box",
+                            "scan_type_label": _("Box Barcode"),
+                            "packaging": packaging,
+                            "default_scan_qty": packaging_qty,
+                            "default_scanned_uom": packaging_uom,
+                        }
+
+                    if getattr(rec, "_name", "") == "product.packaging" and getattr(rec, "product_id", False):
+                        packaging_qty = self._get_packaging_qty(rec) or 1.0
+                        packaging_uom = self._get_packaging_uom(rec, rec.product_id) or rec.product_id.uom_id
+
+                        return {
+                            "product": rec.product_id,
+                            "scan_type": "box",
+                            "scan_type_label": _("Box Barcode"),
+                            "packaging": rec,
+                            "default_scan_qty": packaging_qty,
+                            "default_scanned_uom": packaging_uom,
+                        }
 
                     if "product_id" in Model._fields and rec.product_id:
-                        qty = self._get_packaging_qty(rec) or 1.0
                         return {
                             "product": rec.product_id,
                             "scan_type": "box",
                             "scan_type_label": _("Box Barcode"),
                             "packaging": False,
-                            "default_scan_qty": qty,
+                            "default_scan_qty": 1.0,
                             "default_scanned_uom": rec.product_id.uom_id,
                         }
                 except Exception:
