@@ -75,9 +75,7 @@ class RouteVisit(models.Model):
         )
         if not quant:
             raise UserError(
-                _(
-                    "Lot '%s' is not currently available in the van stock or outlet stock."
-                )
+                _("Lot '%s' is not currently available in the van stock or outlet stock.")
                 % lot.display_name
             )
         return lot
@@ -304,10 +302,7 @@ class RouteVisit(models.Model):
             return available_lots[:1]
 
         raise UserError(
-            _(
-                "Product '%s' has more than one available lot in stock. "
-                "Please scan/select the lot first."
-            )
+            _("Product '%s' has more than one available lot in stock. Please scan/select the lot first.")
             % product.display_name
         )
 
@@ -354,9 +349,7 @@ class RouteVisit(models.Model):
             "previous_qty": 0.0,
             "counted_qty": counted_increase,
             "unit_price": product.lst_price or 0.0,
-            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(
-                product
-            ),
+            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
         }
 
     def _get_scan_counted_increase(self, product, scan_qty=1.0, scanned_uom=False):
@@ -373,10 +366,7 @@ class RouteVisit(models.Model):
             return scanned_uom._compute_quantity(scan_qty, base_uom)
         except Exception as e:
             raise UserError(
-                _(
-                    "Could not convert the scanned quantity from the selected UoM "
-                    "to the product base UoM.\n\n%s"
-                )
+                _("Could not convert the scanned quantity from the selected UoM to the product base UoM.\n\n%s")
                 % str(e)
             )
 
@@ -392,18 +382,13 @@ class RouteVisit(models.Model):
 
         if self.visit_process_state not in ("checked_in", "counting", "reconciled"):
             raise UserError(
-                _(
-                    "Barcode scanning is only allowed when the visit is Checked In, "
-                    "Counting, or Reconciled."
-                )
+                _("Barcode scanning is only allowed when the visit is Checked In, Counting, or Reconciled.")
             )
 
         if not self.vehicle_id:
             raise UserError(_("Please set a vehicle before scanning."))
         if not self.vehicle_id.stock_location_id:
-            raise UserError(
-                _("The selected vehicle does not have a Vehicle Stock Location.")
-            )
+            raise UserError(_("The selected vehicle does not have a Vehicle Stock Location."))
 
         self._sync_source_location_from_vehicle()
         if not self.source_location_id:
@@ -415,11 +400,7 @@ class RouteVisit(models.Model):
         effective_scan_qty = scan_qty
         effective_scanned_uom = scanned_uom or scan_info.get("default_scanned_uom")
 
-        if (
-            scan_info.get("scan_type") == "box"
-            and not scanned_uom
-            and scan_qty == 1.0
-        ):
+        if scan_info.get("scan_type") == "box" and not scanned_uom and scan_qty == 1.0:
             effective_scan_qty = scan_info.get("default_scan_qty") or 1.0
 
         counted_increase = self._get_scan_counted_increase(
@@ -435,24 +416,18 @@ class RouteVisit(models.Model):
             )
 
         resolved_lot = self._resolve_product_active_lot(product, active_lot=active_lot)
-        resolved_expiry_date = (
-            self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
-        )
+        resolved_expiry_date = self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
 
         line = self._find_visit_line_for_product(product)
         if line:
             line.write(
                 {
                     "counted_qty": (line.counted_qty or 0.0) + counted_increase,
-                    "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(
-                        product
-                    ),
+                    "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
                 }
             )
         else:
-            line = RouteVisitLine.create(
-                [self._prepare_visit_line_from_scan(product, counted_increase)]
-            )
+            line = RouteVisitLine.create([self._prepare_visit_line_from_scan(product, counted_increase)])
 
         self.last_scanned_barcode = (barcode or "").strip()
 
