@@ -122,15 +122,17 @@ class RoutePlanLine(models.Model):
         action = self.env.ref("route_core.action_route_visit_pda").read()[0]
         action["res_id"] = visit.id
         action["view_mode"] = "form"
-        action["views"] = [
-            (self.env.ref("route_core.view_route_visit_pda_form").id, "form"),
-        ]
+        action["views"] = [(self.env.ref("route_core.view_route_visit_pda_form").id, "form")]
         action["target"] = "current"
         action["context"] = {
+            **(action.get("context") or {}),
             "create": 0,
             "edit": 1,
             "delete": 0,
             "pda_mode": True,
+            "default_plan_id": self.plan_id.id,
+            "default_user_id": self.plan_id.user_id.id if self.plan_id.user_id else False,
+            "default_vehicle_id": self.plan_id.vehicle_id.id if self.plan_id.vehicle_id else False,
         }
         return action
 
