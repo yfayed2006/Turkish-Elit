@@ -127,7 +127,7 @@ class RouteVisit(models.Model):
         if not record:
             return 0.0
 
-        # Prefer explicit quantity fields first.
+        # product.packaging usually stores the exact contained qty directly.
         for field_name in (
             "qty",
             "quantity",
@@ -140,12 +140,37 @@ class RouteVisit(models.Model):
             "unit_qty",
             "units",
             "units_count",
-            "factor_inv",
         ):
             if field_name in record._fields:
                 value = record[field_name] or 0.0
                 if value and value > 0:
                     return float(value)
+
+        # Odoo 19 packaging may be stored on uom.uom. In that case factor/factor_inv
+        # can be stored in either direction, so normalize to the larger meaningful qty.
+        if getattr(record, "_name", "") == "uom.uom":
+            candidates = []
+            if "factor_inv" in record._fields:
+                value = record["factor_inv"] or 0.0
+                if value and value > 0:
+                    candidates.append(float(value))
+                    if value < 1:
+                        candidates.append(1.0 / float(value))
+            if "factor" in record._fields:
+                value = record["factor"] or 0.0
+                if value and value > 0:
+                    candidates.append(float(value))
+                    if value < 1:
+                        candidates.append(1.0 / float(value))
+            candidates = [v for v in candidates if v and v > 0]
+            if candidates:
+                meaningful = [v for v in candidates if v > 1]
+                return max(meaningful or candidates)
+
+        if "factor_inv" in record._fields:
+            value = record["factor_inv"] or 0.0
+            if value and value > 0:
+                return float(value)
 
         if "factor" in record._fields:
             factor = record["factor"] or 0.0
