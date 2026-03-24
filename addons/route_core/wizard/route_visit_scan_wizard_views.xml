@@ -28,6 +28,14 @@
 <field name="scan_mode" readonly="1"/>
 <field name="barcode" placeholder="Scan product barcode then press Enter"/>
 <field name="quantity" readonly="auto_quantity_locked"/>
+<group col="7" string="Quick Qty" invisible="auto_quantity_locked">
+<button name="action_qty_minus" type="object" string="-1" class="btn-secondary"/>
+<button name="action_qty_1" type="object" string="1" class="btn-secondary"/>
+<button name="action_qty_3" type="object" string="3" class="btn-secondary"/>
+<button name="action_qty_5" type="object" string="5" class="btn-secondary"/>
+<button name="action_qty_10" type="object" string="10" class="btn-secondary"/>
+<button name="action_qty_plus" type="object" string="+1" class="btn-secondary"/>
+</group>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
 <field name="expiry_date" invisible="scan_mode != 'count'"/>
 <field name="return_route" invisible="scan_mode != 'return'"/>
@@ -49,6 +57,7 @@
 <group>
 <field name="last_product_id" readonly="1"/>
 <field name="last_counted_qty" readonly="1"/>
+<field name="last_barcode" readonly="1"/>
 </group>
 </group>
 <group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
@@ -59,6 +68,7 @@
 </group>
 </group>
 <footer>
+<button name="action_repeat_last_barcode" type="object" string="Repeat Last" class="btn-secondary" invisible="not last_barcode"/>
 <button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary"/>
 <button name="action_done" type="object" string="Done" class="btn-secondary"/>
 </footer>
