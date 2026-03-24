@@ -31,6 +31,7 @@ class RouteVisitScanWizard(models.TransientModel):
         default="lot",
         readonly=True,
     )
+    focus_refresh_token = fields.Integer(string="Focus Refresh Token", readonly=True, default=0)
 
     lot_barcode = fields.Char(string="Scan Lot")
     active_lot_id = fields.Many2one("stock.lot", string="Active Lot", readonly=True)
@@ -149,7 +150,11 @@ class RouteVisitScanWizard(models.TransientModel):
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = False
                 rec.auto_uom_locked = True
-                rec.detected_packaging_name = scan_info.get("packaging_display_name") or rec.visit_id._get_packaging_display_name(scan_info.get("packaging")) or "Box"
+                rec.detected_packaging_name = (
+                    scan_info.get("packaging_display_name")
+                    or rec.visit_id._get_packaging_display_name(scan_info.get("packaging"))
+                    or "Box"
+                )
                 if rec.quantity <= 0:
                     rec.quantity = 1.0
                 rec.scanned_uom_id = product.uom_id.id
@@ -176,30 +181,83 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
             rec.add_to_near_expiry_return = bool(rec.expiry_date and rec.is_near_expiry)
 
+    def _action_reopen_self(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Scan Barcode"),
+            "res_model": "route.visit.scan.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "res_id": self.id,
+        }
+
+    def _prepare_for_next_count_scan(self, product, counted_qty):
+        self.ensure_one()
+        self.write(
+            {
+                "focus_target": "product" if self.active_lot_id else "lot",
+                "focus_refresh_token": (self.focus_refresh_token or 0) + 1,
+                "barcode": False,
+                "quantity": 1.0,
+                "expiry_date": False,
+                "add_to_near_expiry_return": False,
+                "detected_product_id": False,
+                "base_uom_id": False,
+                "scanned_uom_id": False,
+                "detected_scan_type": False,
+                "counted_increase": 0.0,
+                "detected_packaging_name": False,
+                "auto_quantity_locked": False,
+                "auto_uom_locked": False,
+                "last_product_id": product.id if product else False,
+                "last_counted_qty": counted_qty or 0.0,
+            }
+        )
+        return self._action_reopen_self()
+
     def action_set_active_lot(self):
         self.ensure_one()
         if not self.visit_id:
             raise UserError(_("Visit is required."))
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
-        self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
-        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+        self.write(
+            {
+                "active_lot_id": lot.id,
+                "lot_barcode": False,
+                "focus_target": "product",
+                "focus_refresh_token": (self.focus_refresh_token or 0) + 1,
+            }
+        )
+        return self._action_reopen_self()
 
     def action_clear_active_lot(self):
         self.ensure_one()
-        self.write({"active_lot_id": False, "lot_barcode": False, "expiry_date": False, "add_to_near_expiry_return": False, "focus_target": "lot"})
-        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+        self.write(
+            {
+                "active_lot_id": False,
+                "lot_barcode": False,
+                "expiry_date": False,
+                "add_to_near_expiry_return": False,
+                "focus_target": "lot",
+                "focus_refresh_token": (self.focus_refresh_token or 0) + 1,
+            }
+        )
+        return self._action_reopen_self()
 
     def _get_or_create_visit_line(self, product):
         self.ensure_one()
         line = self.visit_id.line_ids.filtered(lambda l: l.product_id == product)[:1]
         if line:
             return line
-        return self.env["route.visit.line"].create({
-            "visit_id": self.visit_id.id,
-            "company_id": self.visit_id.company_id.id if "company_id" in self.visit_id._fields else self.env.company.id,
-            "product_id": product.id,
-            "unit_price": product.lst_price or 0.0,
-        })
+        return self.env["route.visit.line"].create(
+            {
+                "visit_id": self.visit_id.id,
+                "company_id": self.visit_id.company_id.id if "company_id" in self.visit_id._fields else self.env.company.id,
+                "product_id": product.id,
+                "unit_price": product.lst_price or 0.0,
+            }
+        )
 
     def action_scan_and_add(self):
         self.ensure_one()
@@ -243,21 +301,7 @@ class RouteVisitScanWizard(models.TransientModel):
                 line.write(line_vals)
                 line.invalidate_recordset()
 
-            return {
-                "type": "ir.actions.act_window",
-                "name": _("Scan Barcode"),
-                "res_model": "route.visit.scan.wizard",
-                "view_mode": "form",
-                "target": "new",
-                "context": {
-                    "default_visit_id": self.visit_id.id,
-                    "default_scan_mode": self.scan_mode,
-                    "default_active_lot_id": self.active_lot_id.id,
-                    "default_focus_target": "product" if self.active_lot_id else "lot",
-                    "default_last_product_id": product.id,
-                    "default_last_counted_qty": result["counted_increase"],
-                },
-            }
+            return self._prepare_for_next_count_scan(product, result["counted_increase"])
 
         raise UserError(_("Return mode is not handled in this version."))
 
