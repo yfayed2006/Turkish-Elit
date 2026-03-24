@@ -232,21 +232,32 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.detected_product_id = product.id
             rec.base_uom_id = product.uom_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
-            pieces_per_box = scan_info.get("default_scan_qty") or 1.0
+
+            suggested_qty = scan_info.get("default_scan_qty") or 1.0
+            packaging_qty = scan_info.get("packaging_qty") or suggested_qty or 1.0
 
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = False
                 rec.auto_uom_locked = True
-                rec.detected_packaging_name = scan_info.get("packaging_display_name") or _("Box")
+                rec.detected_packaging_name = (
+                    scan_info.get("packaging_display_name")
+                    or rec.visit_id._get_packaging_display_name(
+                        scan_info.get("packaging"),
+                        product=product,
+                        barcode=rec.barcode,
+                    )
+                    or _("Box")
+                )
                 if rec.quantity <= 0:
                     rec.quantity = 1.0
                 rec.scanned_uom_id = product.uom_id.id
-                rec.counted_increase = pieces_per_box * rec.quantity
+                rec.counted_increase = (rec.quantity or 0.0) * packaging_qty
             else:
                 if not rec.scanned_uom_id:
                     rec.scanned_uom_id = product.uom_id.id
                 if rec.quantity <= 0:
                     rec.quantity = 1.0
+
                 qty = rec.quantity if rec.quantity and rec.quantity > 0 else 0.0
                 if qty and rec.scanned_uom_id:
                     try:
@@ -331,11 +342,7 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Quantity must be greater than zero."))
 
         effective_qty = self.quantity
-        effective_uom = self.scanned_uom_id
-
-        if self.detected_scan_type == "Box Barcode":
-            effective_qty = self.quantity
-            effective_uom = self.base_uom_id
+        effective_uom = self.scanned_uom_id or self.base_uom_id
 
         if self.scan_mode == "count":
             result = self.visit_id._process_scanned_barcode(
@@ -353,6 +360,7 @@ class RouteVisitScanWizard(models.TransientModel):
             line_vals = {}
             if effective_expiry_date:
                 line_vals["expiry_date"] = effective_expiry_date
+
             line_vals["suggest_near_expiry_return"] = self.is_near_expiry
 
             if resolved_lot and self.active_lot_status == "expired":
