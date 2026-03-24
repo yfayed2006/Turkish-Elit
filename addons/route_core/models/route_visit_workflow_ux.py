@@ -27,7 +27,7 @@ class RouteVisit(models.Model):
             ("start_visit", "Start Visit"),
             ("load_previous_balance", "Load Previous Balance"),
             ("scan_shelf", "Scan Shelf"),
-            ("returns_step", "Additional Returns"),
+            ("returns_step", "Scan Returns"),
             ("reconcile_count", "Reconcile Count"),
             ("confirm_return_transfers", "Confirm Return Transfers"),
             ("generate_refill", "Generate Refill Proposal"),
@@ -224,8 +224,8 @@ class RouteVisit(models.Model):
             elif rec.visit_process_state == "counting" and not rec.returns_step_done:
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
-                rec.ux_stage_title = "Additional Returns"
-                rec.ux_stage_help = "Do you have any additional returns not recorded during shelf counting? Choose No Additional Returns or Add Additional Returns."
+                rec.ux_stage_title = "Check Return"
+                rec.ux_stage_help = "Is there any return in this visit? Choose No Returns or Scan Returns."
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
@@ -340,27 +340,38 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self._action_mark_no_returns()
 
+    def _get_total_sold_qty(self):
+        self.ensure_one()
+        return sum(self.line_ids.mapped("sold_qty"))
+
+    def _mark_reconciled(self):
+        self.ensure_one()
+        if self.state != "in_progress" or self.visit_process_state != "counting":
+            raise UserError(_("Only counting visits in progress can be reconciled."))
+        self.write({"visit_process_state": "reconciled"})
+
     def action_ux_reconcile_count(self):
         self.ensure_one()
-        self.action_set_reconciled()
+        self._mark_reconciled()
 
-        if (
-            self.visit_process_state == "reconciled"
-            and self.sold_total_qty > 0
-            and not self.sale_order_id
-        ):
+        if self.visit_process_state == "reconciled" and self._get_total_sold_qty() > 0 and not self.sale_order_id:
             self.action_create_sale_order()
 
         return self._get_pda_form_action()
 
     def action_ux_confirm_return_transfers(self):
         self.ensure_one()
-        self.action_confirm_return_transfers()
-        return self._get_pda_form_action()
+        if not any((line.return_qty or 0.0) > 0 for line in self.line_ids):
+            raise UserError(_("There are no return quantities to transfer."))
+        raise UserError(_("Return transfer creation is not implemented yet in the current codebase."))
 
     def action_ux_view_return_transfers(self):
         self.ensure_one()
-        return self.action_view_return_transfers()
+        if not self.return_picking_ids:
+            raise UserError(_("There are no return transfers linked to this visit."))
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["domain"] = [("id", "in", self.return_picking_ids.ids)]
+        return action
 
     def action_ux_generate_refill(self):
         self.ensure_one()
@@ -422,8 +433,8 @@ class RouteVisit(models.Model):
         if not draft_payments:
             raise UserError(_("There are no draft payments to confirm."))
 
-        self.action_confirm_all_payments()
-
+        draft_payments.action_confirm()
+        self.write({"visit_process_state": "collection_done"})
         return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
@@ -431,18 +442,17 @@ class RouteVisit(models.Model):
         if not self.collection_skip_reason:
             raise UserError(_("Please enter Collection Skip Reason first."))
 
-        self.action_skip_collection()
-
+        self.write({"visit_process_state": "collection_done"})
         return self._get_pda_form_action()
 
     def _action_finish_visit_core(self):
         self.ensure_one()
 
         if self.visit_process_state == "collection_done":
-            self.action_update_outlet_balance()
+            self.write({"visit_process_state": "ready_to_close"})
 
         if self.visit_process_state == "ready_to_close":
-            return self.action_set_done_process()
+            return self.action_end_visit()
 
         raise UserError(_("The visit is not yet ready for closing."))
 
