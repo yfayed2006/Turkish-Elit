@@ -1,0 +1,29 @@
+<odoo>
+<record id="view_route_visit_missing_lot_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.missing.lot.wizard.form</field>
+<field name="model">route.visit.missing.lot.wizard</field>
+<field name="arch" type="xml">
+<form string="Complete Missing Lots" create="0" edit="1" delete="0">
+<sheet>
+<group>
+<field name="visit_id" readonly="1"/>
+<field name="resume_action" readonly="1"/>
+</group>
+<div class="alert alert-warning" role="alert"> Some tracked products are missing a Lot/Serial Number. Complete them below, then continue. </div>
+<field name="line_ids" nolabel="1">
+<list editable="bottom" create="0" delete="0">
+<field name="product_id" readonly="1"/>
+<field name="required_qty" readonly="1"/>
+<field name="lot_id" options="{'no_create': True}"/>
+</list>
+</field>
+</sheet>
+<footer>
+<button name="action_save_and_continue" type="object" string="Save & Continue" class="btn-primary"/>
+<button name="action_save_only" type="object" string="Save Only" class="btn-secondary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
