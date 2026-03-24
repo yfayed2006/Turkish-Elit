@@ -37,6 +37,16 @@ class RouteVisitLine(models.Model):
         index=True,
     )
 
+
+    lot_id = fields.Many2one(
+        "stock.lot",
+        string="Lot/Serial",
+        ondelete="set null",
+        index=True,
+        domain="[('product_id', '=', product_id)]",
+        help="Lot/Serial used for this visit line when the product is tracked.",
+    )
+
     barcode = fields.Char(
         string="Barcode",
         related="product_id.barcode",
