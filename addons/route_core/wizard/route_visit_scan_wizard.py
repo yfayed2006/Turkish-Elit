@@ -236,7 +236,7 @@ class RouteVisitScanWizard(models.TransientModel):
             suggested_qty = scan_info.get("default_scan_qty") or 1.0
 
             if scan_info.get("scan_type") == "box":
-                rec.auto_quantity_locked = True
+                rec.auto_quantity_locked = False
                 rec.auto_uom_locked = True
                 rec.detected_packaging_name = (
                     scan_info.get("packaging_display_name")
@@ -247,13 +247,14 @@ class RouteVisitScanWizard(models.TransientModel):
                     )
                     or "Box"
                 )
-                rec.quantity = 1.0
+                if rec.quantity <= 0:
+                    rec.quantity = 1.0
                 rec.scanned_uom_id = (
                     scan_info.get("default_scanned_uom").id
                     if scan_info.get("default_scanned_uom")
                     else product.uom_id.id
                 )
-                rec.counted_increase = suggested_qty
+                rec.counted_increase = suggested_qty * rec.quantity
             else:
                 if not rec.scanned_uom_id:
                     rec.scanned_uom_id = product.uom_id.id
@@ -347,7 +348,7 @@ class RouteVisitScanWizard(models.TransientModel):
         effective_uom = self.scanned_uom_id
 
         if self.detected_scan_type == "Box Barcode":
-            effective_qty = 1.0
+            effective_qty = self.quantity
             effective_uom = self.base_uom_id
 
         if self.scan_mode == "count":
