@@ -68,51 +68,6 @@ class RouteVisit(models.Model):
 
     ux_can_finish_visit = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
-    def _ux_get_sold_total_qty(self):
-        self.ensure_one()
-        return sum((line.sold_qty or 0.0) for line in self.line_ids)
-
-    def _ux_mark_reconciled(self):
-        self.ensure_one()
-        if self.state != "in_progress":
-            raise UserError(_("Only visits in progress can be reconciled."))
-        if self.visit_process_state not in ("checked_in", "counting"):
-            raise UserError(_("Only checked-in or counting visits can be reconciled."))
-        self.write({"visit_process_state": "reconciled"})
-        return True
-
-    def _ux_confirm_all_payments(self):
-        self.ensure_one()
-        draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
-        if not draft_payments:
-            raise UserError(_("There are no draft payments to confirm."))
-        draft_payments.action_confirm()
-        if self.state == "in_progress" and self.visit_process_state == "reconciled":
-            self.write({"visit_process_state": "collection_done"})
-        return True
-
-    def _ux_skip_collection(self):
-        self.ensure_one()
-        if not self.collection_skip_reason:
-            raise UserError(_("Please enter Collection Skip Reason first."))
-        if self.state != "in_progress":
-            raise UserError(_("Only visits in progress can skip collection."))
-        if self.visit_process_state != "reconciled":
-            raise UserError(_("Collection can only be skipped after reconciliation."))
-        self.write({"visit_process_state": "collection_done"})
-        return True
-
-    def _ux_get_return_transfer_action(self):
-        self.ensure_one()
-        if not self.return_picking_ids:
-            raise UserError(_("There are no return transfers linked to this visit."))
-        action = self.env.ref("stock.action_picking_tree_all").read()[0]
-        action["domain"] = [("id", "in", self.return_picking_ids.ids)]
-        if len(self.return_picking_ids) == 1:
-            action["view_mode"] = "form"
-            action["res_id"] = self.return_picking_ids.id
-        return action
-
     @api.depends(
         "state",
         "visit_process_state",
@@ -180,19 +135,26 @@ class RouteVisit(models.Model):
             rec.ux_can_create_sale_order = False
             rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
 
-            # Keep return transfer buttons passive unless real pickings already exist.
-            rec.ux_can_confirm_return_transfers = False
+            rec.ux_can_confirm_return_transfers = (
+                rec.state == "in_progress"
+                and rec.visit_process_state == "reconciled"
+                and has_return_qty
+                and not has_return_transfers
+            )
+
             rec.ux_can_view_return_transfers = has_return_transfers
 
             rec.ux_can_generate_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and not rec.refill_datetime
             )
 
             rec.ux_can_confirm_refill = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and bool(rec.refill_datetime)
                 and has_supplied_qty
                 and not rec.refill_picking_id
@@ -262,8 +224,8 @@ class RouteVisit(models.Model):
             elif rec.visit_process_state == "counting" and not rec.returns_step_done:
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
-                rec.ux_stage_title = "Check Return"
-                rec.ux_stage_help = "Is there any return in this visit? Choose No Returns or Scan Returns."
+                rec.ux_stage_title = "Additional returns?"
+                rec.ux_stage_help = "Did you miss any returns during shelf counting? Choose No Additional Returns or Add Additional Returns."
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
@@ -273,7 +235,18 @@ class RouteVisit(models.Model):
 
             elif (
                 rec.visit_process_state == "reconciled"
+                and has_return_qty
+                and not has_return_transfers
+            ):
+                rec.ux_stage = "return_transfer"
+                rec.ux_primary_action = "confirm_return_transfers"
+                rec.ux_stage_title = "Confirm return transfers"
+                rec.ux_stage_help = "Create the internal transfers for returned products."
+
+            elif (
+                rec.visit_process_state == "reconciled"
                 and not rec.refill_datetime
+                and (not has_return_qty or has_return_transfers)
             ):
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "generate_refill"
@@ -282,6 +255,7 @@ class RouteVisit(models.Model):
 
             elif (
                 rec.visit_process_state == "reconciled"
+                and (not has_return_qty or has_return_transfers)
                 and bool(rec.refill_datetime)
                 and has_supplied_qty
                 and not rec.refill_picking_id
@@ -368,11 +342,11 @@ class RouteVisit(models.Model):
 
     def action_ux_reconcile_count(self):
         self.ensure_one()
-        self._ux_mark_reconciled()
+        self.action_set_reconciled()
 
         if (
             self.visit_process_state == "reconciled"
-            and self._ux_get_sold_total_qty() > 0
+            and self.sold_total_qty > 0
             and not self.sale_order_id
         ):
             self.action_create_sale_order()
@@ -381,16 +355,12 @@ class RouteVisit(models.Model):
 
     def action_ux_confirm_return_transfers(self):
         self.ensure_one()
-        raise UserError(
-            _(
-                "Return transfer confirmation is not implemented in the current codebase yet. "
-                "Returned quantities are already recorded on the visit lines, and you can continue the workflow."
-            )
-        )
+        self.action_confirm_return_transfers()
+        return self._get_pda_form_action()
 
     def action_ux_view_return_transfers(self):
         self.ensure_one()
-        return self._ux_get_return_transfer_action()
+        return self.action_view_return_transfers()
 
     def action_ux_generate_refill(self):
         self.ensure_one()
@@ -448,19 +418,33 @@ class RouteVisit(models.Model):
 
     def action_ux_confirm_payments(self):
         self.ensure_one()
-        self._ux_confirm_all_payments()
+        draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+        if not draft_payments:
+            raise UserError(_("There are no draft payments to confirm."))
+
+        self.action_confirm_all_payments()
+
         return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
         self.ensure_one()
-        self._ux_skip_collection()
+        if not self.collection_skip_reason:
+            raise UserError(_("Please enter Collection Skip Reason first."))
+
+        self.action_skip_collection()
+
         return self._get_pda_form_action()
 
     def _action_finish_visit_core(self):
         self.ensure_one()
-        if self.visit_process_state not in ("collection_done", "ready_to_close"):
-            raise UserError(_("The visit is not yet ready for closing."))
-        return self.action_end_visit()
+
+        if self.visit_process_state == "collection_done":
+            self.action_update_outlet_balance()
+
+        if self.visit_process_state == "ready_to_close":
+            return self.action_set_done_process()
+
+        raise UserError(_("The visit is not yet ready for closing."))
 
     def action_ux_finish_visit(self):
         return self._action_finish_visit_core()
