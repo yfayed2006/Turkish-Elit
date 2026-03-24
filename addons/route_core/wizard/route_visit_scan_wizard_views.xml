@@ -7,7 +7,6 @@
 <group string="Active Lot" invisible="scan_mode != 'count'">
 <group>
 <field name="focus_target" invisible="1"/>
-<field name="focus_refresh_token" invisible="1"/>
 <field name="lot_barcode" placeholder="Scan or type lot code here" invisible="active_lot_id"/>
 <field name="active_lot_id" readonly="1"/>
 <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
@@ -26,22 +25,14 @@
 <group>
 <field name="visit_id" readonly="1"/>
 <field name="scan_mode" readonly="1"/>
-<field name="barcode" placeholder="Scan product barcode then press Enter"/>
+<field name="barcode" placeholder="Scan product or box barcode here"/>
 <field name="quantity" readonly="auto_quantity_locked"/>
-<group col="7" string="Quick Qty" invisible="auto_quantity_locked">
-<button name="action_qty_minus" type="object" string="-1" class="btn-secondary"/>
-<button name="action_qty_1" type="object" string="1" class="btn-secondary"/>
-<button name="action_qty_3" type="object" string="3" class="btn-secondary"/>
-<button name="action_qty_5" type="object" string="5" class="btn-secondary"/>
-<button name="action_qty_10" type="object" string="10" class="btn-secondary"/>
-<button name="action_qty_plus" type="object" string="+1" class="btn-secondary"/>
-</group>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
-<field name="apply_return_from_scan" invisible="scan_mode != 'count'"/>
-<field name="return_scan_qty" invisible="scan_mode != 'count' or not apply_return_from_scan"/>
-<field name="return_route" invisible="(scan_mode == 'count' and not apply_return_from_scan) or scan_mode not in ['count', 'return']"/>
 <field name="expiry_date" invisible="scan_mode != 'count'"/>
-<field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
+<field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id"/>
+<field name="return_qty" invisible="scan_mode != 'count' or not return_from_scan"/>
+<field name="return_route" invisible="scan_mode != 'count' or not return_from_scan"/>
+<field name="add_to_near_expiry_return" invisible="1"/>
 <field name="auto_quantity_locked" invisible="1"/>
 <field name="auto_uom_locked" invisible="1"/>
 </group>
@@ -59,7 +50,6 @@
 <group>
 <field name="last_product_id" readonly="1"/>
 <field name="last_counted_qty" readonly="1"/>
-<field name="last_barcode" readonly="1"/>
 </group>
 </group>
 <group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
@@ -70,7 +60,6 @@
 </group>
 </group>
 <footer>
-<button name="action_repeat_last_barcode" type="object" string="Repeat Last" class="btn-secondary" invisible="not last_barcode"/>
 <button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary"/>
 <button name="action_done" type="object" string="Done" class="btn-secondary"/>
 </footer>
