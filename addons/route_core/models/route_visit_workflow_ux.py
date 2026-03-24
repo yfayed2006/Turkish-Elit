@@ -27,7 +27,7 @@ class RouteVisit(models.Model):
             ("start_visit", "Start Visit"),
             ("load_previous_balance", "Load Previous Balance"),
             ("scan_shelf", "Scan Shelf"),
-            ("returns_step", "Scan Returns"),
+            ("returns_step", "Additional Returns"),
             ("reconcile_count", "Reconcile Count"),
             ("confirm_return_transfers", "Confirm Return Transfers"),
             ("generate_refill", "Generate Refill Proposal"),
@@ -224,8 +224,8 @@ class RouteVisit(models.Model):
             elif rec.visit_process_state == "counting" and not rec.returns_step_done:
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
-                rec.ux_stage_title = "Additional returns?"
-                rec.ux_stage_help = "Did you miss any returns during shelf counting? Choose No Additional Returns or Add Additional Returns."
+                rec.ux_stage_title = "Additional Returns"
+                rec.ux_stage_help = "Do you have any additional returns not recorded during shelf counting? Choose No Additional Returns or Add Additional Returns."
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
