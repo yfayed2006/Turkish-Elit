@@ -29,3 +29,6 @@ from . import route_visit_returns_ext
 from . import route_visit_refill_transfer_ext
 from . import route_visit_workflow_ux
 from . import route_product_barcode
+
+from . import route_visit_missing_lot_ext
+from . import sale_order_missing_lot_ext
