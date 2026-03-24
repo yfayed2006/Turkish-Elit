@@ -10,7 +10,7 @@
 <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
 <button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
 <button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="not ux_can_no_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
 <button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
 <button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
@@ -57,7 +57,7 @@
 <div class="oe_button_box" name="button_box">
 <button name="action_ux_scan_shelf" string="Scan Barcode" type="object" class="oe_stat_button" icon="fa-barcode" invisible="not ux_can_scan_barcode"/>
 <button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_scan_returns"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_no_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
 <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
 </button>
@@ -86,7 +86,7 @@
 <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
 <button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
 <button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="not ux_can_no_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
 <button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
 <button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
@@ -133,7 +133,7 @@
 <div class="oe_button_box" name="button_box">
 <button name="action_ux_scan_shelf" string="Scan Barcode" type="object" class="oe_stat_button" icon="fa-barcode" invisible="not ux_can_scan_barcode"/>
 <button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_scan_returns"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_no_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
 <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
 </button>
