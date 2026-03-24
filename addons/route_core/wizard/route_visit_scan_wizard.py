@@ -203,16 +203,20 @@ class RouteVisitScanWizard(models.TransientModel):
                 continue
             rec.add_to_near_expiry_return = bool(rec.is_near_expiry)
 
+    def _reset_detected_preview(self):
+        self.ensure_one()
+        self.detected_product_id = False
+        self.base_uom_id = False
+        self.detected_scan_type = False
+        self.counted_increase = 0.0
+        self.detected_packaging_name = False
+        self.auto_quantity_locked = False
+        self.auto_uom_locked = False
+
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id", "active_lot_id")
     def _onchange_barcode_preview(self):
         for rec in self:
-            rec.detected_product_id = False
-            rec.base_uom_id = False
-            rec.detected_scan_type = False
-            rec.counted_increase = 0.0
-            rec.detected_packaging_name = False
-            rec.auto_quantity_locked = False
-            rec.auto_uom_locked = False
+            rec._reset_detected_preview()
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
                 rec.scanned_uom_id = False
@@ -234,25 +238,17 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.detected_scan_type = scan_info["scan_type_label"]
 
             suggested_qty = scan_info.get("default_scan_qty") or 1.0
-            packaging_qty = scan_info.get("packaging_qty") or suggested_qty or 1.0
 
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = False
                 rec.auto_uom_locked = True
-                rec.detected_packaging_name = (
-                    scan_info.get("packaging_display_name")
-                    or rec.visit_id._get_packaging_display_name(
-                        scan_info.get("packaging"),
-                        product=product,
-                        barcode=rec.barcode,
-                    )
-                    or _("Box")
-                )
+                rec.detected_packaging_name = scan_info.get("packaging_display_name") or rec.visit_id._get_packaging_display_name(scan_info.get("packaging"))
                 if rec.quantity <= 0:
                     rec.quantity = 1.0
                 rec.scanned_uom_id = product.uom_id.id
-                rec.counted_increase = (rec.quantity or 0.0) * packaging_qty
+                rec.counted_increase = (rec.quantity or 0.0) * suggested_qty
             else:
+                rec.detected_packaging_name = False
                 if not rec.scanned_uom_id:
                     rec.scanned_uom_id = product.uom_id.id
                 if rec.quantity <= 0:
@@ -341,8 +337,15 @@ class RouteVisitScanWizard(models.TransientModel):
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
 
+        # Re-resolve at execution time so box behavior is always based on
+        # the current Odoo packaging configuration, not on stale preview values.
+        scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
         effective_qty = self.quantity
-        effective_uom = self.scanned_uom_id or self.base_uom_id
+        effective_uom = self.scanned_uom_id
+
+        if scan_info.get("scan_type") == "box":
+            effective_qty = self.quantity
+            effective_uom = self.base_uom_id or scan_info["product"].uom_id
 
         if self.scan_mode == "count":
             result = self.visit_id._process_scanned_barcode(
