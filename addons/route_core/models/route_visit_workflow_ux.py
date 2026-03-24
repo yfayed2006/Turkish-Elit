@@ -416,14 +416,21 @@ class RouteVisit(models.Model):
             },
         }
 
+    def _action_mark_collection_done(self):
+        self.ensure_one()
+        values = {"visit_process_state": "collection_done"}
+        if hasattr(self, "collection_datetime"):
+            values["collection_datetime"] = fields.Datetime.now()
+        self.write(values)
+
     def action_ux_confirm_payments(self):
         self.ensure_one()
         draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
         if not draft_payments:
             raise UserError(_("There are no draft payments to confirm."))
 
-        self.action_confirm_all_payments()
-
+        draft_payments.action_confirm()
+        self._action_mark_collection_done()
         return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
@@ -431,20 +438,23 @@ class RouteVisit(models.Model):
         if not self.collection_skip_reason:
             raise UserError(_("Please enter Collection Skip Reason first."))
 
-        self.action_skip_collection()
-
+        self._action_mark_collection_done()
         return self._get_pda_form_action()
 
     def _action_finish_visit_core(self):
         self.ensure_one()
 
-        if self.visit_process_state == "collection_done":
-            self.action_update_outlet_balance()
+        if self.visit_process_state not in ("collection_done", "ready_to_close"):
+            raise UserError(_("The visit is not yet ready for closing."))
 
-        if self.visit_process_state == "ready_to_close":
-            return self.action_set_done_process()
+        sold_lines = self.line_ids.filtered(lambda l: (l.sold_qty or 0.0) > 0)
+        if sold_lines and not self.sale_order_id:
+            self.action_create_sale_order()
 
-        raise UserError(_("The visit is not yet ready for closing."))
+        result = self.action_end_visit()
+        if isinstance(result, dict):
+            return result
+        return self._get_pda_form_action()
 
     def action_ux_finish_visit(self):
         return self._action_finish_visit_core()
