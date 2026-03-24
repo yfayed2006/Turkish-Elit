@@ -479,9 +479,9 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self.line_ids.filtered(lambda l: l.product_id == product)[:1]
 
-    def _prepare_visit_line_from_scan(self, product, counted_increase):
+    def _prepare_visit_line_from_scan(self, product, counted_increase, resolved_lot=False, resolved_expiry_date=False):
         self.ensure_one()
-        return {
+        vals = {
             "visit_id": self.id,
             "company_id": self.company_id.id,
             "product_id": product.id,
@@ -490,6 +490,11 @@ class RouteVisit(models.Model):
             "unit_price": product.lst_price or 0.0,
             "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
         }
+        if resolved_lot and "lot_id" in self.env["route.visit.line"]._fields:
+            vals["lot_id"] = resolved_lot.id
+        if resolved_expiry_date:
+            vals["expiry_date"] = resolved_expiry_date
+        return vals
 
     def _get_scan_counted_increase(self, product, scan_qty=1.0, scanned_uom=False):
         self.ensure_one()
@@ -553,14 +558,37 @@ class RouteVisit(models.Model):
 
         line = self._find_visit_line_for_product(product)
         if line:
-            line.write(
-                {
-                    "counted_qty": (line.counted_qty or 0.0) + counted_increase,
-                    "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
-                }
-            )
+            update_vals = {
+                "counted_qty": (line.counted_qty or 0.0) + counted_increase,
+                "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+            }
+            if resolved_lot and "lot_id" in line._fields:
+                if line.lot_id and line.lot_id != resolved_lot:
+                    raise UserError(
+                        _(
+                            "Product '%(product)s' was already counted with Lot/Serial '%(existing)s'. "
+                            "The current visit line supports one Lot/Serial per product. "
+                            "Please complete the missing lots step or adjust the line before scanning another lot."
+                        )
+                        % {
+                            "product": product.display_name,
+                            "existing": line.lot_id.display_name,
+                        }
+                    )
+                if not line.lot_id:
+                    update_vals["lot_id"] = resolved_lot.id
+            if resolved_expiry_date and not line.expiry_date:
+                update_vals["expiry_date"] = resolved_expiry_date
+            line.write(update_vals)
         else:
-            line = RouteVisitLine.create([self._prepare_visit_line_from_scan(product, counted_increase)])
+            line = RouteVisitLine.create([
+                self._prepare_visit_line_from_scan(
+                    product,
+                    counted_increase,
+                    resolved_lot=resolved_lot,
+                    resolved_expiry_date=resolved_expiry_date,
+                )
+            ])
 
         self.last_scanned_barcode = (barcode or "").strip()
         if self.visit_process_state == "checked_in":
