@@ -37,8 +37,10 @@
 <button name="action_qty_plus" type="object" string="+1" class="btn-secondary"/>
 </group>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
+<field name="apply_return_from_scan" invisible="scan_mode != 'count'"/>
+<field name="return_scan_qty" invisible="scan_mode != 'count' or not apply_return_from_scan"/>
+<field name="return_route" invisible="(scan_mode == 'count' and not apply_return_from_scan) or scan_mode not in ['count', 'return']"/>
 <field name="expiry_date" invisible="scan_mode != 'count'"/>
-<field name="return_route" invisible="scan_mode != 'return'"/>
 <field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
 <field name="auto_quantity_locked" invisible="1"/>
 <field name="auto_uom_locked" invisible="1"/>
