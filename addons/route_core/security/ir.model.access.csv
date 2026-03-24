@@ -16,3 +16,5 @@ access_route_visit_scan_wizard_user,access.route.visit.scan.wizard.user,model_ro
 access_route_visit_return_scan_wizard_user,access.route.visit.return.scan.wizard.user,model_route_visit_return_scan_wizard,base.group_user,1,1,1,1
 access_route_visit_collect_payment_wizard_user,access.route.visit.collect.payment.wizard.user,model_route_visit_collect_payment_wizard,base.group_user,1,1,1,1
 access_route_product_barcode_user,access.route.product.barcode.user,model_route_product_barcode,base.group_user,1,1,1,1
+access_route_visit_missing_lot_wizard_user,access.route.visit.missing.lot.wizard.user,model_route_visit_missing_lot_wizard,base.group_user,1,1,1,1
+access_route_visit_missing_lot_wizard_line_user,access.route.visit.missing.lot.wizard.line.user,model_route_visit_missing_lot_wizard_line,base.group_user,1,1,1,1
