@@ -265,7 +265,7 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
-    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount")
+    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state")
     def _compute_payment_totals(self):
         for rec in self:
             total_sales = 0.0
@@ -274,7 +274,8 @@ class RouteVisit(models.Model):
                 unit_price = getattr(line, "unit_price", 0.0) or 0.0
                 total_sales += sold_qty * unit_price
 
-            total_collected = sum(rec.payment_ids.mapped("amount")) if rec.payment_ids else 0.0
+            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
+            total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
 
             rec.net_due_amount = total_sales
             rec.collected_amount = total_collected
