@@ -38,7 +38,7 @@ class RouteVisit(models.Model):
 
         return {
             "type": "ir.actions.act_window",
-            "name": _("Scan Returns"),
+            "name": _("Additional Returns"),
             "res_model": "route.visit.return.scan.wizard",
             "view_mode": "form",
             "target": "new",
@@ -54,14 +54,13 @@ class RouteVisit(models.Model):
 
         if self.visit_process_state != "counting":
             raise UserError(
-                _("No Returns can only be confirmed during the counting stage.")
+                _("No Additional Returns can only be confirmed during the counting stage.")
             )
 
-        if self.line_ids:
-            self.line_ids.write({"return_qty": 0.0})
+        has_any_returns = any((line.return_qty or 0.0) > 0 for line in self.line_ids)
 
         self.write({
-            "has_returns_declared": False,
+            "has_returns_declared": has_any_returns,
             "returns_step_done": True,
         })
 
