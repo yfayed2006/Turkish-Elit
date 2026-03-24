@@ -1,95 +1,68 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
-        <field name="name">route.visit.scan.wizard.form</field>
-        <field name="model">route.visit.scan.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Scan Barcode / Returns">
-                <group string="Active Lot" invisible="scan_mode != 'count'">
-                    <group>
-                        <field name="focus_target" invisible="1"/>
-                        <field name="lot_barcode"
-                               placeholder="Scan or type lot code here"
-                               invisible="active_lot_id"/>
-                        <field name="active_lot_id" readonly="1"/>
-                        <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
-                    </group>
-                    <group>
-                        <field name="active_lot_expiry_date" readonly="1" invisible="not active_lot_id"/>
-                        <field name="active_lot_days_left" readonly="1" invisible="not active_lot_id"/>
-                        <field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
-                    </group>
-                    <group col="4">
-                        <button name="action_set_active_lot"
-                                type="object"
-                                string="Set Lot"
-                                class="btn-secondary"
-                                invisible="active_lot_id"/>
-                        <button name="action_clear_active_lot"
-                                type="object"
-                                string="Clear Lot"
-                                class="btn-secondary"
-                                invisible="not active_lot_id"/>
-                    </group>
-                </group>
-
-                <group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
-                    <group>
-                        <field name="visit_id" readonly="1"/>
-                        <field name="scan_mode" readonly="1"/>
-                        <field name="barcode" placeholder="Scan product or box barcode here"/>
-
-                        <field name="quantity" readonly="auto_quantity_locked"/>
-                        <field name="scanned_uom_id" readonly="auto_uom_locked"/>
-
-                        <field name="expiry_date" invisible="scan_mode != 'count'"/>
-                        <field name="return_route" invisible="scan_mode != 'return'"/>
-                        <field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
-
-                        <field name="auto_quantity_locked" invisible="1"/>
-                        <field name="auto_uom_locked" invisible="1"/>
-                    </group>
-                    <group>
-                        <field name="detected_product_id" readonly="1" invisible="not detected_product_id"/>
-                        <field name="base_uom_id" readonly="1" invisible="not detected_product_id"/>
-                        <field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
-                        <field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
-                        <field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
-                        <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
-                        <field name="is_near_expiry" readonly="1" invisible="1"/>
-                    </group>
-                </group>
-
-                <group string="Last Scan Result" invisible="scan_mode != 'count' or not last_product_id">
-                    <group>
-                        <field name="last_product_id" readonly="1"/>
-                        <field name="last_counted_qty" readonly="1"/>
-                    </group>
-                </group>
-
-                <group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
-                    <group>
-                        <field name="last_product_id" readonly="1"/>
-                        <field name="last_return_qty" readonly="1"/>
-                        <field name="last_return_route" readonly="1"/>
-                    </group>
-                </group>
-
-                <footer>
-                    <button
-                        name="action_scan_and_add"
-                        type="object"
-                        string="Scan / Add"
-                        class="btn-primary"/>
-                    <button
-                        name="action_done"
-                        type="object"
-                        string="Done"
-                        class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
+<record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.scan.wizard.form</field>
+<field name="model">route.visit.scan.wizard</field>
+<field name="arch" type="xml">
+<form string="Scan Barcode / Returns">
+<group string="Active Lot" invisible="scan_mode != 'count'">
+<group>
+<field name="focus_target" invisible="1"/>
+<field name="focus_refresh_token" invisible="1"/>
+<field name="lot_barcode" placeholder="Scan or type lot code here" invisible="active_lot_id"/>
+<field name="active_lot_id" readonly="1"/>
+<field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
+</group>
+<group>
+<field name="active_lot_expiry_date" readonly="1" invisible="not active_lot_id"/>
+<field name="active_lot_days_left" readonly="1" invisible="not active_lot_id"/>
+<field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
+</group>
+<group col="4">
+<button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary" invisible="active_lot_id"/>
+<button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary" invisible="not active_lot_id"/>
+</group>
+</group>
+<group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
+<group>
+<field name="visit_id" readonly="1"/>
+<field name="scan_mode" readonly="1"/>
+<field name="barcode" placeholder="Scan product barcode then press Enter"/>
+<field name="quantity" readonly="auto_quantity_locked"/>
+<field name="scanned_uom_id" readonly="auto_uom_locked"/>
+<field name="expiry_date" invisible="scan_mode != 'count'"/>
+<field name="return_route" invisible="scan_mode != 'return'"/>
+<field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
+<field name="auto_quantity_locked" invisible="1"/>
+<field name="auto_uom_locked" invisible="1"/>
+</group>
+<group>
+<field name="detected_product_id" readonly="1" invisible="not detected_product_id"/>
+<field name="base_uom_id" readonly="1" invisible="not detected_product_id"/>
+<field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
+<field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
+<field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
+<field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+<field name="is_near_expiry" readonly="1" invisible="1"/>
+</group>
+</group>
+<group string="Last Scan Result" invisible="scan_mode != 'count' or not last_product_id">
+<group>
+<field name="last_product_id" readonly="1"/>
+<field name="last_counted_qty" readonly="1"/>
+</group>
+</group>
+<group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
+<group>
+<field name="last_product_id" readonly="1"/>
+<field name="last_return_qty" readonly="1"/>
+<field name="last_return_route" readonly="1"/>
+</group>
+</group>
+<footer>
+<button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary"/>
+<button name="action_done" type="object" string="Done" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
 </odoo>
