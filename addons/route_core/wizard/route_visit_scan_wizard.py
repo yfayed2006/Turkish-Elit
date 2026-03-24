@@ -76,6 +76,7 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Last Return Route",
         readonly=True,
     )
+    last_barcode = fields.Char(string="Last Barcode", readonly=True)
 
     @api.depends("active_lot_id", "visit_id.date", "visit_id.near_expiry_threshold_days")
     def _compute_active_lot_state(self):
@@ -212,6 +213,61 @@ class RouteVisitScanWizard(models.TransientModel):
                 "auto_uom_locked": False,
                 "last_product_id": product.id if product else False,
                 "last_counted_qty": counted_qty or 0.0,
+                "last_barcode": self.barcode or False,
+            }
+        )
+        return self._action_reopen_self()
+
+    def _reopen_with_focus(self, focus_target=None):
+        self.ensure_one()
+        vals = {"focus_refresh_token": (self.focus_refresh_token or 0) + 1}
+        if focus_target:
+            vals["focus_target"] = focus_target
+        self.write(vals)
+        return self._action_reopen_self()
+
+    def _set_quantity_value(self, quantity):
+        self.ensure_one()
+        quantity = max(1.0, float(quantity or 1.0))
+        self.write({"quantity": quantity})
+        return self._reopen_with_focus("product")
+
+    def action_qty_1(self):
+        self.ensure_one()
+        return self._set_quantity_value(1.0)
+
+    def action_qty_3(self):
+        self.ensure_one()
+        return self._set_quantity_value(3.0)
+
+    def action_qty_5(self):
+        self.ensure_one()
+        return self._set_quantity_value(5.0)
+
+    def action_qty_10(self):
+        self.ensure_one()
+        return self._set_quantity_value(10.0)
+
+    def action_qty_plus(self):
+        self.ensure_one()
+        return self._set_quantity_value((self.quantity or 0.0) + 1.0)
+
+    def action_qty_minus(self):
+        self.ensure_one()
+        return self._set_quantity_value((self.quantity or 1.0) - 1.0)
+
+    def action_repeat_last_barcode(self):
+        self.ensure_one()
+        if not self.last_barcode:
+            return self._reopen_with_focus("product")
+        self.write(
+            {
+                "barcode": self.last_barcode,
+                "quantity": 1.0,
+                "expiry_date": False,
+                "add_to_near_expiry_return": False,
+                "focus_target": "product",
+                "focus_refresh_token": (self.focus_refresh_token or 0) + 1,
             }
         )
         return self._action_reopen_self()
