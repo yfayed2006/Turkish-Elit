@@ -1,159 +1,78 @@
-/** @odoo-module **/
-
-import { patch } from "@web/core/utils/patch";
-import { FormRenderer } from "@web/views/form/form_renderer";
-
-function focusField(root, fieldName) {
-    if (!root) {
-        return false;
-    }
-
-    const selectors = [
-        `.o_field_widget[name="${fieldName}"] input`,
-        `[name="${fieldName}"] input`,
-        `input[name="${fieldName}"]`,
-        `.o_field_char[name="${fieldName}"] input`,
-        `.o_input[name="${fieldName}"]`,
-    ];
-
-    for (const selector of selectors) {
-        const el = root.querySelector(selector);
-        if (el && !el.disabled && el.offsetParent !== null) {
-            try {
-                el.focus();
-                el.select?.();
-                return true;
-            } catch (_) {
-                // ignore
-            }
-        }
-    }
-    return false;
-}
-
-function focusWithRetry(root, fieldName, maxAttempts = 20, delay = 120) {
-    let attempt = 0;
-
-    const run = () => {
-        if (focusField(root, fieldName)) {
-            return;
-        }
-        attempt += 1;
-        if (attempt < maxAttempts) {
-            setTimeout(run, delay);
-        }
-    };
-
-    setTimeout(run, 50);
-}
-
-patch(FormRenderer.prototype, {
-    setup() {
-        super.setup?.();
-        this.__routeVisitScanLastFocusTarget = null;
-        this.__routeVisitScanObserver = null;
-    },
-
-    mounted() {
-        super.mounted?.();
-        this._routeVisitScanInstallFocusFlow();
-        this._routeVisitScanApplyImmediateFocus();
-    },
-
-    patched() {
-        super.patched?.();
-        this._routeVisitScanApplyImmediateFocus();
-    },
-
-    willUnmount() {
-        if (this.__routeVisitScanObserver) {
-            this.__routeVisitScanObserver.disconnect();
-            this.__routeVisitScanObserver = null;
-        }
-        super.willUnmount?.();
-    },
-
-    _routeVisitScanIsTargetWizard() {
-        const record = this.props?.record;
-        return !!record && record.resModel === "route.visit.scan.wizard";
-    },
-
-    _routeVisitScanGetFocusTarget() {
-        const record = this.props?.record;
-        if (!record || record.resModel !== "route.visit.scan.wizard") {
-            return null;
-        }
-        return record.data?.focus_target || null;
-    },
-
-    _routeVisitScanApplyImmediateFocus() {
-        if (!this._routeVisitScanIsTargetWizard()) {
-            return;
-        }
-
-        const focusTarget = this._routeVisitScanGetFocusTarget();
-        if (!focusTarget) {
-            return;
-        }
-
-        const fieldName = focusTarget === "product" ? "barcode" : "lot_barcode";
-
-        if (this.__routeVisitScanLastFocusTarget !== focusTarget) {
-            this.__routeVisitScanLastFocusTarget = focusTarget;
-            focusWithRetry(this.el, fieldName, 25, 120);
-        }
-    },
-
-    _routeVisitScanInstallFocusFlow() {
-        if (!this._routeVisitScanIsTargetWizard() || this.__routeVisitScanObserver) {
-            return;
-        }
-
-        const root = this.el;
-        if (!root) {
-            return;
-        }
-
-        const clickedButtonName = { value: null };
-
-        root.addEventListener(
-            "click",
-            (ev) => {
-                const button = ev.target.closest("button");
-                if (!button) {
-                    return;
-                }
-
-                const buttonName = button.getAttribute("name");
-                if (buttonName === "action_set_active_lot") {
-                    clickedButtonName.value = "set_lot";
-                } else if (buttonName === "action_clear_active_lot") {
-                    clickedButtonName.value = "clear_lot";
-                }
-            },
-            true
-        );
-
-        this.__routeVisitScanObserver = new MutationObserver(() => {
-            if (!this._routeVisitScanIsTargetWizard()) {
-                return;
-            }
-
-            if (clickedButtonName.value === "set_lot") {
-                focusWithRetry(this.el, "barcode", 25, 120);
-                clickedButtonName.value = null;
-                return;
-            }
-
-            if (clickedButtonName.value === "clear_lot") {
-                focusWithRetry(this.el, "lot_barcode", 25, 120);
-                clickedButtonName.value = null;
-            }
-        });
-
-        this.__routeVisitScanObserver.observe(root, {
-            childList: true,
-            subtree: true,
-        });
-    },
-});
+<odoo>
+<record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.scan.wizard.form</field>
+<field name="model">route.visit.scan.wizard</field>
+<field name="arch" type="xml">
+<form string="Scan Barcode / Returns">
+<group string="Active Lot" invisible="scan_mode != 'count'">
+<group>
+<field name="focus_target" invisible="1"/>
+<field name="focus_refresh_token" invisible="1"/>
+<field name="lot_barcode" placeholder="Scan or type lot code here" invisible="active_lot_id"/>
+<field name="active_lot_id" readonly="1"/>
+<field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
+</group>
+<group>
+<field name="active_lot_expiry_date" readonly="1" invisible="not active_lot_id"/>
+<field name="active_lot_days_left" readonly="1" invisible="not active_lot_id"/>
+<field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
+</group>
+<group col="4">
+<button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary" invisible="active_lot_id"/>
+<button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary" invisible="not active_lot_id"/>
+</group>
+</group>
+<group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
+<group>
+<field name="visit_id" readonly="1"/>
+<field name="scan_mode" readonly="1"/>
+<field name="barcode" placeholder="Scan product barcode then press Enter"/>
+<field name="quantity" readonly="auto_quantity_locked"/>
+<group col="7" string="Quick Qty" invisible="auto_quantity_locked">
+<button name="action_qty_minus" type="object" string="-1" class="btn-secondary"/>
+<button name="action_qty_1" type="object" string="1" class="btn-secondary"/>
+<button name="action_qty_3" type="object" string="3" class="btn-secondary"/>
+<button name="action_qty_5" type="object" string="5" class="btn-secondary"/>
+<button name="action_qty_10" type="object" string="10" class="btn-secondary"/>
+<button name="action_qty_plus" type="object" string="+1" class="btn-secondary"/>
+</group>
+<field name="scanned_uom_id" readonly="auto_uom_locked"/>
+<field name="expiry_date" invisible="scan_mode != 'count'"/>
+<field name="return_route" invisible="scan_mode != 'return'"/>
+<field name="add_to_near_expiry_return" invisible="scan_mode != 'count' or not is_near_expiry"/>
+<field name="auto_quantity_locked" invisible="1"/>
+<field name="auto_uom_locked" invisible="1"/>
+</group>
+<group>
+<field name="detected_product_id" readonly="1" invisible="not detected_product_id"/>
+<field name="base_uom_id" readonly="1" invisible="not detected_product_id"/>
+<field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
+<field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
+<field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
+<field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+<field name="is_near_expiry" readonly="1" invisible="1"/>
+</group>
+</group>
+<group string="Last Scan Result" invisible="scan_mode != 'count' or not last_product_id">
+<group>
+<field name="last_product_id" readonly="1"/>
+<field name="last_counted_qty" readonly="1"/>
+<field name="last_barcode" readonly="1"/>
+</group>
+</group>
+<group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
+<group>
+<field name="last_product_id" readonly="1"/>
+<field name="last_return_qty" readonly="1"/>
+<field name="last_return_route" readonly="1"/>
+</group>
+</group>
+<footer>
+<button name="action_repeat_last_barcode" type="object" string="Repeat Last" class="btn-secondary" invisible="not last_barcode"/>
+<button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary"/>
+<button name="action_done" type="object" string="Done" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
