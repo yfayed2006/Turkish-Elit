@@ -195,6 +195,26 @@ class RouteVisit(models.Model):
 
 
 
+    def _is_excluded_non_packaging_model(self, rec):
+        self.ensure_one()
+        model_name = (getattr(rec, "_name", "") or "").lower()
+        excluded_prefixes = (
+            "stock.quant",
+            "stock.lot",
+            "stock.move",
+            "stock.picking",
+            "stock.location",
+            "stock.scrap",
+            "stock.valuation",
+            "stock.package",
+            "stock.package_level",
+            "stock.move.line",
+            "stock.inventory",
+            "stock.warehouse",
+        )
+        return any(model_name.startswith(prefix) for prefix in excluded_prefixes)
+
+
     def _record_matches_barcode(self, rec, barcode):
         self.ensure_one()
         barcode = (barcode or "").strip()
@@ -238,6 +258,8 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not rec:
             return -9999
+        if self._is_excluded_non_packaging_model(rec):
+            return -9999
 
         qty = self._get_packaging_qty(rec)
         barcode = (barcode or "").strip()
@@ -256,30 +278,31 @@ class RouteVisit(models.Model):
             score += 20
 
         if model_name == "product.packaging":
-            score += 20
+            score += 35
+        if model_name == "uom.uom":
+            score += 25
         if "package_type_id" in rec._fields or "package_type" in rec._fields:
-            score += 10
+            score += 15
 
         if display_name:
             if any(ch.isdigit() for ch in display_name):
-                score += 8
+                score += 10
             if "box" in display_name or "pack" in display_name or "pcs" in display_name:
-                score += 8
+                score += 10
             if display_name in ("box", "pack", "package"):
                 score -= 5
 
         try:
             if product and "product_id" in rec._fields and rec.product_id == product:
-                score += 25
+                score += 30
         except Exception:
             pass
         try:
             if product and getattr(product, "product_tmpl_id", False) and "product_tmpl_id" in rec._fields and rec.product_tmpl_id == product.product_tmpl_id:
-                score += 20
+                score += 25
         except Exception:
             pass
 
-        # Penalize barcode-only helper records that carry qty 1 or no meaningful count.
         if "barcode" in model_name and qty <= 1:
             score -= 15
 
@@ -331,35 +354,49 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not rec:
             return False
+        if self._is_excluded_non_packaging_model(rec):
+            return False
 
         qty_field = self._get_packaging_qty_field_name(rec)
         has_qty = bool(qty_field)
 
         model_name = (getattr(rec, "_name", "") or "").lower()
         display_name = ""
+        name_value = ""
         try:
             display_name = (rec.display_name or "").lower()
         except Exception:
             display_name = ""
+        try:
+            name_value = (getattr(rec, "name", False) or "").lower()
+        except Exception:
+            name_value = ""
 
         has_product = "product_id" in rec._fields and bool(rec.product_id)
         has_pack_hint = (
-            "pack" in model_name
+            model_name == "product.packaging"
+            or "pack" in model_name
             or "packaging" in model_name
+            or "uom.uom" == model_name
             or "box" in display_name
             or "pack" in display_name
             or "pcs" in display_name
+            or "box" in name_value
+            or "pack" in name_value
+            or "pcs" in name_value
             or "package_type_id" in rec._fields
             or "package_type" in rec._fields
         )
         has_barcode_relation = any(
-            getattr(field, "type", None) in ("one2many", "many2many") and "barcode" in field_name
+            getattr(field, "type", None) in ("one2many", "many2many") and "barcode" in field_name.lower()
             for field_name, field in rec._fields.items()
         )
 
-        if has_product and has_qty:
+        if model_name == "product.packaging" and has_qty:
             return True
         if has_qty and (has_pack_hint or has_barcode_relation):
+            return True
+        if has_product and has_qty and has_pack_hint:
             return True
         return False
 
@@ -857,7 +894,9 @@ class RouteVisit(models.Model):
         effective_scanned_uom = scanned_uom or scan_info.get("default_scanned_uom")
 
         if scan_info.get("scan_type") == "box":
-            effective_scan_qty = scan_info.get("default_scan_qty") or 1.0
+            box_qty = scan_info.get("default_scan_qty") or 1.0
+            box_count = scan_qty or 1.0
+            effective_scan_qty = box_qty * box_count
             effective_scanned_uom = product.uom_id
 
         counted_increase = self._get_scan_counted_increase(
