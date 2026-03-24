@@ -1,44 +1,30 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <record id="view_route_visit_return_scan_wizard_form" model="ir.ui.view">
-        <field name="name">route.visit.return.scan.wizard.form</field>
-        <field name="model">route.visit.return.scan.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Scan Returns">
-                <group>
-                    <group>
-                        <field name="visit_id" readonly="1"/>
-                        <field name="barcode"/>
-                        <field name="product_id"/>
-                        <field name="quantity"/>
-                        <field name="return_route"/>
-                    </group>
-                    <group string="Preview">
-                        <field name="detected_product_id" readonly="1"/>
-                        <field name="last_product_id" readonly="1"/>
-                        <field name="last_return_qty" readonly="1"/>
-                        <field name="last_return_route" readonly="1"/>
-                    </group>
-                </group>
-
-                <footer>
-                    <button
-                        name="action_apply_return"
-                        string="Apply Return"
-                        type="object"
-                        class="btn-primary"
-                    />
-                    <button
-                        name="action_done"
-                        string="Done"
-                        type="object"
-                        class="btn-secondary"
-                    />
-                    <button string="Cancel" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
+<record id="view_route_visit_return_scan_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.return.scan.wizard.form</field>
+<field name="model">route.visit.return.scan.wizard</field>
+<field name="arch" type="xml">
+<form string="Additional Returns">
+<group>
+<group>
+<field name="visit_id" readonly="1"/>
+<field name="barcode"/>
+<field name="product_id"/>
+<field name="quantity"/>
+<field name="return_route"/>
+</group>
+<group string="Preview">
+<field name="detected_product_id" readonly="1"/>
+<field name="last_product_id" readonly="1"/>
+<field name="last_return_qty" readonly="1"/>
+<field name="last_return_route" readonly="1"/>
+</group>
+</group>
+<footer>
+<button name="action_apply_return" string="Apply Additional Return" type="object" class="btn-primary"/>
+<button name="action_done" string="Done" type="object" class="btn-secondary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
 </odoo>
