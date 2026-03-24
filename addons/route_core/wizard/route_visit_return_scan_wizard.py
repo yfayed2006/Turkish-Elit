@@ -109,7 +109,7 @@ class RouteVisitReturnScanWizard(models.TransientModel):
 
         return {
             "type": "ir.actions.act_window",
-            "name": _("Scan Returns"),
+            "name": _("Additional Returns"),
             "res_model": "route.visit.return.scan.wizard",
             "view_mode": "form",
             "target": "new",
@@ -127,10 +127,10 @@ class RouteVisitReturnScanWizard(models.TransientModel):
         self.ensure_one()
 
         if not any((line.return_qty or 0.0) > 0 for line in self.visit_id.line_ids):
-            raise UserError(_("No return quantities were recorded. Use No Returns if there are no returns."))
+            raise UserError(_("No additional returns were recorded. Use No Additional Returns if there are no extra returns."))
 
         self.visit_id.write({
-            "has_returns_declared": True,
+            "has_returns_declared": any((line.return_qty or 0.0) > 0 for line in self.visit_id.line_ids),
             "returns_step_done": True,
         })
         return self.visit_id._action_reopen_visit_form()
