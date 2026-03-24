@@ -87,5 +87,5 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
         "stock.lot",
         string="Lot/Serial",
         domain="[('product_id', '=', product_id)]",
-        required=True,
+        required=False,
     )
