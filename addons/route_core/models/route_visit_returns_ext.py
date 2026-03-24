@@ -57,10 +57,9 @@ class RouteVisit(models.Model):
                 _("No Additional Returns can only be confirmed during the counting stage.")
             )
 
-        has_any_returns = any((line.return_qty or 0.0) > 0 for line in self.line_ids)
 
         self.write({
-            "has_returns_declared": has_any_returns,
+            "has_returns_declared": any((line.return_qty or 0.0) > 0 for line in self.line_ids),
             "returns_step_done": True,
         })
 
