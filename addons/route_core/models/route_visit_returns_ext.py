@@ -19,6 +19,8 @@ class RouteVisit(models.Model):
 
     def _action_reopen_visit_form(self):
         self.ensure_one()
+        if hasattr(self, "_get_pda_form_action"):
+            return self._get_pda_form_action()
         return {
             "type": "ir.actions.act_window",
             "name": _("Visit"),
@@ -38,7 +40,7 @@ class RouteVisit(models.Model):
 
         return {
             "type": "ir.actions.act_window",
-            "name": _("Additional Returns"),
+            "name": _("Scan Returns"),
             "res_model": "route.visit.return.scan.wizard",
             "view_mode": "form",
             "target": "new",
@@ -54,12 +56,13 @@ class RouteVisit(models.Model):
 
         if self.visit_process_state != "counting":
             raise UserError(
-                _("No Additional Returns can only be confirmed during the counting stage.")
+                _("No Returns can only be confirmed during the counting stage.")
             )
 
+        has_existing_returns = any((line.return_qty or 0.0) > 0 for line in self.line_ids)
 
         self.write({
-            "has_returns_declared": any((line.return_qty or 0.0) > 0 for line in self.line_ids),
+            "has_returns_declared": bool(has_existing_returns),
             "returns_step_done": True,
         })
 
