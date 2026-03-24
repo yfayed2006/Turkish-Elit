@@ -58,6 +58,8 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Return Route",
         default="vehicle",
     )
+    apply_return_from_scan = fields.Boolean(string="Return from this scan", default=False)
+    return_scan_qty = fields.Float(string="Return Qty", default=0.0)
 
     detected_product_id = fields.Many2one("product.product", string="Detected Product", readonly=True)
     base_uom_id = fields.Many2one("uom.uom", string="Base UoM", readonly=True)
@@ -118,6 +120,22 @@ class RouteVisitScanWizard(models.TransientModel):
         for rec in self:
             rec.add_to_near_expiry_return = bool(rec.scan_mode == "count" and rec.is_near_expiry)
 
+    @api.onchange("apply_return_from_scan")
+    def _onchange_apply_return_from_scan(self):
+        for rec in self:
+            if rec.apply_return_from_scan:
+                if rec.counted_increase > 0 and rec.return_scan_qty <= 0:
+                    rec.return_scan_qty = rec.counted_increase
+            else:
+                rec.return_scan_qty = 0.0
+
+    @api.onchange("counted_increase")
+    def _onchange_counted_increase_sync_return_qty(self):
+        for rec in self:
+            if rec.apply_return_from_scan and rec.counted_increase > 0:
+                if rec.return_scan_qty <= 0 or rec.return_scan_qty > rec.counted_increase:
+                    rec.return_scan_qty = rec.counted_increase
+
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id", "active_lot_id")
     def _onchange_barcode_preview(self):
         for rec in self:
@@ -128,6 +146,8 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.detected_packaging_name = False
             rec.auto_quantity_locked = False
             rec.auto_uom_locked = False
+            if not rec.apply_return_from_scan:
+                rec.return_scan_qty = 0.0
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
                 rec.scanned_uom_id = False
@@ -174,6 +194,10 @@ class RouteVisitScanWizard(models.TransientModel):
                 else:
                     rec.counted_increase = 0.0
 
+            if rec.apply_return_from_scan and rec.counted_increase > 0:
+                if rec.return_scan_qty <= 0 or rec.return_scan_qty > rec.counted_increase:
+                    rec.return_scan_qty = rec.counted_increase
+
             try:
                 resolved_lot = rec.visit_id._resolve_product_active_lot(product, active_lot=rec.active_lot_id)
             except UserError:
@@ -203,6 +227,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 "quantity": 1.0,
                 "expiry_date": False,
                 "add_to_near_expiry_return": False,
+                "apply_return_from_scan": False,
+                "return_scan_qty": 0.0,
                 "detected_product_id": False,
                 "base_uom_id": False,
                 "scanned_uom_id": False,
@@ -344,14 +370,33 @@ class RouteVisitScanWizard(models.TransientModel):
                 line_vals["expiry_date"] = effective_expiry_date
             line_vals["suggest_near_expiry_return"] = self.is_near_expiry
 
+            return_qty_to_add = 0.0
+            return_route_to_set = False
+
             if resolved_lot and self.active_lot_status == "expired":
-                line_vals["return_qty"] = (line.return_qty or 0.0) + (result["counted_increase"] or 0.0)
-                line_vals["return_route"] = "damaged"
+                return_qty_to_add = result["counted_increase"] or 0.0
+                return_route_to_set = "damaged"
                 line_vals["suggest_near_expiry_return"] = False
             elif self.add_to_near_expiry_return:
-                line_vals["return_qty"] = (line.return_qty or 0.0) + (result["counted_increase"] or 0.0)
-                line_vals["return_route"] = "near_expiry"
+                return_qty_to_add = result["counted_increase"] or 0.0
+                return_route_to_set = "near_expiry"
                 line_vals["suggest_near_expiry_return"] = False
+            elif self.apply_return_from_scan:
+                if self.return_scan_qty <= 0:
+                    raise UserError(_("Return quantity must be greater than zero."))
+                max_allowed = result["counted_increase"] or 0.0
+                if self.return_scan_qty > max_allowed:
+                    raise UserError(_("Return quantity cannot exceed the counted quantity of this scan."))
+                return_qty_to_add = self.return_scan_qty
+                return_route_to_set = self.return_route or "vehicle"
+
+            if return_qty_to_add > 0:
+                line_vals["return_qty"] = (line.return_qty or 0.0) + return_qty_to_add
+                line_vals["return_route"] = return_route_to_set or "vehicle"
+                self.visit_id.write({
+                    "has_returns_declared": True,
+                    "returns_step_done": False,
+                })
 
             if line_vals:
                 line.write(line_vals)
