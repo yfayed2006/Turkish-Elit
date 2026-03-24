@@ -1,464 +1,413 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <record id="view_route_visit_tree" model="ir.ui.view">
-        <field name="name">route.visit.tree</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <list string="Route Visits" create="0" delete="0">
-                <field name="name"/>
-                <field name="date"/>
-                <field name="outlet_id"/>
-                <field name="partner_id"/>
-                <field name="area_id"/>
-                <field name="vehicle_id"/>
-                <field name="user_id"/>
-                <field name="visit_process_state"/>
-                <field name="state"/>
-                <field name="sale_order_id"/>
-                <field name="start_datetime"/>
-                <field name="end_datetime"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_route_visit_pda_kanban" model="ir.ui.view">
-        <field name="name">route.visit.pda.kanban</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile" create="0" delete="0">
-                <field name="name"/>
-                <field name="date"/>
-                <field name="outlet_id"/>
-                <field name="partner_id"/>
-                <field name="area_id"/>
-                <field name="user_id"/>
-                <field name="visit_process_state"/>
-                <field name="state"/>
-                <field name="sale_order_id"/>
-
-                <templates>
-                    <t t-name="card">
-                        <div class="oe_kanban_global_click o_kanban_record">
-                            <div class="mb-2">
-                                <strong class="fs-5">
-                                    <field name="outlet_id"/>
-                                </strong>
-                            </div>
-
-                            <div class="mb-1">
-                                <span class="text-muted">Visit:</span>
-                                <span class="ms-1"><field name="name"/></span>
-                            </div>
-
-                            <div class="mb-1">
-                                <span class="text-muted">Customer:</span>
-                                <span class="ms-1"><field name="partner_id"/></span>
-                            </div>
-
-                            <div class="mb-1">
-                                <span class="text-muted">Area:</span>
-                                <span class="ms-1"><field name="area_id"/></span>
-                            </div>
-
-                            <div class="mb-1">
-                                <span class="text-muted">Date:</span>
-                                <span class="ms-1"><field name="date"/></span>
-                            </div>
-
-                            <div class="mb-1">
-                                <span class="text-muted">Visit State:</span>
-                                <span class="ms-1"><field name="state"/></span>
-                            </div>
-
-                            <div class="mb-2">
-                                <span class="text-muted">Process:</span>
-                                <span class="ms-1"><field name="visit_process_state"/></span>
-                            </div>
-
-                            <div class="mt-3">
-                                <a type="open" role="button" class="btn btn-primary w-100">Open Visit</a>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    <record id="view_route_visit_form" model="ir.ui.view">
-        <field name="name">route.visit.form</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <form string="Route Visit" create="0" delete="0">
-                <header>
-                    <button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
-                    <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
-                    <button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
-                    <button name="action_ux_returns_step" string="Scan Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-                    <button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
-                    <button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
-                    <button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
-                    <button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
-                    <button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
-                    <button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
-                    <button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
-                    <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-
-                    <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
-                </header>
-
-                <sheet>
-                    <field name="ux_primary_action" invisible="1"/>
-                    <field name="ux_stage" invisible="1"/>
-                    <field name="ux_stage_title" invisible="1"/>
-                    <field name="ux_stage_help" invisible="1"/>
-
-                    <field name="returns_step_done" invisible="1"/>
-                    <field name="has_returns_declared" invisible="1"/>
-
-                    <field name="ux_can_scan_barcode" invisible="1"/>
-                    <field name="ux_can_scan_returns" invisible="1"/>
-                    <field name="ux_can_no_returns" invisible="1"/>
-                    <field name="ux_can_create_sale_order" invisible="1"/>
-                    <field name="ux_can_view_sale_order" invisible="1"/>
-                    <field name="ux_can_confirm_return_transfers" invisible="1"/>
-                    <field name="ux_can_view_return_transfers" invisible="1"/>
-                    <field name="ux_can_generate_refill" invisible="1"/>
-                    <field name="ux_can_confirm_refill" invisible="1"/>
-                    <field name="ux_can_view_refill_transfer" invisible="1"/>
-                    <field name="ux_can_open_pending_refill" invisible="1"/>
-                    <field name="ux_can_collect_payment" invisible="1"/>
-                    <field name="ux_can_confirm_payments" invisible="1"/>
-                    <field name="ux_can_skip_collection" invisible="1"/>
-                    <field name="ux_can_open_payments" invisible="1"/>
-                    <field name="ux_can_finish_visit" invisible="1"/>
-
-                    <div class="alert alert-info mb-3" role="alert">
-                        <strong><field name="ux_stage_title" readonly="1" nolabel="1"/></strong>
-                        <div class="mt-1">
-                            <field name="ux_stage_help" readonly="1" nolabel="1"/>
-                        </div>
-                    </div>
-
-                    <group>
-                        <group>
-                            <field name="name" readonly="1"/>
-                            <field name="date" readonly="1"/>
-                            <field name="outlet_id" readonly="1"/>
-                            <field name="partner_id" readonly="1"/>
-                            <field name="area_id" readonly="1"/>
-                            <field name="vehicle_id" readonly="1"/>
-                            <field name="user_id" readonly="1"/>
-                            <field name="state" readonly="1"/>
-                            <field name="visit_process_state" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="sale_order_id" readonly="1"/>
-                            <field name="start_datetime" readonly="1"/>
-                            <field name="end_datetime" readonly="1"/>
-                        </group>
-                    </group>
-
-                    <notebook>
-                        <page string="Visit Lines">
-                            <field name="line_ids">
-                                <list editable="bottom">
-                                    <field name="product_id"/>
-                                    <field name="barcode" readonly="1"/>
-                                    <field name="uom_id" readonly="1"/>
-                                    <field name="previous_qty"/>
-                                    <field name="counted_qty"/>
-                                    <field name="return_qty"/>
-                                    <field name="return_route"/>
-                                    <field name="sold_qty" readonly="1"/>
-                                    <field name="vehicle_available_qty" readonly="1"/>
-                                    <field name="supplied_qty"/>
-                                    <field name="pending_refill_qty" readonly="1"/>
-                                    <field name="new_balance_qty" readonly="1"/>
-                                    <field name="unit_price"/>
-                                    <field name="sold_amount" readonly="1"/>
-                                    <field name="return_amount" readonly="1"/>
-                                    <field name="supply_value" readonly="1"/>
-                                    <field name="new_balance_value" readonly="1"/>
-                                    <field name="note"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Payments">
-                            <field name="payment_ids">
-                                <list editable="bottom">
-                                    <field name="payment_date"/>
-                                    <field name="payment_mode"/>
-                                    <field name="collection_type"/>
-                                    <field name="amount"/>
-                                    <field name="due_date"/>
-                                    <field name="reference"/>
-                                    <field name="bank_name"/>
-                                    <field name="pos_terminal"/>
-                                    <field name="note"/>
-                                    <field name="state"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Notes">
-                            <field name="notes" placeholder="Internal notes..."/>
-                        </page>
-
-                        <page string="No Sale Reason" invisible="not no_sale_reason">
-                            <field name="no_sale_reason" readonly="1"/>
-                        </page>
-                    </notebook>
-                </sheet>
-
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <record id="view_route_visit_pda_form" model="ir.ui.view">
-        <field name="name">route.visit.pda.form</field>
-        <field name="model">route.visit</field>
-        <field name="priority" eval="90"/>
-        <field name="arch" type="xml">
-            <form string="PDA Visit" create="0" delete="0">
-                <header>
-                    <button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
-                    <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
-                    <button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
-                    <button name="action_ux_returns_step" string="Scan Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-                    <button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
-                    <button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
-                    <button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
-                    <button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
-                    <button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
-                    <button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
-                    <button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
-                    <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-
-                    <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
-                </header>
-
-                <sheet>
-                    <field name="ux_primary_action" invisible="1"/>
-                    <field name="ux_stage" invisible="1"/>
-                    <field name="ux_stage_title" invisible="1"/>
-                    <field name="ux_stage_help" invisible="1"/>
-
-                    <field name="returns_step_done" invisible="1"/>
-                    <field name="has_returns_declared" invisible="1"/>
-
-                    <field name="ux_can_scan_barcode" invisible="1"/>
-                    <field name="ux_can_scan_returns" invisible="1"/>
-                    <field name="ux_can_no_returns" invisible="1"/>
-                    <field name="ux_can_create_sale_order" invisible="1"/>
-                    <field name="ux_can_view_sale_order" invisible="1"/>
-                    <field name="ux_can_confirm_return_transfers" invisible="1"/>
-                    <field name="ux_can_view_return_transfers" invisible="1"/>
-                    <field name="ux_can_generate_refill" invisible="1"/>
-                    <field name="ux_can_confirm_refill" invisible="1"/>
-                    <field name="ux_can_view_refill_transfer" invisible="1"/>
-                    <field name="ux_can_open_pending_refill" invisible="1"/>
-                    <field name="ux_can_collect_payment" invisible="1"/>
-                    <field name="ux_can_confirm_payments" invisible="1"/>
-                    <field name="ux_can_skip_collection" invisible="1"/>
-                    <field name="ux_can_open_payments" invisible="1"/>
-                    <field name="ux_can_finish_visit" invisible="1"/>
-
-                    <div class="alert alert-info mb-3" role="alert">
-                        <strong><field name="ux_stage_title" readonly="1" nolabel="1"/></strong>
-                        <div class="mt-1">
-                            <field name="ux_stage_help" readonly="1" nolabel="1"/>
-                        </div>
-                    </div>
-
-                    <group>
-                        <group>
-                            <field name="name" readonly="1"/>
-                            <field name="date" readonly="1"/>
-                            <field name="outlet_id" readonly="1"/>
-                            <field name="partner_id" readonly="1"/>
-                            <field name="area_id" readonly="1"/>
-                            <field name="vehicle_id" readonly="1"/>
-                            <field name="user_id" readonly="1"/>
-                            <field name="state" readonly="1"/>
-                            <field name="visit_process_state" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="sale_order_id" readonly="1"/>
-                            <field name="start_datetime" readonly="1"/>
-                            <field name="end_datetime" readonly="1"/>
-                        </group>
-                    </group>
-
-                    <notebook>
-                        <page string="Count">
-                            <field name="line_ids">
-                                <list editable="bottom">
-                                    <field name="product_id"/>
-                                    <field name="barcode" readonly="1"/>
-                                    <field name="uom_id" readonly="1"/>
-                                    <field name="previous_qty"/>
-                                    <field name="counted_qty"/>
-                                    <field name="return_qty"/>
-                                    <field name="return_route"/>
-                                    <field name="sold_qty" readonly="1"/>
-                                    <field name="vehicle_available_qty" readonly="1"/>
-                                    <field name="supplied_qty"/>
-                                    <field name="pending_refill_qty" readonly="1"/>
-                                    <field name="new_balance_qty" readonly="1"/>
-                                    <field name="unit_price"/>
-                                    <field name="sold_amount" readonly="1"/>
-                                    <field name="return_amount" readonly="1"/>
-                                    <field name="supply_value" readonly="1"/>
-                                    <field name="new_balance_value" readonly="1"/>
-                                    <field name="note"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Payments">
-                            <field name="payment_ids">
-                                <list editable="bottom">
-                                    <field name="payment_date"/>
-                                    <field name="payment_mode"/>
-                                    <field name="collection_type"/>
-                                    <field name="amount"/>
-                                    <field name="due_date"/>
-                                    <field name="reference"/>
-                                    <field name="bank_name"/>
-                                    <field name="pos_terminal"/>
-                                    <field name="note"/>
-                                    <field name="state"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Notes">
-                            <field name="notes" placeholder="Internal notes..."/>
-                        </page>
-
-                        <page string="No Sale Reason" invisible="not no_sale_reason">
-                            <field name="no_sale_reason" readonly="1"/>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="view_route_visit_search" model="ir.ui.view">
-        <field name="name">route.visit.search</field>
-        <field name="model">route.visit</field>
-        <field name="arch" type="xml">
-            <search string="Route Visits">
-                <field name="name"/>
-                <field name="date"/>
-                <field name="outlet_id"/>
-                <field name="partner_id"/>
-                <field name="area_id"/>
-                <field name="vehicle_id"/>
-                <field name="user_id"/>
-                <field name="state"/>
-
-                <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-                <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
-                <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
-                <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
-
-                <separator/>
-
-                <filter name="group_by_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
-                <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
-                <filter name="group_by_state" string="Visit State" context="{'group_by': 'state'}"/>
-                <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
-            </search>
-        </field>
-    </record>
-
-    <record id="action_route_visit" model="ir.actions.act_window">
-        <field name="name">Visit History</field>
-        <field name="res_model">route.visit</field>
-        <field name="view_mode">list,form</field>
-        <field name="search_view_id" ref="view_route_visit_search"/>
-        <field name="context">
-            {
-                'search_default_filter_my_visits': 1,
-                'search_default_filter_today': 1,
-                'create': 0,
-                'edit': 1,
-                'delete': 0
-            }
-        </field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Visit History is for review and operational settlement.
-            </p>
-        </field>
-    </record>
-
-    <record id="action_route_visit_list_view" model="ir.actions.act_window.view">
-        <field name="sequence" eval="1"/>
-        <field name="view_mode">list</field>
-        <field name="view_id" ref="view_route_visit_tree"/>
-        <field name="act_window_id" ref="action_route_visit"/>
-    </record>
-
-    <record id="action_route_visit_form_view" model="ir.actions.act_window.view">
-        <field name="sequence" eval="2"/>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_route_visit_form"/>
-        <field name="act_window_id" ref="action_route_visit"/>
-    </record>
-
-    <record id="action_route_visit_pda" model="ir.actions.act_window">
-        <field name="name">PDA Visits</field>
-        <field name="res_model">route.visit</field>
-        <field name="view_mode">kanban,form,list</field>
-        <field name="search_view_id" ref="view_route_visit_search"/>
-        <field name="context">
-            {
-                'create': 0,
-                'edit': 1,
-                'delete': 0
-            }
-        </field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Open the route visits for the selected plan in PDA mode.
-            </p>
-        </field>
-    </record>
-
-    <record id="action_route_visit_pda_kanban_view" model="ir.actions.act_window.view">
-        <field name="sequence" eval="1"/>
-        <field name="view_mode">kanban</field>
-        <field name="view_id" ref="view_route_visit_pda_kanban"/>
-        <field name="act_window_id" ref="action_route_visit_pda"/>
-    </record>
-
-    <record id="action_route_visit_pda_form_view" model="ir.actions.act_window.view">
-        <field name="sequence" eval="2"/>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_route_visit_pda_form"/>
-        <field name="act_window_id" ref="action_route_visit_pda"/>
-    </record>
-
-    <record id="action_route_visit_pda_list_view" model="ir.actions.act_window.view">
-        <field name="sequence" eval="3"/>
-        <field name="view_mode">list</field>
-        <field name="view_id" ref="view_route_visit_tree"/>
-        <field name="act_window_id" ref="action_route_visit_pda"/>
-    </record>
-
-    <menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
-
-    <menuitem id="menu_route_visit_history" name="Visit History" parent="menu_route_visit_root" action="action_route_visit" sequence="40"/>
-
-    <record id="menu_route_visit" model="ir.ui.menu">
-        <field name="active" eval="False"/>
-    </record>
-
+<record id="view_route_visit_tree" model="ir.ui.view">
+<field name="name">route.visit.tree</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<list string="Route Visits" create="0" delete="0">
+<field name="name"/>
+<field name="date"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="vehicle_id"/>
+<field name="user_id"/>
+<field name="visit_process_state"/>
+<field name="state"/>
+<field name="sale_order_id"/>
+<field name="start_datetime"/>
+<field name="end_datetime"/>
+</list>
+</field>
+</record>
+<record id="view_route_visit_pda_kanban" model="ir.ui.view">
+<field name="name">route.visit.pda.kanban</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<kanban class="o_kanban_mobile" create="0" delete="0">
+<field name="name"/>
+<field name="date"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="user_id"/>
+<field name="visit_process_state"/>
+<field name="state"/>
+<field name="sale_order_id"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record">
+<div class="mb-2">
+<strong class="fs-5">
+<field name="outlet_id"/>
+</strong>
+</div>
+<div class="mb-1">
+<span class="text-muted">Visit:</span>
+<span class="ms-1">
+<field name="name"/>
+</span>
+</div>
+<div class="mb-1">
+<span class="text-muted">Customer:</span>
+<span class="ms-1">
+<field name="partner_id"/>
+</span>
+</div>
+<div class="mb-1">
+<span class="text-muted">Area:</span>
+<span class="ms-1">
+<field name="area_id"/>
+</span>
+</div>
+<div class="mb-1">
+<span class="text-muted">Date:</span>
+<span class="ms-1">
+<field name="date"/>
+</span>
+</div>
+<div class="mb-1">
+<span class="text-muted">Visit State:</span>
+<span class="ms-1">
+<field name="state"/>
+</span>
+</div>
+<div class="mb-2">
+<span class="text-muted">Process:</span>
+<span class="ms-1">
+<field name="visit_process_state"/>
+</span>
+</div>
+<div class="mt-3">
+<a type="open" role="button" class="btn btn-primary w-100">Open Visit</a>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_visit_form" model="ir.ui.view">
+<field name="name">route.visit.form</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<form string="Route Visit" create="0" delete="0">
+<header>
+<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
+<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
+<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
+<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
+<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
+<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
+<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
+<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
+</header>
+<sheet>
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
+<field name="returns_step_done" invisible="1"/>
+<field name="has_returns_declared" invisible="1"/>
+<field name="ux_can_scan_barcode" invisible="1"/>
+<field name="ux_can_scan_returns" invisible="1"/>
+<field name="ux_can_no_returns" invisible="1"/>
+<field name="ux_can_create_sale_order" invisible="1"/>
+<field name="ux_can_view_sale_order" invisible="1"/>
+<field name="ux_can_confirm_return_transfers" invisible="1"/>
+<field name="ux_can_view_return_transfers" invisible="1"/>
+<field name="ux_can_generate_refill" invisible="1"/>
+<field name="ux_can_confirm_refill" invisible="1"/>
+<field name="ux_can_view_refill_transfer" invisible="1"/>
+<field name="ux_can_open_pending_refill" invisible="1"/>
+<field name="ux_can_collect_payment" invisible="1"/>
+<field name="ux_can_confirm_payments" invisible="1"/>
+<field name="ux_can_skip_collection" invisible="1"/>
+<field name="ux_can_open_payments" invisible="1"/>
+<field name="ux_can_finish_visit" invisible="1"/>
+<div class="alert alert-info mb-3" role="alert">
+<strong>
+<field name="ux_stage_title" readonly="1" nolabel="1"/>
+</strong>
+<div class="mt-1">
+<field name="ux_stage_help" readonly="1" nolabel="1"/>
+</div>
+</div>
+<group>
+<group>
+<field name="name" readonly="1"/>
+<field name="date" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+<field name="user_id" readonly="1"/>
+<field name="state" readonly="1"/>
+<field name="visit_process_state" readonly="1"/>
+</group>
+<group>
+<field name="sale_order_id" readonly="1"/>
+<field name="start_datetime" readonly="1"/>
+<field name="end_datetime" readonly="1"/>
+</group>
+</group>
+<notebook>
+<page string="Visit Lines">
+<field name="line_ids">
+<list editable="bottom">
+<field name="product_id"/>
+<field name="barcode" readonly="1"/>
+<field name="uom_id" readonly="1"/>
+<field name="previous_qty"/>
+<field name="counted_qty"/>
+<field name="return_qty"/>
+<field name="return_route"/>
+<field name="sold_qty" readonly="1"/>
+<field name="vehicle_available_qty" readonly="1"/>
+<field name="supplied_qty"/>
+<field name="pending_refill_qty" readonly="1"/>
+<field name="new_balance_qty" readonly="1"/>
+<field name="unit_price"/>
+<field name="sold_amount" readonly="1"/>
+<field name="return_amount" readonly="1"/>
+<field name="supply_value" readonly="1"/>
+<field name="new_balance_value" readonly="1"/>
+<field name="note"/>
+</list>
+</field>
+</page>
+<page string="Payments">
+<field name="payment_ids">
+<list editable="bottom">
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="amount"/>
+<field name="due_date"/>
+<field name="reference"/>
+<field name="bank_name"/>
+<field name="pos_terminal"/>
+<field name="note"/>
+<field name="state"/>
+</list>
+</field>
+</page>
+<page string="Notes">
+<field name="notes" placeholder="Internal notes..."/>
+</page>
+<page string="No Sale Reason" invisible="not no_sale_reason">
+<field name="no_sale_reason" readonly="1"/>
+</page>
+</notebook>
+</sheet>
+<chatter/>
+</form>
+</field>
+</record>
+<record id="view_route_visit_pda_form" model="ir.ui.view">
+<field name="name">route.visit.pda.form</field>
+<field name="model">route.visit</field>
+<field name="priority" eval="90"/>
+<field name="arch" type="xml">
+<form string="PDA Visit" create="0" delete="0">
+<header>
+<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
+<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
+<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
+<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
+<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
+<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
+<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
+<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
+</header>
+<sheet>
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
+<field name="returns_step_done" invisible="1"/>
+<field name="has_returns_declared" invisible="1"/>
+<field name="ux_can_scan_barcode" invisible="1"/>
+<field name="ux_can_scan_returns" invisible="1"/>
+<field name="ux_can_no_returns" invisible="1"/>
+<field name="ux_can_create_sale_order" invisible="1"/>
+<field name="ux_can_view_sale_order" invisible="1"/>
+<field name="ux_can_confirm_return_transfers" invisible="1"/>
+<field name="ux_can_view_return_transfers" invisible="1"/>
+<field name="ux_can_generate_refill" invisible="1"/>
+<field name="ux_can_confirm_refill" invisible="1"/>
+<field name="ux_can_view_refill_transfer" invisible="1"/>
+<field name="ux_can_open_pending_refill" invisible="1"/>
+<field name="ux_can_collect_payment" invisible="1"/>
+<field name="ux_can_confirm_payments" invisible="1"/>
+<field name="ux_can_skip_collection" invisible="1"/>
+<field name="ux_can_open_payments" invisible="1"/>
+<field name="ux_can_finish_visit" invisible="1"/>
+<div class="alert alert-info mb-3" role="alert">
+<strong>
+<field name="ux_stage_title" readonly="1" nolabel="1"/>
+</strong>
+<div class="mt-1">
+<field name="ux_stage_help" readonly="1" nolabel="1"/>
+</div>
+</div>
+<group>
+<group>
+<field name="name" readonly="1"/>
+<field name="date" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+<field name="user_id" readonly="1"/>
+<field name="state" readonly="1"/>
+<field name="visit_process_state" readonly="1"/>
+</group>
+<group>
+<field name="sale_order_id" readonly="1"/>
+<field name="start_datetime" readonly="1"/>
+<field name="end_datetime" readonly="1"/>
+</group>
+</group>
+<notebook>
+<page string="Count">
+<field name="line_ids">
+<list editable="bottom">
+<field name="product_id"/>
+<field name="barcode" readonly="1"/>
+<field name="uom_id" readonly="1"/>
+<field name="previous_qty"/>
+<field name="counted_qty"/>
+<field name="return_qty"/>
+<field name="return_route"/>
+<field name="sold_qty" readonly="1"/>
+<field name="vehicle_available_qty" readonly="1"/>
+<field name="supplied_qty"/>
+<field name="pending_refill_qty" readonly="1"/>
+<field name="new_balance_qty" readonly="1"/>
+<field name="unit_price"/>
+<field name="sold_amount" readonly="1"/>
+<field name="return_amount" readonly="1"/>
+<field name="supply_value" readonly="1"/>
+<field name="new_balance_value" readonly="1"/>
+<field name="note"/>
+</list>
+</field>
+</page>
+<page string="Payments">
+<field name="payment_ids">
+<list editable="bottom">
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="amount"/>
+<field name="due_date"/>
+<field name="reference"/>
+<field name="bank_name"/>
+<field name="pos_terminal"/>
+<field name="note"/>
+<field name="state"/>
+</list>
+</field>
+</page>
+<page string="Notes">
+<field name="notes" placeholder="Internal notes..."/>
+</page>
+<page string="No Sale Reason" invisible="not no_sale_reason">
+<field name="no_sale_reason" readonly="1"/>
+</page>
+</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_visit_search" model="ir.ui.view">
+<field name="name">route.visit.search</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<search string="Route Visits">
+<field name="name"/>
+<field name="date"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="vehicle_id"/>
+<field name="user_id"/>
+<field name="state"/>
+<filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
+<filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
+<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<separator/>
+<filter name="group_by_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_state" string="Visit State" context="{'group_by': 'state'}"/>
+<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+</search>
+</field>
+</record>
+<record id="action_route_visit" model="ir.actions.act_window">
+<field name="name">Visit History</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_visit_search"/>
+<field name="context"> { 'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0 } </field>
+<field name="help" type="html">
+<p class="o_view_nocontent_smiling_face"> Visit History is for review and operational settlement. </p>
+</field>
+</record>
+<record id="action_route_visit_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="view_route_visit_tree"/>
+<field name="act_window_id" ref="action_route_visit"/>
+</record>
+<record id="action_route_visit_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="view_route_visit_form"/>
+<field name="act_window_id" ref="action_route_visit"/>
+</record>
+<record id="action_route_visit_pda" model="ir.actions.act_window">
+<field name="name">PDA Visits</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">kanban,form,list</field>
+<field name="search_view_id" ref="view_route_visit_search"/>
+<field name="context"> { 'create': 0, 'edit': 1, 'delete': 0 } </field>
+<field name="help" type="html">
+<p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in PDA mode. </p>
+</field>
+</record>
+<record id="action_route_visit_pda_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="view_route_visit_pda_kanban"/>
+<field name="act_window_id" ref="action_route_visit_pda"/>
+</record>
+<record id="action_route_visit_pda_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="view_route_visit_pda_form"/>
+<field name="act_window_id" ref="action_route_visit_pda"/>
+</record>
+<record id="action_route_visit_pda_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="view_route_visit_tree"/>
+<field name="act_window_id" ref="action_route_visit_pda"/>
+</record>
+<menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
+<menuitem id="menu_route_visit_history" name="Visit History" parent="menu_route_visit_root" action="action_route_visit" sequence="40"/>
+<record id="menu_route_visit" model="ir.ui.menu">
+<field name="active" eval="False"/>
+</record>
 </odoo>
