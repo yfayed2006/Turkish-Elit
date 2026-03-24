@@ -228,6 +228,9 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             }
         )
 
+        if hasattr(self.visit_id, "_get_pda_form_action"):
+            return self.visit_id._get_pda_form_action()
+
         return {
             "type": "ir.actions.act_window",
             "name": _("Visit"),
