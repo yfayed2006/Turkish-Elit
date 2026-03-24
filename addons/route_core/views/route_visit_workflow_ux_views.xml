@@ -1,578 +1,154 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <record id="view_route_visit_form_workflow_ux" model="ir.ui.view">
-        <field name="name">route.visit.form.workflow.ux</field>
-        <field name="model">route.visit</field>
-        <field name="inherit_id" ref="route_core.view_route_visit_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="replace">
-                <header>
-                    <button
-                        name="action_ux_start_visit"
-                        string="Start Visit"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'start_visit'"
-                    />
-                    <button
-                        name="action_ux_load_previous_balance"
-                        string="Load Previous Balance"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'load_previous_balance'"
-                    />
-                    <button
-                        name="action_ux_scan_shelf"
-                        string="Scan Shelf"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'scan_shelf'"
-                    />
-                    <button
-                        name="action_ux_returns_step"
-                        string="Check Return"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'returns_step'"
-                    />
-                    <button
-                        name="action_ux_no_returns"
-                        string="No Returns"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="not ux_can_no_returns"
-                    />
-                    <button
-                        name="action_ux_reconcile_count"
-                        string="Reconcile Count"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'reconcile_count'"
-                    />
-                    <button
-                        name="action_ux_confirm_return_transfers"
-                        string="Confirm Return Transfers"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_return_transfers'"
-                    />
-                    <button
-                        name="action_ux_generate_refill"
-                        string="Generate Refill Proposal"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'generate_refill'"
-                    />
-                    <button
-                        name="action_ux_confirm_refill"
-                        string="Confirm Refill"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_refill'"
-                    />
-                    <button
-                        name="action_ux_open_pending_refill"
-                        string="Open Pending Refill"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'open_pending_refill'"
-                    />
-                    <button
-                        name="action_ux_collect_payment"
-                        string="Collect Payment"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'collect_payment'"
-                    />
-                    <button
-                        name="action_ux_confirm_payments"
-                        string="Confirm Payments"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_payments'"
-                    />
-                    <button
-                        name="action_ux_finalize_visit"
-                        string="Finish Visit"
-                        type="object"
-                        class="btn-success"
-                        invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
-                    />
-                    <button
-                        name="action_cancel"
-                        string="Cancel Process"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state in ('done', 'cancel')"
-                    />
-
-                    <field
-                        name="visit_process_state"
-                        widget="statusbar"
-                        statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"
-                    />
-                </header>
-            </xpath>
-
-            <xpath expr="//sheet" position="inside">
-                <field name="ux_primary_action" invisible="1"/>
-                <field name="ux_stage" invisible="1"/>
-                <field name="ux_stage_title" invisible="1"/>
-                <field name="ux_stage_help" invisible="1"/>
-
-                <field name="ux_can_scan_barcode" invisible="1"/>
-                <field name="ux_can_scan_returns" invisible="1"/>
-                <field name="ux_can_no_returns" invisible="1"/>
-
-                <field name="ux_can_create_sale_order" invisible="1"/>
-                <field name="ux_can_view_sale_order" invisible="1"/>
-
-                <field name="ux_can_confirm_return_transfers" invisible="1"/>
-                <field name="ux_can_view_return_transfers" invisible="1"/>
-
-                <field name="ux_can_generate_refill" invisible="1"/>
-                <field name="ux_can_confirm_refill" invisible="1"/>
-                <field name="ux_can_view_refill_transfer" invisible="1"/>
-                <field name="ux_can_open_pending_refill" invisible="1"/>
-
-                <field name="ux_can_collect_payment" invisible="1"/>
-                <field name="ux_can_confirm_payments" invisible="1"/>
-                <field name="ux_can_skip_collection" invisible="1"/>
-                <field name="ux_can_open_payments" invisible="1"/>
-
-                <field name="ux_can_finish_visit" invisible="1"/>
-
-                <div class="alert alert-info mb-3" role="alert">
-                    <strong>
-                        <field name="ux_stage_title" readonly="1" nolabel="1"/>
-                    </strong>
-                    <div class="mt-1">
-                        <field name="ux_stage_help" readonly="1" nolabel="1"/>
-                    </div>
-                </div>
-            </xpath>
-
-            <xpath expr="//div[@name='button_box']" position="replace">
-                <div class="oe_button_box" name="button_box">
-
-                    <button
-                        name="action_ux_scan_shelf"
-                        string="Scan Barcode"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-barcode"
-                        invisible="not ux_can_scan_barcode"
-                    />
-
-                    <button
-                        name="action_ux_returns_step"
-                        string="Check Return"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_scan_returns"
-                    />
-
-                    <button
-                        name="action_ux_no_returns"
-                        string="No Returns"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-check-circle"
-                        invisible="not ux_can_no_returns"
-                    />
-
-                    <button
-                        name="action_ux_view_sale_order"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link"
-                        invisible="not ux_can_view_sale_order"
-                    >
-                        <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
-                    </button>
-
-                    <button
-                        name="action_ux_confirm_return_transfers"
-                        string="Return Transfers"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_confirm_return_transfers"
-                    />
-
-                    <button
-                        name="action_ux_view_return_transfers"
-                        string="View Return Transfers"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link-square"
-                        invisible="not ux_can_view_return_transfers"
-                    />
-
-                    <button
-                        name="action_ux_generate_refill"
-                        string="Generate Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-refresh"
-                        invisible="not ux_can_generate_refill"
-                    />
-
-                    <button
-                        name="action_ux_confirm_refill"
-                        string="Confirm Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-truck"
-                        invisible="not ux_can_confirm_refill"
-                    />
-
-                    <button
-                        name="action_ux_view_refill_transfer"
-                        string="Refill Transfer"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link-square"
-                        invisible="not ux_can_view_refill_transfer"
-                    />
-
-                    <button
-                        name="action_ux_open_pending_refill"
-                        string="Pending Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-exchange"
-                        invisible="not ux_can_open_pending_refill"
-                    />
-
-                    <button
-                        name="action_ux_collect_payment"
-                        string="Collect Payment"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-money"
-                        invisible="not ux_can_collect_payment"
-                    />
-
-                    <button
-                        name="action_ux_confirm_payments"
-                        string="Confirm Payments"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-check-circle"
-                        invisible="not ux_can_confirm_payments"
-                    />
-
-                    <button
-                        name="action_ux_open_payments"
-                        string="Review Payments"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-credit-card"
-                        invisible="not ux_can_open_payments"
-                    />
-
-                    <button
-                        name="action_ux_skip_collection"
-                        string="Skip Collection"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-forward"
-                        invisible="not ux_can_skip_collection"
-                    />
-
-                </div>
-            </xpath>
-        </field>
-    </record>
-
-    <record id="view_route_visit_pda_form_workflow_ux" model="ir.ui.view">
-        <field name="name">route.visit.pda.form.workflow.ux</field>
-        <field name="model">route.visit</field>
-        <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="replace">
-                <header>
-                    <button
-                        name="action_ux_start_visit"
-                        string="Start Visit"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'start_visit'"
-                    />
-                    <button
-                        name="action_ux_load_previous_balance"
-                        string="Load Previous Balance"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'load_previous_balance'"
-                    />
-                    <button
-                        name="action_ux_scan_shelf"
-                        string="Scan Shelf"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'scan_shelf'"
-                    />
-                    <button
-                        name="action_ux_returns_step"
-                        string="Check Return"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'returns_step'"
-                    />
-                    <button
-                        name="action_ux_no_returns"
-                        string="No Returns"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="not ux_can_no_returns"
-                    />
-                    <button
-                        name="action_ux_reconcile_count"
-                        string="Reconcile Count"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'reconcile_count'"
-                    />
-                    <button
-                        name="action_ux_confirm_return_transfers"
-                        string="Confirm Return Transfers"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_return_transfers'"
-                    />
-                    <button
-                        name="action_ux_generate_refill"
-                        string="Generate Refill Proposal"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'generate_refill'"
-                    />
-                    <button
-                        name="action_ux_confirm_refill"
-                        string="Confirm Refill"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_refill'"
-                    />
-                    <button
-                        name="action_ux_open_pending_refill"
-                        string="Open Pending Refill"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'open_pending_refill'"
-                    />
-                    <button
-                        name="action_ux_collect_payment"
-                        string="Collect Payment"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'collect_payment'"
-                    />
-                    <button
-                        name="action_ux_confirm_payments"
-                        string="Confirm Payments"
-                        type="object"
-                        class="btn-primary"
-                        invisible="ux_primary_action != 'confirm_payments'"
-                    />
-                    <button
-                        name="action_ux_finalize_visit"
-                        string="Finish Visit"
-                        type="object"
-                        class="btn-success"
-                        invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"
-                    />
-                    <button
-                        name="action_cancel"
-                        string="Cancel Process"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="visit_process_state in ('done', 'cancel')"
-                    />
-
-                    <field
-                        name="visit_process_state"
-                        widget="statusbar"
-                        statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"
-                    />
-                </header>
-            </xpath>
-
-            <xpath expr="//sheet" position="inside">
-                <field name="ux_primary_action" invisible="1"/>
-                <field name="ux_stage" invisible="1"/>
-                <field name="ux_stage_title" invisible="1"/>
-                <field name="ux_stage_help" invisible="1"/>
-
-                <field name="ux_can_scan_barcode" invisible="1"/>
-                <field name="ux_can_scan_returns" invisible="1"/>
-                <field name="ux_can_no_returns" invisible="1"/>
-
-                <field name="ux_can_create_sale_order" invisible="1"/>
-                <field name="ux_can_view_sale_order" invisible="1"/>
-
-                <field name="ux_can_confirm_return_transfers" invisible="1"/>
-                <field name="ux_can_view_return_transfers" invisible="1"/>
-
-                <field name="ux_can_generate_refill" invisible="1"/>
-                <field name="ux_can_confirm_refill" invisible="1"/>
-                <field name="ux_can_view_refill_transfer" invisible="1"/>
-                <field name="ux_can_open_pending_refill" invisible="1"/>
-
-                <field name="ux_can_collect_payment" invisible="1"/>
-                <field name="ux_can_confirm_payments" invisible="1"/>
-                <field name="ux_can_skip_collection" invisible="1"/>
-                <field name="ux_can_open_payments" invisible="1"/>
-
-                <field name="ux_can_finish_visit" invisible="1"/>
-
-                <div class="alert alert-info mb-3" role="alert">
-                    <strong>
-                        <field name="ux_stage_title" readonly="1" nolabel="1"/>
-                    </strong>
-                    <div class="mt-1">
-                        <field name="ux_stage_help" readonly="1" nolabel="1"/>
-                    </div>
-                </div>
-            </xpath>
-
-            <xpath expr="//div[@name='button_box']" position="replace">
-                <div class="oe_button_box" name="button_box">
-
-                    <button
-                        name="action_ux_scan_shelf"
-                        string="Scan Barcode"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-barcode"
-                        invisible="not ux_can_scan_barcode"
-                    />
-
-                    <button
-                        name="action_ux_returns_step"
-                        string="Check Return"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_scan_returns"
-                    />
-
-                    <button
-                        name="action_ux_no_returns"
-                        string="No Returns"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-check-circle"
-                        invisible="not ux_can_no_returns"
-                    />
-
-                    <button
-                        name="action_ux_view_sale_order"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link"
-                        invisible="not ux_can_view_sale_order"
-                    >
-                        <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
-                    </button>
-
-                    <button
-                        name="action_ux_confirm_return_transfers"
-                        string="Return Transfers"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-undo"
-                        invisible="not ux_can_confirm_return_transfers"
-                    />
-
-                    <button
-                        name="action_ux_view_return_transfers"
-                        string="View Return Transfers"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link-square"
-                        invisible="not ux_can_view_return_transfers"
-                    />
-
-                    <button
-                        name="action_ux_generate_refill"
-                        string="Generate Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-refresh"
-                        invisible="not ux_can_generate_refill"
-                    />
-
-                    <button
-                        name="action_ux_confirm_refill"
-                        string="Confirm Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-truck"
-                        invisible="not ux_can_confirm_refill"
-                    />
-
-                    <button
-                        name="action_ux_view_refill_transfer"
-                        string="Refill Transfer"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-external-link-square"
-                        invisible="not ux_can_view_refill_transfer"
-                    />
-
-                    <button
-                        name="action_ux_open_pending_refill"
-                        string="Pending Refill"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-exchange"
-                        invisible="not ux_can_open_pending_refill"
-                    />
-
-                    <button
-                        name="action_ux_collect_payment"
-                        string="Collect Payment"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-money"
-                        invisible="not ux_can_collect_payment"
-                    />
-
-                    <button
-                        name="action_ux_confirm_payments"
-                        string="Confirm Payments"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-check-circle"
-                        invisible="not ux_can_confirm_payments"
-                    />
-
-                    <button
-                        name="action_ux_open_payments"
-                        string="Review Payments"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-credit-card"
-                        invisible="not ux_can_open_payments"
-                    />
-
-                    <button
-                        name="action_ux_skip_collection"
-                        string="Skip Collection"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-forward"
-                        invisible="not ux_can_skip_collection"
-                    />
-
-                </div>
-            </xpath>
-        </field>
-    </record>
-
+<record id="view_route_visit_form_workflow_ux" model="ir.ui.view">
+<field name="name">route.visit.form.workflow.ux</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="arch" type="xml">
+<xpath expr="//header" position="replace">
+<header>
+<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
+<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
+<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="not ux_can_no_returns"/>
+<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
+<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
+<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
+<button name="action_ux_open_pending_refill" string="Open Pending Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'open_pending_refill'"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
+<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
+<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
+</header>
+</xpath>
+<xpath expr="//sheet" position="inside">
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
+<field name="ux_can_scan_barcode" invisible="1"/>
+<field name="ux_can_scan_returns" invisible="1"/>
+<field name="ux_can_no_returns" invisible="1"/>
+<field name="ux_can_create_sale_order" invisible="1"/>
+<field name="ux_can_view_sale_order" invisible="1"/>
+<field name="ux_can_confirm_return_transfers" invisible="1"/>
+<field name="ux_can_view_return_transfers" invisible="1"/>
+<field name="ux_can_generate_refill" invisible="1"/>
+<field name="ux_can_confirm_refill" invisible="1"/>
+<field name="ux_can_view_refill_transfer" invisible="1"/>
+<field name="ux_can_open_pending_refill" invisible="1"/>
+<field name="ux_can_collect_payment" invisible="1"/>
+<field name="ux_can_confirm_payments" invisible="1"/>
+<field name="ux_can_skip_collection" invisible="1"/>
+<field name="ux_can_open_payments" invisible="1"/>
+<field name="ux_can_finish_visit" invisible="1"/>
+<div class="alert alert-info mb-3" role="alert">
+<strong>
+<field name="ux_stage_title" readonly="1" nolabel="1"/>
+</strong>
+<div class="mt-1">
+<field name="ux_stage_help" readonly="1" nolabel="1"/>
+</div>
+</div>
+</xpath>
+<xpath expr="//div[@name='button_box']" position="replace">
+<div class="oe_button_box" name="button_box">
+<button name="action_ux_scan_shelf" string="Scan Barcode" type="object" class="oe_stat_button" icon="fa-barcode" invisible="not ux_can_scan_barcode"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_scan_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_no_returns"/>
+<button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
+<field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+</button>
+<button name="action_ux_confirm_return_transfers" string="Return Transfers" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_confirm_return_transfers"/>
+<button name="action_ux_view_return_transfers" string="View Return Transfers" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_return_transfers"/>
+<button name="action_ux_generate_refill" string="Generate Refill" type="object" class="oe_stat_button" icon="fa-refresh" invisible="not ux_can_generate_refill"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="oe_stat_button" icon="fa-truck" invisible="not ux_can_confirm_refill"/>
+<button name="action_ux_view_refill_transfer" string="Refill Transfer" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_refill_transfer"/>
+<button name="action_ux_open_pending_refill" string="Pending Refill" type="object" class="oe_stat_button" icon="fa-exchange" invisible="not ux_can_open_pending_refill"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="oe_stat_button" icon="fa-money" invisible="not ux_can_collect_payment"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_confirm_payments"/>
+<button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
+<button name="action_ux_skip_collection" string="Skip Collection" type="object" class="oe_stat_button" icon="fa-forward" invisible="not ux_can_skip_collection"/>
+</div>
+</xpath>
+</field>
+</record>
+<record id="view_route_visit_pda_form_workflow_ux" model="ir.ui.view">
+<field name="name">route.visit.pda.form.workflow.ux</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="arch" type="xml">
+<xpath expr="//header" position="replace">
+<header>
+<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
+<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
+<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="not ux_can_no_returns"/>
+<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
+<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
+<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
+<button name="action_ux_open_pending_refill" string="Open Pending Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'open_pending_refill'"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
+<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
+<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
+</header>
+</xpath>
+<xpath expr="//sheet" position="inside">
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
+<field name="ux_can_scan_barcode" invisible="1"/>
+<field name="ux_can_scan_returns" invisible="1"/>
+<field name="ux_can_no_returns" invisible="1"/>
+<field name="ux_can_create_sale_order" invisible="1"/>
+<field name="ux_can_view_sale_order" invisible="1"/>
+<field name="ux_can_confirm_return_transfers" invisible="1"/>
+<field name="ux_can_view_return_transfers" invisible="1"/>
+<field name="ux_can_generate_refill" invisible="1"/>
+<field name="ux_can_confirm_refill" invisible="1"/>
+<field name="ux_can_view_refill_transfer" invisible="1"/>
+<field name="ux_can_open_pending_refill" invisible="1"/>
+<field name="ux_can_collect_payment" invisible="1"/>
+<field name="ux_can_confirm_payments" invisible="1"/>
+<field name="ux_can_skip_collection" invisible="1"/>
+<field name="ux_can_open_payments" invisible="1"/>
+<field name="ux_can_finish_visit" invisible="1"/>
+<div class="alert alert-info mb-3" role="alert">
+<strong>
+<field name="ux_stage_title" readonly="1" nolabel="1"/>
+</strong>
+<div class="mt-1">
+<field name="ux_stage_help" readonly="1" nolabel="1"/>
+</div>
+</div>
+</xpath>
+<xpath expr="//div[@name='button_box']" position="replace">
+<div class="oe_button_box" name="button_box">
+<button name="action_ux_scan_shelf" string="Scan Barcode" type="object" class="oe_stat_button" icon="fa-barcode" invisible="not ux_can_scan_barcode"/>
+<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_scan_returns"/>
+<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_no_returns"/>
+<button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
+<field name="sale_order_count" string="Sale Order" widget="statinfo"/>
+</button>
+<button name="action_ux_confirm_return_transfers" string="Return Transfers" type="object" class="oe_stat_button" icon="fa-undo" invisible="not ux_can_confirm_return_transfers"/>
+<button name="action_ux_view_return_transfers" string="View Return Transfers" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_return_transfers"/>
+<button name="action_ux_generate_refill" string="Generate Refill" type="object" class="oe_stat_button" icon="fa-refresh" invisible="not ux_can_generate_refill"/>
+<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="oe_stat_button" icon="fa-truck" invisible="not ux_can_confirm_refill"/>
+<button name="action_ux_view_refill_transfer" string="Refill Transfer" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_refill_transfer"/>
+<button name="action_ux_open_pending_refill" string="Pending Refill" type="object" class="oe_stat_button" icon="fa-exchange" invisible="not ux_can_open_pending_refill"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="oe_stat_button" icon="fa-money" invisible="not ux_can_collect_payment"/>
+<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="oe_stat_button" icon="fa-check-circle" invisible="not ux_can_confirm_payments"/>
+<button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
+<button name="action_ux_skip_collection" string="Skip Collection" type="object" class="oe_stat_button" icon="fa-forward" invisible="not ux_can_skip_collection"/>
+</div>
+</xpath>
+</field>
+</record>
 </odoo>
