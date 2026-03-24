@@ -19,7 +19,7 @@
 </field>
 </sheet>
 <footer>
-<button name="action_save_and_continue" type="object" string="Save & Continue" class="btn-primary"/>
+<button name="action_save_and_continue" type="object" string="Save and Continue" class="btn-primary"/>
 <button name="action_save_only" type="object" string="Save Only" class="btn-secondary"/>
 <button string="Cancel" special="cancel" class="btn-secondary"/>
 </footer>
