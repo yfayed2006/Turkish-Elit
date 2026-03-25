@@ -11,6 +11,7 @@
 <field name="area_id"/>
 <field name="user_id"/>
 <field name="source_visit_id"/>
+<field name="planned_route_plan_id"/>
 <field name="line_count"/>
 <field name="total_remaining_qty"/>
 <field name="planned_date"/>
@@ -29,6 +30,7 @@
 <button name="action_reopen" type="object" string="Reopen" class="btn-secondary" invisible="state not in ('planned', 'done', 'cancel')"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancel'"/>
 <button name="action_view_source_visit" type="object" string="Open Source Visit" class="btn-secondary" invisible="not source_visit_id"/>
+<button name="action_view_planned_route_plan" type="object" string="Open Planned Route Plan" class="btn-secondary" invisible="not planned_route_plan_id"/>
 <field name="state" widget="statusbar" statusbar_visible="open,planned,done,cancel"/>
 </header>
 <sheet>
@@ -41,6 +43,7 @@
 <group>
 <field name="date"/>
 <field name="planned_date"/>
+<field name="planned_route_plan_id" readonly="1"/>
 <field name="source_visit_id" readonly="1"/>
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1"/>
@@ -89,6 +92,7 @@
 <field name="area_id"/>
 <field name="user_id"/>
 <field name="source_visit_id"/>
+<field name="planned_route_plan_id"/>
 <filter name="filter_open" string="Open" domain="[('state', '=', 'open')]"/>
 <filter name="filter_planned" string="Planned" domain="[('state', '=', 'planned')]"/>
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
@@ -97,6 +101,7 @@
 <filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_by_plan" string="Route Plan" context="{'group_by': 'planned_route_plan_id'}"/>
 <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
 <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
 </search>
