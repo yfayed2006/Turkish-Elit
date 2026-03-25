@@ -77,6 +77,12 @@ class RouteShortage(models.Model):
         tracking=True,
         help="Optional planning date for following up these shortages in a future visit.",
     )
+    planned_route_plan_id = fields.Many2one(
+        "route.plan",
+        string="Planned Route Plan",
+        ondelete="set null",
+        tracking=True,
+    )
     state = fields.Selection(
         [
             ("open", "Open"),
@@ -134,7 +140,10 @@ class RouteShortage(models.Model):
 
     def action_mark_planned(self):
         for rec in self:
-            rec.state = "planned"
+            values = {"state": "planned"}
+            if rec.planned_route_plan_id and not rec.planned_date:
+                values["planned_date"] = rec.planned_route_plan_id.date
+            rec.write(values)
 
     def action_mark_done(self):
         for rec in self:
@@ -142,7 +151,10 @@ class RouteShortage(models.Model):
 
     def action_reopen(self):
         for rec in self:
-            rec.state = "open"
+            rec.write({
+                "state": "open",
+                "planned_route_plan_id": False,
+            })
 
     def action_cancel(self):
         for rec in self:
@@ -153,6 +165,19 @@ class RouteShortage(models.Model):
         if not self.source_visit_id:
             return False
         return self.source_visit_id._get_pda_form_action()
+
+    def action_view_planned_route_plan(self):
+        self.ensure_one()
+        if not self.planned_route_plan_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Route Plan"),
+            "res_model": "route.plan",
+            "res_id": self.planned_route_plan_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
 
 class RouteShortageLine(models.Model):
@@ -295,7 +320,11 @@ class RouteVisit(models.Model):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_shortage").read()[0]
         action["domain"] = [("source_visit_id", "=", self.id)]
-        action["context"] = dict(self.env.context, default_source_visit_id=self.id, default_outlet_id=self.outlet_id.id)
+        action["context"] = dict(
+            self.env.context,
+            default_source_visit_id=self.id,
+            default_outlet_id=self.outlet_id.id,
+        )
         return action
 
     def _get_shortage_candidate_lines(self):
@@ -337,9 +366,9 @@ class RouteVisit(models.Model):
         shortage_model = self.env["route.shortage"]
         for rec in self:
             candidate_lines = rec._get_shortage_candidate_lines()
-            shortage = shortage_model.search([(
-                "source_visit_id", "=", rec.id
-            )], limit=1)
+            shortage = shortage_model.search([
+                ("source_visit_id", "=", rec.id)
+            ], limit=1)
 
             if not candidate_lines:
                 if shortage and shortage.state not in ("done", "cancel"):
@@ -359,6 +388,7 @@ class RouteVisit(models.Model):
 
     def action_end_visit(self):
         result = super().action_end_visit()
-        if result is True:
-            self._sync_shortages_from_visit()
+        done_visits = self.filtered(lambda rec: rec.state == "done")
+        if done_visits:
+            done_visits._sync_shortages_from_visit()
         return result
