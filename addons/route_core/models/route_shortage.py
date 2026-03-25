@@ -77,6 +77,12 @@ class RouteShortage(models.Model):
         tracking=True,
         help="Optional planning date for following up these shortages in a future visit.",
     )
+    planned_route_plan_id = fields.Many2one(
+        "route.plan",
+        string="Planned Route Plan",
+        ondelete="set null",
+        tracking=True,
+    )
     state = fields.Selection(
         [
             ("open", "Open"),
@@ -134,7 +140,10 @@ class RouteShortage(models.Model):
 
     def action_mark_planned(self):
         for rec in self:
-            rec.state = "planned"
+            values = {"state": "planned"}
+            if rec.planned_route_plan_id and not rec.planned_date:
+                values["planned_date"] = rec.planned_route_plan_id.date
+            rec.write(values)
 
     def action_mark_done(self):
         for rec in self:
@@ -142,7 +151,10 @@ class RouteShortage(models.Model):
 
     def action_reopen(self):
         for rec in self:
-            rec.state = "open"
+            rec.write({
+                "state": "open",
+                "planned_route_plan_id": False,
+            })
 
     def action_cancel(self):
         for rec in self:
@@ -153,6 +165,19 @@ class RouteShortage(models.Model):
         if not self.source_visit_id:
             return False
         return self.source_visit_id._get_pda_form_action()
+
+    def action_view_planned_route_plan(self):
+        self.ensure_one()
+        if not self.planned_route_plan_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Route Plan"),
+            "res_model": "route.plan",
+            "res_id": self.planned_route_plan_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
 
 
 class RouteShortageLine(models.Model):
@@ -348,20 +373,32 @@ class RouteVisit(models.Model):
             if not candidate_lines:
                 if shortage and shortage.state not in ("done", "cancel"):
                     shortage.line_ids.unlink()
-                    shortage.state = "done"
-                    shortage.note = (shortage.note or "") + (
-                        "\n" if shortage.note else ""
-                    ) + _("Automatically closed because no remaining shortages were detected.")
+                    shortage.write({
+                        "state": "done",
+                        "planned_route_plan_id": False,
+                        "note": (shortage.note or "")
+                        + ("\n" if shortage.note else "")
+                        + _("Automatically closed because no remaining shortages were detected."),
+                    })
                 continue
 
+            header_vals = rec._prepare_shortage_header_vals()
             if not shortage:
-                shortage = shortage_model.create(rec._prepare_shortage_header_vals())
+                shortage = shortage_model.create(header_vals)
             else:
-                shortage.write(rec._prepare_shortage_header_vals())
+                preserve_vals = {
+                    "planned_route_plan_id": shortage.planned_route_plan_id.id if shortage.planned_route_plan_id else False,
+                    "planned_date": shortage.planned_date,
+                    "state": shortage.state if shortage.state in ("planned", "done", "cancel") else "open",
+                }
+                shortage.write(dict(header_vals, **preserve_vals))
                 shortage.line_ids.unlink()
 
             line_commands = [(0, 0, rec._prepare_shortage_line_vals(line)) for line in candidate_lines]
-            shortage.write({"line_ids": line_commands, "state": "open"})
+            shortage.write({
+                "line_ids": line_commands,
+                "state": "planned" if shortage.planned_route_plan_id else "open",
+            })
 
     def action_end_visit(self):
         result = super().action_end_visit()
