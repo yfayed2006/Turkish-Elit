@@ -67,6 +67,14 @@ class RouteOutlet(models.Model):
         string="Last Sale Order",
         compute="_compute_visit_stats",
     )
+    open_shortage_count = fields.Integer(
+        string="Open Shortages",
+        compute="_compute_shortage_stats",
+    )
+    total_shortage_count = fields.Integer(
+        string="Total Active Shortages",
+        compute="_compute_shortage_stats",
+    )
 
     display_address = fields.Text(
         string="Address",
@@ -110,6 +118,19 @@ class RouteOutlet(models.Model):
             ]
             record.display_address = ", ".join([part for part in parts if part])
 
+    @api.depends("visit_ids")
+    def _compute_shortage_stats(self):
+        Shortage = self.env["route.shortage"]
+        for record in self:
+            record.open_shortage_count = Shortage.search_count([
+                ("outlet_id", "=", record.id),
+                ("state", "=", "open"),
+            ])
+            record.total_shortage_count = Shortage.search_count([
+                ("outlet_id", "=", record.id),
+                ("state", "in", ["open", "planned"]),
+            ])
+
     @api.constrains("partner_id")
     def _check_partner_company_type(self):
         for record in self:
@@ -142,3 +163,17 @@ class RouteOutlet(models.Model):
             default_partner_id=self.partner_id.id if self.partner_id else False,
         )
         return action
+
+    def action_view_open_shortages(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_shortage").read()[0]
+        action["domain"] = [
+            ("outlet_id", "=", self.id),
+            ("state", "in", ["open", "planned"]),
+        ]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+        )
+        return action
+
