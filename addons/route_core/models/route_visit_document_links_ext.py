@@ -7,12 +7,24 @@ class RouteVisit(models.Model):
 
     sale_delivery_count = fields.Integer(
         string="Sales Delivery Count",
-        compute="_compute_visit_document_counts",
+        compute="_compute_visit_document_links",
         store=False,
     )
     return_transfer_count = fields.Integer(
         string="Return Transfer Count",
-        compute="_compute_visit_document_counts",
+        compute="_compute_visit_document_links",
+        store=False,
+    )
+    sale_delivery_id = fields.Many2one(
+        "stock.picking",
+        string="Sales Delivery",
+        compute="_compute_visit_document_links",
+        store=False,
+    )
+    generated_shortage_id = fields.Many2one(
+        "route.shortage",
+        string="Generated Shortage",
+        compute="_compute_visit_document_links",
         store=False,
     )
 
@@ -25,21 +37,33 @@ class RouteVisit(models.Model):
         "refill_picking_id",
         "outlet_id",
     )
-    def _compute_visit_document_counts(self):
+    def _compute_visit_document_links(self):
         Picking = self.env["stock.picking"]
+        Shortage = self.env["route.shortage"]
         for rec in self:
             rec.sale_delivery_count = 0
             rec.return_transfer_count = 0
+            rec.sale_delivery_id = False
+            rec.generated_shortage_id = False
 
             if rec.id:
-                rec.return_transfer_count = Picking.search_count(
-                    rec._get_return_transfer_domain()
+                sale_deliveries = Picking.search(
+                    rec._get_sale_delivery_domain(),
+                    order="id desc",
+                    limit=1,
                 )
+                rec.sale_delivery_id = sale_deliveries[:1].id if sale_deliveries else False
+                rec.sale_delivery_count = Picking.search_count(rec._get_sale_delivery_domain())
 
-            if rec.id and rec.sale_order_id:
-                rec.sale_delivery_count = Picking.search_count(
-                    rec._get_sale_delivery_domain()
+                return_transfers = Picking.search_count(rec._get_return_transfer_domain())
+                rec.return_transfer_count = return_transfers
+
+                shortage = Shortage.search(
+                    rec._get_generated_shortage_domain(),
+                    order="id desc",
+                    limit=1,
                 )
+                rec.generated_shortage_id = shortage[:1].id if shortage else False
 
     def _get_sale_delivery_domain(self):
         self.ensure_one()
@@ -78,15 +102,10 @@ class RouteVisit(models.Model):
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = action_name
         action["domain"] = [("id", "in", pickings.ids)]
-        action["context"] = dict(
-            self.env.context,
-            default_route_visit_id=self.id,
-        )
+        action["context"] = dict(self.env.context, default_route_visit_id=self.id)
         if len(pickings) == 1:
             action["res_id"] = pickings.id
-            action["views"] = [
-                (self.env.ref("stock.view_picking_form").id, "form")
-            ]
+            action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
         return action
 
     def action_view_sale_deliveries(self):
@@ -128,7 +147,5 @@ class RouteVisit(models.Model):
         )
         if len(shortages) == 1:
             action["res_id"] = shortages.id
-            action["views"] = [
-                (self.env.ref("route_core.view_route_shortage_form").id, "form")
-            ]
+            action["views"] = [(self.env.ref("route_core.view_route_shortage_form").id, "form")]
         return action
