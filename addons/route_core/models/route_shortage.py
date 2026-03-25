@@ -77,12 +77,6 @@ class RouteShortage(models.Model):
         tracking=True,
         help="Optional planning date for following up these shortages in a future visit.",
     )
-    planned_route_plan_id = fields.Many2one(
-        "route.plan",
-        string="Planned Route Plan",
-        ondelete="set null",
-        tracking=True,
-    )
     state = fields.Selection(
         [
             ("open", "Open"),
@@ -140,10 +134,7 @@ class RouteShortage(models.Model):
 
     def action_mark_planned(self):
         for rec in self:
-            values = {"state": "planned"}
-            if rec.planned_route_plan_id and not rec.planned_date:
-                values["planned_date"] = rec.planned_route_plan_id.date
-            rec.write(values)
+            rec.state = "planned"
 
     def action_mark_done(self):
         for rec in self:
@@ -151,10 +142,7 @@ class RouteShortage(models.Model):
 
     def action_reopen(self):
         for rec in self:
-            rec.write({
-                "state": "open",
-                "planned_route_plan_id": False,
-            })
+            rec.state = "open"
 
     def action_cancel(self):
         for rec in self:
@@ -165,19 +153,6 @@ class RouteShortage(models.Model):
         if not self.source_visit_id:
             return False
         return self.source_visit_id._get_pda_form_action()
-
-    def action_view_planned_route_plan(self):
-        self.ensure_one()
-        if not self.planned_route_plan_id:
-            return False
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Route Plan"),
-            "res_model": "route.plan",
-            "res_id": self.planned_route_plan_id.id,
-            "view_mode": "form",
-            "target": "current",
-        }
 
 
 class RouteShortageLine(models.Model):
@@ -282,3 +257,109 @@ class RouteShortageLine(models.Model):
             price = rec.unit_price or 0.0
             rec.missing_value = (rec.qty_missing or 0.0) * price
             rec.remaining_value = (rec.qty_remaining or 0.0) * price
+
+    @api.onchange("qty_done", "qty_missing")
+    def _onchange_progress_state(self):
+        for rec in self:
+            if rec.state == "cancel":
+                continue
+            if (rec.qty_done or 0.0) >= (rec.qty_missing or 0.0) and (rec.qty_missing or 0.0) > 0:
+                rec.state = "done"
+            else:
+                rec.state = "open"
+
+    @api.onchange("state")
+    def _onchange_state(self):
+        for rec in self:
+            if rec.state == "cancel":
+                rec.qty_done = 0.0
+            elif rec.state == "done" and (rec.qty_missing or 0.0) > 0:
+                rec.qty_done = rec.qty_missing
+
+
+class RouteVisit(models.Model):
+    _inherit = "route.visit"
+
+    shortage_count = fields.Integer(
+        string="Shortages",
+        compute="_compute_shortage_count",
+        store=False,
+    )
+
+    def _compute_shortage_count(self):
+        shortage_model = self.env["route.shortage"]
+        for rec in self:
+            rec.shortage_count = shortage_model.search_count([("source_visit_id", "=", rec.id)])
+
+    def action_view_shortages(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_shortage").read()[0]
+        action["domain"] = [("source_visit_id", "=", self.id)]
+        action["context"] = dict(self.env.context, default_source_visit_id=self.id, default_outlet_id=self.outlet_id.id)
+        return action
+
+    def _get_shortage_candidate_lines(self):
+        self.ensure_one()
+        return self.line_ids.filtered(
+            lambda l: l.product_id and max((l.sold_qty or 0.0) - (l.supplied_qty or 0.0), 0.0) > 0
+        )
+
+    def _prepare_shortage_header_vals(self):
+        self.ensure_one()
+        return {
+            "date": self.date or fields.Date.context_today(self),
+            "company_id": self.company_id.id,
+            "source_visit_id": self.id,
+            "outlet_id": self.outlet_id.id,
+            "partner_id": self.partner_id.id if self.partner_id else False,
+            "area_id": self.area_id.id if self.area_id else False,
+            "vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+            "user_id": self.user_id.id if self.user_id else False,
+            "state": "open",
+        }
+
+    def _prepare_shortage_line_vals(self, visit_line):
+        self.ensure_one()
+        shortage_qty = max((visit_line.sold_qty or 0.0) - (visit_line.supplied_qty or 0.0), 0.0)
+        return {
+            "source_visit_line_id": visit_line.id,
+            "product_id": visit_line.product_id.id,
+            "qty_sold": visit_line.sold_qty or 0.0,
+            "qty_supplied": visit_line.supplied_qty or 0.0,
+            "qty_missing": shortage_qty,
+            "qty_done": 0.0,
+            "unit_price": visit_line.unit_price or 0.0,
+            "note": _("Generated from visit %s") % (self.name,),
+            "state": "open",
+        }
+
+    def _sync_shortages_from_visit(self):
+        shortage_model = self.env["route.shortage"]
+        for rec in self:
+            candidate_lines = rec._get_shortage_candidate_lines()
+            shortage = shortage_model.search([(
+                "source_visit_id", "=", rec.id
+            )], limit=1)
+
+            if not candidate_lines:
+                if shortage and shortage.state not in ("done", "cancel"):
+                    shortage.line_ids.unlink()
+                    shortage.state = "done"
+                    shortage.note = (shortage.note or "") + ("\n" if shortage.note else "") + _("Automatically closed because no remaining shortages were detected.")
+                continue
+
+            if not shortage:
+                shortage = shortage_model.create(rec._prepare_shortage_header_vals())
+            else:
+                shortage.write(rec._prepare_shortage_header_vals())
+                shortage.line_ids.unlink()
+
+            line_commands = [(0, 0, rec._prepare_shortage_line_vals(line)) for line in candidate_lines]
+            shortage.write({"line_ids": line_commands, "state": "open"})
+
+    def action_end_visit(self):
+        result = super().action_end_visit()
+        for rec in self:
+            if rec.state == "done":
+                rec._sync_shortages_from_visit()
+        return result
