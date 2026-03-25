@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import fields, models, _
 from odoo.exceptions import UserError
 
 
@@ -62,9 +62,7 @@ class RouteVisitEndWizard(models.TransientModel):
             raise UserError(_("Only visits in progress can be ended."))
 
         if not self.reason or not self.reason.strip():
-            raise UserError(
-                _("Please enter a reason before ending the visit without sale.")
-            )
+            raise UserError(_("Please enter a reason before ending the visit without sale."))
 
         self.visit_id.write({
             "state": "done",
