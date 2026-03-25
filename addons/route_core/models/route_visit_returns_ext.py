@@ -169,12 +169,12 @@ class RouteVisit(models.Model):
             "route_visit_id": self.id,
             "partner_id": self.partner_id.id if self.partner_id else False,
             "move_type": "direct",
+            "company_id": (self.company_id or self.env.company).id,
         }
 
     def _prepare_return_move_vals(self, picking, line):
         self.ensure_one()
         return {
-            "name": line.product_id.display_name or line.product_id.name,
             "product_id": line.product_id.id,
             "product_uom_qty": line.return_qty,
             "product_uom": line.uom_id.id or line.product_id.uom_id.id,
