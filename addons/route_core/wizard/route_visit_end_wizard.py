@@ -70,6 +70,9 @@ class RouteVisitEndWizard(models.TransientModel):
             "no_sale_reason": self.reason.strip(),
         })
 
+        if hasattr(self.visit_id, "_sync_shortages_from_visit"):
+            self.visit_id._sync_shortages_from_visit()
+
         return self._get_return_action()
 
     def action_cancel(self):
