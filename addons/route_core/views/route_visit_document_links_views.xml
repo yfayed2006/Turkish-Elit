@@ -1,32 +1,33 @@
 <odoo>
-<record id="view_route_visit_form_document_links_tab" model="ir.ui.view">
-<field name="name">route.visit.form.document.links.tab</field>
-<field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_form"/>
-<field name="priority" eval="200"/>
-<field name="arch" type="xml">
-<xpath expr="//notebook" position="inside">
-<page string="Documents">
-<group>
-<label string="Document links temporarily disabled for recovery."/>
-</group>
-</page>
-</xpath>
-</field>
-</record>
-<record id="view_route_visit_pda_form_document_links_tab" model="ir.ui.view">
-<field name="name">route.visit.pda.form.document.links.tab</field>
-<field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
-<field name="priority" eval="200"/>
-<field name="arch" type="xml">
-<xpath expr="//notebook" position="inside">
-<page string="Documents">
-<group>
-<label string="Document links temporarily disabled for recovery."/>
-</group>
-</page>
-</xpath>
-</field>
-</record>
+    <record id="view_route_visit_form_document_links_tab" model="ir.ui.view">
+        <field name="name">route.visit.form.document.links.tab</field>
+        <field name="model">route.visit</field>
+        <field name="inherit_id" ref="route_core.view_route_visit_form"/>
+        <field name="priority" eval="200"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Documents">
+                    <group>
+                        <separator string="Document links temporarily disabled for recovery."/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_route_visit_pda_form_document_links_tab" model="ir.ui.view">
+        <field name="name">route.visit.pda.form.document.links.tab</field>
+        <field name="model">route.visit</field>
+        <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+        <field name="priority" eval="200"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Documents">
+                    <group>
+                        <separator string="Document links temporarily disabled for recovery."/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
 </odoo>
