@@ -557,6 +557,30 @@ class RouteVisit(models.Model):
         action["context"] = dict(self.env.context, route_visit_id=self.id)
         return action
 
+    def _get_linked_route_sale_delivery(self):
+        self.ensure_one()
+        if not self.sale_order_id:
+            return self.env["stock.picking"]
+
+        domain = [
+            ("route_visit_id", "=", self.id),
+            ("origin", "=", self.sale_order_id.name),
+            ("state", "!=", "cancel"),
+        ]
+
+        if self.outlet_id and getattr(self.outlet_id, "stock_location_id", False):
+            domain.append(("location_id", "=", self.outlet_id.stock_location_id.id))
+
+        return self.env["stock.picking"].search(domain, order="id desc", limit=1)
+
+    def _get_route_sale_delivery_form_action(self, picking):
+        self.ensure_one()
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["res_id"] = picking.id
+        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        action["context"] = dict(self.env.context, default_route_visit_id=self.id)
+        return action
+
     def action_create_sale_order(self):
         self.ensure_one()
 
@@ -571,12 +595,16 @@ class RouteVisit(models.Model):
 
         if self.sale_order_id:
             self._sync_sale_order_lines(self.sale_order_id)
-            self.sale_order_id.action_confirm()
+            confirm_result = self.sale_order_id.action_confirm()
+            if isinstance(confirm_result, dict):
+                return confirm_result
             return self._get_sale_order_form_action(self.sale_order_id)
 
         sale_order = self.env["sale.order"].create(self._prepare_sale_order_vals())
         self.sale_order_id = sale_order.id
-        sale_order.action_confirm()
+        confirm_result = sale_order.action_confirm()
+        if isinstance(confirm_result, dict):
+            return confirm_result
 
         return self._get_sale_order_form_action(sale_order)
 
@@ -635,6 +663,13 @@ class RouteVisit(models.Model):
             )
 
         if self.sale_order_id:
+            delivery = self._get_linked_route_sale_delivery()
+            if delivery and delivery.state != "done":
+                return self._get_route_sale_delivery_form_action(delivery)
+
+            if not delivery:
+                return self._get_sale_order_form_action(self.sale_order_id)
+
             self.with_context(route_visit_force_write=True).write({
                 "state": "done",
                 "visit_process_state": "done",
