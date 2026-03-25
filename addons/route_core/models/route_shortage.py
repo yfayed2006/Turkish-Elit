@@ -295,7 +295,11 @@ class RouteVisit(models.Model):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_shortage").read()[0]
         action["domain"] = [("source_visit_id", "=", self.id)]
-        action["context"] = dict(self.env.context, default_source_visit_id=self.id, default_outlet_id=self.outlet_id.id)
+        action["context"] = dict(
+            self.env.context,
+            default_source_visit_id=self.id,
+            default_outlet_id=self.outlet_id.id,
+        )
         return action
 
     def _get_shortage_candidate_lines(self):
@@ -337,15 +341,17 @@ class RouteVisit(models.Model):
         shortage_model = self.env["route.shortage"]
         for rec in self:
             candidate_lines = rec._get_shortage_candidate_lines()
-            shortage = shortage_model.search([(
-                "source_visit_id", "=", rec.id
-            )], limit=1)
+            shortage = shortage_model.search([
+                ("source_visit_id", "=", rec.id)
+            ], limit=1)
 
             if not candidate_lines:
                 if shortage and shortage.state not in ("done", "cancel"):
                     shortage.line_ids.unlink()
                     shortage.state = "done"
-                    shortage.note = (shortage.note or "") + ("\n" if shortage.note else "") + _("Automatically closed because no remaining shortages were detected.")
+                    shortage.note = (shortage.note or "") + (
+                        "\n" if shortage.note else ""
+                    ) + _("Automatically closed because no remaining shortages were detected.")
                 continue
 
             if not shortage:
@@ -359,7 +365,7 @@ class RouteVisit(models.Model):
 
     def action_end_visit(self):
         result = super().action_end_visit()
-        for rec in self:
-            if rec.state == "done":
-                rec._sync_shortages_from_visit()
+        done_visits = self.filtered(lambda rec: rec.state == "done")
+        if done_visits:
+            done_visits._sync_shortages_from_visit()
         return result
