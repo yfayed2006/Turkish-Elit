@@ -37,7 +37,6 @@ class RouteVisitLine(models.Model):
         index=True,
     )
 
-
     lot_id = fields.Many2one(
         "stock.lot",
         string="Lot/Serial",
@@ -186,11 +185,31 @@ class RouteVisitLine(models.Model):
         help="Enable this when the near-expiry item is intentionally kept at the outlet instead of being returned.",
     )
 
-    @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
+    @api.depends(
+        "visit_id.visit_process_state",
+        "previous_qty",
+        "counted_qty",
+        "return_qty",
+        "supplied_qty",
+    )
     def _compute_quantities(self):
         for line in self:
-            line.sold_qty = max((line.previous_qty or 0.0) - (line.counted_qty or 0.0), 0.0)
-            line.new_balance_qty = (line.counted_qty or 0.0) + (line.supplied_qty or 0.0) - (line.return_qty or 0.0)
+            stage = line.visit_id.visit_process_state or "draft"
+            previous_qty = line.previous_qty or 0.0
+            counted_qty = line.counted_qty or 0.0
+            return_qty = line.return_qty or 0.0
+            supplied_qty = line.supplied_qty or 0.0
+
+            # During Checked In, previous balance has been loaded but shelf counting
+            # has not started yet. Showing Sold Qty = Previous Qty at this point is
+            # misleading, because the representative has not scanned the shelf yet.
+            if stage == "checked_in":
+                line.sold_qty = 0.0
+                line.new_balance_qty = previous_qty
+                continue
+
+            line.sold_qty = max(previous_qty - counted_qty, 0.0)
+            line.new_balance_qty = counted_qty + supplied_qty - return_qty
 
     @api.depends(
         "previous_qty",
