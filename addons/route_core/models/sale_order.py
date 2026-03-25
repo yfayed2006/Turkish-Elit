@@ -186,6 +186,19 @@ class SaleOrder(models.Model):
             limit=1,
         )
 
+    def _get_route_delivery_form_action(self, picking):
+        self.ensure_one()
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["res_id"] = picking.id
+        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        action["context"] = {
+            "default_route_visit_id": picking.route_visit_id.id if getattr(picking, "route_visit_id", False) else False,
+            "default_picking_type_id": picking.picking_type_id.id,
+            "default_location_id": picking.location_id.id,
+            "default_location_dest_id": picking.location_dest_id.id,
+        }
+        return action
+
     def _create_and_validate_route_delivery(self, visit):
         self.ensure_one()
 
@@ -194,38 +207,38 @@ class SaleOrder(models.Model):
 
         existing_picking = self._get_existing_route_delivery(visit)
         if existing_picking:
-            return existing_picking
+            picking = existing_picking
+        else:
+            source_location = self._get_route_sale_source_location(visit)
+            dest_location = self._get_route_sale_destination_location(visit)
+            picking_type = self._get_route_outgoing_picking_type()
 
-        source_location = self._get_route_sale_source_location(visit)
-        dest_location = self._get_route_sale_destination_location(visit)
-        picking_type = self._get_route_outgoing_picking_type()
-
-        sale_lines = self.order_line.filtered(
-            lambda line: line.product_id
-            and not line.display_type
-            and (line.product_uom_qty or 0.0) > 0
-        )
-        if not sale_lines:
-            raise UserError(_("There are no sale lines with quantities to deliver."))
-
-        picking = self.env["stock.picking"].create(
-            self._prepare_route_delivery_vals(
-                visit=visit,
-                picking_type=picking_type,
-                source_location=source_location,
-                dest_location=dest_location,
+            sale_lines = self.order_line.filtered(
+                lambda line: line.product_id
+                and not line.display_type
+                and (line.product_uom_qty or 0.0) > 0
             )
-        )
+            if not sale_lines:
+                raise UserError(_("There are no sale lines with quantities to deliver."))
 
-        for line in sale_lines:
-            self.env["stock.move"].create(
-                self._prepare_route_delivery_move_vals(
-                    picking=picking,
-                    order_line=line,
+            picking = self.env["stock.picking"].create(
+                self._prepare_route_delivery_vals(
+                    visit=visit,
+                    picking_type=picking_type,
                     source_location=source_location,
                     dest_location=dest_location,
                 )
             )
+
+            for line in sale_lines:
+                self.env["stock.move"].create(
+                    self._prepare_route_delivery_move_vals(
+                        picking=picking,
+                        order_line=line,
+                        source_location=picking.location_id,
+                        dest_location=picking.location_dest_id,
+                    )
+                )
 
         if picking.state == "draft":
             picking.action_confirm()
@@ -238,19 +251,10 @@ class SaleOrder(models.Model):
         if picking.state not in ("done", "cancel"):
             result = picking.button_validate()
             if isinstance(result, dict):
-                raise UserError(
-                    _(
-                        "The route sale delivery was created, but Odoo requested an extra wizard step. "
-                        "Please open the delivery and validate it manually once."
-                    )
-                )
+                return result
 
         if picking.state != "done":
-            raise UserError(
-                _(
-                    "The route sale delivery was created, but it could not be fully validated automatically."
-                )
-            )
+            return self._get_route_delivery_form_action(picking)
 
         return picking
 
@@ -275,9 +279,9 @@ class SaleOrder(models.Model):
             else:
                 normal_orders |= order
 
-        result = True
+        action_result = True
         if normal_orders:
-            result = super(SaleOrder, normal_orders).action_confirm()
+            action_result = super(SaleOrder, normal_orders).action_confirm()
 
         for order in route_orders:
             visit = order._get_linked_route_visit()
@@ -285,6 +289,8 @@ class SaleOrder(models.Model):
                 continue
 
             order._route_confirm_without_procurement()
-            order._create_and_validate_route_delivery(visit)
+            delivery_result = order._create_and_validate_route_delivery(visit)
+            if isinstance(delivery_result, dict):
+                action_result = delivery_result
 
-        return result
+        return action_result
