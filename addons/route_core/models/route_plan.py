@@ -236,8 +236,7 @@ class RoutePlan(models.Model):
             if existing_line:
                 current_note = (existing_line.note or "").strip()
                 if shortage.name not in current_note:
-                    existing_line.note = (current_note + "
-" + note_fragment).strip()
+                    existing_line.note = (current_note + "\n" + note_fragment).strip()
             else:
                 max_sequence += 10
                 line = self.env["route.plan.line"].create({
