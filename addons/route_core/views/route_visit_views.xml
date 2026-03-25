@@ -200,30 +200,6 @@
 <page string="Notes">
 <field name="notes" placeholder="Internal notes..."/>
 </page>
-<page string="Documents">
-<group>
-<group>
-<field name="sale_order_id" readonly="1"/>
-<field name="sale_delivery_id" readonly="1"/>
-<field name="refill_picking_id" readonly="1"/>
-<field name="generated_shortage_id" readonly="1"/>
-</group>
-<group>
-<field name="sale_order_count" readonly="1"/>
-<field name="sale_delivery_count" readonly="1"/>
-<field name="return_transfer_count" readonly="1"/>
-<field name="refill_picking_count" readonly="1"/>
-<field name="shortage_count" readonly="1"/>
-</group>
-</group>
-<group col="5">
-<button name="action_view_sale_order" type="object" string="Open Sale Order" class="btn-primary" invisible="sale_order_count == 0"/>
-<button name="action_view_sale_deliveries" type="object" string="Open Sales Deliveries" class="btn-secondary" invisible="sale_delivery_count == 0"/>
-<button name="action_view_return_transfers" type="object" string="Open Return Transfers" class="btn-secondary" invisible="return_transfer_count == 0"/>
-<button name="action_view_refill_transfer" type="object" string="Open Refill Transfer" class="btn-secondary" invisible="refill_picking_count == 0"/>
-<button name="action_view_shortages" type="object" string="Open Generated Shortage" class="btn-secondary" invisible="shortage_count == 0"/>
-</group>
-</page>
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
@@ -347,30 +323,6 @@
 </page>
 <page string="Notes">
 <field name="notes" placeholder="Internal notes..."/>
-</page>
-<page string="Documents">
-<group>
-<group>
-<field name="sale_order_id" readonly="1"/>
-<field name="sale_delivery_id" readonly="1"/>
-<field name="refill_picking_id" readonly="1"/>
-<field name="generated_shortage_id" readonly="1"/>
-</group>
-<group>
-<field name="sale_order_count" readonly="1"/>
-<field name="sale_delivery_count" readonly="1"/>
-<field name="return_transfer_count" readonly="1"/>
-<field name="refill_picking_count" readonly="1"/>
-<field name="shortage_count" readonly="1"/>
-</group>
-</group>
-<group col="5">
-<button name="action_view_sale_order" type="object" string="Open Sale Order" class="btn-primary" invisible="sale_order_count == 0"/>
-<button name="action_view_sale_deliveries" type="object" string="Open Sales Deliveries" class="btn-secondary" invisible="sale_delivery_count == 0"/>
-<button name="action_view_return_transfers" type="object" string="Open Return Transfers" class="btn-secondary" invisible="return_transfer_count == 0"/>
-<button name="action_view_refill_transfer" type="object" string="Open Refill Transfer" class="btn-secondary" invisible="refill_picking_count == 0"/>
-<button name="action_view_shortages" type="object" string="Open Generated Shortage" class="btn-secondary" invisible="shortage_count == 0"/>
-</group>
 </page>
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
