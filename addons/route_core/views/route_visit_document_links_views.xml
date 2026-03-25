@@ -2,10 +2,9 @@
 <record id="view_route_visit_form_document_links" model="ir.ui.view">
 <field name="name">route.visit.form.document.links</field>
 <field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="inherit_id" ref="route_core.view_route_visit_form_workflow_ux"/>
 <field name="arch" type="xml">
-<xpath expr="//form/sheet" position="inside">
-<div class="oe_button_box" name="button_box_documents">
+<xpath expr="//div[@name='button_box']" position="inside">
 <button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
 <field name="sale_order_count" widget="statinfo" string="Sale Order"/>
 </button>
@@ -21,17 +20,15 @@
 <button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
 <field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
 </button>
-</div>
 </xpath>
 </field>
 </record>
 <record id="view_route_visit_pda_form_document_links" model="ir.ui.view">
 <field name="name">route.visit.pda.form.document.links</field>
 <field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form_workflow_ux"/>
 <field name="arch" type="xml">
-<xpath expr="//form/sheet" position="inside">
-<div class="oe_button_box" name="button_box_documents_pda">
+<xpath expr="//div[@name='button_box']" position="inside">
 <button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
 <field name="sale_order_count" widget="statinfo" string="Sale Order"/>
 </button>
@@ -47,7 +44,6 @@
 <button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
 <field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
 </button>
-</div>
 </xpath>
 </field>
 </record>
