@@ -78,6 +78,14 @@ class RoutePlan(models.Model):
         string="In Progress Visits",
         compute="_compute_line_counts",
     )
+    shortage_count = fields.Integer(
+        string="Planned Shortages",
+        compute="_compute_shortage_counts",
+    )
+    open_shortage_candidate_count = fields.Integer(
+        string="Open Shortage Candidates",
+        compute="_compute_shortage_counts",
+    )
 
     area_summary = fields.Char(
         string="Areas",
@@ -102,6 +110,20 @@ class RoutePlan(models.Model):
             rec.in_progress_count = len(
                 lines.filtered(lambda l: l.visit_id and l.visit_id.state == "in_progress")
             )
+
+    @api.depends("line_ids.outlet_id", "area_id", "date")
+    def _compute_shortage_counts(self):
+        Shortage = self.env["route.shortage"]
+        for rec in self:
+            rec.shortage_count = Shortage.search_count([
+                ("planned_route_plan_id", "=", rec.id),
+                ("state", "in", ["planned", "open"]),
+            ])
+
+            candidate_domain = [("state", "=", "open")]
+            if rec.area_id:
+                candidate_domain.append(("area_id", "=", rec.area_id.id))
+            rec.open_shortage_candidate_count = Shortage.search_count(candidate_domain)
 
     @api.depends(
         "area_id",
@@ -184,6 +206,65 @@ class RoutePlan(models.Model):
         line.visit_id = visit.id
         return visit
 
+    def _get_open_shortage_domain(self):
+        self.ensure_one()
+        domain = [("state", "=", "open")]
+        if self.area_id:
+            domain.append(("area_id", "=", self.area_id.id))
+        return domain
+
+    def action_add_open_shortages(self):
+        self.ensure_one()
+
+        shortages = self.env["route.shortage"].search(
+            self._get_open_shortage_domain(),
+            order="date asc, id asc",
+        )
+        if not shortages:
+            raise UserError(_("There are no open shortages to add to this route plan."))
+
+        existing_lines_by_outlet = {
+            line.outlet_id.id: line
+            for line in self.line_ids.filtered("outlet_id")
+        }
+        max_sequence = max(self.line_ids.mapped("sequence") or [0])
+
+        for shortage in shortages:
+            if not shortage.outlet_id:
+                continue
+
+            existing_line = existing_lines_by_outlet.get(shortage.outlet_id.id)
+            note_fragment = _("Open shortage: %s") % shortage.name
+
+            if existing_line:
+                vals = {}
+                if existing_line.visit_id and existing_line.visit_id.state in ("done", "cancel"):
+                    vals["visit_id"] = False
+                    vals["state"] = "pending"
+                current_note = (existing_line.note or "").strip()
+                if shortage.name not in current_note:
+                    vals["note"] = (current_note + "\n" + note_fragment).strip()
+                if vals:
+                    existing_line.write(vals)
+            else:
+                max_sequence += 10
+                line = self.env["route.plan.line"].create({
+                    "plan_id": self.id,
+                    "sequence": max_sequence,
+                    "area_id": shortage.outlet_id.area_id.id if shortage.outlet_id.area_id else (self.area_id.id if self.area_id else False),
+                    "outlet_id": shortage.outlet_id.id,
+                    "note": note_fragment,
+                })
+                existing_lines_by_outlet[shortage.outlet_id.id] = line
+
+            shortage.write({
+                "state": "planned",
+                "planned_date": self.date,
+                "planned_route_plan_id": self.id,
+            })
+
+        return self.action_view_shortages()
+
     def action_view_visits(self):
         self.ensure_one()
 
@@ -197,6 +278,18 @@ class RoutePlan(models.Model):
         else:
             action["views"] = [(False, "list"), (False, "form")]
 
+        return action
+
+    def action_view_shortages(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_shortage").read()[0]
+        action["domain"] = [("planned_route_plan_id", "=", self.id)]
+        action["context"] = {
+            **self.env.context,
+            "default_planned_route_plan_id": self.id,
+            "search_default_filter_planned": 0,
+            "search_default_filter_open": 0,
+        }
         return action
 
     def action_open_add_area_outlets_wizard(self):
