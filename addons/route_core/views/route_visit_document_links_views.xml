@@ -1,0 +1,54 @@
+<odoo>
+<record id="view_route_visit_form_document_links" model="ir.ui.view">
+<field name="name">route.visit.form.document.links</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/sheet" position="inside">
+<div class="oe_button_box" name="button_box_documents">
+<button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
+<field name="sale_order_count" widget="statinfo" string="Sale Order"/>
+</button>
+<button name="action_view_sale_deliveries" type="object" class="oe_stat_button" icon="fa-truck" invisible="sale_delivery_count == 0">
+<field name="sale_delivery_count" widget="statinfo" string="Sales Delivery"/>
+</button>
+<button name="action_view_return_transfers" type="object" class="oe_stat_button" icon="fa-reply" invisible="return_transfer_count == 0">
+<field name="return_transfer_count" widget="statinfo" string="Return Transfers"/>
+</button>
+<button name="action_view_refill_transfer" type="object" class="oe_stat_button" icon="fa-exchange" invisible="refill_picking_count == 0">
+<field name="refill_picking_count" widget="statinfo" string="Refill Transfer"/>
+</button>
+<button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
+<field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
+</button>
+</div>
+</xpath>
+</field>
+</record>
+<record id="view_route_visit_pda_form_document_links" model="ir.ui.view">
+<field name="name">route.visit.pda.form.document.links</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/sheet" position="inside">
+<div class="oe_button_box" name="button_box_documents_pda">
+<button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
+<field name="sale_order_count" widget="statinfo" string="Sale Order"/>
+</button>
+<button name="action_view_sale_deliveries" type="object" class="oe_stat_button" icon="fa-truck" invisible="sale_delivery_count == 0">
+<field name="sale_delivery_count" widget="statinfo" string="Sales Delivery"/>
+</button>
+<button name="action_view_return_transfers" type="object" class="oe_stat_button" icon="fa-reply" invisible="return_transfer_count == 0">
+<field name="return_transfer_count" widget="statinfo" string="Return Transfers"/>
+</button>
+<button name="action_view_refill_transfer" type="object" class="oe_stat_button" icon="fa-exchange" invisible="refill_picking_count == 0">
+<field name="refill_picking_count" widget="statinfo" string="Refill Transfer"/>
+</button>
+<button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
+<field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
+</button>
+</div>
+</xpath>
+</field>
+</record>
+</odoo>
