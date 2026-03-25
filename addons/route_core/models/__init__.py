@@ -32,3 +32,5 @@ from . import route_product_barcode
 
 from . import route_visit_missing_lot_ext
 from . import sale_order_missing_lot_ext
+
+from . import route_shortage
