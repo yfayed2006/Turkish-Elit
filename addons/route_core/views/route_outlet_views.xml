@@ -1,137 +1,119 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <record id="view_route_outlet_list" model="ir.ui.view">
-        <field name="name">route.outlet.list</field>
-        <field name="model">route.outlet</field>
-        <field name="arch" type="xml">
-            <list string="Outlets">
-                <field name="code"/>
-                <field name="barcode"/>
-                <field name="name"/>
-                <field name="area_id"/>
-                <field name="partner_id"/>
-                <field name="default_commission_rate"/>
-                <field name="active_stock_tracking"/>
-                <field name="last_visit_date"/>
-                <field name="last_sale_order_id"/>
-                <field name="visit_count"/>
-                <field name="phone"/>
-                <field name="mobile"/>
-                <field name="active"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_route_outlet_form" model="ir.ui.view">
-        <field name="name">route.outlet.form</field>
-        <field name="model">route.outlet</field>
-        <field name="arch" type="xml">
-            <form string="Outlet">
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button
-                            name="action_view_visits"
-                            type="object"
-                            class="oe_stat_button"
-                            icon="fa-map-marker"
-                        >
-                            <field name="visit_count" string="Visits" widget="statinfo"/>
-                        </button>
-                    </div>
-
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" placeholder="Outlet Name"/>
-                        </h1>
-                    </div>
-
-                    <group>
-                        <group>
-                            <field name="code" readonly="1"/>
-                            <field name="barcode"/>
-                            <field name="area_id"/>
-                            <field name="partner_id"
-                                   domain="[('is_company', '=', True)]"
-                                   context="{'default_is_company': True}"
-                                   options="{'no_open': False}"/>
-                            <field name="active"/>
-                        </group>
-                        <group>
-                            <field name="phone"/>
-                            <field name="mobile"/>
-                            <field name="default_commission_rate"/>
-                            <field name="active_stock_tracking"/>
-                        </group>
-                    </group>
-
-                    <group string="Latest Activity">
-                        <group>
-                            <field name="last_visit_id" readonly="1"/>
-                            <field name="last_visit_date" readonly="1"/>
-                            <field name="last_settlement_date" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="last_sale_order_id" readonly="1"/>
-                        </group>
-                    </group>
-
-                    <notebook>
-                        <page string="Address">
-                            <group>
-                                <group>
-                                    <field name="street"/>
-                                    <field name="street2"/>
-                                    <field name="city"/>
-                                    <field name="zip"/>
-                                </group>
-                                <group>
-                                    <field name="state_id"/>
-                                    <field name="country_id"/>
-                                </group>
-                            </group>
-                            <group>
-                                <field name="display_address" readonly="1"/>
-                            </group>
-                        </page>
-
-                        <page string="Visits">
-                            <field name="visit_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="date"/>
-                                    <field name="partner_id"/>
-                                    <field name="area_id"/>
-                                    <field name="user_id"/>
-                                    <field name="state"/>
-                                    <field name="visit_process_state"/>
-                                    <field name="sale_order_id"/>
-                                    <field name="net_due_amount"/>
-                                    <field name="collected_amount"/>
-                                    <field name="remaining_due_amount"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Notes">
-                            <field name="note" placeholder="Internal notes..."/>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_route_outlet" model="ir.actions.act_window">
-        <field name="name">Outlets</field>
-        <field name="res_model">route.outlet</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <menuitem id="menu_route_outlet"
-              name="Outlets"
-              parent="menu_route_visit_root"
-              action="action_route_outlet"
-              sequence="30"/>
-
+<record id="view_route_outlet_list" model="ir.ui.view">
+<field name="name">route.outlet.list</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<list string="Outlets">
+<field name="code"/>
+<field name="barcode"/>
+<field name="name"/>
+<field name="area_id"/>
+<field name="partner_id"/>
+<field name="default_commission_rate"/>
+<field name="active_stock_tracking"/>
+<field name="open_shortage_count" string="Open Shortages" widget="badge" decoration-warning="open_shortage_count > 0"/>
+<field name="last_visit_date"/>
+<field name="last_sale_order_id"/>
+<field name="visit_count"/>
+<field name="phone"/>
+<field name="mobile"/>
+<field name="active"/>
+</list>
+</field>
+</record>
+<record id="view_route_outlet_form" model="ir.ui.view">
+<field name="name">route.outlet.form</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<form string="Outlet">
+<sheet>
+<div class="oe_button_box" name="button_box">
+<button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="visit_count" string="Visits" widget="statinfo"/>
+</button>
+<button name="action_view_open_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="total_shortage_count == 0">
+<field name="total_shortage_count" string="Shortages" widget="statinfo"/>
+</button>
+</div>
+<div class="oe_title">
+<h1>
+<field name="name" placeholder="Outlet Name"/>
+</h1>
+</div>
+<group>
+<group>
+<field name="code" readonly="1"/>
+<field name="barcode"/>
+<field name="area_id"/>
+<field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}"/>
+<field name="active"/>
+</group>
+<group>
+<field name="phone"/>
+<field name="mobile"/>
+<field name="default_commission_rate"/>
+<field name="active_stock_tracking"/>
+<field name="open_shortage_count" readonly="1"/>
+</group>
+</group>
+<group string="Latest Activity">
+<group>
+<field name="last_visit_id" readonly="1"/>
+<field name="last_visit_date" readonly="1"/>
+<field name="last_settlement_date" readonly="1"/>
+</group>
+<group>
+<field name="last_sale_order_id" readonly="1"/>
+<field name="total_shortage_count" readonly="1"/>
+</group>
+</group>
+<notebook>
+<page string="Address">
+<group>
+<group>
+<field name="street"/>
+<field name="street2"/>
+<field name="city"/>
+<field name="zip"/>
+</group>
+<group>
+<field name="state_id"/>
+<field name="country_id"/>
+</group>
+</group>
+<group>
+<field name="display_address" readonly="1"/>
+</group>
+</page>
+<page string="Visits">
+<field name="visit_ids" readonly="1">
+<list>
+<field name="name"/>
+<field name="date"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="user_id"/>
+<field name="state"/>
+<field name="visit_process_state"/>
+<field name="sale_order_id"/>
+<field name="net_due_amount"/>
+<field name="collected_amount"/>
+<field name="remaining_due_amount"/>
+</list>
+</field>
+</page>
+<page string="Notes">
+<field name="note" placeholder="Internal notes..."/>
+</page>
+</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="action_route_outlet" model="ir.actions.act_window">
+<field name="name">Outlets</field>
+<field name="res_model">route.outlet</field>
+<field name="view_mode">list,form</field>
+</record>
+<menuitem id="menu_route_outlet" name="Outlets" parent="menu_route_visit_root" action="action_route_outlet" sequence="30"/>
 </odoo>
