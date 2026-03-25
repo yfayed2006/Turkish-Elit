@@ -449,7 +449,9 @@ class RouteVisit(models.Model):
 
         sold_lines = self.line_ids.filtered(lambda l: (l.sold_qty or 0.0) > 0)
         if sold_lines and not self.sale_order_id:
-            self.action_create_sale_order()
+            sale_result = self.action_create_sale_order()
+            if isinstance(sale_result, dict) and sale_result.get("res_model") != "sale.order":
+                return sale_result
 
         result = self.action_end_visit()
         if isinstance(result, dict):
