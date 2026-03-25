@@ -60,6 +60,10 @@ class RoutePlanLine(models.Model):
         compute="_compute_button_label",
     )
     note = fields.Text(string="Line Note")
+    shortage_count = fields.Integer(
+        string="Open Shortages",
+        compute="_compute_shortage_count",
+    )
 
     @property
     def _plan_sync_context_key(self):
@@ -74,6 +78,17 @@ class RoutePlanLine(models.Model):
                 rec.button_label = "View Visit"
             else:
                 rec.button_label = "Open Visit"
+
+    @api.depends("outlet_id")
+    def _compute_shortage_count(self):
+        Shortage = self.env["route.shortage"]
+        for rec in self:
+            rec.shortage_count = 0
+            if rec.outlet_id:
+                rec.shortage_count = Shortage.search_count([
+                    ("outlet_id", "=", rec.outlet_id.id),
+                    ("state", "in", ["open", "planned"]),
+                ])
 
     @api.onchange("area_id")
     def _onchange_area_id(self):
@@ -162,6 +177,21 @@ class RoutePlanLine(models.Model):
             visit = self.plan_id._create_visit_for_line(self)
 
         return self._get_pda_visit_action(visit)
+
+    def action_view_outlet_shortages(self):
+        self.ensure_one()
+        if not self.outlet_id:
+            raise UserError(_("This route plan line has no outlet."))
+        action = self.env.ref("route_core.action_route_shortage").read()[0]
+        action["domain"] = [
+            ("outlet_id", "=", self.outlet_id.id),
+            ("state", "in", ["open", "planned"]),
+        ]
+        action["context"] = {
+            **self.env.context,
+            "default_outlet_id": self.outlet_id.id,
+        }
+        return action
 
     @api.model_create_multi
     def create(self, vals_list):
