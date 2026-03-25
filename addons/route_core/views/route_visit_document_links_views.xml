@@ -5,23 +5,21 @@
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="arch" type="xml">
 <xpath expr="//sheet/div[contains(@class, 'alert')][1]" position="after">
-<div class="oe_button_box" name="visit_document_links_box">
-<button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
-<field name="sale_order_count" widget="statinfo" string="Sale Order"/>
-</button>
-<button name="action_view_sale_deliveries" type="object" class="oe_stat_button" icon="fa-truck" invisible="sale_delivery_count == 0">
-<field name="sale_delivery_count" widget="statinfo" string="Sales Delivery"/>
-</button>
-<button name="action_view_return_transfers" type="object" class="oe_stat_button" icon="fa-reply" invisible="return_transfer_count == 0">
-<field name="return_transfer_count" widget="statinfo" string="Return Transfers"/>
-</button>
-<button name="action_view_refill_transfer" type="object" class="oe_stat_button" icon="fa-exchange" invisible="refill_picking_count == 0">
-<field name="refill_picking_count" widget="statinfo" string="Refill Transfer"/>
-</button>
-<button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
-<field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
-</button>
+<separator string="Visit Documents"/>
+<group>
+<field name="sale_order_count" invisible="1"/>
+<field name="sale_delivery_count" invisible="1"/>
+<field name="return_transfer_count" invisible="1"/>
+<field name="refill_picking_count" invisible="1"/>
+<field name="shortage_count" invisible="1"/>
+<div class="o_row" name="visit_document_links_row_form">
+<button name="action_view_sale_order" type="object" string="Sale Order" class="btn btn-secondary me-2" invisible="sale_order_count == 0"/>
+<button name="action_view_sale_deliveries" type="object" string="Sales Delivery" class="btn btn-secondary me-2" invisible="sale_delivery_count == 0"/>
+<button name="action_view_return_transfers" type="object" string="Return Transfers" class="btn btn-secondary me-2" invisible="return_transfer_count == 0"/>
+<button name="action_view_refill_transfer" type="object" string="Refill Transfer" class="btn btn-secondary me-2" invisible="refill_picking_count == 0"/>
+<button name="action_view_shortages" type="object" string="Generated Shortage" class="btn btn-secondary" invisible="shortage_count == 0"/>
 </div>
+</group>
 </xpath>
 </field>
 </record>
@@ -31,23 +29,21 @@
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
 <xpath expr="//sheet/div[contains(@class, 'alert')][1]" position="after">
-<div class="oe_button_box" name="visit_document_links_box_pda">
-<button name="action_view_sale_order" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="sale_order_count == 0">
-<field name="sale_order_count" widget="statinfo" string="Sale Order"/>
-</button>
-<button name="action_view_sale_deliveries" type="object" class="oe_stat_button" icon="fa-truck" invisible="sale_delivery_count == 0">
-<field name="sale_delivery_count" widget="statinfo" string="Sales Delivery"/>
-</button>
-<button name="action_view_return_transfers" type="object" class="oe_stat_button" icon="fa-reply" invisible="return_transfer_count == 0">
-<field name="return_transfer_count" widget="statinfo" string="Return Transfers"/>
-</button>
-<button name="action_view_refill_transfer" type="object" class="oe_stat_button" icon="fa-exchange" invisible="refill_picking_count == 0">
-<field name="refill_picking_count" widget="statinfo" string="Refill Transfer"/>
-</button>
-<button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
-<field name="shortage_count" widget="statinfo" string="Generated Shortage"/>
-</button>
+<separator string="Visit Documents"/>
+<group>
+<field name="sale_order_count" invisible="1"/>
+<field name="sale_delivery_count" invisible="1"/>
+<field name="return_transfer_count" invisible="1"/>
+<field name="refill_picking_count" invisible="1"/>
+<field name="shortage_count" invisible="1"/>
+<div class="o_row" name="visit_document_links_row_pda">
+<button name="action_view_sale_order" type="object" string="Sale Order" class="btn btn-secondary me-2" invisible="sale_order_count == 0"/>
+<button name="action_view_sale_deliveries" type="object" string="Sales Delivery" class="btn btn-secondary me-2" invisible="sale_delivery_count == 0"/>
+<button name="action_view_return_transfers" type="object" string="Return Transfers" class="btn btn-secondary me-2" invisible="return_transfer_count == 0"/>
+<button name="action_view_refill_transfer" type="object" string="Refill Transfer" class="btn btn-secondary me-2" invisible="refill_picking_count == 0"/>
+<button name="action_view_shortages" type="object" string="Generated Shortage" class="btn btn-secondary" invisible="shortage_count == 0"/>
 </div>
+</group>
 </xpath>
 </field>
 </record>
