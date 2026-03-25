@@ -192,9 +192,18 @@ class RouteVisit(models.Model):
 
             rec._update_vehicle_available_on_lines()
 
+            has_supplied_qty = False
             for line in rec.line_ids:
-                available_qty = line.vehicle_available_qty
-                proposed_qty = min(line.sold_qty, available_qty) if line.sold_qty > 0 else 0.0
+                available_qty = line.vehicle_available_qty or 0.0
+                sold_qty = line.sold_qty or 0.0
+                proposed_qty = min(sold_qty, available_qty) if sold_qty > 0 else 0.0
+                pending_qty = max(sold_qty - proposed_qty, 0.0)
                 line.write({
                     "supplied_qty": proposed_qty,
+                    "pending_refill_qty": pending_qty,
                 })
+                has_supplied_qty = has_supplied_qty or proposed_qty > 0
+
+            rec.write({
+                "has_refill": has_supplied_qty,
+            })
