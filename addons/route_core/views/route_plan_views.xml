@@ -131,7 +131,6 @@
 <field name="user_id" string="Salesperson"/>
 <field name="vehicle_id" string="Vehicle"/>
 <field name="area_id" string="Area"/>
-<field name="outlet_summary" string="Outlets"/>
 </searchpanel>
 </search>
 </field>
