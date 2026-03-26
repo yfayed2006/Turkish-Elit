@@ -346,20 +346,21 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def _get_current_scan_counted_increase(self):
         self.ensure_one()
-        if not self.detected_product_id:
-            return 0.0
-        effective_qty = self.quantity or 0.0
-        effective_uom = self.base_uom_id if self.detected_scan_type == "Box Barcode" else self.scanned_uom_id
-        if effective_qty <= 0:
+        if not self.visit_id or not self.barcode or not self.barcode.strip() or self.quantity <= 0:
             return 0.0
         try:
+            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+            product = scan_info["product"]
+            if scan_info.get("scan_type") == "box":
+                return (self.quantity or 0.0) * (scan_info.get("box_qty") or 1.0)
+            scanned_uom = self.scanned_uom_id or product.uom_id
             return self.visit_id._get_scan_counted_increase(
-                self.detected_product_id,
-                scan_qty=effective_qty,
-                scanned_uom=effective_uom,
+                product,
+                scan_qty=self.quantity or 0.0,
+                scanned_uom=scanned_uom,
             )
         except Exception:
-            return self.counted_increase or 0.0
+            return self.counted_increase or self.quantity or 0.0
 
     def action_scan_and_add(self):
         self.ensure_one()
@@ -374,7 +375,7 @@ class RouteVisitScanWizard(models.TransientModel):
         if self.scan_mode == "count":
             preview_counted_increase = self._get_current_scan_counted_increase()
             if preview_counted_increase <= 0:
-                preview_counted_increase = self.counted_increase or 0.0
+                preview_counted_increase = self.counted_increase or self.quantity or 0.0
 
         if self.scan_mode == "count" and self.active_lot_status == "expired" and self.expired_decision != "damaged":
             raise UserError(_("This lot is expired. Choose 'Return To Damaged Stock' before scanning can continue."))
