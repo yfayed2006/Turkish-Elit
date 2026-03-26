@@ -29,8 +29,8 @@
 <field name="quantity" readonly="auto_quantity_locked"/>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
 <field name="expiry_date" invisible="scan_mode != 'count'"/>
-<field name="expired_decision" invisible="scan_mode != 'count' or active_lot_status != 'expired'" required="active_lot_status == 'expired'"/>
-<field name="near_expiry_decision" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'" required="active_lot_status == 'near_expiry'"/>
+<field name="expired_decision" invisible="scan_mode != 'count' or active_lot_status != 'expired'"/>
+<field name="near_expiry_decision" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'"/>
 <field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
 <field name="return_qty" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)"/>
 <field name="return_route" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)" readonly="active_lot_status == 'expired'"/>
