@@ -73,23 +73,33 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self._action_mark_no_returns()
 
-    def _find_or_create_visit_line_for_product(self, product):
+    def _find_or_create_visit_line_for_product(self, product, lot=False, expiry_date=False):
         self.ensure_one()
 
-        line = self.line_ids.filtered(lambda l: l.product_id == product)[:1]
+        if lot and hasattr(self, "_get_or_create_visit_line_for_product_and_lot"):
+            return self._get_or_create_visit_line_for_product_and_lot(
+                product,
+                resolved_lot=lot,
+                resolved_expiry_date=expiry_date,
+                counted_increase=0.0,
+            )
+
+        line = self.line_ids.filtered(lambda l: l.product_id == product and not l.lot_id)[:1]
         if line:
             return line
 
         return self.env["route.visit.line"].create({
             "visit_id": self.id,
+            "company_id": self.company_id.id,
             "product_id": product.id,
-            "barcode": product.barcode or "",
-            "uom_id": product.uom_id.id,
+            "previous_qty": 0.0,
+            "counted_qty": 0.0,
             "unit_price": getattr(product, "lst_price", 0.0),
+            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product) if hasattr(self, "_get_vehicle_available_qty_for_scan_product") else 0.0,
             "return_route": "vehicle",
         })
 
-    def _add_return_qty(self, product, qty, return_route="vehicle"):
+    def _add_return_qty(self, product, qty, return_route="vehicle", lot=False, expiry_date=False):
         self.ensure_one()
 
         if qty <= 0:
@@ -98,7 +108,7 @@ class RouteVisit(models.Model):
         if return_route not in ("vehicle", "damaged", "near_expiry"):
             raise UserError(_("Invalid return route."))
 
-        line = self._find_or_create_visit_line_for_product(product)
+        line = self._find_or_create_visit_line_for_product(product, lot=lot, expiry_date=expiry_date)
         line.write({
             "return_qty": (line.return_qty or 0.0) + qty,
             "return_route": return_route or "vehicle",
