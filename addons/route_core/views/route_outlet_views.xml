@@ -9,9 +9,10 @@
 <field name="name"/>
 <field name="area_id"/>
 <field name="partner_id"/>
-<field name="default_commission_rate"/>
-<field name="active_stock_tracking"/>
+<field name="summary_alert_level" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+<field name="current_due_amount" sum="Total Due"/>
 <field name="open_shortage_count" string="Open Shortages" widget="badge" decoration-warning="open_shortage_count > 0"/>
+<field name="near_expiry_product_count" string="Near Expiry" widget="badge" decoration-warning="near_expiry_product_count > 0"/>
 <field name="last_visit_date"/>
 <field name="last_sale_order_id"/>
 <field name="visit_count"/>
@@ -31,7 +32,16 @@
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="visit_count" string="Visits" widget="statinfo"/>
 </button>
-<button name="action_view_open_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="total_shortage_count == 0">
+<button name="action_view_payments" type="object" class="oe_stat_button" icon="fa-money">
+<field name="payment_count" string="Payments" widget="statinfo"/>
+</button>
+<button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
+<field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
+</button>
+<button name="action_view_stock_balances" type="object" class="oe_stat_button" icon="fa-cubes">
+<field name="stock_balance_count" string="Stock Balances" widget="statinfo"/>
+</button>
+<button name="action_view_open_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
 <field name="total_shortage_count" string="Shortages" widget="statinfo"/>
 </button>
 </div>
@@ -64,10 +74,113 @@
 </group>
 <group>
 <field name="last_sale_order_id" readonly="1"/>
+<field name="last_payment_id" readonly="1"/>
 <field name="total_shortage_count" readonly="1"/>
 </group>
 </group>
 <notebook>
+<page string="Summary">
+<group string="Summary KPIs" col="4">
+<group>
+<field name="summary_alert_level" widget="badge" readonly="1" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+<field name="current_due_amount" readonly="1"/>
+<field name="open_shortage_count" readonly="1"/>
+</group>
+<group>
+<field name="next_planned_visit_date" readonly="1"/>
+<field name="stock_total_qty" readonly="1"/>
+<field name="stock_total_value" readonly="1"/>
+</group>
+<group>
+<field name="near_expiry_product_count" readonly="1"/>
+<field name="expired_product_count" readonly="1"/>
+<field name="deferred_payment_count" readonly="1"/>
+</group>
+<group>
+<field name="unpaid_visit_count" readonly="1"/>
+<field name="open_plan_count" readonly="1"/>
+<field name="stock_balance_count" readonly="1"/>
+</group>
+</group>
+<group string="Basic Information" col="2">
+<group>
+<field name="partner_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="phone" readonly="1"/>
+<field name="mobile" readonly="1"/>
+<field name="commission_rate" readonly="1"/>
+</group>
+<group>
+<field name="stock_location_id" readonly="1"/>
+<field name="active_stock_tracking" readonly="1"/>
+<field name="default_commission_rate" readonly="1"/>
+<field name="active" readonly="1"/>
+</group>
+</group>
+<group string="Operational Summary" col="2">
+<group>
+<field name="last_visit_id" readonly="1"/>
+<field name="last_visit_date" readonly="1"/>
+<field name="in_progress_visit_id" readonly="1"/>
+</group>
+<group>
+<field name="next_route_plan_id" readonly="1"/>
+<field name="next_planned_visit_date" readonly="1"/>
+<field name="open_plan_count" readonly="1"/>
+</group>
+</group>
+<group string="Financial Summary" col="2">
+<group>
+<field name="current_due_amount" readonly="1"/>
+<field name="unpaid_visit_count" readonly="1"/>
+<field name="payment_count" readonly="1"/>
+</group>
+<group>
+<field name="last_payment_id" readonly="1"/>
+<field name="last_payment_date" readonly="1"/>
+<field name="last_payment_amount" readonly="1"/>
+</group>
+</group>
+<group string="Stock Summary" col="2">
+<group>
+<field name="stock_balance_count" readonly="1"/>
+<field name="stock_total_qty" readonly="1"/>
+<field name="stock_total_value" readonly="1"/>
+</group>
+<group>
+<field name="zero_stock_product_count" readonly="1"/>
+<field name="near_expiry_product_count" readonly="1"/>
+<field name="expired_product_count" readonly="1"/>
+<field name="last_stock_update_at" readonly="1"/>
+</group>
+</group>
+<group string="Shortages & Alerts" col="2">
+<group>
+<field name="open_shortage_count" readonly="1"/>
+<field name="planned_shortage_count" readonly="1"/>
+<field name="total_shortage_count" readonly="1"/>
+</group>
+<group>
+<field name="last_shortage_id" readonly="1"/>
+<field name="summary_alert_level" widget="badge" readonly="1" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+</group>
+</group>
+<group string="Latest References" col="2">
+<group>
+<field name="last_sale_order_id" readonly="1"/>
+<field name="last_payment_id" readonly="1"/>
+<field name="last_shortage_id" readonly="1"/>
+</group>
+<group>
+<field name="last_visit_id" readonly="1"/>
+<field name="next_route_plan_id" readonly="1"/>
+<field name="in_progress_visit_id" readonly="1"/>
+</group>
+</group>
+<group string="Last No Sale Reason">
+<field name="last_no_sale_reason" readonly="1" nolabel="1" placeholder="No no-sale reason recorded yet."/>
+</group>
+</page>
 <page string="Address">
 <group>
 <group>
