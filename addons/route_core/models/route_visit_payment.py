@@ -15,6 +15,30 @@ class RouteVisitPayment(models.Model):
         index=True,
     )
 
+    outlet_id = fields.Many2one(
+        "route.outlet",
+        string="Outlet",
+        related="visit_id.outlet_id",
+        store=True,
+        readonly=True,
+    )
+
+    area_id = fields.Many2one(
+        "route.area",
+        string="Area",
+        related="visit_id.area_id",
+        store=True,
+        readonly=True,
+    )
+
+    salesperson_id = fields.Many2one(
+        "res.users",
+        string="Salesperson",
+        related="visit_id.user_id",
+        store=True,
+        readonly=True,
+    )
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -66,6 +90,13 @@ class RouteVisitPayment(models.Model):
         default=0.0,
     )
 
+    remaining_due_amount = fields.Monetary(
+        string="Unpaid Amount",
+        currency_field="currency_id",
+        compute="_compute_remaining_due_amount",
+        store=False,
+    )
+
     due_date = fields.Date(string="Deferred Due Date")
 
     reference = fields.Char(string="Reference")
@@ -95,6 +126,11 @@ class RouteVisitPayment(models.Model):
     def _compute_visit_remaining_due(self):
         for rec in self:
             rec.visit_remaining_due = rec.visit_id.remaining_due_amount or 0.0
+
+    @api.depends("visit_id.remaining_due_amount")
+    def _compute_remaining_due_amount(self):
+        for rec in self:
+            rec.remaining_due_amount = rec.visit_id.remaining_due_amount or 0.0
 
     @api.model
     def default_get(self, fields_list):
@@ -198,3 +234,4 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError("You cannot delete a confirmed payment.")
         return super().unlink()
+
