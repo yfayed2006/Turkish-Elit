@@ -57,19 +57,16 @@ class RouteVisitScanWizard(models.TransientModel):
     return_route = fields.Selection(
         [("vehicle", "To Vehicle"), ("damaged", "To Damaged Stock"), ("near_expiry", "To Near Expiry Stock")],
         string="Return Route",
-        default="vehicle",
     )
-
-    near_expiry_action = fields.Selection(
+    near_expiry_decision = fields.Selection(
         [
             ("keep", "Keep On Shelf"),
             ("vehicle", "Return To Vehicle"),
             ("near_expiry", "Return To Near Expiry Stock"),
         ],
         string="Near Expiry Decision",
-        default="keep",
     )
-    scan_guidance_message = fields.Text(string="Scan Guidance", readonly=True)
+    scan_guidance = fields.Text(string="Scan Guidance", compute="_compute_scan_guidance", readonly=True)
 
     detected_product_id = fields.Many2one("product.product", string="Detected Product", readonly=True)
     base_uom_id = fields.Many2one("uom.uom", string="Base UoM", readonly=True)
@@ -124,40 +121,55 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.expiry_days_left = delta_days
             rec.is_near_expiry = delta_days <= (rec.visit_id.near_expiry_threshold_days or 0)
 
+    @api.depends("active_lot_status", "counted_increase", "return_qty", "near_expiry_decision")
+    def _compute_scan_guidance(self):
+        for rec in self:
+            rec.scan_guidance = False
+            if rec.active_lot_status == "expired":
+                rec.scan_guidance = _(
+                    "This lot is expired. The scanned quantity will be returned automatically to Damaged Stock."
+                )
+            elif rec.active_lot_status == "near_expiry":
+                rec.scan_guidance = _(
+                    "This lot is near expiry. Choose whether to keep it on the shelf or return part/all of it to the vehicle or Near Expiry Stock."
+                )
+
+    def _apply_near_expiry_decision(self):
+        self.ensure_one()
+        if self.active_lot_status == "expired":
+            self.return_from_scan = True
+            self.return_route = "damaged"
+            self.near_expiry_decision = False
+            self.return_qty = self.counted_increase or self.quantity or 1.0
+            return
+
+        if self.active_lot_status != "near_expiry":
+            self.near_expiry_decision = False
+            return
+
+        if self.near_expiry_decision == "keep":
+            self.return_from_scan = False
+            self.return_route = False
+            self.return_qty = 0.0
+        elif self.near_expiry_decision in ("vehicle", "near_expiry"):
+            self.return_from_scan = True
+            self.return_route = self.near_expiry_decision
+            if self.return_qty < 0:
+                self.return_qty = 0.0
+        else:
+            self.return_from_scan = False
+            self.return_route = False
+            self.return_qty = 0.0
+
+    @api.onchange("near_expiry_decision")
+    def _onchange_near_expiry_decision(self):
+        for rec in self:
+            rec._apply_near_expiry_decision()
+
     @api.onchange("expiry_date")
     def _onchange_expiry_date_default_near_expiry(self):
         for rec in self:
             rec.add_to_near_expiry_return = False
-
-    def _apply_scan_expiry_policy(self):
-        for rec in self:
-            if rec.scan_mode != "count" or not rec.detected_product_id or not rec.active_lot_id:
-                rec.scan_guidance_message = False
-                continue
-
-            counted_qty = rec.counted_increase or rec.quantity or 1.0
-
-            if rec.active_lot_status == "expired":
-                rec.scan_guidance_message = _(
-                    "This lot is expired. The scanned quantity will be returned automatically to Damaged Stock."
-                )
-                rec.return_from_scan = True
-                rec.return_qty = counted_qty
-                rec.return_route = "damaged"
-                rec.near_expiry_action = "keep"
-            elif rec.active_lot_status == "near_expiry":
-                rec.scan_guidance_message = _(
-                    "This lot is near expiry. Choose whether to keep it on the shelf, return it to the vehicle, or transfer it to Near Expiry Stock."
-                )
-                if rec.near_expiry_action in ("vehicle", "near_expiry"):
-                    rec.return_from_scan = True
-                    rec.return_qty = counted_qty
-                    rec.return_route = rec.near_expiry_action
-                else:
-                    rec.return_from_scan = False
-                    rec.return_qty = 0.0
-            else:
-                rec.scan_guidance_message = False
 
     @api.onchange("return_from_scan", "counted_increase")
     def _onchange_return_from_scan(self):
@@ -166,23 +178,17 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
                 continue
-            if rec.active_lot_status == "expired":
-                rec.return_from_scan = True
-                rec.return_qty = rec.counted_increase or rec.quantity or 1.0
-                rec.return_route = "damaged"
-                continue
-            if rec.active_lot_status == "near_expiry":
-                rec._apply_scan_expiry_policy()
+            if rec.active_lot_status in ("expired", "near_expiry"):
+                rec._apply_near_expiry_decision()
                 continue
             if rec.return_from_scan:
                 if rec.return_qty <= 0:
                     rec.return_qty = rec.counted_increase or 1.0
+                if not rec.return_route:
+                    rec.return_route = "vehicle"
             else:
                 rec.return_qty = 0.0
-
-    @api.onchange("active_lot_status", "counted_increase", "quantity", "near_expiry_action")
-    def _onchange_scan_expiry_policy(self):
-        self._apply_scan_expiry_policy()
+                rec.return_route = False
 
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id", "active_lot_id")
     def _onchange_barcode_preview(self):
@@ -201,8 +207,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.add_to_near_expiry_return = False
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
-                rec.near_expiry_action = "keep"
-                rec.scan_guidance_message = False
+                rec.return_route = False
+                rec.near_expiry_decision = False
                 continue
 
             try:
@@ -213,8 +219,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.add_to_near_expiry_return = False
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
-                rec.near_expiry_action = "keep"
-                rec.scan_guidance_message = False
+                rec.return_route = False
+                rec.near_expiry_decision = False
                 continue
 
             product = scan_info["product"]
@@ -251,8 +257,8 @@ class RouteVisitScanWizard(models.TransientModel):
 
             rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
             rec.add_to_near_expiry_return = False
-            rec._apply_scan_expiry_policy()
-            if rec.return_from_scan and rec.return_qty <= 0:
+            rec._apply_near_expiry_decision()
+            if rec.return_from_scan and rec.return_qty <= 0 and rec.active_lot_status not in ("near_expiry", "expired"):
                 rec.return_qty = rec.counted_increase or 1.0
 
     def action_set_active_lot(self):
@@ -260,12 +266,24 @@ class RouteVisitScanWizard(models.TransientModel):
         if not self.visit_id:
             raise UserError(_("Visit is required."))
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
-        self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
+        vals = {"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"}
+        self.write(vals)
+        self._apply_near_expiry_decision()
         return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
 
     def action_clear_active_lot(self):
         self.ensure_one()
-        self.write({"active_lot_id": False, "lot_barcode": False, "expiry_date": False, "add_to_near_expiry_return": False, "return_from_scan": False, "return_qty": 0.0, "near_expiry_action": "keep", "scan_guidance_message": False, "focus_target": "lot"})
+        self.write({
+            "active_lot_id": False,
+            "lot_barcode": False,
+            "expiry_date": False,
+            "add_to_near_expiry_return": False,
+            "return_from_scan": False,
+            "return_qty": 0.0,
+            "return_route": False,
+            "near_expiry_decision": False,
+            "focus_target": "lot",
+        })
         return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
 
     def _get_or_create_visit_line(self, product):
@@ -318,12 +336,24 @@ class RouteVisitScanWizard(models.TransientModel):
                 forced_return_route = "damaged"
                 line_vals["suggest_near_expiry_return"] = False
             elif resolved_lot and self.active_lot_status == "near_expiry":
-                if self.near_expiry_action in ("vehicle", "near_expiry"):
-                    forced_return_qty = counted_increase
-                    forced_return_route = self.near_expiry_action
+                if not self.near_expiry_decision:
+                    raise UserError(_(
+                        "This lot is near expiry. Choose whether to keep it on the shelf or return part/all of it before continuing."
+                    ))
+                if self.near_expiry_decision in ("vehicle", "near_expiry"):
+                    requested_return_qty = self.return_qty or 0.0
+                    if requested_return_qty <= 0:
+                        raise UserError(_(
+                            "Enter the quantity to return from this near-expiry lot, or choose Keep On Shelf."
+                        ))
+                    if requested_return_qty > counted_increase:
+                        raise UserError(_("Return Qty cannot be greater than the counted quantity from this scan."))
+                    forced_return_qty = requested_return_qty
+                    forced_return_route = self.near_expiry_decision
                     line_vals["suggest_near_expiry_return"] = False
                 else:
-                    line_vals["suggest_near_expiry_return"] = True
+                    forced_return_qty = 0.0
+                    forced_return_route = False
             elif self.return_from_scan:
                 requested_return_qty = self.return_qty or 0.0
                 if requested_return_qty <= 0:
@@ -342,26 +372,31 @@ class RouteVisitScanWizard(models.TransientModel):
                 line.write(line_vals)
                 line.invalidate_recordset()
 
+            defaults = {
+                "default_visit_id": self.visit_id.id,
+                "default_scan_mode": self.scan_mode,
+                "default_active_lot_id": self.active_lot_id.id,
+                "default_focus_target": "product" if self.active_lot_id else "lot",
+                "default_last_product_id": product.id,
+                "default_last_counted_qty": result["counted_increase"],
+                "default_last_return_qty": forced_return_qty,
+                "default_last_return_route": forced_return_route,
+                "default_return_from_scan": False,
+                "default_return_qty": 0.0,
+                "default_return_route": False,
+                "default_near_expiry_decision": False,
+            }
+            if self.active_lot_status == "expired":
+                defaults["default_return_from_scan"] = True
+                defaults["default_return_route"] = "damaged"
+
             return {
                 "type": "ir.actions.act_window",
                 "name": _("Scan Barcode"),
                 "res_model": "route.visit.scan.wizard",
                 "view_mode": "form",
                 "target": "new",
-                "context": {
-                    "default_visit_id": self.visit_id.id,
-                    "default_scan_mode": self.scan_mode,
-                    "default_active_lot_id": self.active_lot_id.id,
-                    "default_focus_target": "product" if self.active_lot_id else "lot",
-                    "default_last_product_id": product.id,
-                    "default_last_counted_qty": result["counted_increase"],
-                    "default_last_return_qty": forced_return_qty,
-                    "default_last_return_route": forced_return_route,
-                    "default_return_from_scan": False,
-                    "default_return_qty": 0.0,
-                    "default_near_expiry_action": "keep",
-                    "default_scan_guidance_message": False,
-                },
+                "context": defaults,
             }
 
         raise UserError(_("Return mode is not handled in this version."))
