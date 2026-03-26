@@ -344,6 +344,23 @@ class RouteVisitScanWizard(models.TransientModel):
             "unit_price": product.lst_price or 0.0,
         })
 
+    def _get_current_scan_counted_increase(self):
+        self.ensure_one()
+        if not self.detected_product_id:
+            return 0.0
+        effective_qty = self.quantity or 0.0
+        effective_uom = self.base_uom_id if self.detected_scan_type == "Box Barcode" else self.scanned_uom_id
+        if effective_qty <= 0:
+            return 0.0
+        try:
+            return self.visit_id._get_scan_counted_increase(
+                self.detected_product_id,
+                scan_qty=effective_qty,
+                scanned_uom=effective_uom,
+            )
+        except Exception:
+            return self.counted_increase or 0.0
+
     def action_scan_and_add(self):
         self.ensure_one()
         if not self.visit_id:
@@ -352,6 +369,12 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Please enter or scan a barcode first."))
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
+
+        preview_counted_increase = 0.0
+        if self.scan_mode == "count":
+            preview_counted_increase = self._get_current_scan_counted_increase()
+            if preview_counted_increase <= 0:
+                preview_counted_increase = self.counted_increase or 0.0
 
         if self.scan_mode == "count" and self.active_lot_status == "expired" and self.expired_decision != "damaged":
             raise UserError(_("This lot is expired. Choose 'Return To Damaged Stock' before scanning can continue."))
@@ -362,7 +385,7 @@ class RouteVisitScanWizard(models.TransientModel):
             if self.near_expiry_decision in ("vehicle", "near_expiry"):
                 if self.return_qty <= 0:
                     raise UserError(_("Please enter the quantity to return for the near expiry lot."))
-                if self.return_qty > (self.counted_increase or 0.0):
+                if self.return_qty - preview_counted_increase > 1e-9:
                     raise UserError(_("Return Qty cannot be greater than the counted quantity from this scan."))
 
         effective_qty = self.quantity
@@ -385,7 +408,7 @@ class RouteVisitScanWizard(models.TransientModel):
                 line_vals["expiry_date"] = effective_expiry_date
             line_vals["suggest_near_expiry_return"] = self.is_near_expiry
 
-            counted_increase = result["counted_increase"] or 0.0
+            counted_increase = preview_counted_increase or result["counted_increase"] or 0.0
             forced_return_qty = 0.0
             forced_return_route = False
 
@@ -400,12 +423,14 @@ class RouteVisitScanWizard(models.TransientModel):
                 elif self.near_expiry_decision in ("vehicle", "near_expiry"):
                     forced_return_qty = self.return_qty or 0.0
                     forced_return_route = self.near_expiry_decision
+                    if forced_return_qty - counted_increase > 1e-9:
+                        raise UserError(_("Return Qty cannot be greater than the counted quantity from this scan."))
                     line_vals["suggest_near_expiry_return"] = False
             elif self.return_from_scan:
                 requested_return_qty = self.return_qty or 0.0
                 if requested_return_qty <= 0:
                     requested_return_qty = counted_increase
-                if requested_return_qty > counted_increase:
+                if requested_return_qty - counted_increase > 1e-9:
                     raise UserError(_("Return Qty cannot be greater than the counted quantity from this scan."))
                 forced_return_qty = requested_return_qty
                 forced_return_route = self.return_route or "vehicle"
