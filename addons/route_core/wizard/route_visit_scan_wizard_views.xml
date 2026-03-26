@@ -29,9 +29,11 @@
 <field name="quantity" readonly="auto_quantity_locked"/>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
 <field name="expiry_date" invisible="scan_mode != 'count'"/>
-<field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id"/>
-<field name="return_qty" invisible="scan_mode != 'count' or not return_from_scan"/>
-<field name="return_route" invisible="scan_mode != 'count' or not return_from_scan"/>
+<field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
+<field name="return_qty" invisible="scan_mode != 'count' or (not return_from_scan and active_lot_status not in ('expired','near_expiry'))" readonly="active_lot_status in ('expired','near_expiry')"/>
+<field name="return_route" invisible="scan_mode != 'count' or (not return_from_scan and active_lot_status not in ('expired','near_expiry'))" readonly="active_lot_status in ('expired','near_expiry')"/>
+<field name="near_expiry_action" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'"/>
+<field name="scan_guidance_message" readonly="1" invisible="scan_mode != 'count' or active_lot_status not in ('expired','near_expiry')"/>
 <field name="add_to_near_expiry_return" invisible="1"/>
 <field name="auto_quantity_locked" invisible="1"/>
 <field name="auto_uom_locked" invisible="1"/>
