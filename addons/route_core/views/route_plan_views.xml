@@ -87,7 +87,7 @@
 <field name="partner_id" readonly="1"/>
 <field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
-<field name="visit_id" string="Execution Record" readonly="1"/>
+<field name="visit_id" string="Follow-up Visit" readonly="1"/>
 <field name="note" string="Line Note"/>
 <button name="action_view_outlet_shortages" type="object" string="Shortages" icon="fa-exclamation-triangle"/>
 <button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play"/>
