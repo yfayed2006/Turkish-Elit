@@ -112,12 +112,26 @@
 <field name="user_id"/>
 <field name="vehicle_id"/>
 <field name="area_id"/>
+<field name="area_summary" string="Areas"/>
+<field name="outlet_summary" string="Outlets"/>
+<field name="state"/>
 <filter name="filter_my_plans" string="My Plans" domain="[('user_id', '=', uid)]"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
-<filter name="filter_cancel" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+<filter name="filter_cancel" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
+<separator/>
+<filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+<searchpanel>
+<field name="user_id" string="Salesperson"/>
+<field name="vehicle_id" string="Vehicle"/>
+<field name="area_id" string="Area"/>
+</searchpanel>
 </search>
 </field>
 </record>
