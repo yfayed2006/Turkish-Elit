@@ -50,6 +50,24 @@ class OutletStockBalance(models.Model):
         default=fields.Datetime.now,
     )
 
+    lot_names = fields.Char(
+        string="Lot / Serial",
+        compute="_compute_lot_tracking_info",
+        readonly=True,
+    )
+
+    nearest_expiry_date = fields.Date(
+        string="Expiry Date",
+        compute="_compute_lot_tracking_info",
+        readonly=True,
+    )
+
+    nearest_alert_date = fields.Date(
+        string="Alert Date",
+        compute="_compute_lot_tracking_info",
+        readonly=True,
+    )
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -79,6 +97,49 @@ class OutletStockBalance(models.Model):
             name = f"{rec.outlet_id.display_name} - {rec.product_id.display_name}"
             result.append((rec.id, name))
         return result
+
+    @api.depends("outlet_id", "product_id")
+    def _compute_lot_tracking_info(self):
+        Quant = self.env["stock.quant"]
+        for rec in self:
+            rec.lot_names = False
+            rec.nearest_expiry_date = False
+            rec.nearest_alert_date = False
+
+            if not rec.outlet_id or not rec.product_id:
+                continue
+
+            stock_location_field = rec.outlet_id._fields.get("stock_location_id")
+            location = stock_location_field and rec.outlet_id.stock_location_id or False
+            if not location:
+                continue
+
+            quants = Quant.search([
+                ("location_id", "child_of", location.id),
+                ("product_id", "=", rec.product_id.id),
+                ("quantity", ">", 0),
+                ("lot_id", "!=", False),
+            ])
+
+            lots = quants.mapped("lot_id")
+            if not lots:
+                continue
+
+            unique_lots = lots.sorted(lambda lot: (lot.name or "", lot.id))
+            rec.lot_names = ", ".join(dict.fromkeys(unique_lots.mapped("name")))
+
+            expiry_dates = []
+            alert_dates = []
+            for lot in unique_lots:
+                if lot.expiration_date:
+                    expiry_dates.append(fields.Date.to_date(lot.expiration_date))
+                if lot.alert_date:
+                    alert_dates.append(fields.Date.to_date(lot.alert_date))
+
+            if expiry_dates:
+                rec.nearest_expiry_date = min(expiry_dates)
+            if alert_dates:
+                rec.nearest_alert_date = min(alert_dates)
 
     @api.onchange("product_id")
     def _onchange_product_id_set_unit_price(self):
