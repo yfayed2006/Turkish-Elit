@@ -1,94 +1,120 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_route_visit_payment_list" model="ir.ui.view">
-        <field name="name">route.visit.payment.list</field>
-        <field name="model">route.visit.payment</field>
-        <field name="arch" type="xml">
-            <list>
-                <field name="visit_id"/>
-                <field name="payment_date"/>
-                <field name="payment_mode"/>
-                <field name="collection_type"/>
-                <field name="amount"/>
-                <field name="due_date"/>
-                <field name="reference"/>
-                <field name="state"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_route_visit_payment_form" model="ir.ui.view">
-        <field name="name">route.visit.payment.form</field>
-        <field name="model">route.visit.payment</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button
-                        name="action_confirm"
-                        string="Confirm"
-                        type="object"
-                        class="btn-primary"
-                        invisible="state != 'draft'"
-                    />
-                    <button
-                        name="action_reset_to_draft"
-                        string="Reset to Draft"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="state != 'cancelled'"
-                    />
-                    <button
-                        name="action_cancel"
-                        string="Cancel"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="state != 'draft'"
-                    />
-                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
-                </header>
-                <sheet>
-                    <group string="Visit Financial Status" col="2">
-                        <group>
-                            <field name="visit_id" readonly="state != 'draft'"/>
-                            <field name="visit_remaining_due" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="payment_date" readonly="state != 'draft'"/>
-                            <field name="payment_mode" readonly="state != 'draft'"/>
-                        </group>
-                    </group>
-
-                    <group string="Collection Decision" col="2">
-                        <group>
-                            <field name="collection_type" readonly="state != 'draft'"/>
-                            <field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
-                            <field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
-                        </group>
-                        <group>
-                            <field name="reference" readonly="state != 'draft'" invisible="payment_mode == 'cash'"/>
-                            <field name="bank_name" readonly="state != 'draft'" invisible="payment_mode != 'bank'"/>
-                            <field name="pos_terminal" readonly="state != 'draft'" invisible="payment_mode != 'pos'"/>
-                        </group>
-                    </group>
-
-                    <group>
-                        <field name="note" readonly="state != 'draft'"/>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_route_visit_payment" model="ir.actions.act_window">
-        <field name="name">Visit Payments</field>
-        <field name="res_model">route.visit.payment</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <menuitem
-        id="menu_route_visit_payment"
-        name="Visit Payments"
-        parent="menu_route_visit_root"
-        action="action_route_visit_payment"
-        sequence="61"/>
+<record id="view_route_visit_payment_list" model="ir.ui.view">
+<field name="name">route.visit.payment.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list>
+<field name="visit_id"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="amount"/>
+<field name="remaining_due_amount" string="Unpaid Amount" widget="badge" decoration-danger="remaining_due_amount > 0" decoration-success="remaining_due_amount <= 0"/>
+<field name="due_date"/>
+<field name="reference"/>
+<field name="state"/>
+</list>
+</field>
+</record>
+<record id="view_route_visit_payment_form" model="ir.ui.view">
+<field name="name">route.visit.payment.form</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<form>
+<header>
+<button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
+<button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
+<button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
+</header>
+<sheet>
+<group string="Visit Financial Status" col="2">
+<group>
+<field name="visit_id" readonly="state != 'draft'"/>
+<field name="outlet_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="salesperson_id" readonly="1"/>
+<field name="visit_remaining_due" readonly="1"/>
+</group>
+<group>
+<field name="payment_date" readonly="state != 'draft'"/>
+<field name="payment_mode" readonly="state != 'draft'"/>
+</group>
+</group>
+<group string="Collection Decision" col="2">
+<group>
+<field name="collection_type" readonly="state != 'draft'"/>
+<field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
+<field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
+</group>
+<group>
+<field name="reference" readonly="state != 'draft'" invisible="payment_mode == 'cash'"/>
+<field name="bank_name" readonly="state != 'draft'" invisible="payment_mode != 'bank'"/>
+<field name="pos_terminal" readonly="state != 'draft'" invisible="payment_mode != 'pos'"/>
+</group>
+</group>
+<group>
+<field name="note" readonly="state != 'draft'"/>
+</group>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_visit_payment_search" model="ir.ui.view">
+<field name="name">route.visit.payment.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Visit Payments">
+<field name="visit_id"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="state"/>
+<field name="reference"/>
+<filter name="filter_today" string="Today" domain="[('payment_date', '>=', context_today()), ('payment_date', '<', context_today() + relativedelta(days=1))]"/>
+<filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_collection_type" string="Collection Scenario" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="salesperson_id" string="Salesperson"/>
+<field name="payment_mode" string="Payment Mode"/>
+<field name="collection_type" string="Collection Scenario"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="action_route_visit_payment" model="ir.actions.act_window">
+<field name="name">Visit Payments</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_today': 0}</field>
+</record>
+<menuitem id="menu_route_visit_payment" name="Visit Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
 </odoo>
