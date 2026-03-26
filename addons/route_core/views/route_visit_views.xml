@@ -353,15 +353,30 @@
 <field name="vehicle_id"/>
 <field name="user_id"/>
 <field name="state"/>
+<field name="visit_process_state"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
 <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
+<filter name="filter_has_shortages" string="Has Shortages" domain="[('shortage_count', '>', 0)]"/>
 <separator/>
-<filter name="group_by_user" string="Salesperson" context="{'group_by': 'user_id'}"/>
-<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
-<filter name="group_by_state" string="Visit State" context="{'group_by': 'state'}"/>
+<filter name="filter_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="filter_customer" string="Customer" domain="[]" context="{'group_by': 'partner_id'}"/>
+<filter name="filter_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="filter_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'user_id'}"/>
+<filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+<filter name="group_by_process" string="Process State" context="{'group_by': 'visit_process_state'}"/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
 <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="partner_id" string="Customer"/>
+<field name="user_id" string="Salesperson"/>
+<field name="state" string="Status" select="multi"/>
+<field name="visit_process_state" string="Process State" select="multi"/>
+</searchpanel>
 </search>
 </field>
 </record>
