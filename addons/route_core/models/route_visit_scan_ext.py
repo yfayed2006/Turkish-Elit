@@ -40,7 +40,10 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not lot:
             return False
-        for field_name in ("expiration_date", "life_date", "use_date"):
+        # Prefer the earliest operational lot date that should drive field decisions.
+        # removal_date is used first so already-removal lots are treated as expired
+        # even when the final expiration_date is later.
+        for field_name in ("removal_date", "expiration_date", "life_date", "use_date"):
             if field_name in lot._fields and lot[field_name]:
                 return fields.Date.to_date(lot[field_name])
         return False
@@ -447,19 +450,13 @@ class RouteVisit(models.Model):
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
-        if not product:
-            return False
-
-        if self._find_visit_line_for_product(product):
-            return True
-
-        allowed_locations = self._get_scan_allowed_locations()
-        if not allowed_locations:
+        source_location = self._get_scan_source_location()
+        if not source_location or not product:
             return False
 
         quant = self.env["stock.quant"].search(
             [
-                ("location_id", "child_of", allowed_locations.ids),
+                ("location_id", "child_of", source_location.id),
                 ("product_id", "=", product.id),
                 ("quantity", ">", 0),
             ],
@@ -481,17 +478,37 @@ class RouteVisit(models.Model):
         )
         return sum(quants.mapped("quantity"))
 
-    def _find_visit_line_for_product(self, product):
+    def _get_outlet_available_qty_for_product_lot(self, product, lot):
         self.ensure_one()
-        return self.line_ids.filtered(lambda l: l.product_id == product)[:1]
+        outlet_location = self._get_scan_outlet_location()
+        if not outlet_location or not product or not lot:
+            return 0.0
+        quants = self.env["stock.quant"].search([
+            ("location_id", "child_of", outlet_location.id),
+            ("product_id", "=", product.id),
+            ("lot_id", "=", lot.id),
+        ])
+        return sum(quants.mapped("quantity"))
 
-    def _prepare_visit_line_from_scan(self, product, counted_increase, resolved_lot=False, resolved_expiry_date=False):
+    def _find_visit_line_for_product(self, product, lot=False):
+        self.ensure_one()
+        lines = self.line_ids.filtered(lambda l: l.product_id == product)
+        if not lines:
+            return self.env["route.visit.line"]
+        if lot and "lot_id" in self.env["route.visit.line"]._fields:
+            exact = lines.filtered(lambda l: l.lot_id == lot)[:1]
+            if exact:
+                return exact
+            return lines.filtered(lambda l: not l.lot_id)[:1]
+        return lines.filtered(lambda l: not l.lot_id)[:1] or lines[:1]
+
+    def _prepare_visit_line_from_scan(self, product, counted_increase, resolved_lot=False, resolved_expiry_date=False, previous_qty=0.0):
         self.ensure_one()
         vals = {
             "visit_id": self.id,
             "company_id": self.company_id.id,
             "product_id": product.id,
-            "previous_qty": 0.0,
+            "previous_qty": previous_qty or 0.0,
             "counted_qty": counted_increase,
             "unit_price": product.lst_price or 0.0,
             "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
@@ -501,6 +518,67 @@ class RouteVisit(models.Model):
         if resolved_expiry_date:
             vals["expiry_date"] = resolved_expiry_date
         return vals
+
+    def _get_or_create_visit_line_for_product_and_lot(self, product, resolved_lot=False, resolved_expiry_date=False, counted_increase=0.0):
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+
+        if not resolved_lot or "lot_id" not in RouteVisitLine._fields:
+            line = self._find_visit_line_for_product(product)
+            if line:
+                return line
+            return RouteVisitLine.create([self._prepare_visit_line_from_scan(product, counted_increase)])
+
+        exact_line = self.line_ids.filtered(
+            lambda l: l.product_id == product and l.lot_id == resolved_lot
+        )[:1]
+        if exact_line:
+            return exact_line
+
+        unassigned_line = self.line_ids.filtered(
+            lambda l: l.product_id == product
+            and not l.lot_id
+            and (l.counted_qty or 0.0) <= 0
+            and (l.return_qty or 0.0) <= 0
+            and (l.supplied_qty or 0.0) <= 0
+        )[:1]
+
+        lot_previous_qty = self._get_outlet_available_qty_for_product_lot(product, resolved_lot)
+
+        if unassigned_line:
+            original_previous_qty = unassigned_line.previous_qty or 0.0
+            remainder_previous_qty = max(original_previous_qty - lot_previous_qty, 0.0)
+
+            unassigned_line.write({
+                "lot_id": resolved_lot.id,
+                "previous_qty": lot_previous_qty,
+                "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+                "expiry_date": resolved_expiry_date or unassigned_line.expiry_date,
+            })
+
+            if remainder_previous_qty > 0:
+                RouteVisitLine.create({
+                    "visit_id": self.id,
+                    "company_id": self.company_id.id,
+                    "product_id": product.id,
+                    "previous_qty": remainder_previous_qty,
+                    "counted_qty": 0.0,
+                    "unit_price": unassigned_line.unit_price or product.lst_price or 0.0,
+                    "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+                    "return_route": unassigned_line.return_route or "vehicle",
+                })
+
+            return unassigned_line
+
+        return RouteVisitLine.create([
+            self._prepare_visit_line_from_scan(
+                product,
+                counted_increase,
+                resolved_lot=resolved_lot,
+                resolved_expiry_date=resolved_expiry_date,
+                previous_qty=lot_previous_qty,
+            )
+        ])
 
     def _get_scan_counted_increase(self, product, scan_qty=1.0, scanned_uom=False):
         self.ensure_one()
@@ -555,34 +633,26 @@ class RouteVisit(models.Model):
 
         if not self._is_product_available_in_vehicle(product):
             raise UserError(
-                _("Product '%s' is not currently available in the van stock or current outlet stock.")
+                _("Product '%s' is not currently available in the van stock.")
                 % product.display_name
             )
 
         resolved_lot = self._resolve_product_active_lot(product, active_lot=active_lot)
         resolved_expiry_date = self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
 
-        line = self._find_visit_line_for_product(product)
+        line = self._get_or_create_visit_line_for_product_and_lot(
+            product,
+            resolved_lot=resolved_lot,
+            resolved_expiry_date=resolved_expiry_date,
+            counted_increase=counted_increase,
+        )
         if line:
             update_vals = {
                 "counted_qty": (line.counted_qty or 0.0) + counted_increase,
                 "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
             }
-            if resolved_lot and "lot_id" in line._fields:
-                if line.lot_id and line.lot_id != resolved_lot:
-                    raise UserError(
-                        _(
-                            "Product '%(product)s' was already counted with Lot/Serial '%(existing)s'. "
-                            "The current visit line supports one Lot/Serial per product. "
-                            "Please complete the missing lots step or adjust the line before scanning another lot."
-                        )
-                        % {
-                            "product": product.display_name,
-                            "existing": line.lot_id.display_name,
-                        }
-                    )
-                if not line.lot_id:
-                    update_vals["lot_id"] = resolved_lot.id
+            if resolved_lot and "lot_id" in line._fields and not line.lot_id:
+                update_vals["lot_id"] = resolved_lot.id
             if resolved_expiry_date and not line.expiry_date:
                 update_vals["expiry_date"] = resolved_expiry_date
             line.write(update_vals)
@@ -593,6 +663,7 @@ class RouteVisit(models.Model):
                     counted_increase,
                     resolved_lot=resolved_lot,
                     resolved_expiry_date=resolved_expiry_date,
+                    previous_qty=self._get_outlet_available_qty_for_product_lot(product, resolved_lot),
                 )
             ])
 
