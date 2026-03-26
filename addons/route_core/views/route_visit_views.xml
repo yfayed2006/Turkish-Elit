@@ -11,6 +11,7 @@
 <field name="area_id"/>
 <field name="vehicle_id"/>
 <field name="user_id"/>
+<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="visit_process_state"/>
 <field name="state"/>
 <field name="sale_order_id"/>
@@ -30,6 +31,7 @@
 <field name="partner_id"/>
 <field name="area_id"/>
 <field name="user_id"/>
+<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="visit_process_state"/>
 <field name="state"/>
 <field name="sale_order_id"/>
@@ -69,6 +71,12 @@
 <span class="text-muted">Visit State:</span>
 <span class="ms-1">
 <field name="state"/>
+</span>
+</div>
+<div class="mb-1">
+<span class="text-muted">Shortages:</span>
+<span class="ms-1">
+<field name="shortage_count" widget="badge" decoration-warning="shortage_count > 0"/>
 </span>
 </div>
 <div class="mb-2">
