@@ -10,7 +10,7 @@
 <field name="partner_id"/>
 <field name="area_id"/>
 <field name="user_id"/>
-<field name="source_visit_id"/>
+<field name="source_visit_id" string="Generated From Visit"/>
 <field name="planned_route_plan_id"/>
 <field name="line_count"/>
 <field name="total_remaining_qty"/>
@@ -29,7 +29,7 @@
 <button name="action_mark_done" type="object" string="Mark Done" class="btn-success" invisible="state in ('done', 'cancel')"/>
 <button name="action_reopen" type="object" string="Reopen" class="btn-secondary" invisible="state not in ('planned', 'done', 'cancel')"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancel'"/>
-<button name="action_view_source_visit" type="object" string="Open Source Visit" class="btn-secondary" invisible="not source_visit_id"/>
+<button name="action_view_source_visit" type="object" string="Open Generated Visit" class="btn-secondary" invisible="not source_visit_id"/>
 <button name="action_view_planned_route_plan" type="object" string="Open Planned Route Plan" class="btn-secondary" invisible="not planned_route_plan_id"/>
 <field name="state" widget="statusbar" statusbar_visible="open,planned,done,cancel"/>
 </header>
@@ -44,7 +44,7 @@
 <field name="date"/>
 <field name="planned_date"/>
 <field name="planned_route_plan_id" readonly="1"/>
-<field name="source_visit_id" readonly="1"/>
+<field name="source_visit_id" string="Generated From Visit" readonly="1"/>
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1"/>
 </group>
@@ -91,7 +91,7 @@
 <field name="partner_id"/>
 <field name="area_id"/>
 <field name="user_id"/>
-<field name="source_visit_id"/>
+<field name="source_visit_id" string="Generated From Visit"/>
 <field name="planned_route_plan_id"/>
 <filter name="filter_open" string="Open" domain="[('state', '=', 'open')]"/>
 <filter name="filter_planned" string="Planned" domain="[('state', '=', 'planned')]"/>
