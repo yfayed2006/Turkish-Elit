@@ -359,7 +359,6 @@
 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancel')]"/>
-<filter name="filter_has_shortages" string="Has Shortages" domain="[('shortage_count', '>', 0)]"/>
 <separator/>
 <filter name="filter_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="filter_customer" string="Customer" domain="[]" context="{'group_by': 'partner_id'}"/>
