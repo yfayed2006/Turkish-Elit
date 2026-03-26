@@ -1,9 +1,9 @@
 <odoo>
-<record id="view_route_visit_scan_wizard_form" model="ir.ui.view">
-<field name="name">route.visit.scan.wizard.form</field>
-<field name="model">route.visit.scan.wizard</field>
+<record id="view_route_visit_return_scan_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.return.scan.wizard.form</field>
+<field name="model">route.visit.return.scan.wizard</field>
 <field name="arch" type="xml">
-<form string="Scan Barcode / Returns">
+<form string="Scan Additional Returns">
 <group string="Active Lot" invisible="scan_mode != 'count'">
 <group>
 <field name="focus_target" invisible="1"/>
@@ -34,6 +34,7 @@
 <field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
 <field name="return_qty" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)"/>
 <field name="return_route" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)" readonly="active_lot_status == 'expired'"/>
+<field name="return_route" invisible="scan_mode != 'return'"/>
 <field name="add_to_near_expiry_return" invisible="1"/>
 <field name="auto_quantity_locked" invisible="1"/>
 <field name="auto_uom_locked" invisible="1"/>
