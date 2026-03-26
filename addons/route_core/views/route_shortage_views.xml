@@ -91,6 +91,7 @@
 <field name="partner_id"/>
 <field name="area_id"/>
 <field name="user_id"/>
+<field name="state"/>
 <field name="source_visit_id" string="Generated From Visit"/>
 <field name="planned_route_plan_id"/>
 <filter name="filter_open" string="Open" domain="[('state', '=', 'open')]"/>
@@ -100,10 +101,18 @@
 <separator/>
 <filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_plan" string="Route Plan" context="{'group_by': 'planned_route_plan_id'}"/>
 <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
 <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+<searchpanel>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="partner_id"/>
+<field name="user_id"/>
+<field name="state"/>
+</searchpanel>
 </search>
 </field>
 </record>
