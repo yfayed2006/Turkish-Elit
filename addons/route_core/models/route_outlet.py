@@ -347,7 +347,16 @@ class RouteOutlet(models.Model):
             record.total_shortage_count = len(shortages.filtered(lambda s: s.state in ["open", "planned"]))
             record.last_shortage_id = shortages[:1] if shortages else False
 
-    @api.depends("name", "area_id", "visit_ids", "visit_ids.state")
+    @api.depends(
+        "name",
+        "area_id",
+        "visit_ids",
+        "visit_ids.state",
+        "visit_ids.plan_line_id",
+        "visit_ids.plan_line_id.plan_id",
+        "visit_ids.plan_line_id.plan_id.date",
+        "visit_ids.plan_line_id.plan_id.state",
+    )
     def _compute_plan_stats(self):
         PlanLine = self.env["route.plan.line"]
         today = fields.Date.context_today(self)
@@ -357,10 +366,18 @@ class RouteOutlet(models.Model):
                     ("outlet_id", "=", record.id),
                     ("state", "=", "pending"),
                     ("plan_id.state", "in", ["draft", "in_progress"]),
-                ],
-                order="plan_id.date asc, id asc",
+                ]
             )
-            future_lines = pending_lines.filtered(lambda line: line.plan_id.date and line.plan_id.date >= today)
+            pending_lines = pending_lines.sorted(
+                key=lambda line: (
+                    line.plan_id.date or fields.Date.to_date("9999-12-31"),
+                    line.sequence or 0,
+                    line.id,
+                )
+            )
+            future_lines = pending_lines.filtered(
+                lambda line: line.plan_id.date and line.plan_id.date >= today
+            )
             next_line = (future_lines[:1] or pending_lines[:1]) if pending_lines else False
 
             record.next_route_plan_id = next_line.plan_id if next_line else False
