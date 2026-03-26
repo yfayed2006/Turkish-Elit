@@ -447,13 +447,19 @@ class RouteVisit(models.Model):
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
-        source_location = self._get_scan_source_location()
-        if not source_location or not product:
+        if not product:
+            return False
+
+        if self._find_visit_line_for_product(product):
+            return True
+
+        allowed_locations = self._get_scan_allowed_locations()
+        if not allowed_locations:
             return False
 
         quant = self.env["stock.quant"].search(
             [
-                ("location_id", "child_of", source_location.id),
+                ("location_id", "child_of", allowed_locations.ids),
                 ("product_id", "=", product.id),
                 ("quantity", ">", 0),
             ],
@@ -549,7 +555,7 @@ class RouteVisit(models.Model):
 
         if not self._is_product_available_in_vehicle(product):
             raise UserError(
-                _("Product '%s' is not currently available in the van stock.")
+                _("Product '%s' is not currently available in the van stock or current outlet stock.")
                 % product.display_name
             )
 
