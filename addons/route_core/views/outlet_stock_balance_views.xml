@@ -1,55 +1,78 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_outlet_stock_balance_list" model="ir.ui.view">
-        <field name="name">outlet.stock.balance.list</field>
-        <field name="model">outlet.stock.balance</field>
-        <field name="arch" type="xml">
-            <list>
-                <field name="outlet_id"/>
-                <field name="product_id"/>
-                <field name="barcode"/>
-                <field name="qty"/>
-                <field name="unit_price"/>
-                <field name="last_visit_id"/>
-                <field name="last_updated_at"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_outlet_stock_balance_form" model="ir.ui.view">
-        <field name="name">outlet.stock.balance.form</field>
-        <field name="model">outlet.stock.balance</field>
-        <field name="arch" type="xml">
-            <form>
-                <sheet>
-                    <group>
-                        <group>
-                            <field name="outlet_id"/>
-                            <field name="product_id"/>
-                            <field name="barcode" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="qty"/>
-                            <field name="unit_price"/>
-                            <field name="last_visit_id"/>
-                            <field name="last_updated_at" readonly="1"/>
-                        </group>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_outlet_stock_balance" model="ir.actions.act_window">
-        <field name="name">Outlet Stock Balances</field>
-        <field name="res_model">outlet.stock.balance</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <menuitem
-        id="menu_outlet_stock_balance"
-        name="Outlet Stock Balances"
-        parent="menu_route_visit_root"
-        action="action_outlet_stock_balance"
-        sequence="60"/>
+<record id="view_outlet_stock_balance_list" model="ir.ui.view">
+<field name="name">outlet.stock.balance.list</field>
+<field name="model">outlet.stock.balance</field>
+<field name="arch" type="xml">
+<list>
+<field name="outlet_id"/>
+<field name="product_id"/>
+<field name="barcode"/>
+<field name="lot_names"/>
+<field name="nearest_expiry_date"/>
+<field name="nearest_alert_date"/>
+<field name="qty"/>
+<field name="unit_price"/>
+<field name="last_visit_id"/>
+<field name="last_updated_at"/>
+</list>
+</field>
+</record>
+<record id="view_outlet_stock_balance_form" model="ir.ui.view">
+<field name="name">outlet.stock.balance.form</field>
+<field name="model">outlet.stock.balance</field>
+<field name="arch" type="xml">
+<form>
+<sheet>
+<group>
+<group>
+<field name="outlet_id"/>
+<field name="product_id"/>
+<field name="barcode" readonly="1"/>
+<field name="lot_names" readonly="1"/>
+</group>
+<group>
+<field name="qty"/>
+<field name="unit_price"/>
+<field name="nearest_expiry_date" readonly="1"/>
+<field name="nearest_alert_date" readonly="1"/>
+<field name="last_visit_id"/>
+<field name="last_updated_at" readonly="1"/>
+</group>
+</group>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_outlet_stock_balance_search" model="ir.ui.view">
+<field name="name">outlet.stock.balance.search</field>
+<field name="model">outlet.stock.balance</field>
+<field name="arch" type="xml">
+<search string="Outlet Stock Balances">
+<field name="outlet_id"/>
+<field name="product_id"/>
+<field name="barcode"/>
+<field name="last_visit_id"/>
+<filter name="filter_has_qty" string="Has Quantity" domain="[('qty', '>', 0)]"/>
+<filter name="filter_zero_qty" string="Zero Quantity" domain="[('qty', '=', 0)]"/>
+<filter name="filter_with_last_visit" string="With Last Visit" domain="[('last_visit_id', '!=', False)]"/>
+<separator/>
+<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_by_last_visit" string="Last Visit" context="{'group_by': 'last_visit_id'}"/>
+<filter name="group_by_updated_at" string="Last Updated" context="{'group_by': 'last_updated_at'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="product_id" string="Product"/>
+<field name="last_visit_id" string="Last Visit"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="action_outlet_stock_balance" model="ir.actions.act_window">
+<field name="name">Outlet Stock Balances</field>
+<field name="res_model">outlet.stock.balance</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_outlet_stock_balance_search"/>
+</record>
+<menuitem id="menu_outlet_stock_balance" name="Outlet Stock Balances" parent="menu_route_visit_root" action="action_outlet_stock_balance" sequence="60"/>
 </odoo>
