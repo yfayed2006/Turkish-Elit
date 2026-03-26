@@ -236,7 +236,7 @@ class RouteVisitLine(models.Model):
         for line in self:
             if not line.expiry_date or not line.is_near_expiry:
                 line.near_expiry_action_state = "none"
-            elif line.return_qty > 0 and line.return_route == "near_expiry":
+            elif line.return_qty > 0:
                 line.near_expiry_action_state = "returned"
             elif line.keep_near_expiry:
                 line.near_expiry_action_state = "kept"
