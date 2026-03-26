@@ -79,6 +79,12 @@ class RouteOutlet(models.Model):
         string="Stock Balances",
     )
 
+    plan_line_ids = fields.One2many(
+        "route.plan.line",
+        "outlet_id",
+        string="Route Plan Lines",
+    )
+
     visit_count = fields.Integer(
         string="Visits Count",
         compute="_compute_visit_stats",
@@ -348,14 +354,12 @@ class RouteOutlet(models.Model):
             record.last_shortage_id = shortages[:1] if shortages else False
 
     @api.depends(
-        "name",
-        "area_id",
-        "visit_ids",
-        "visit_ids.state",
-        "visit_ids.plan_line_id",
-        "visit_ids.plan_line_id.plan_id",
-        "visit_ids.plan_line_id.plan_id.date",
-        "visit_ids.plan_line_id.plan_id.state",
+        "plan_line_ids",
+        "plan_line_ids.state",
+        "plan_line_ids.sequence",
+        "plan_line_ids.plan_id",
+        "plan_line_ids.plan_id.date",
+        "plan_line_ids.plan_id.state",
     )
     def _compute_plan_stats(self):
         PlanLine = self.env["route.plan.line"]
