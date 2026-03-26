@@ -154,7 +154,7 @@
 <field name="last_stock_update_at" readonly="1"/>
 </group>
 </group>
-<group string="Shortages & Alerts" col="2">
+<group string="Shortages and Alerts" col="2">
 <group>
 <field name="open_shortage_count" readonly="1"/>
 <field name="planned_shortage_count" readonly="1"/>
