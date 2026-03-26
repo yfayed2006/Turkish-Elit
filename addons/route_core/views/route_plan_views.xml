@@ -130,7 +130,8 @@
 <searchpanel>
 <field name="user_id" string="Salesperson"/>
 <field name="vehicle_id" string="Vehicle"/>
-<field name="area_id" string="Area"/>
+<field name="search_area_ids" string="Areas" select="multi"/>
+<field name="search_outlet_ids" string="Outlets" select="multi"/>
 </searchpanel>
 </search>
 </field>
