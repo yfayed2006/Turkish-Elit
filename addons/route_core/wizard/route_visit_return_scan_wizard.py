@@ -2,9 +2,9 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 
-class RouteVisitScanWizard(models.TransientModel):
-    _name = "route.visit.scan.wizard"
-    _description = "Route Visit Scan Wizard"
+class RouteVisitReturnScanWizard(models.TransientModel):
+    _name = "route.visit.return.scan.wizard"
+    _description = "Route Visit Return Scan Wizard"
 
     visit_id = fields.Many2one(
         "route.visit",
@@ -18,7 +18,7 @@ class RouteVisitScanWizard(models.TransientModel):
             ("return", "Return"),
         ],
         string="Scan Mode",
-        default="count",
+        default="return",
         required=True,
         readonly=True,
     )
@@ -314,7 +314,7 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Visit is required."))
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
         self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
-        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.return.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
 
     def action_clear_active_lot(self):
         self.ensure_one()
@@ -343,7 +343,7 @@ class RouteVisitScanWizard(models.TransientModel):
         return {
             "type": "ir.actions.act_window",
             "name": _("Scan Barcode"),
-            "res_model": "route.visit.scan.wizard",
+            "res_model": "route.visit.return.scan.wizard",
             "view_mode": "form",
             "target": "new",
             "res_id": self.id,
@@ -483,7 +483,7 @@ class RouteVisitScanWizard(models.TransientModel):
             return {
                 "type": "ir.actions.act_window",
                 "name": _("Scan Barcode"),
-                "res_model": "route.visit.scan.wizard",
+                "res_model": "route.visit.return.scan.wizard",
                 "view_mode": "form",
                 "target": "new",
                 "context": {
@@ -499,6 +499,51 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_return_qty": 0.0,
                     "default_near_expiry_decision": False,
                     "default_expired_decision": False,
+                },
+            }
+
+        if self.scan_mode == "return":
+            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+            product = scan_info["product"]
+            effective_return_qty = self._get_current_scan_counted_increase()
+            if effective_return_qty <= 0:
+                effective_return_qty = self.quantity or 0.0
+            if effective_return_qty <= 0:
+                raise UserError(_("Return quantity must be greater than zero."))
+
+            resolved_lot = False
+            effective_expiry_date = False
+            try:
+                resolved_lot = self.visit_id._resolve_product_active_lot(product, active_lot=self.active_lot_id)
+                effective_expiry_date = self.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
+            except UserError:
+                resolved_lot = False
+                effective_expiry_date = False
+
+            self.visit_id._add_return_qty(
+                product,
+                effective_return_qty,
+                return_route=self.return_route or "vehicle",
+                lot=resolved_lot,
+                expiry_date=effective_expiry_date,
+            )
+
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("Scan Returns"),
+                "res_model": "route.visit.return.scan.wizard",
+                "view_mode": "form",
+                "target": "new",
+                "context": {
+                    "default_visit_id": self.visit_id.id,
+                    "default_scan_mode": "return",
+                    "default_focus_target": "product",
+                    "default_quantity": 1.0,
+                    "default_scanned_uom_id": False,
+                    "default_return_route": self.return_route or "vehicle",
+                    "default_last_product_id": product.id,
+                    "default_last_return_qty": effective_return_qty,
+                    "default_last_return_route": self.return_route or "vehicle",
                 },
             }
 
