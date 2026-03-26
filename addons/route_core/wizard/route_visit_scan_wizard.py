@@ -321,6 +321,13 @@ class RouteVisitScanWizard(models.TransientModel):
         self.write({
             "active_lot_id": False,
             "lot_barcode": False,
+            "barcode": False,
+            "detected_product_id": False,
+            "base_uom_id": False,
+            "scanned_uom_id": False,
+            "detected_scan_type": False,
+            "counted_increase": 0.0,
+            "detected_packaging_name": False,
             "expiry_date": False,
             "add_to_near_expiry_return": False,
             "return_from_scan": False,
@@ -330,7 +337,31 @@ class RouteVisitScanWizard(models.TransientModel):
             "expired_decision": False,
             "return_route": "vehicle",
         })
-        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Scan Barcode"),
+            "res_model": "route.visit.scan.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "res_id": self.id,
+            "context": {
+                "default_visit_id": self.visit_id.id,
+                "default_scan_mode": self.scan_mode,
+                "default_focus_target": "lot",
+                "default_lot_barcode": False,
+                "default_barcode": False,
+                "default_quantity": 1.0,
+                "default_return_from_scan": False,
+                "default_return_qty": 0.0,
+                "default_near_expiry_decision": False,
+                "default_expired_decision": False,
+                "default_return_route": "vehicle",
+                "default_last_product_id": self.last_product_id.id if self.last_product_id else False,
+                "default_last_counted_qty": self.last_counted_qty,
+                "default_last_return_qty": self.last_return_qty,
+                "default_last_return_route": self.last_return_route,
+            },
+        }
 
     def _get_or_create_visit_line(self, product):
         self.ensure_one()
