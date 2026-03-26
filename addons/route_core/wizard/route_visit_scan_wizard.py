@@ -60,6 +60,17 @@ class RouteVisitScanWizard(models.TransientModel):
         default="vehicle",
     )
 
+    near_expiry_action = fields.Selection(
+        [
+            ("keep", "Keep On Shelf"),
+            ("vehicle", "Return To Vehicle"),
+            ("near_expiry", "Return To Near Expiry Stock"),
+        ],
+        string="Near Expiry Decision",
+        default="keep",
+    )
+    scan_guidance_message = fields.Text(string="Scan Guidance", readonly=True)
+
     detected_product_id = fields.Many2one("product.product", string="Detected Product", readonly=True)
     base_uom_id = fields.Many2one("uom.uom", string="Base UoM", readonly=True)
     scanned_uom_id = fields.Many2one("uom.uom", string="Count As UoM")
@@ -118,6 +129,36 @@ class RouteVisitScanWizard(models.TransientModel):
         for rec in self:
             rec.add_to_near_expiry_return = False
 
+    def _apply_scan_expiry_policy(self):
+        for rec in self:
+            if rec.scan_mode != "count" or not rec.detected_product_id or not rec.active_lot_id:
+                rec.scan_guidance_message = False
+                continue
+
+            counted_qty = rec.counted_increase or rec.quantity or 1.0
+
+            if rec.active_lot_status == "expired":
+                rec.scan_guidance_message = _(
+                    "This lot is expired. The scanned quantity will be returned automatically to Damaged Stock."
+                )
+                rec.return_from_scan = True
+                rec.return_qty = counted_qty
+                rec.return_route = "damaged"
+                rec.near_expiry_action = "keep"
+            elif rec.active_lot_status == "near_expiry":
+                rec.scan_guidance_message = _(
+                    "This lot is near expiry. Choose whether to keep it on the shelf, return it to the vehicle, or transfer it to Near Expiry Stock."
+                )
+                if rec.near_expiry_action in ("vehicle", "near_expiry"):
+                    rec.return_from_scan = True
+                    rec.return_qty = counted_qty
+                    rec.return_route = rec.near_expiry_action
+                else:
+                    rec.return_from_scan = False
+                    rec.return_qty = 0.0
+            else:
+                rec.scan_guidance_message = False
+
     @api.onchange("return_from_scan", "counted_increase")
     def _onchange_return_from_scan(self):
         for rec in self:
@@ -125,11 +166,23 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
                 continue
+            if rec.active_lot_status == "expired":
+                rec.return_from_scan = True
+                rec.return_qty = rec.counted_increase or rec.quantity or 1.0
+                rec.return_route = "damaged"
+                continue
+            if rec.active_lot_status == "near_expiry":
+                rec._apply_scan_expiry_policy()
+                continue
             if rec.return_from_scan:
                 if rec.return_qty <= 0:
                     rec.return_qty = rec.counted_increase or 1.0
             else:
                 rec.return_qty = 0.0
+
+    @api.onchange("active_lot_status", "counted_increase", "quantity", "near_expiry_action")
+    def _onchange_scan_expiry_policy(self):
+        self._apply_scan_expiry_policy()
 
     @api.onchange("barcode", "quantity", "scanned_uom_id", "visit_id", "active_lot_id")
     def _onchange_barcode_preview(self):
@@ -148,6 +201,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.add_to_near_expiry_return = False
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
+                rec.near_expiry_action = "keep"
+                rec.scan_guidance_message = False
                 continue
 
             try:
@@ -158,6 +213,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.add_to_near_expiry_return = False
                 rec.return_from_scan = False
                 rec.return_qty = 0.0
+                rec.near_expiry_action = "keep"
+                rec.scan_guidance_message = False
                 continue
 
             product = scan_info["product"]
@@ -194,6 +251,7 @@ class RouteVisitScanWizard(models.TransientModel):
 
             rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
             rec.add_to_near_expiry_return = False
+            rec._apply_scan_expiry_policy()
             if rec.return_from_scan and rec.return_qty <= 0:
                 rec.return_qty = rec.counted_increase or 1.0
 
@@ -207,7 +265,7 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def action_clear_active_lot(self):
         self.ensure_one()
-        self.write({"active_lot_id": False, "lot_barcode": False, "expiry_date": False, "add_to_near_expiry_return": False, "return_from_scan": False, "return_qty": 0.0, "focus_target": "lot"})
+        self.write({"active_lot_id": False, "lot_barcode": False, "expiry_date": False, "add_to_near_expiry_return": False, "return_from_scan": False, "return_qty": 0.0, "near_expiry_action": "keep", "scan_guidance_message": False, "focus_target": "lot"})
         return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
 
     def _get_or_create_visit_line(self, product):
@@ -259,6 +317,13 @@ class RouteVisitScanWizard(models.TransientModel):
                 forced_return_qty = counted_increase
                 forced_return_route = "damaged"
                 line_vals["suggest_near_expiry_return"] = False
+            elif resolved_lot and self.active_lot_status == "near_expiry":
+                if self.near_expiry_action in ("vehicle", "near_expiry"):
+                    forced_return_qty = counted_increase
+                    forced_return_route = self.near_expiry_action
+                    line_vals["suggest_near_expiry_return"] = False
+                else:
+                    line_vals["suggest_near_expiry_return"] = True
             elif self.return_from_scan:
                 requested_return_qty = self.return_qty or 0.0
                 if requested_return_qty <= 0:
@@ -294,6 +359,8 @@ class RouteVisitScanWizard(models.TransientModel):
                     "default_last_return_route": forced_return_route,
                     "default_return_from_scan": False,
                     "default_return_qty": 0.0,
+                    "default_near_expiry_action": "keep",
+                    "default_scan_guidance_message": False,
                 },
             }
 
