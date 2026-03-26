@@ -97,6 +97,18 @@ class RoutePlan(models.Model):
         compute="_compute_plan_summaries",
         store=False,
     )
+    search_area_ids = fields.Many2many(
+        "route.area",
+        string="Search Areas",
+        compute="_compute_search_panel_relations",
+        store=True,
+    )
+    search_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Search Outlets",
+        compute="_compute_search_panel_relations",
+        store=True,
+    )
 
     @api.depends("line_ids", "line_ids.state", "line_ids.visit_id", "line_ids.visit_id.state")
     def _compute_line_counts(self):
@@ -147,6 +159,16 @@ class RoutePlan(models.Model):
 
             rec.area_summary = self._format_summary_names(unique_area_names, max_items=2)
             rec.outlet_summary = self._format_summary_names(unique_outlet_names, max_items=2)
+
+    @api.depends("area_id", "line_ids.area_id", "line_ids.outlet_id")
+    def _compute_search_panel_relations(self):
+        for rec in self:
+            area_ids = set(rec.line_ids.mapped("area_id").ids)
+            if rec.area_id:
+                area_ids.add(rec.area_id.id)
+
+            rec.search_area_ids = [fields.Command.set(list(area_ids))]
+            rec.search_outlet_ids = [fields.Command.set(rec.line_ids.mapped("outlet_id").ids)]
 
     @api.model
     def _format_summary_names(self, names, max_items=2):
