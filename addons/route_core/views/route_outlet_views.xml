@@ -141,6 +141,20 @@
 <field name="last_payment_amount" readonly="1"/>
 </group>
 </group>
+<group string="Monthly Sales Trend" col="4">
+<group>
+<field name="sales_current_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_previous_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_two_months_ago" readonly="1"/>
+</group>
+<group>
+<field name="sales_last_3_months_total" readonly="1"/>
+</group>
+</group>
 <group string="Stock Summary" col="2">
 <group>
 <field name="stock_balance_count" readonly="1"/>
@@ -154,7 +168,7 @@
 <field name="last_stock_update_at" readonly="1"/>
 </group>
 </group>
-<group string="Shortages and Alerts" col="2">
+<group string="Shortages & Alerts" col="2">
 <group>
 <field name="open_shortage_count" readonly="1"/>
 <field name="planned_shortage_count" readonly="1"/>
