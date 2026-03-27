@@ -761,23 +761,35 @@ class RouteOutlet(models.Model):
 
             rows_html = []
             for row in risky_rows[:5]:
+                status_class = {
+                    "Expired": "background:#f8d7da;color:#842029;",
+                    "Near Expiry": "background:#fff3cd;color:#664d03;",
+                    "Zero Stock": "background:#fde2e4;color:#9b1c31;",
+                    "Refill Needed": "background:#e7f1ff;color:#0a58ca;",
+                }.get(row["status"], "background:#f8f9fa;color:#495057;")
                 rows_html.append(
                     "<tr>"
-                    f"<td>{html.escape(row['product'])}</td>"
-                    f"<td>{row['qty']:.2f}</td>"
-                    f"<td>{html.escape(row['lot'])}</td>"
-                    f"<td>{html.escape(row['expiry'])}</td>"
-                    f"<td><span>{html.escape(row['status'])}</span></td>"
+                    f"<td style='padding:8px 10px; min-width:220px; word-break:break-word;'>{html.escape(row['product'])}</td>"
+                    f"<td style='padding:8px 10px; min-width:90px; text-align:right;'>{row['qty']:.2f}</td>"
+                    f"<td style='padding:8px 10px; min-width:180px; word-break:break-word;'>{html.escape(row['lot'])}</td>"
+                    f"<td style='padding:8px 10px; min-width:120px;'>{html.escape(row['expiry'])}</td>"
+                    f"<td style='padding:8px 10px; min-width:130px;'><span style='display:inline-block; padding:2px 8px; border-radius:999px; font-weight:600; {status_class}'>{html.escape(row['status'])}</span></td>"
                     "</tr>"
                 )
 
             record.top_risk_products_html = (
-                '<table class="table table-sm table-bordered">'
-                '<thead><tr>'
-                '<th>Product</th><th>Shelf Qty</th><th>Lot</th><th>Expiry Date</th><th>Risk Status</th>'
-                '</tr></thead>'
+                "<div style='width:100%; overflow-x:auto;'>"
+                "<table style='width:100%; border-collapse:collapse; table-layout:auto;'>"
+                "<thead><tr>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Product</th>"
+                "<th style='text-align:right; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Shelf Qty</th>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Lot</th>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Expiry Date</th>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Risk Status</th>"
+                "</tr></thead>"
                 f"<tbody>{''.join(rows_html)}</tbody>"
-                '</table>'
+                "</table>"
+                "</div>"
             )
 
     @api.depends(
