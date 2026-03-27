@@ -180,6 +180,28 @@ class RouteVisit(models.Model):
         compute="_compute_payment_totals",
         store=False,
     )
+    promise_to_pay_count = fields.Integer(
+        string="Open Promises",
+        compute="_compute_promise_to_pay_summary",
+        store=False,
+    )
+    latest_promise_to_pay_date = fields.Date(
+        string="Latest Promise Date",
+        compute="_compute_promise_to_pay_summary",
+        store=False,
+    )
+    latest_promise_to_pay_amount = fields.Monetary(
+        string="Latest Promise Amount",
+        currency_field="currency_id",
+        compute="_compute_promise_to_pay_summary",
+        store=False,
+    )
+    latest_promise_status = fields.Selection(
+        [("open", "Open"), ("due_today", "Due Today"), ("overdue", "Overdue"), ("closed", "Closed")],
+        string="Latest Promise Status",
+        compute="_compute_promise_to_pay_summary",
+        store=False,
+    )
 
     has_returns = fields.Boolean(
         string="Has Returns",
@@ -456,6 +478,35 @@ class RouteVisit(models.Model):
             rec.net_due_amount = total_sales
             rec.collected_amount = total_collected
             rec.remaining_due_amount = max((total_sales or 0.0) - (total_collected or 0.0), 0.0)
+
+
+    @api.depends(
+        "payment_ids.promise_date",
+        "payment_ids.promise_amount",
+        "payment_ids.promise_status",
+        "payment_ids.state",
+        "payment_ids.payment_date",
+    )
+    def _compute_promise_to_pay_summary(self):
+        for rec in self:
+            promise_payments = rec.payment_ids.filtered(
+                lambda p: p.state != "cancelled" and (p.promise_amount or 0.0) > 0.0
+            )
+            open_promises = promise_payments.filtered(lambda p: p.promise_status in ("open", "due_today", "overdue"))
+            latest = False
+            if promise_payments:
+                latest = promise_payments.sorted(
+                    key=lambda p: (
+                        p.promise_date or fields.Date.to_date("1900-01-01"),
+                        p.payment_date or fields.Datetime.now(),
+                        p.id,
+                    ),
+                    reverse=True,
+                )[0]
+            rec.promise_to_pay_count = len(open_promises)
+            rec.latest_promise_to_pay_date = latest.promise_date if latest else False
+            rec.latest_promise_to_pay_amount = latest.promise_amount if latest else 0.0
+            rec.latest_promise_status = latest.promise_status if latest else False
 
     def _compute_refill_picking_count(self):
         for rec in self:
@@ -966,3 +1017,4 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
