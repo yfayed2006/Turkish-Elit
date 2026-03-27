@@ -11,7 +11,7 @@ class RouteVisit(models.Model):
         store=False,
     )
     return_transfer_count = fields.Integer(
-        string="Return Transfer Count",
+        string="Linked Return Transfers",
         compute="_compute_visit_document_links",
         store=False,
     )
