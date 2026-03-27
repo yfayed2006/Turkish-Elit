@@ -146,7 +146,8 @@
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
 </div>
-<group string="Visit Command Header" col="4">
+<separator string="Visit Command Header"/>
+<group col="4">
 <group>
 <field name="outlet_id" readonly="1"/>
 <field name="name" readonly="1"/>
@@ -168,20 +169,19 @@
 <field name="visit_mode_recommendation" readonly="1"/>
 </group>
 </group>
-<group string="Decision Flags" invisible="not outlet_decision_flags_html">
-<field name="outlet_decision_flags_html" readonly="1" nolabel="1"/>
-</group>
+<separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
+<div class="mb-2" invisible="not outlet_decision_flags_html">
+<field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
+</div>
+<group string="Visit Details" col="2">
 <group>
-<group>
-<field name="date" readonly="1"/>
 <field name="partner_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="vehicle_id" readonly="1"/>
 <field name="user_id" readonly="1"/>
-<field name="state" readonly="1"/>
-<field name="visit_process_state" readonly="1"/>
 </group>
 <group>
+<field name="date" readonly="1"/>
 <field name="sale_order_id" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
 </group>
@@ -298,7 +298,8 @@
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
 </div>
-<group string="Visit Command Header" col="4">
+<separator string="Visit Command Header"/>
+<group col="4">
 <group>
 <field name="outlet_id" readonly="1"/>
 <field name="name" readonly="1"/>
@@ -320,20 +321,19 @@
 <field name="visit_mode_recommendation" readonly="1"/>
 </group>
 </group>
-<group string="Decision Flags" invisible="not outlet_decision_flags_html">
-<field name="outlet_decision_flags_html" readonly="1" nolabel="1"/>
-</group>
+<separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
+<div class="mb-2" invisible="not outlet_decision_flags_html">
+<field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
+</div>
+<group string="Visit Details" col="2">
 <group>
-<group>
-<field name="date" readonly="1"/>
 <field name="partner_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="vehicle_id" readonly="1"/>
 <field name="user_id" readonly="1"/>
-<field name="state" readonly="1"/>
-<field name="visit_process_state" readonly="1"/>
 </group>
 <group>
+<field name="date" readonly="1"/>
 <field name="sale_order_id" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
 </group>
