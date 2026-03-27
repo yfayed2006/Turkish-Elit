@@ -194,6 +194,61 @@ class RouteOutlet(models.Model):
         string="Trend Status",
         compute="_compute_visit_stats",
     )
+    sales_growth_vs_previous_display = fields.Char(
+        string="Growth vs Previous Month",
+        compute="_compute_visit_stats",
+    )
+    sales_previous_growth_display = fields.Char(
+        string="Previous Month Growth",
+        compute="_compute_visit_stats",
+    )
+    collections_current_month = fields.Monetary(
+        string="Current Month Collections",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    collections_previous_month = fields.Monetary(
+        string="Previous Month Collections",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    collections_two_months_ago = fields.Monetary(
+        string="2 Months Ago Collections",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    collections_last_3_months_total = fields.Monetary(
+        string="Last 3 Months Collections",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    collections_last_3_months_average = fields.Monetary(
+        string="3 Month Collection Average",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    collection_current_rate_display = fields.Char(
+        string="Current Month Collection Rate",
+        compute="_compute_payment_stats",
+    )
+    collection_previous_rate_display = fields.Char(
+        string="Previous Month Collection Rate",
+        compute="_compute_payment_stats",
+    )
+    collection_two_months_ago_rate_display = fields.Char(
+        string="2 Months Ago Collection Rate",
+        compute="_compute_payment_stats",
+    )
+    collection_status = fields.Selection(
+        [
+            ("good", "Good"),
+            ("warning", "Warning"),
+            ("weak", "Weak"),
+            ("no_basis", "No Basis"),
+        ],
+        string="Collection Status",
+        compute="_compute_payment_stats",
+    )
     deferred_payment_count = fields.Integer(
         string="Deferred Payments",
         compute="_compute_payment_stats",
@@ -308,6 +363,40 @@ class RouteOutlet(models.Model):
             return 100.0
         return 0.0
 
+    @staticmethod
+    def _format_growth_display(current_amount, previous_amount):
+        current_amount = current_amount or 0.0
+        previous_amount = previous_amount or 0.0
+        if previous_amount:
+            growth = ((current_amount - previous_amount) / previous_amount) * 100.0
+            return f"{growth:+.2f}%"
+        if current_amount:
+            return "New"
+        return "Flat"
+
+    @staticmethod
+    def _format_collection_rate_display(collections_amount, sales_amount):
+        collections_amount = collections_amount or 0.0
+        sales_amount = sales_amount or 0.0
+        if sales_amount > 0:
+            return f"{(collections_amount / sales_amount) * 100.0:.2f}%"
+        if collections_amount > 0:
+            return "No Sales Basis"
+        return "N/A"
+
+    @staticmethod
+    def _get_collection_status(collections_amount, sales_amount):
+        collections_amount = collections_amount or 0.0
+        sales_amount = sales_amount or 0.0
+        if sales_amount <= 0:
+            return "no_basis"
+        rate = (collections_amount / sales_amount) * 100.0
+        if rate >= 90.0:
+            return "good"
+        if rate >= 60.0:
+            return "warning"
+        return "weak"
+
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -389,6 +478,8 @@ class RouteOutlet(models.Model):
             record.sales_two_months_ago_label = self._month_label(two_months_ago_start)
             record.sales_growth_vs_previous_pct = self._compute_growth_percentage(current_sales, previous_sales)
             record.sales_previous_growth_pct = self._compute_growth_percentage(previous_sales, two_months_ago_sales)
+            record.sales_growth_vs_previous_display = self._format_growth_display(current_sales, previous_sales)
+            record.sales_previous_growth_display = self._format_growth_display(previous_sales, two_months_ago_sales)
             if current_sales > previous_sales:
                 record.sales_trend_status = "up"
             elif current_sales < previous_sales:
@@ -417,9 +508,20 @@ class RouteOutlet(models.Model):
         "payment_ids.visit_id.payment_ids.state",
         "payment_ids.visit_id.line_ids.sold_qty",
         "payment_ids.visit_id.line_ids.unit_price",
+        "visit_ids.sale_order_id",
+        "visit_ids.sale_order_id.amount_total",
+        "visit_ids.sale_order_id.amount_untaxed",
+        "visit_ids.sale_order_id.date_order",
+        "visit_ids.sale_order_id.state",
     )
     def _compute_payment_stats(self):
         now = fields.Datetime.now()
+        today = fields.Date.context_today(self)
+        today_date = fields.Date.to_date(today)
+        current_month_start = today_date.replace(day=1)
+        previous_month_start = current_month_start - relativedelta(months=1)
+        two_months_ago_start = current_month_start - relativedelta(months=2)
+        next_month_start = current_month_start + relativedelta(months=1)
         for record in self:
             payments = record.payment_ids.sorted(
                 key=lambda p: ((p.payment_date or now), p.id),
@@ -438,6 +540,68 @@ class RouteOutlet(models.Model):
                     and p.visit_id
                     and (p.visit_id.remaining_due_amount or 0.0) > 0
                 )
+            )
+
+            monthly_collections = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            for payment in confirmed_payments:
+                payment_date = fields.Datetime.to_datetime(payment.payment_date).date() if payment.payment_date else False
+                if not payment_date:
+                    continue
+                amount = payment.amount or 0.0
+                if current_month_start <= payment_date < next_month_start:
+                    monthly_collections["current"] += amount
+                elif previous_month_start <= payment_date < current_month_start:
+                    monthly_collections["previous"] += amount
+                elif two_months_ago_start <= payment_date < previous_month_start:
+                    monthly_collections["two_months_ago"] += amount
+
+            sale_orders = record.visit_ids.mapped("sale_order_id").filtered(lambda so: so and so.state != "cancel")
+            monthly_sales = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            for order in sale_orders:
+                order_date = fields.Datetime.to_datetime(order.date_order).date() if order.date_order else False
+                if not order_date:
+                    order_date = fields.Date.to_date(order.create_date) if order.create_date else False
+                if not order_date:
+                    continue
+                amount = order.amount_total or order.amount_untaxed or 0.0
+                if current_month_start <= order_date < next_month_start:
+                    monthly_sales["current"] += amount
+                elif previous_month_start <= order_date < current_month_start:
+                    monthly_sales["previous"] += amount
+                elif two_months_ago_start <= order_date < previous_month_start:
+                    monthly_sales["two_months_ago"] += amount
+
+            current_collections = monthly_collections["current"]
+            previous_collections = monthly_collections["previous"]
+            two_months_ago_collections = monthly_collections["two_months_ago"]
+            total_last_3_months_collections = (
+                current_collections + previous_collections + two_months_ago_collections
+            )
+
+            record.collections_current_month = current_collections
+            record.collections_previous_month = previous_collections
+            record.collections_two_months_ago = two_months_ago_collections
+            record.collections_last_3_months_total = total_last_3_months_collections
+            record.collections_last_3_months_average = total_last_3_months_collections / 3.0
+            record.collection_current_rate_display = self._format_collection_rate_display(
+                current_collections, monthly_sales["current"]
+            )
+            record.collection_previous_rate_display = self._format_collection_rate_display(
+                previous_collections, monthly_sales["previous"]
+            )
+            record.collection_two_months_ago_rate_display = self._format_collection_rate_display(
+                two_months_ago_collections, monthly_sales["two_months_ago"]
+            )
+            record.collection_status = self._get_collection_status(
+                current_collections, monthly_sales["current"]
             )
 
     @api.depends("stock_balance_ids", "stock_balance_ids.qty", "stock_balance_ids.unit_price", "stock_balance_ids.last_updated_at", "stock_balance_ids.nearest_expiry_date", "stock_balance_ids.nearest_alert_date")
