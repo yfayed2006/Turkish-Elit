@@ -197,11 +197,14 @@ class RouteVisit(models.Model):
                 and rec.visit_process_state in ("collection_done", "ready_to_close")
             )
 
+            visit_mode_label = dict(self._fields["visit_mode"].selection).get(rec.visit_mode, rec.visit_mode or _("Regular Visit"))
+            collection_priority_label = dict(self._fields["collection_priority"].selection).get(rec.collection_priority, rec.collection_priority or _("Low"))
+
             if rec.state == "draft":
                 rec.ux_stage = "arrival"
                 rec.ux_primary_action = "start_visit"
                 rec.ux_stage_title = "Start the visit"
-                rec.ux_stage_help = "Begin the visit."
+                rec.ux_stage_help = "Begin the visit and review the command header before moving to the next step."
 
             elif rec.state == "in_progress" and rec.visit_process_state == "pending":
                 rec.ux_stage = "load_balance"
