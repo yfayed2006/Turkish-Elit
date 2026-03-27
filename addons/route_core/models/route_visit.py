@@ -208,6 +208,43 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    collection_priority_score = fields.Integer(
+        string="Collection Priority Score",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_open_promise_count = fields.Integer(
+        string="Open Promises",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_overdue_promise_count = fields.Integer(
+        string="Overdue Promises",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_unpaid_visit_count = fields.Integer(
+        string="Unpaid Visits",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    collection_trend_status = fields.Selection(
+        [
+            ("good", "Good"),
+            ("warning", "Warning"),
+            ("weak", "Weak"),
+            ("no_basis", "No Basis"),
+        ],
+        string="Collection Trend",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    collection_priority_reason = fields.Char(
+        string="Collection Priority Basis",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+
     has_returns = fields.Boolean(
         string="Has Returns",
         default=False,
@@ -352,23 +389,133 @@ class RouteVisit(models.Model):
     )
 
 
-    def _get_collection_priority_value(self, outlet):
+    def _get_outlet_collection_promise_metrics(self, outlet):
+        Payment = self.env["route.visit.payment"]
         if not outlet:
-            return "low"
+            return {"open_promises": 0, "overdue_promises": 0}
 
-        aging_90_plus = getattr(outlet, "aging_90_plus_amount", 0.0) or 0.0
-        aging_61_90 = getattr(outlet, "aging_61_90_amount", 0.0) or 0.0
+        promise_payments = Payment.search([
+            ("outlet_id", "=", outlet.id),
+            ("state", "!=", "cancelled"),
+            ("promise_amount", ">", 0.0),
+        ])
+        open_promises = promise_payments.filtered(
+            lambda p: p.promise_status in ("open", "due_today", "overdue")
+        )
+        overdue_promises = open_promises.filtered(lambda p: p.promise_status == "overdue")
+        return {
+            "open_promises": len(open_promises),
+            "overdue_promises": len(overdue_promises),
+        }
+
+    def _get_collection_priority_context(self, outlet):
+        if not outlet:
+            return {
+                "priority": "low",
+                "score": 0,
+                "open_promises": 0,
+                "overdue_promises": 0,
+                "unpaid_visits": 0,
+                "collection_trend": "no_basis",
+                "reason": "No outlet linked",
+            }
+
         current_due = getattr(outlet, "current_due_amount", 0.0) or 0.0
-        collection_status = getattr(outlet, "collection_status", False)
-        deferred_count = getattr(outlet, "deferred_payment_count", 0) or 0
+        aging_31_60 = getattr(outlet, "aging_31_60_amount", 0.0) or 0.0
+        aging_61_90 = getattr(outlet, "aging_61_90_amount", 0.0) or 0.0
+        aging_90_plus = getattr(outlet, "aging_90_plus_amount", 0.0) or 0.0
+        unpaid_visits = getattr(outlet, "unpaid_visit_count", 0) or 0
+        collection_trend = getattr(outlet, "collection_status", "no_basis") or "no_basis"
+        sales_average = getattr(outlet, "sales_last_3_months_average", 0.0) or 0.0
 
+        promise_metrics = self._get_outlet_collection_promise_metrics(outlet)
+        open_promises = promise_metrics["open_promises"]
+        overdue_promises = promise_metrics["overdue_promises"]
+
+        score = 0
+        reasons = []
+
+        # Current due pressure
+        if current_due > 0:
+            if current_due >= max(sales_average * 3.0, 5000.0):
+                score += 25
+                reasons.append("very high due")
+            elif current_due >= max(sales_average * 1.5, 1500.0):
+                score += 18
+                reasons.append("high due")
+            elif current_due >= 500.0:
+                score += 10
+                reasons.append("due outstanding")
+            else:
+                score += 5
+                reasons.append("small due")
+
+        # Aging pressure
         if aging_90_plus > 0:
-            return "critical"
-        if aging_61_90 > 0 or collection_status == "weak":
-            return "high"
-        if current_due > 0 or collection_status == "warning" or deferred_count > 0:
-            return "medium"
-        return "low"
+            score += 40
+            reasons.append("90+ aging")
+        elif aging_61_90 > 0:
+            score += 25
+            reasons.append("61-90 aging")
+        elif aging_31_60 > 0:
+            score += 10
+            reasons.append("31-60 aging")
+
+        # Promise pressure
+        if overdue_promises >= 3:
+            score += 25
+            reasons.append("multiple overdue promises")
+        elif overdue_promises > 0:
+            score += min(15 + ((overdue_promises - 1) * 5), 25)
+            reasons.append("overdue promises")
+
+        if open_promises >= 3:
+            score += 10
+            reasons.append("many open promises")
+        elif open_promises > 0:
+            score += 5
+            reasons.append("open promise")
+
+        # Unpaid visits pressure
+        if unpaid_visits >= 5:
+            score += 15
+            reasons.append("many unpaid visits")
+        elif unpaid_visits >= 2:
+            score += 8
+            reasons.append("multiple unpaid visits")
+        elif unpaid_visits >= 1:
+            score += 4
+            reasons.append("unpaid visit")
+
+        # Collection trend pressure
+        if collection_trend == "weak":
+            score += 20
+            reasons.append("weak collection trend")
+        elif collection_trend == "warning":
+            score += 10
+            reasons.append("warning collection trend")
+
+        if score >= 70:
+            priority = "critical"
+        elif score >= 40:
+            priority = "high"
+        elif score >= 15:
+            priority = "medium"
+        else:
+            priority = "low"
+
+        return {
+            "priority": priority,
+            "score": int(score),
+            "open_promises": open_promises,
+            "overdue_promises": overdue_promises,
+            "unpaid_visits": unpaid_visits,
+            "collection_trend": collection_trend,
+            "reason": ", ".join(reasons[:4]) if reasons else "healthy collection profile",
+        }
+
+    def _get_collection_priority_value(self, outlet):
+        return self._get_collection_priority_context(outlet)["priority"]
 
     def _get_recommended_visit_mode_value(self, outlet, collection_priority):
         if not outlet:
@@ -398,12 +545,19 @@ class RouteVisit(models.Model):
         badges = []
         alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
 
+        promise_metrics = self._get_outlet_collection_promise_metrics(outlet) if outlet else {"open_promises": 0, "overdue_promises": 0}
+
         if collection_priority == "critical":
             badges.append(_badge("Critical Debt", "background:#f8d7da;color:#b02a37;"))
         elif collection_priority == "high":
             badges.append(_badge("Collect First", "background:#fde2e4;color:#b02a37;"))
         elif collection_priority == "medium":
             badges.append(_badge("Collection Follow-up", "background:#fff3cd;color:#8a6d1d;"))
+
+        if promise_metrics.get("overdue_promises", 0) > 0:
+            badges.append(_badge("Overdue Promise", "background:#fde2e4;color:#b02a37;"))
+        elif promise_metrics.get("open_promises", 0) > 0:
+            badges.append(_badge("Open Promise", "background:#e2f0ff;color:#1d4ed8;"))
 
         if open_shortages > 0:
             badges.append(_badge("Open Shortages", "background:#e2e3ff;color:#3d3d9b;"))
@@ -430,12 +584,18 @@ class RouteVisit(models.Model):
         "outlet_id.open_shortage_count",
         "outlet_id.near_expiry_product_count",
         "outlet_id.summary_alert_level",
+        "outlet_id.aging_31_60_amount",
         "outlet_id.aging_61_90_amount",
         "outlet_id.aging_90_plus_amount",
         "outlet_id.collection_status",
+        "outlet_id.unpaid_visit_count",
+        "outlet_id.sales_last_3_months_average",
         "outlet_id.deferred_payment_count",
         "outlet_id.refill_needed_count",
         "outlet_id.expired_product_count",
+        "outlet_id.visit_ids.payment_ids.promise_date",
+        "outlet_id.visit_ids.payment_ids.promise_amount",
+        "outlet_id.visit_ids.payment_ids.state",
         "pending_near_expiry_line_count",
         "has_pending_near_expiry",
     )
@@ -446,10 +606,17 @@ class RouteVisit(models.Model):
             open_shortages = (getattr(outlet, "open_shortage_count", 0) or 0) if outlet else 0
             near_expiry = (getattr(outlet, "near_expiry_product_count", 0) or 0) if outlet else 0
 
-            priority = rec._get_collection_priority_value(outlet)
+            priority_ctx = rec._get_collection_priority_context(outlet)
+            priority = priority_ctx["priority"]
             recommendation = rec._get_recommended_visit_mode_value(outlet, priority)
 
             rec.collection_priority = priority
+            rec.collection_priority_score = priority_ctx["score"]
+            rec.outlet_open_promise_count = priority_ctx["open_promises"]
+            rec.outlet_overdue_promise_count = priority_ctx["overdue_promises"]
+            rec.outlet_unpaid_visit_count = priority_ctx["unpaid_visits"]
+            rec.collection_trend_status = priority_ctx["collection_trend"]
+            rec.collection_priority_reason = priority_ctx["reason"]
             rec.visit_mode_recommendation = recommendation
             rec.outlet_current_due_amount = current_due
             rec.outlet_open_shortage_count = open_shortages
