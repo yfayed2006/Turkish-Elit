@@ -95,6 +95,7 @@
 <field name="near_expiry_product_count" readonly="1"/>
 <field name="expired_product_count" readonly="1"/>
 <field name="deferred_payment_count" readonly="1"/>
+<field name="refill_needed_count" readonly="1"/>
 </group>
 <group>
 <field name="unpaid_visit_count" readonly="1"/>
@@ -189,6 +190,9 @@
 <field name="collections_last_3_months_average" readonly="1"/>
 <field name="collection_status" widget="badge" readonly="1" decoration-success="collection_status == 'good'" decoration-warning="collection_status == 'warning'" decoration-danger="collection_status == 'weak'" decoration-info="collection_status == 'no_basis'"/>
 </group>
+</group>
+<group string="Top Risk Products">
+<field name="top_risk_products_html" nolabel="1" readonly="1" widget="html"/>
 </group>
 <group string="Stock Summary" col="2">
 <group>
