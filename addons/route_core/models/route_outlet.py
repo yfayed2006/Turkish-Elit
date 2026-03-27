@@ -337,6 +337,11 @@ class RouteOutlet(models.Model):
         compute="_compute_top_risk_products",
         sanitize=False,
     )
+    top_selling_products_html = fields.Html(
+        string="Top 3 Selling Products",
+        compute="_compute_top_selling_products",
+        sanitize=False,
+    )
 
     summary_alert_level = fields.Selection(
         [
@@ -786,6 +791,85 @@ class RouteOutlet(models.Model):
                 "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Lot</th>"
                 "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Expiry Date</th>"
                 "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Risk Status</th>"
+                "</tr></thead>"
+                f"<tbody>{''.join(rows_html)}</tbody>"
+                "</table>"
+                "</div>"
+            )
+
+    @api.depends(
+        "visit_ids",
+        "visit_ids.date",
+        "visit_ids.state",
+        "visit_ids.sale_order_id",
+        "visit_ids.sale_order_id.state",
+        "visit_ids.line_ids",
+        "visit_ids.line_ids.product_id",
+        "visit_ids.line_ids.sold_qty",
+    )
+    def _compute_top_selling_products(self):
+        today = fields.Date.to_date(fields.Date.context_today(self))
+        current_month_start = today.replace(day=1)
+        two_months_ago_start = current_month_start - relativedelta(months=2)
+        next_month_start = current_month_start + relativedelta(months=1)
+        VisitLine = self.env["route.visit.line"]
+
+        for record in self:
+            product_totals = {}
+            lines = VisitLine.search([
+                ("visit_id.outlet_id", "=", record.id),
+                ("visit_id.state", "!=", "cancel"),
+                ("visit_id.sale_order_id", "!=", False),
+                ("visit_id.date", ">=", two_months_ago_start),
+                ("visit_id.date", "<", next_month_start),
+                ("sold_qty", ">", 0),
+            ])
+
+            for line in lines:
+                product = line.product_id
+                if not product:
+                    continue
+                bucket = product_totals.setdefault(product.id, {
+                    "name": product.display_name or "-",
+                    "qty": 0.0,
+                    "last_date": False,
+                })
+                bucket["qty"] += line.sold_qty or 0.0
+                visit_date = line.visit_id.date
+                if visit_date and (not bucket["last_date"] or visit_date > bucket["last_date"]):
+                    bucket["last_date"] = visit_date
+
+            top_rows = sorted(
+                product_totals.values(),
+                key=lambda row: (-(row["qty"] or 0.0), row["name"]),
+            )[:3]
+
+            if not top_rows:
+                record.top_selling_products_html = (
+                    '<div class="text-muted">No sold products found for the last 3 months.</div>'
+                )
+                continue
+
+            rows_html = []
+            for idx, row in enumerate(top_rows, start=1):
+                last_date = fields.Date.to_string(row["last_date"]) if row["last_date"] else "-"
+                rows_html.append(
+                    "<tr>"
+                    f"<td style='padding:8px 10px; width:60px; text-align:center;'>{idx}</td>"
+                    f"<td style='padding:8px 10px; min-width:240px; word-break:break-word;'>{html.escape(row['name'])}</td>"
+                    f"<td style='padding:8px 10px; width:140px; text-align:right; font-weight:600;'>{row['qty']:.2f}</td>"
+                    f"<td style='padding:8px 10px; width:140px;'>{html.escape(last_date)}</td>"
+                    "</tr>"
+                )
+
+            record.top_selling_products_html = (
+                "<div style='width:100%; overflow-x:auto;'>"
+                "<table style='width:100%; border-collapse:collapse; table-layout:auto;'>"
+                "<thead><tr>"
+                "<th style='text-align:center; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Rank</th>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Product</th>"
+                "<th style='text-align:right; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Sold Qty</th>"
+                "<th style='text-align:left; padding:8px 10px; border-bottom:1px solid #dee2e6;'>Last Sold Date</th>"
                 "</tr></thead>"
                 f"<tbody>{''.join(rows_html)}</tbody>"
                 "</table>"
