@@ -219,6 +219,10 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 raise ValidationError(_("Deferred payment to a specific date must have amount = 0."))
             if not self.due_date:
                 raise ValidationError(_("Please set the deferred due date."))
+            if not (self.promise_date or self.due_date):
+                raise ValidationError(_("Please set the promise to pay date."))
+            if (self.promise_amount or 0.0) <= 0:
+                raise ValidationError(_("Please set the promise to pay amount."))
             if not self.note:
                 raise ValidationError(_("Please add a note explaining the deferment."))
 
@@ -227,6 +231,10 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 raise ValidationError(_("Carry to next visit must have amount = 0."))
             if self.due_date:
                 raise ValidationError(_("Do not set a due date when carrying payment to the next visit."))
+            if not self.promise_date:
+                raise ValidationError(_("Please set the promise to pay date for the next visit."))
+            if (self.promise_amount or 0.0) <= 0:
+                raise ValidationError(_("Please set the promise to pay amount for the next visit."))
             if not self.note:
                 raise ValidationError(_("Please add a note explaining why payment is carried to next visit."))
 
@@ -263,4 +271,3 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
-
