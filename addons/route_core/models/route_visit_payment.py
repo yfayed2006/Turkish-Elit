@@ -90,6 +90,24 @@ class RouteVisitPayment(models.Model):
         default=0.0,
     )
 
+    promise_date = fields.Date(string="Promise To Pay Date")
+    promise_amount = fields.Monetary(
+        string="Promise To Pay Amount",
+        currency_field="currency_id",
+        default=0.0,
+    )
+    promise_status = fields.Selection(
+        [
+            ("open", "Open"),
+            ("due_today", "Due Today"),
+            ("overdue", "Overdue"),
+            ("closed", "Closed"),
+        ],
+        string="Promise Status",
+        compute="_compute_promise_status",
+        store=False,
+    )
+
     remaining_due_amount = fields.Monetary(
         string="Unpaid Amount",
         currency_field="currency_id",
@@ -132,6 +150,21 @@ class RouteVisitPayment(models.Model):
         for rec in self:
             rec.remaining_due_amount = rec.visit_id.remaining_due_amount or 0.0
 
+    @api.depends("promise_amount", "promise_date", "visit_id.remaining_due_amount", "state")
+    def _compute_promise_status(self):
+        today = fields.Date.context_today(self)
+        for rec in self:
+            if rec.state == "cancelled" or (rec.promise_amount or 0.0) <= 0:
+                rec.promise_status = False
+            elif (rec.visit_id.remaining_due_amount or 0.0) <= 0:
+                rec.promise_status = "closed"
+            elif rec.promise_date and rec.promise_date < today:
+                rec.promise_status = "overdue"
+            elif rec.promise_date and rec.promise_date == today:
+                rec.promise_status = "due_today"
+            else:
+                rec.promise_status = "open"
+
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
@@ -145,6 +178,20 @@ class RouteVisitPayment(models.Model):
                 vals.setdefault("collection_type", "full")
         return vals
 
+    def _sync_promise_fields(self):
+        for rec in self:
+            due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+            if rec.collection_type == "full":
+                rec.promise_date = False
+                rec.promise_amount = 0.0
+            elif rec.collection_type == "partial":
+                rec.promise_amount = max(due - (rec.amount or 0.0), 0.0)
+            elif rec.collection_type == "defer_date":
+                rec.promise_date = rec.due_date or rec.promise_date
+                rec.promise_amount = due
+            elif rec.collection_type == "next_visit":
+                rec.promise_amount = due
+
     @api.onchange("visit_id")
     def _onchange_visit_id_set_amount(self):
         for rec in self:
@@ -154,8 +201,9 @@ class RouteVisitPayment(models.Model):
             elif rec.collection_type == "partial":
                 if due > 0 and (rec.amount <= 0 or rec.amount >= due):
                     rec.amount = due / 2.0
+            rec._sync_promise_fields()
 
-    @api.onchange("collection_type")
+    @api.onchange("collection_type", "amount", "due_date", "promise_date")
     def _onchange_collection_type(self):
         for rec in self:
             due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
@@ -178,7 +226,9 @@ class RouteVisitPayment(models.Model):
                 rec.amount = 0.0
                 rec.due_date = False
 
-    @api.constrains("amount", "collection_type", "due_date", "visit_id")
+            rec._sync_promise_fields()
+
+    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id")
     def _check_payment_rules(self):
         for rec in self:
             due = rec.visit_id.remaining_due_amount or 0.0
@@ -203,18 +253,36 @@ class RouteVisitPayment(models.Model):
                     raise ValidationError(
                         "Partial payment must be less than the remaining due amount. Use Full Payment instead."
                     )
+                if (rec.promise_amount or 0.0) <= 0:
+                    raise ValidationError("Please set the promised unpaid amount.")
+                if not rec.promise_date:
+                    raise ValidationError("Please set the promise to pay date for the carried-forward balance.")
+                if not rec.note:
+                    raise ValidationError("Please add a note for the carried-forward balance.")
 
             elif rec.collection_type == "defer_date":
                 if rec.amount != 0:
                     raise ValidationError("Deferred payment to a specific date must have amount = 0.")
                 if not rec.due_date:
                     raise ValidationError("Please set the deferred due date.")
+                if (rec.promise_amount or 0.0) <= 0:
+                    raise ValidationError("Please set the promise to pay amount.")
+                if not (rec.promise_date or rec.due_date):
+                    raise ValidationError("Please set the promise to pay date.")
+                if not rec.note:
+                    raise ValidationError("Please add a note explaining the deferment.")
 
             elif rec.collection_type == "next_visit":
                 if rec.amount != 0:
                     raise ValidationError("Carry to next visit must have amount = 0.")
                 if rec.due_date:
                     raise ValidationError("Do not set a due date when carrying payment to the next visit.")
+                if (rec.promise_amount or 0.0) <= 0:
+                    raise ValidationError("Please set the promise to pay amount.")
+                if not rec.promise_date:
+                    raise ValidationError("Please set the promise to pay date for the next visit.")
+                if not rec.note:
+                    raise ValidationError("Please add a note explaining why payment is carried to next visit.")
 
     def action_confirm(self):
         for rec in self:
@@ -234,4 +302,5 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError("You cannot delete a confirmed payment.")
         return super().unlink()
+
 
