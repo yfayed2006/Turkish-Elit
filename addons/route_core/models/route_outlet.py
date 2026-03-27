@@ -693,6 +693,93 @@ class RouteOutlet(models.Model):
             record.next_planned_visit_date = next_line.plan_id.date if next_line else False
             record.open_plan_count = len(pending_lines.mapped("plan_id"))
 
+
+
+    @api.depends(
+        "stock_balance_ids",
+        "stock_balance_ids.product_id",
+        "stock_balance_ids.qty",
+        "stock_balance_ids.lot_names",
+        "stock_balance_ids.nearest_expiry_date",
+        "stock_balance_ids.nearest_alert_date",
+    )
+    def _compute_top_risk_products(self):
+        today = fields.Date.context_today(self)
+        for record in self:
+            risky_rows = []
+            refill_needed_count = 0
+            for balance in record.stock_balance_ids:
+                qty = balance.qty or 0.0
+                expiry_date = balance.nearest_expiry_date
+                alert_date = balance.nearest_alert_date
+                status = False
+                priority = 0
+
+                if expiry_date and expiry_date < today:
+                    status = "Expired"
+                    priority = 400
+                elif alert_date and alert_date <= today:
+                    status = "Near Expiry"
+                    priority = 300
+                elif qty <= 0:
+                    status = "Zero Stock"
+                    priority = 250
+                elif qty <= 5:
+                    status = "Refill Needed"
+                    priority = 150
+
+                if qty <= 5:
+                    refill_needed_count += 1
+
+                if not status:
+                    continue
+
+                risky_rows.append({
+                    "product": balance.product_id.display_name or "-",
+                    "qty": qty,
+                    "lot": balance.lot_names or "-",
+                    "expiry": fields.Date.to_string(expiry_date) if expiry_date else "-",
+                    "status": status,
+                    "priority": priority,
+                })
+
+            risky_rows.sort(
+                key=lambda row: (
+                    -row["priority"],
+                    row["expiry"] if row["expiry"] != "-" else "9999-12-31",
+                    row["product"],
+                )
+            )
+
+            record.refill_needed_count = refill_needed_count
+
+            if not risky_rows:
+                record.top_risk_products_html = (
+                    '<div class="text-muted">No risk products detected for this outlet.</div>'
+                )
+                continue
+
+            rows_html = []
+            for row in risky_rows[:5]:
+                rows_html.append(
+                    "<tr>"
+                    f"<td>{html.escape(row['product'])}</td>"
+                    f"<td>{row['qty']:.2f}</td>"
+                    f"<td>{html.escape(row['lot'])}</td>"
+                    f"<td>{html.escape(row['expiry'])}</td>"
+                    f"<td><span>{html.escape(row['status'])}</span></td>"
+                    "</tr>"
+                )
+
+            record.top_risk_products_html = (
+                '<table class="table table-sm table-bordered">'
+                '<thead><tr>'
+                '<th>Product</th><th>Shelf Qty</th><th>Lot</th><th>Expiry Date</th><th>Risk Status</th>'
+                '</tr></thead>'
+                f"<tbody>{''.join(rows_html)}</tbody>"
+                '</table>'
+            )
+
     @api.depends(
         "open_shortage_count",
         "planned_shortage_count",
