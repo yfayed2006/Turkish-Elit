@@ -335,6 +335,85 @@ class RouteVisitLine(models.Model):
                 if line.near_expiry_decision_note == "Kept at outlet by representative decision.":
                     line.near_expiry_decision_note = False
 
+
+    @api.depends(
+        "product_id",
+        "visit_id.outlet_id",
+        "visit_id.date",
+        "previous_qty",
+        "counted_qty",
+        "supplied_qty",
+        "new_balance_qty",
+        "sold_qty",
+    )
+    def _compute_shelf_movement_metrics(self):
+        VisitLine = self.env["route.visit.line"]
+        today = fields.Date.context_today(self)
+
+        for line in self:
+            line.last_sold_date = False
+            line.last_supply_date = False
+            line.days_since_last_sale = 0
+            line.days_on_shelf = 0
+            line.movement_status = "no_stock"
+            line.movement_status_note = "No stock on shelf."
+
+            if not line.product_id or not line.visit_id or not line.visit_id.outlet_id:
+                continue
+
+            reference_date = line.visit_id.date or today
+            shelf_qty = (line.counted_qty or 0.0) if (line.counted_qty or 0.0) > 0 else (line.previous_qty or 0.0)
+            if (line.new_balance_qty or 0.0) > 0:
+                shelf_qty = line.new_balance_qty or 0.0
+
+            history = VisitLine.search([
+                ("id", "!=", line.id),
+                ("visit_id.outlet_id", "=", line.visit_id.outlet_id.id),
+                ("product_id", "=", line.product_id.id),
+                ("visit_id.state", "!=", "cancelled"),
+                ("visit_id.date", "<=", reference_date),
+            ], order="visit_id.date desc, id desc", limit=60)
+
+            sale_history = history.filtered(lambda l: (l.sold_qty or 0.0) > 0)
+            supply_history = history.filtered(lambda l: (l.supplied_qty or 0.0) > 0 or (l.previous_qty or 0.0) > 0)
+
+            last_sale_line = sale_history[:1] if sale_history else VisitLine.browse()
+            last_supply_line = supply_history[:1] if supply_history else VisitLine.browse()
+
+            if last_sale_line:
+                line.last_sold_date = last_sale_line.visit_id.date
+                if line.last_sold_date:
+                    line.days_since_last_sale = max((reference_date - line.last_sold_date).days, 0)
+
+            if last_supply_line:
+                line.last_supply_date = last_supply_line.visit_id.date
+                if line.last_supply_date:
+                    line.days_on_shelf = max((reference_date - line.last_supply_date).days, 0)
+
+            if shelf_qty <= 0:
+                line.movement_status = "no_stock"
+                line.movement_status_note = "No stock on shelf."
+                continue
+
+            if not line.last_sold_date:
+                line.movement_status = "no_sale_history"
+                line.movement_status_note = "Stock exists but there is no recorded sale history yet."
+                continue
+
+            days = line.days_since_last_sale or 0
+            if days <= 7:
+                line.movement_status = "active"
+                line.movement_status_note = "Healthy movement based on recent sales."
+            elif days <= 21:
+                line.movement_status = "watch"
+                line.movement_status_note = "Monitor this item; recent movement is slowing down."
+            elif days <= 45:
+                line.movement_status = "slow"
+                line.movement_status_note = "Slow-moving item; consider refill carefully."
+            else:
+                line.movement_status = "very_slow"
+                line.movement_status_note = "Very slow item; review expiry and stock decision."
+
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
@@ -364,3 +443,4 @@ class RouteVisitLine(models.Model):
             else:
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
+
