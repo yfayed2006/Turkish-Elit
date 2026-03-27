@@ -164,6 +164,11 @@ class RouteOutlet(models.Model):
         currency_field="currency_id",
         compute="_compute_visit_stats",
     )
+    sales_lifetime_total = fields.Monetary(
+        string="Lifetime Sales",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
     sales_current_month_label = fields.Char(
         string="Current Month Label",
         compute="_compute_visit_stats",
@@ -308,6 +313,81 @@ class RouteOutlet(models.Model):
     commission_previous_growth_display = fields.Char(
         string="Previous Month Commission Growth",
         compute="_compute_visit_stats",
+    )
+    returns_current_month = fields.Monetary(
+        string="Current Month Returns",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    returns_previous_month = fields.Monetary(
+        string="Previous Month Returns",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    returns_two_months_ago = fields.Monetary(
+        string="2 Months Ago Returns",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    returns_last_3_months_total = fields.Monetary(
+        string="Last 3 Months Returns",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    returns_lifetime_total = fields.Monetary(
+        string="Lifetime Returns",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    net_current_month = fields.Monetary(
+        string="Current Month Net Sales",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    net_previous_month = fields.Monetary(
+        string="Previous Month Net Sales",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    net_two_months_ago = fields.Monetary(
+        string="2 Months Ago Net Sales",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    net_last_3_months_total = fields.Monetary(
+        string="Last 3 Months Net Sales",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    net_lifetime_total = fields.Monetary(
+        string="Lifetime Net Sales",
+        currency_field="currency_id",
+        compute="_compute_profitability_stats",
+    )
+    aging_0_30_amount = fields.Monetary(
+        string="0-30 Days",
+        currency_field="currency_id",
+        compute="_compute_receivables_stats",
+    )
+    aging_31_60_amount = fields.Monetary(
+        string="31-60 Days",
+        currency_field="currency_id",
+        compute="_compute_receivables_stats",
+    )
+    aging_61_90_amount = fields.Monetary(
+        string="61-90 Days",
+        currency_field="currency_id",
+        compute="_compute_receivables_stats",
+    )
+    aging_90_plus_amount = fields.Monetary(
+        string="90+ Days",
+        currency_field="currency_id",
+        compute="_compute_receivables_stats",
+    )
+    decision_flags_html = fields.Html(
+        string="Decision Flags",
+        compute="_compute_decision_flags",
+        sanitize=False,
     )
     deferred_payment_count = fields.Integer(
         string="Deferred Payments",
@@ -550,12 +630,14 @@ class RouteOutlet(models.Model):
             previous_sales = monthly_sales["previous"]
             two_months_ago_sales = monthly_sales["two_months_ago"]
             total_last_3_months = current_sales + previous_sales + two_months_ago_sales
+            sales_lifetime_total = sum((order.amount_total or order.amount_untaxed or 0.0) for order in sale_orders)
 
             record.sales_current_month = current_sales
             record.sales_previous_month = previous_sales
             record.sales_two_months_ago = two_months_ago_sales
             record.sales_last_3_months_total = total_last_3_months
             record.sales_last_3_months_average = total_last_3_months / 3.0
+            record.sales_lifetime_total = sales_lifetime_total
             record.sales_current_month_label = self._month_label(current_month_start)
             record.sales_previous_month_label = self._month_label(previous_month_start)
             record.sales_two_months_ago_label = self._month_label(two_months_ago_start)
@@ -1006,6 +1088,187 @@ class RouteOutlet(models.Model):
                 f"<tbody>{''.join(rows_html)}</tbody>"
                 "</table>"
                 "</div>"
+            )
+
+    @api.depends(
+        "visit_ids",
+        "visit_ids.date",
+        "visit_ids.state",
+        "visit_ids.sale_order_id",
+        "visit_ids.sale_order_id.amount_total",
+        "visit_ids.sale_order_id.amount_untaxed",
+        "visit_ids.sale_order_id.date_order",
+        "visit_ids.line_ids.return_amount",
+        "visit_ids.line_ids.write_date",
+        "visit_ids.write_date",
+    )
+    def _compute_profitability_stats(self):
+        today = fields.Date.to_date(fields.Date.context_today(self))
+        current_month_start = today.replace(day=1)
+        previous_month_start = current_month_start - relativedelta(months=1)
+        two_months_ago_start = current_month_start - relativedelta(months=2)
+        next_month_start = current_month_start + relativedelta(months=1)
+
+        for record in self:
+            monthly_returns = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            monthly_net = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            returns_lifetime_total = 0.0
+            net_lifetime_total = 0.0
+            outlet_default_rate = (
+                record.default_commission_rate
+                if "default_commission_rate" in record._fields and record.default_commission_rate
+                else record.commission_rate
+            ) or 0.0
+
+            visits = record.visit_ids.filtered(lambda v: v.state != "cancel" and v.sale_order_id)
+            for visit in visits:
+                order = visit.sale_order_id
+                visit_date = fields.Datetime.to_datetime(order.date_order).date() if order and order.date_order else False
+                if not visit_date:
+                    visit_date = visit.date or False
+                if not visit_date and order and order.create_date:
+                    visit_date = fields.Date.to_date(order.create_date)
+                if not visit_date:
+                    continue
+
+                gross_amount = order.amount_total or order.amount_untaxed or 0.0
+                returns_amount = sum((line.return_amount or 0.0) for line in visit.line_ids)
+                effective_rate = getattr(visit, "commission_rate", 0.0) or outlet_default_rate
+                commission_amount = gross_amount * (effective_rate / 100.0)
+                net_amount = gross_amount - returns_amount - commission_amount
+
+                returns_lifetime_total += returns_amount
+                net_lifetime_total += net_amount
+
+                if current_month_start <= visit_date < next_month_start:
+                    monthly_returns["current"] += returns_amount
+                    monthly_net["current"] += net_amount
+                elif previous_month_start <= visit_date < current_month_start:
+                    monthly_returns["previous"] += returns_amount
+                    monthly_net["previous"] += net_amount
+                elif two_months_ago_start <= visit_date < previous_month_start:
+                    monthly_returns["two_months_ago"] += returns_amount
+                    monthly_net["two_months_ago"] += net_amount
+
+            record.returns_current_month = monthly_returns["current"]
+            record.returns_previous_month = monthly_returns["previous"]
+            record.returns_two_months_ago = monthly_returns["two_months_ago"]
+            record.returns_last_3_months_total = sum(monthly_returns.values())
+            record.returns_lifetime_total = returns_lifetime_total
+
+            record.net_current_month = monthly_net["current"]
+            record.net_previous_month = monthly_net["previous"]
+            record.net_two_months_ago = monthly_net["two_months_ago"]
+            record.net_last_3_months_total = sum(monthly_net.values())
+            record.net_lifetime_total = net_lifetime_total
+
+    @api.depends(
+        "visit_ids",
+        "visit_ids.date",
+        "visit_ids.state",
+        "visit_ids.remaining_due_amount",
+        "visit_ids.write_date",
+    )
+    def _compute_receivables_stats(self):
+        today = fields.Date.to_date(fields.Date.context_today(self))
+        for record in self:
+            bucket_0_30 = 0.0
+            bucket_31_60 = 0.0
+            bucket_61_90 = 0.0
+            bucket_90_plus = 0.0
+
+            unpaid_visits = record.visit_ids.filtered(
+                lambda v: v.state != "cancel" and (v.remaining_due_amount or 0.0) > 0
+            )
+            for visit in unpaid_visits:
+                base_date = visit.date or False
+                if not base_date and visit.sale_order_id and visit.sale_order_id.date_order:
+                    base_date = fields.Datetime.to_datetime(visit.sale_order_id.date_order).date()
+                if not base_date:
+                    base_date = today
+                age_days = max((today - base_date).days, 0)
+                amount = visit.remaining_due_amount or 0.0
+                if age_days <= 30:
+                    bucket_0_30 += amount
+                elif age_days <= 60:
+                    bucket_31_60 += amount
+                elif age_days <= 90:
+                    bucket_61_90 += amount
+                else:
+                    bucket_90_plus += amount
+
+            record.aging_0_30_amount = bucket_0_30
+            record.aging_31_60_amount = bucket_31_60
+            record.aging_61_90_amount = bucket_61_90
+            record.aging_90_plus_amount = bucket_90_plus
+
+    @api.depends(
+        "summary_alert_level",
+        "collection_status",
+        "current_due_amount",
+        "sales_last_3_months_average",
+        "refill_needed_count",
+        "near_expiry_product_count",
+        "expired_product_count",
+        "open_shortage_count",
+        "aging_61_90_amount",
+        "aging_90_plus_amount",
+    )
+    def _compute_decision_flags(self):
+        for record in self:
+            badges = []
+
+            def add_badge(label, style):
+                badges.append(
+                    f"<span style='display:inline-block; padding:4px 10px; border-radius:999px; font-weight:600; margin:0 8px 8px 0; {style}'>{html.escape(label)}</span>"
+                )
+
+            visit_now = (
+                record.open_shortage_count > 0
+                or record.refill_needed_count > 0
+                or record.near_expiry_product_count > 0
+                or record.expired_product_count > 0
+            )
+            collect_first = (
+                (record.aging_61_90_amount or 0.0) > 0
+                or (record.aging_90_plus_amount or 0.0) > 0
+                or record.collection_status == "weak"
+            )
+            refill_needed = record.refill_needed_count > 0 or record.open_shortage_count > 0
+            near_expiry_risk = record.near_expiry_product_count > 0 or record.expired_product_count > 0
+            high_debt = (
+                (record.current_due_amount or 0.0) > max((record.sales_last_3_months_average or 0.0) * 1.5, 500.0)
+            )
+            healthy = not any([visit_now, collect_first, refill_needed, near_expiry_risk, high_debt])
+
+            if visit_now:
+                add_badge("Visit Now", "background:#fde2e4;color:#9b1c31;")
+            if collect_first:
+                add_badge("Collect First", "background:#fff3cd;color:#7a5d00;")
+            if refill_needed:
+                add_badge("Refill Needed", "background:#e7f1ff;color:#0a58ca;")
+            if near_expiry_risk:
+                add_badge("Near Expiry Risk", "background:#fff3cd;color:#7a5d00;")
+            if high_debt:
+                add_badge("High Debt", "background:#fde2e4;color:#9b1c31;")
+            if healthy:
+                add_badge("Healthy Outlet", "background:#d1e7dd;color:#0f5132;")
+
+            aging_summary = (
+                f"<div style='margin-top:6px; color:#6c757d;'>Aging: 0-30 = {record.aging_0_30_amount:.2f}, "
+                f"31-60 = {record.aging_31_60_amount:.2f}, 61-90 = {record.aging_61_90_amount:.2f}, "
+                f"90+ = {record.aging_90_plus_amount:.2f}</div>"
+            )
+            record.decision_flags_html = (
+                "<div style='width:100%;'>" + "".join(badges) + aging_summary + "</div>"
             )
 
     @api.depends(
