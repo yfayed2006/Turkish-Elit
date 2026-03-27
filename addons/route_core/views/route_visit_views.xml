@@ -165,6 +165,8 @@
 </group>
 <group>
 <field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
+<field name="collection_priority_score" readonly="1"/>
+<field name="collection_trend_status" string="Collection Trend" readonly="1" widget="badge" decoration-success="collection_trend_status == 'good'" decoration-info="collection_trend_status == 'no_basis'" decoration-warning="collection_trend_status == 'warning'" decoration-danger="collection_trend_status == 'weak'"/>
 <field name="visit_mode" readonly="1"/>
 <field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
 </group>
@@ -173,6 +175,20 @@
 <div class="mb-2" invisible="not outlet_decision_flags_html">
 <field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
 </div>
+<group string="Collection Control Snapshot" col="3">
+<group>
+<field name="outlet_open_promise_count" readonly="1"/>
+<field name="outlet_overdue_promise_count" readonly="1"/>
+</group>
+<group>
+<field name="outlet_unpaid_visit_count" readonly="1"/>
+<field name="next_promise_to_pay_date" readonly="1"/>
+</group>
+<group>
+<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
+<field name="collection_priority_reason" readonly="1"/>
+</group>
+</group>
 <group string="Visit Details" col="2">
 <group>
 <field name="partner_id" readonly="1"/>
