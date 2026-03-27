@@ -372,7 +372,12 @@ class RouteVisitLine(models.Model):
                 ("product_id", "=", line.product_id.id),
                 ("visit_id.state", "!=", "cancelled"),
                 ("visit_id.date", "<=", reference_date),
-            ], order="visit_id.date desc, id desc", limit=60)
+            ], order="id desc", limit=120)
+
+            history = history.sorted(
+                key=lambda l: ((l.visit_id.date or fields.Date.from_string("1900-01-01")), l.id),
+                reverse=True,
+            )
 
             sale_history = history.filtered(lambda l: (l.sold_qty or 0.0) > 0)
             supply_history = history.filtered(lambda l: (l.supplied_qty or 0.0) > 0 or (l.previous_qty or 0.0) > 0)
@@ -443,4 +448,3 @@ class RouteVisitLine(models.Model):
             else:
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
-
