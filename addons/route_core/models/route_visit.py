@@ -360,19 +360,56 @@ class RouteVisit(models.Model):
             return "audit_only"
         return "regular"
 
+    def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions):
+        def _badge(label, style):
+            return (
+                '<span style="display:inline-block;margin:0 8px 8px 0;padding:6px 12px;'
+                'border-radius:999px;font-weight:600;%s">%s</span>'
+            ) % (style, label)
+
+        badges = []
+        alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
+
+        if collection_priority == "critical":
+            badges.append(_badge("Critical Debt", "background:#f8d7da;color:#b02a37;"))
+        elif collection_priority == "high":
+            badges.append(_badge("Collect First", "background:#fde2e4;color:#b02a37;"))
+        elif collection_priority == "medium":
+            badges.append(_badge("Collection Follow-up", "background:#fff3cd;color:#8a6d1d;"))
+
+        if open_shortages > 0:
+            badges.append(_badge("Open Shortages", "background:#e2e3ff;color:#3d3d9b;"))
+
+        if near_expiry > 0:
+            badges.append(_badge("Near Expiry Risk", "background:#f6e7b0;color:#8a6d1d;"))
+
+        if pending_decisions > 0:
+            badges.append(_badge("Pending Expiry Decision", "background:#ffe5d0;color:#b54708;"))
+
+        if alert_level == "critical":
+            badges.append(_badge("Visit Now", "background:#f8d7da;color:#b02a37;"))
+        elif alert_level == "warning":
+            badges.append(_badge("Needs Follow-up", "background:#fff3cd;color:#8a6d1d;"))
+
+        if not badges:
+            badges.append(_badge("Normal", "background:#d1f7d6;color:#1e7e34;"))
+
+        return "".join(badges)
+
     @api.depends(
         "outlet_id",
         "outlet_id.current_due_amount",
         "outlet_id.open_shortage_count",
         "outlet_id.near_expiry_product_count",
         "outlet_id.summary_alert_level",
-        "outlet_id.decision_flags_html",
         "outlet_id.aging_61_90_amount",
         "outlet_id.aging_90_plus_amount",
         "outlet_id.collection_status",
         "outlet_id.deferred_payment_count",
         "outlet_id.refill_needed_count",
         "outlet_id.expired_product_count",
+        "pending_near_expiry_line_count",
+        "has_pending_near_expiry",
     )
     def _compute_visit_command_header(self):
         for rec in self:
@@ -390,7 +427,13 @@ class RouteVisit(models.Model):
             rec.outlet_open_shortage_count = open_shortages
             rec.outlet_near_expiry_count = near_expiry
             rec.outlet_summary_alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
-            rec.outlet_decision_flags_html = getattr(outlet, "decision_flags_html", False) if outlet else False
+            rec.outlet_decision_flags_html = rec._build_visit_command_flags_html(
+                outlet,
+                priority,
+                open_shortages,
+                near_expiry,
+                rec.pending_near_expiry_line_count or 0,
+            )
 
     @api.depends("sale_order_id")
     def _compute_sale_order_count(self):
