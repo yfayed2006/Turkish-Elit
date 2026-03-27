@@ -222,6 +222,67 @@
 <field name="commission_growth_vs_previous_display" readonly="1"/>
 </group>
 </group>
+<group string="Profitability Trend" col="4">
+<group>
+<field name="sales_two_months_ago_label" readonly="1"/>
+<field name="sales_two_months_ago" readonly="1"/>
+<field name="returns_two_months_ago" readonly="1"/>
+<field name="commission_two_months_ago_amount" readonly="1"/>
+<field name="net_two_months_ago" readonly="1"/>
+</group>
+<group>
+<field name="sales_previous_month_label" readonly="1"/>
+<field name="sales_previous_month" readonly="1"/>
+<field name="returns_previous_month" readonly="1"/>
+<field name="commission_previous_month_amount" readonly="1"/>
+<field name="net_previous_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_current_month_label" readonly="1"/>
+<field name="sales_current_month" readonly="1"/>
+<field name="returns_current_month" readonly="1"/>
+<field name="commission_current_month_amount" readonly="1"/>
+<field name="net_current_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_last_3_months_total" readonly="1"/>
+<field name="returns_last_3_months_total" readonly="1"/>
+<field name="commission_last_3_months_total" readonly="1"/>
+<field name="net_last_3_months_total" readonly="1"/>
+<field name="collections_last_3_months_total" readonly="1"/>
+</group>
+</group>
+<group string="Profitability Lifetime" col="2">
+<group>
+<field name="sales_lifetime_total" readonly="1"/>
+<field name="returns_lifetime_total" readonly="1"/>
+<field name="commission_lifetime_total" readonly="1"/>
+<field name="net_lifetime_total" readonly="1"/>
+</group>
+<group>
+<field name="current_due_amount" readonly="1"/>
+<field name="collections_last_3_months_average" readonly="1"/>
+<field name="sales_last_3_months_average" readonly="1"/>
+<field name="commission_last_3_months_average" readonly="1"/>
+</group>
+</group>
+<group string="Receivables Aging" col="4">
+<group>
+<field name="aging_0_30_amount" readonly="1"/>
+</group>
+<group>
+<field name="aging_31_60_amount" readonly="1"/>
+</group>
+<group>
+<field name="aging_61_90_amount" readonly="1"/>
+</group>
+<group>
+<field name="aging_90_plus_amount" readonly="1"/>
+</group>
+</group>
+<group string="Decision Flags" col="1">
+<field name="decision_flags_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
+</group>
 <group string="Top 3 Selling Products by Qty (Last 3 Months)" col="1">
 <field name="top_selling_products_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
