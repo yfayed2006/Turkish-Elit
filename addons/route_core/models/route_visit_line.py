@@ -180,6 +180,52 @@ class RouteVisitLine(models.Model):
         help="Optional note when the representative decides to keep a near-expiry item at the outlet.",
     )
 
+
+    last_sold_date = fields.Date(
+        string="Last Sold Date",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+    )
+
+    last_supply_date = fields.Date(
+        string="Last Supply Date",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+    )
+
+    days_since_last_sale = fields.Integer(
+        string="Days Since Last Sale",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+    )
+
+    days_on_shelf = fields.Integer(
+        string="Days On Shelf",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+        help="Estimated days the current stock has been sitting on the shelf based on the last refill/stock entry signal.",
+    )
+
+    movement_status = fields.Selection(
+        [
+            ("active", "Active"),
+            ("watch", "Monitor"),
+            ("slow", "Slow Moving"),
+            ("very_slow", "Very Slow"),
+            ("no_sale_history", "No Sale History"),
+            ("no_stock", "No Stock"),
+        ],
+        string="Movement Status",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+    )
+
+    movement_status_note = fields.Char(
+        string="Movement Note",
+        compute="_compute_shelf_movement_metrics",
+        store=False,
+    )
+
     keep_near_expiry = fields.Boolean(
         string="Keep Near Expiry",
         default=False,
