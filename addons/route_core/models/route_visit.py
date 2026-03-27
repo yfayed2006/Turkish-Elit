@@ -185,6 +185,11 @@ class RouteVisit(models.Model):
         compute="_compute_promise_to_pay_summary",
         store=False,
     )
+    next_promise_to_pay_date = fields.Date(
+        string="Next Promise Date",
+        compute="_compute_promise_to_pay_summary",
+        store=False,
+    )
     latest_promise_to_pay_date = fields.Date(
         string="Latest Promise Date",
         compute="_compute_promise_to_pay_summary",
@@ -492,18 +497,32 @@ class RouteVisit(models.Model):
             promise_payments = rec.payment_ids.filtered(
                 lambda p: p.state != "cancelled" and (p.promise_amount or 0.0) > 0.0
             )
-            open_promises = promise_payments.filtered(lambda p: p.promise_status in ("open", "due_today", "overdue"))
+            open_promises = promise_payments.filtered(
+                lambda p: p.promise_status in ("open", "due_today", "overdue")
+            )
+
+            next_promise = False
+            if open_promises:
+                next_promise = open_promises.sorted(
+                    key=lambda p: (
+                        p.promise_date or fields.Date.to_date("9999-12-31"),
+                        p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                        p.id or 0,
+                    )
+                )[0]
+
             latest = False
             if promise_payments:
                 latest = promise_payments.sorted(
                     key=lambda p: (
-                        p.promise_date or fields.Date.to_date("1900-01-01"),
-                        p.payment_date or fields.Datetime.now(),
-                        p.id,
+                        p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                        p.id or 0,
                     ),
                     reverse=True,
                 )[0]
+
             rec.promise_to_pay_count = len(open_promises)
+            rec.next_promise_to_pay_date = next_promise.promise_date if next_promise else False
             rec.latest_promise_to_pay_date = latest.promise_date if latest else False
             rec.latest_promise_to_pay_amount = latest.promise_amount if latest else 0.0
             rec.latest_promise_status = latest.promise_status if latest else False
