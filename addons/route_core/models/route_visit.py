@@ -260,6 +260,138 @@ class RouteVisit(models.Model):
         store=True,
     )
 
+
+    visit_mode = fields.Selection(
+        [
+            ("regular", "Regular Visit"),
+            ("collection_first", "Collection First"),
+            ("refill_first", "Refill First"),
+            ("audit_only", "Audit Only"),
+        ],
+        string="Visit Mode",
+        default="regular",
+        required=True,
+        tracking=True,
+        copy=False,
+    )
+    visit_mode_recommendation = fields.Selection(
+        [
+            ("regular", "Regular Visit"),
+            ("collection_first", "Collection First"),
+            ("refill_first", "Refill First"),
+            ("audit_only", "Audit Only"),
+        ],
+        string="Recommended Visit Mode",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    collection_priority = fields.Selection(
+        [
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+            ("critical", "Critical"),
+        ],
+        string="Collection Priority",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_current_due_amount = fields.Monetary(
+        string="Current Due",
+        currency_field="currency_id",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_open_shortage_count = fields.Integer(
+        string="Open Shortages",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_near_expiry_count = fields.Integer(
+        string="Near Expiry",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_summary_alert_level = fields.Selection(
+        [("normal", "Normal"), ("warning", "Needs Follow-up"), ("critical", "Critical")],
+        string="Outlet Alert Level",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_decision_flags_html = fields.Html(
+        string="Decision Flags",
+        compute="_compute_visit_command_header",
+        sanitize=False,
+    )
+
+
+    def _get_collection_priority_value(self, outlet):
+        if not outlet:
+            return "low"
+
+        aging_90_plus = getattr(outlet, "aging_90_plus_amount", 0.0) or 0.0
+        aging_61_90 = getattr(outlet, "aging_61_90_amount", 0.0) or 0.0
+        current_due = getattr(outlet, "current_due_amount", 0.0) or 0.0
+        collection_status = getattr(outlet, "collection_status", False)
+        deferred_count = getattr(outlet, "deferred_payment_count", 0) or 0
+
+        if aging_90_plus > 0:
+            return "critical"
+        if aging_61_90 > 0 or collection_status == "weak":
+            return "high"
+        if current_due > 0 or collection_status == "warning" or deferred_count > 0:
+            return "medium"
+        return "low"
+
+    def _get_recommended_visit_mode_value(self, outlet, collection_priority):
+        if not outlet:
+            return "regular"
+
+        refill_needed_count = getattr(outlet, "refill_needed_count", 0) or 0
+        open_shortage_count = getattr(outlet, "open_shortage_count", 0) or 0
+        near_expiry_count = getattr(outlet, "near_expiry_product_count", 0) or 0
+        expired_count = getattr(outlet, "expired_product_count", 0) or 0
+
+        if collection_priority in ("high", "critical"):
+            return "collection_first"
+        if refill_needed_count > 0 or open_shortage_count > 0:
+            return "refill_first"
+        if near_expiry_count > 0 or expired_count > 0:
+            return "audit_only"
+        return "regular"
+
+    @api.depends(
+        "outlet_id",
+        "outlet_id.current_due_amount",
+        "outlet_id.open_shortage_count",
+        "outlet_id.near_expiry_product_count",
+        "outlet_id.summary_alert_level",
+        "outlet_id.decision_flags_html",
+        "outlet_id.aging_61_90_amount",
+        "outlet_id.aging_90_plus_amount",
+        "outlet_id.collection_status",
+        "outlet_id.deferred_payment_count",
+        "outlet_id.refill_needed_count",
+        "outlet_id.expired_product_count",
+    )
+    def _compute_visit_command_header(self):
+        for rec in self:
+            outlet = rec.outlet_id
+            current_due = (getattr(outlet, "current_due_amount", 0.0) or 0.0) if outlet else 0.0
+            open_shortages = (getattr(outlet, "open_shortage_count", 0) or 0) if outlet else 0
+            near_expiry = (getattr(outlet, "near_expiry_product_count", 0) or 0) if outlet else 0
+
+            priority = rec._get_collection_priority_value(outlet)
+            recommendation = rec._get_recommended_visit_mode_value(outlet, priority)
+
+            rec.collection_priority = priority
+            rec.visit_mode_recommendation = recommendation
+            rec.outlet_current_due_amount = current_due
+            rec.outlet_open_shortage_count = open_shortages
+            rec.outlet_near_expiry_count = near_expiry
+            rec.outlet_summary_alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
+            rec.outlet_decision_flags_html = getattr(outlet, "decision_flags_html", False) if outlet else False
+
     @api.depends("sale_order_id")
     def _compute_sale_order_count(self):
         for rec in self:
@@ -330,6 +462,13 @@ class RouteVisit(models.Model):
 
                 if "commission_rate" in rec._fields:
                     rec.commission_rate = rec._get_outlet_commission_rate_value(rec.outlet_id)
+
+                recommended_mode = rec._get_recommended_visit_mode_value(
+                    rec.outlet_id,
+                    rec._get_collection_priority_value(rec.outlet_id),
+                )
+                if not rec.visit_mode or rec.visit_mode == "regular":
+                    rec.visit_mode = recommended_mode
 
     @api.onchange("vehicle_id")
     def _onchange_vehicle_id_set_source_location(self):
