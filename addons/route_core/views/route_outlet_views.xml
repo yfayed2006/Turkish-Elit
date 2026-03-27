@@ -143,16 +143,29 @@
 </group>
 <group string="Monthly Sales Trend" col="4">
 <group>
-<field name="sales_current_month" readonly="1"/>
-</group>
-<group>
-<field name="sales_previous_month" readonly="1"/>
-</group>
-<group>
+<field name="sales_two_months_ago_label" readonly="1"/>
 <field name="sales_two_months_ago" readonly="1"/>
 </group>
 <group>
+<field name="sales_previous_month_label" readonly="1"/>
+<field name="sales_previous_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_current_month_label" readonly="1"/>
+<field name="sales_current_month" readonly="1"/>
+</group>
+<group>
 <field name="sales_last_3_months_total" readonly="1"/>
+<field name="sales_last_3_months_average" readonly="1"/>
+<field name="sales_trend_status" widget="badge" readonly="1" decoration-success="sales_trend_status == 'up'" decoration-warning="sales_trend_status == 'flat'" decoration-danger="sales_trend_status == 'down'"/>
+</group>
+</group>
+<group string="Monthly Growth" col="2">
+<group>
+<field name="sales_previous_growth_pct" readonly="1" widget="percentage"/>
+</group>
+<group>
+<field name="sales_growth_vs_previous_pct" readonly="1" widget="percentage"/>
 </group>
 </group>
 <group string="Stock Summary" col="2">
