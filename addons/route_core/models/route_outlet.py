@@ -1,4 +1,5 @@
 import calendar
+import html
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, api, fields, models
@@ -325,6 +326,16 @@ class RouteOutlet(models.Model):
     last_stock_update_at = fields.Datetime(
         string="Last Stock Update",
         compute="_compute_stock_stats",
+    )
+
+    refill_needed_count = fields.Integer(
+        string="Refill Needed Items",
+        compute="_compute_top_risk_products",
+    )
+    top_risk_products_html = fields.Html(
+        string="Top Risk Products",
+        compute="_compute_top_risk_products",
+        sanitize=False,
     )
 
     summary_alert_level = fields.Selection(
