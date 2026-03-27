@@ -191,6 +191,37 @@
 <field name="collection_status" widget="badge" readonly="1" decoration-success="collection_status == 'good'" decoration-warning="collection_status == 'warning'" decoration-danger="collection_status == 'weak'" decoration-info="collection_status == 'no_basis'"/>
 </group>
 </group>
+<group string="Outlet Commission Trend" col="4">
+<group>
+<field name="sales_two_months_ago_label" readonly="1"/>
+<field name="commission_two_months_ago_amount" readonly="1"/>
+<field name="commission_two_months_ago_rate_display" readonly="1"/>
+</group>
+<group>
+<field name="sales_previous_month_label" readonly="1"/>
+<field name="commission_previous_month_amount" readonly="1"/>
+<field name="commission_previous_month_rate_display" readonly="1"/>
+</group>
+<group>
+<field name="sales_current_month_label" readonly="1"/>
+<field name="commission_current_month_amount" readonly="1"/>
+<field name="commission_current_month_rate_display" readonly="1"/>
+</group>
+<group>
+<field name="commission_last_3_months_total" readonly="1"/>
+<field name="commission_last_3_months_average" readonly="1"/>
+<field name="commission_lifetime_total" readonly="1"/>
+<field name="commission_trend_status" widget="badge" readonly="1" decoration-success="commission_trend_status == 'up'" decoration-warning="commission_trend_status == 'flat'" decoration-danger="commission_trend_status == 'down'"/>
+</group>
+</group>
+<group string="Commission Growth" col="2">
+<group>
+<field name="commission_previous_growth_display" readonly="1"/>
+</group>
+<group>
+<field name="commission_growth_vs_previous_display" readonly="1"/>
+</group>
+</group>
 <group string="Top 3 Selling Products by Qty (Last 3 Months)" col="1">
 <field name="top_selling_products_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
