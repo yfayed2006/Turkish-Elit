@@ -250,6 +250,65 @@ class RouteOutlet(models.Model):
         string="Collection Status",
         compute="_compute_payment_stats",
     )
+    commission_current_month_amount = fields.Monetary(
+        string="Current Month Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_previous_month_amount = fields.Monetary(
+        string="Previous Month Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_two_months_ago_amount = fields.Monetary(
+        string="2 Months Ago Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_last_3_months_total = fields.Monetary(
+        string="Last 3 Months Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_last_3_months_average = fields.Monetary(
+        string="3 Month Commission Average",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_lifetime_total = fields.Monetary(
+        string="Lifetime Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    commission_current_month_rate_display = fields.Char(
+        string="Current Month Commission %",
+        compute="_compute_visit_stats",
+    )
+    commission_previous_month_rate_display = fields.Char(
+        string="Previous Month Commission %",
+        compute="_compute_visit_stats",
+    )
+    commission_two_months_ago_rate_display = fields.Char(
+        string="2 Months Ago Commission %",
+        compute="_compute_visit_stats",
+    )
+    commission_trend_status = fields.Selection(
+        [
+            ("up", "Up"),
+            ("flat", "Flat"),
+            ("down", "Down"),
+        ],
+        string="Commission Trend Status",
+        compute="_compute_visit_stats",
+    )
+    commission_growth_vs_previous_display = fields.Char(
+        string="Commission Growth vs Previous Month",
+        compute="_compute_visit_stats",
+    )
+    commission_previous_growth_display = fields.Char(
+        string="Previous Month Commission Growth",
+        compute="_compute_visit_stats",
+    )
     deferred_payment_count = fields.Integer(
         string="Deferred Payments",
         compute="_compute_payment_stats",
@@ -401,6 +460,14 @@ class RouteOutlet(models.Model):
         return "N/A"
 
     @staticmethod
+    def _format_percentage_display(numerator, denominator):
+        numerator = numerator or 0.0
+        denominator = denominator or 0.0
+        if denominator > 0:
+            return f"{(numerator / denominator) * 100.0:.2f}%"
+        return "N/A"
+
+    @staticmethod
     def _get_collection_status(collections_amount, sales_amount):
         collections_amount = collections_amount or 0.0
         sales_amount = sales_amount or 0.0
@@ -502,6 +569,71 @@ class RouteOutlet(models.Model):
                 record.sales_trend_status = "down"
             else:
                 record.sales_trend_status = "flat"
+
+            commission_monthly = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            commission_lifetime_total = 0.0
+            outlet_default_rate = (
+                record.default_commission_rate
+                if "default_commission_rate" in record._fields and record.default_commission_rate
+                else record.commission_rate
+            ) or 0.0
+            for visit in active_visits.filtered(lambda v: v.sale_order_id):
+                order = visit.sale_order_id
+                visit_date = fields.Datetime.to_datetime(order.date_order).date() if order and order.date_order else False
+                if not visit_date:
+                    visit_date = visit.date or False
+                if not visit_date:
+                    visit_date = fields.Date.to_date(order.create_date) if order and order.create_date else False
+                if not visit_date:
+                    continue
+                sale_amount = (order.amount_total or order.amount_untaxed or 0.0) if order else 0.0
+                effective_rate = getattr(visit, "commission_rate", 0.0) or outlet_default_rate
+                commission_amount = sale_amount * (effective_rate / 100.0)
+                commission_lifetime_total += commission_amount
+                if current_month_start <= visit_date < next_month_start:
+                    commission_monthly["current"] += commission_amount
+                elif previous_month_start <= visit_date < current_month_start:
+                    commission_monthly["previous"] += commission_amount
+                elif two_months_ago_start <= visit_date < previous_month_start:
+                    commission_monthly["two_months_ago"] += commission_amount
+
+            current_commission = commission_monthly["current"]
+            previous_commission = commission_monthly["previous"]
+            two_months_ago_commission = commission_monthly["two_months_ago"]
+            total_last_3_months_commission = (
+                current_commission + previous_commission + two_months_ago_commission
+            )
+            record.commission_current_month_amount = current_commission
+            record.commission_previous_month_amount = previous_commission
+            record.commission_two_months_ago_amount = two_months_ago_commission
+            record.commission_last_3_months_total = total_last_3_months_commission
+            record.commission_last_3_months_average = total_last_3_months_commission / 3.0
+            record.commission_lifetime_total = commission_lifetime_total
+            record.commission_current_month_rate_display = self._format_percentage_display(
+                current_commission, current_sales
+            )
+            record.commission_previous_month_rate_display = self._format_percentage_display(
+                previous_commission, previous_sales
+            )
+            record.commission_two_months_ago_rate_display = self._format_percentage_display(
+                two_months_ago_commission, two_months_ago_sales
+            )
+            record.commission_growth_vs_previous_display = self._format_growth_display(
+                current_commission, previous_commission
+            )
+            record.commission_previous_growth_display = self._format_growth_display(
+                previous_commission, two_months_ago_commission
+            )
+            if current_commission > previous_commission:
+                record.commission_trend_status = "up"
+            elif current_commission < previous_commission:
+                record.commission_trend_status = "down"
+            else:
+                record.commission_trend_status = "flat"
 
             record.current_due_amount = sum(
                 active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0).mapped("remaining_due_amount")
