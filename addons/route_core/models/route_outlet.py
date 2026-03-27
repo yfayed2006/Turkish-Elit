@@ -1,3 +1,4 @@
+import calendar
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, api, fields, models
@@ -157,6 +158,42 @@ class RouteOutlet(models.Model):
         currency_field="currency_id",
         compute="_compute_visit_stats",
     )
+    sales_last_3_months_average = fields.Monetary(
+        string="3 Month Average",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    sales_current_month_label = fields.Char(
+        string="Current Month Label",
+        compute="_compute_visit_stats",
+    )
+    sales_previous_month_label = fields.Char(
+        string="Previous Month Label",
+        compute="_compute_visit_stats",
+    )
+    sales_two_months_ago_label = fields.Char(
+        string="2 Months Ago Label",
+        compute="_compute_visit_stats",
+    )
+    sales_growth_vs_previous_pct = fields.Float(
+        string="Growth vs Previous Month %",
+        digits=(16, 2),
+        compute="_compute_visit_stats",
+    )
+    sales_previous_growth_pct = fields.Float(
+        string="Previous Month Growth %",
+        digits=(16, 2),
+        compute="_compute_visit_stats",
+    )
+    sales_trend_status = fields.Selection(
+        [
+            ("up", "Up"),
+            ("flat", "Flat"),
+            ("down", "Down"),
+        ],
+        string="Trend Status",
+        compute="_compute_visit_stats",
+    )
     deferred_payment_count = fields.Integer(
         string="Deferred Payments",
         compute="_compute_payment_stats",
@@ -255,6 +292,22 @@ class RouteOutlet(models.Model):
         ("route_outlet_code_unique", "unique(code)", "Outlet code must be unique."),
     ]
 
+    @staticmethod
+    def _month_label(date_value):
+        if not date_value:
+            return False
+        return f"{calendar.month_name[date_value.month]} {date_value.year}"
+
+    @staticmethod
+    def _compute_growth_percentage(current_amount, previous_amount):
+        current_amount = current_amount or 0.0
+        previous_amount = previous_amount or 0.0
+        if previous_amount:
+            return ((current_amount - previous_amount) / previous_amount) * 100.0
+        if current_amount:
+            return 100.0
+        return 0.0
+
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -321,10 +374,27 @@ class RouteOutlet(models.Model):
                 elif two_months_ago_start <= order_date < previous_month_start:
                     monthly_sales["two_months_ago"] += amount
 
-            record.sales_current_month = monthly_sales["current"]
-            record.sales_previous_month = monthly_sales["previous"]
-            record.sales_two_months_ago = monthly_sales["two_months_ago"]
-            record.sales_last_3_months_total = sum(monthly_sales.values())
+            current_sales = monthly_sales["current"]
+            previous_sales = monthly_sales["previous"]
+            two_months_ago_sales = monthly_sales["two_months_ago"]
+            total_last_3_months = current_sales + previous_sales + two_months_ago_sales
+
+            record.sales_current_month = current_sales
+            record.sales_previous_month = previous_sales
+            record.sales_two_months_ago = two_months_ago_sales
+            record.sales_last_3_months_total = total_last_3_months
+            record.sales_last_3_months_average = total_last_3_months / 3.0
+            record.sales_current_month_label = self._month_label(current_month_start)
+            record.sales_previous_month_label = self._month_label(previous_month_start)
+            record.sales_two_months_ago_label = self._month_label(two_months_ago_start)
+            record.sales_growth_vs_previous_pct = self._compute_growth_percentage(current_sales, previous_sales)
+            record.sales_previous_growth_pct = self._compute_growth_percentage(previous_sales, two_months_ago_sales)
+            if current_sales > previous_sales:
+                record.sales_trend_status = "up"
+            elif current_sales < previous_sales:
+                record.sales_trend_status = "down"
+            else:
+                record.sales_trend_status = "flat"
 
             record.current_due_amount = sum(
                 active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0).mapped("remaining_due_amount")
