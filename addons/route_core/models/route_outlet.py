@@ -1316,6 +1316,19 @@ class RouteOutlet(models.Model):
             if record.commission_rate < 0 or record.commission_rate > 100:
                 raise ValidationError("Commission % must be between 0 and 100.")
 
+    def _phase0_notification(self, title, message, notif_type="success", sticky=False):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "type": notif_type,
+                "sticky": sticky,
+            },
+        }
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -1323,7 +1336,60 @@ class RouteOutlet(models.Model):
                 vals["code"] = self.env["ir.sequence"].next_by_code("route.outlet") or "/"
             if "commission_rate" not in vals:
                 vals["commission_rate"] = 20.0
+            if not vals.get("company_id"):
+                vals["company_id"] = self.env.company.id
         return super().create(vals_list)
+
+    def write(self, vals):
+        if "company_id" in self._fields and not vals.get("company_id"):
+            missing_company = any(not record.company_id for record in self)
+            if missing_company:
+                vals = dict(vals, company_id=self.env.company.id)
+        return super().write(vals)
+
+    def action_recompute_summary(self):
+        self.ensure_one()
+        self._compute_visit_stats()
+        self._compute_payment_stats()
+        self._compute_stock_stats()
+        self._compute_shortage_stats()
+        self._compute_top_risk_products()
+        self._compute_top_selling_products()
+        self._compute_summary_alert_level()
+        self._compute_display_address()
+        return self._phase0_notification(
+            _("Outlet Summary Refreshed"),
+            _("Outlet summary metrics were refreshed successfully."),
+        )
+
+    def action_outlet_diagnostics(self):
+        self.ensure_one()
+        checks = []
+        if not self.company_id:
+            checks.append(_("Missing company"))
+        if not self.area_id:
+            checks.append(_("Missing area"))
+        if not self.partner_id:
+            checks.append(_("Missing related contact"))
+        if hasattr(self, "stock_location_id") and not self.stock_location_id:
+            checks.append(_("Missing stock location"))
+        if self.in_progress_visit_id:
+            checks.append(_("Visit in progress: %s") % self.in_progress_visit_id.display_name)
+        if self.open_shortage_count:
+            checks.append(_("Open shortages: %s") % self.open_shortage_count)
+        if self.near_expiry_product_count:
+            checks.append(_("Near expiry products: %s") % self.near_expiry_product_count)
+        if self.current_due_amount:
+            checks.append(_("Current due: %s") % self.current_due_amount)
+        if not checks:
+            checks.append(_("No immediate diagnostics issues detected."))
+
+        return self._phase0_notification(
+            _("Outlet Diagnostics"),
+            " | ".join(checks),
+            notif_type="warning" if len(checks) > 1 or checks[0] != _("No immediate diagnostics issues detected.") else "success",
+            sticky=True,
+        )
 
     def action_view_visits(self):
         self.ensure_one()
@@ -1520,3 +1586,4 @@ class RouteOutlet(models.Model):
             create=0,
         )
         return action
+
