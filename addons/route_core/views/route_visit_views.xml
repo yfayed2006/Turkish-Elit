@@ -1,3 +1,4 @@
+<odoo>
 <record id="view_route_visit_tree" model="ir.ui.view">
 <field name="name">route.visit.tree</field>
 <field name="model">route.visit</field>
