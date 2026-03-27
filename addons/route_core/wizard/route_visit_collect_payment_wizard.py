@@ -65,6 +65,13 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         default=0.0,
     )
 
+    promise_date = fields.Date(string="Promise To Pay Date")
+    promise_amount = fields.Monetary(
+        string="Promise To Pay Amount",
+        currency_field="currency_id",
+        default=0.0,
+    )
+
     due_date = fields.Date(string="Deferred Due Date")
     reference = fields.Char(string="Reference")
     bank_name = fields.Char(string="Bank Name")
@@ -134,7 +141,21 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 vals["amount"] = max(remaining_due or 0.0, 0.0)
         return vals
 
-    @api.onchange("collection_type", "visit_id")
+    def _sync_promise_fields(self):
+        for rec in self:
+            due = rec.visit_remaining_due or 0.0
+            if rec.collection_type == "full":
+                rec.promise_date = False
+                rec.promise_amount = 0.0
+            elif rec.collection_type == "partial":
+                rec.promise_amount = max(due - (rec.amount or 0.0), 0.0)
+            elif rec.collection_type == "defer_date":
+                rec.promise_date = rec.due_date or rec.promise_date
+                rec.promise_amount = due
+            elif rec.collection_type == "next_visit":
+                rec.promise_amount = due
+
+    @api.onchange("collection_type", "visit_id", "amount", "due_date", "promise_date")
     def _onchange_collection_type(self):
         for rec in self:
             due = rec.visit_remaining_due or 0.0
@@ -153,6 +174,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             elif rec.collection_type == "next_visit":
                 rec.amount = 0.0
                 rec.due_date = False
+            rec._sync_promise_fields()
 
     @api.onchange("payment_mode")
     def _onchange_payment_mode(self):
@@ -220,6 +242,8 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 "collection_type": self.collection_type,
                 "amount": self.amount,
                 "due_date": self.due_date,
+                "promise_date": self.promise_date or self.due_date,
+                "promise_amount": self.promise_amount,
                 "reference": self.reference,
                 "bank_name": self.bank_name,
                 "pos_terminal": self.pos_terminal,
@@ -239,3 +263,4 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
