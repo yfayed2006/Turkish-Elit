@@ -239,7 +239,7 @@ class RouteVisit(models.Model):
         string="Return Transfers",
     )
     return_picking_count = fields.Integer(
-        string="Return Transfer Count",
+        string="Return Pickings",
         compute="_compute_return_picking_count",
         store=False,
     )
@@ -371,6 +371,19 @@ class RouteVisit(models.Model):
             "\nPending items:%s"
         ) % product_lines)
 
+    def _phase0_notification(self, title, message, notif_type="success", sticky=False):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "type": notif_type,
+                "sticky": sticky,
+            },
+        }
+
     @api.model_create_multi
     def create(self, vals_list):
         if not self.env.context.get("route_plan_allow_visit_create"):
@@ -395,6 +408,8 @@ class RouteVisit(models.Model):
                         vals["area_id"] = outlet.area_id.id
                     if not vals.get("partner_id") and outlet.partner_id:
                         vals["partner_id"] = outlet.partner_id.id
+                    if not vals.get("company_id") and outlet.company_id:
+                        vals["company_id"] = outlet.company_id.id
                     if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                         vals["destination_location_id"] = outlet.stock_location_id.id
 
@@ -407,6 +422,7 @@ class RouteVisit(models.Model):
                     if not vals.get("source_location_id") and hasattr(vehicle, "stock_location_id") and vehicle.stock_location_id:
                         vals["source_location_id"] = vehicle.stock_location_id.id
 
+            vals.setdefault("company_id", self.env.company.id)
             vals.setdefault("visit_process_state", "draft")
             vals.setdefault("near_expiry_threshold_days", 60)
             vals.setdefault("has_returns", False)
@@ -458,6 +474,8 @@ class RouteVisit(models.Model):
                     vals["area_id"] = outlet.area_id.id
                 if not vals.get("partner_id") and outlet.partner_id:
                     vals["partner_id"] = outlet.partner_id.id
+                if not vals.get("company_id") and outlet.company_id:
+                    vals["company_id"] = outlet.company_id.id
                 if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                     vals["destination_location_id"] = outlet.stock_location_id.id
 
@@ -473,6 +491,53 @@ class RouteVisit(models.Model):
         result = super().write(vals)
         self._sync_plan_line_state()
         return result
+
+    def action_recompute_visit_health(self):
+        self.ensure_one()
+        self._compute_sale_order_count()
+        self._compute_payment_totals()
+        self._compute_refill_picking_count()
+        self._compute_return_picking_count()
+        self._compute_near_expiry_status()
+        if hasattr(self, "_compute_visit_document_links"):
+            self._compute_visit_document_links()
+        if hasattr(self, "_compute_ux_workflow"):
+            self._compute_ux_workflow()
+        self._sync_plan_line_state()
+        return self._phase0_notification(
+            _("Visit Health Refreshed"),
+            _("Visit workflow and financial indicators were refreshed successfully."),
+        )
+
+    def action_visit_diagnostics(self):
+        self.ensure_one()
+        checks = []
+        if not self.company_id:
+            checks.append(_("Missing company"))
+        if not self.outlet_id:
+            checks.append(_("Missing outlet"))
+        if not self.vehicle_id:
+            checks.append(_("Missing vehicle"))
+        if not self.source_location_id:
+            checks.append(_("Missing source location"))
+        if not self.destination_location_id:
+            checks.append(_("Missing destination location"))
+        if self.has_pending_near_expiry:
+            checks.append(_("Pending near expiry decisions: %s") % self.pending_near_expiry_line_count)
+        draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+        if draft_payments:
+            checks.append(_("Draft payments: %s") % len(draft_payments))
+        if self.refill_backorder_id:
+            checks.append(_("Pending refill backorder exists"))
+        if not checks:
+            checks.append(_("No immediate diagnostics issues detected."))
+
+        return self._phase0_notification(
+            _("Visit Diagnostics"),
+            " | ".join(checks),
+            notif_type="warning" if len(checks) > 1 or checks[0] != _("No immediate diagnostics issues detected.") else "success",
+            sticky=True,
+        )
 
     def action_start_visit(self):
         for rec in self:
