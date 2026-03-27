@@ -155,18 +155,18 @@
 </group>
 <group>
 <field name="outlet_current_due_amount" readonly="1"/>
-<field name="remaining_due_amount" readonly="1"/>
+<field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
 <group>
 <field name="outlet_open_shortage_count" readonly="1"/>
 <field name="outlet_near_expiry_count" readonly="1"/>
-<field name="pending_near_expiry_line_count" readonly="1"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1"/>
 </group>
 <group>
 <field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
 <field name="visit_mode" readonly="1"/>
-<field name="visit_mode_recommendation" readonly="1"/>
+<field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
 </group>
 </group>
 <separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
@@ -307,18 +307,18 @@
 </group>
 <group>
 <field name="outlet_current_due_amount" readonly="1"/>
-<field name="remaining_due_amount" readonly="1"/>
+<field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
 <group>
 <field name="outlet_open_shortage_count" readonly="1"/>
 <field name="outlet_near_expiry_count" readonly="1"/>
-<field name="pending_near_expiry_line_count" readonly="1"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1"/>
 </group>
 <group>
 <field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
 <field name="visit_mode" readonly="1"/>
-<field name="visit_mode_recommendation" readonly="1"/>
+<field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
 </group>
 </group>
 <separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
