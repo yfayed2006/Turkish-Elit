@@ -1,89 +1,46 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_route_visit_collect_payment_wizard_form" model="ir.ui.view">
-        <field name="name">route.visit.collect.payment.wizard.form</field>
-        <field name="model">route.visit.collect.payment.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Collect Payment" create="0" edit="0" delete="0">
-                <sheet>
-                    <group string="Visit Financial Summary" col="4">
-                        <field name="visit_id" readonly="1"/>
-                        <field name="visit_net_due_amount" readonly="1"/>
-                        <field name="visit_collected_amount" readonly="1"/>
-                        <field name="visit_remaining_due" readonly="1"/>
-                    </group>
-
-                    <separator string="Collection Decision"/>
-
-                    <group col="2">
-                        <group>
-                            <field name="collection_type" widget="radio"/>
-                            <field name="payment_mode"/>
-                            <field name="payment_date"/>
-                            <field
-                                name="amount"
-                                invisible="collection_type in ('defer_date', 'next_visit')"
-                            />
-                            <field
-                                name="due_date"
-                                invisible="collection_type != 'defer_date'"
-                            />
-                        </group>
-
-                        <group>
-                            <field
-                                name="reference"
-                                invisible="payment_mode == 'cash'"
-                            />
-                            <field
-                                name="bank_name"
-                                invisible="payment_mode != 'bank'"
-                            />
-                            <field
-                                name="pos_terminal"
-                                invisible="payment_mode != 'pos'"
-                            />
-                        </group>
-                    </group>
-
-                    <group>
-                        <field
-                            name="note"
-                            placeholder="Add note for partial payment, deferment, or next visit collection..."
-                        />
-                    </group>
-
-                    <div class="alert alert-info mt-3" role="alert" invisible="collection_type != 'full'">
-                        Full payment will save the full remaining due amount as a draft payment for confirmation.
-                    </div>
-
-                    <div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'partial'">
-                        Partial payment will save only part of the remaining due amount. Add a note for the carried-forward balance.
-                    </div>
-
-                    <div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'defer_date'">
-                        Defer to date will save a zero-amount draft with a required due date and note.
-                    </div>
-
-                    <div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'next_visit'">
-                        Carry to next visit will save a zero-amount draft with a required note.
-                    </div>
-                </sheet>
-
-                <footer>
-                    <button
-                        name="action_save_payment"
-                        string="Save Draft"
-                        type="object"
-                        class="btn-primary"
-                    />
-                    <button
-                        string="Cancel"
-                        special="cancel"
-                        class="btn-secondary"
-                    />
-                </footer>
-            </form>
-        </field>
-    </record>
+<record id="view_route_visit_collect_payment_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.collect.payment.wizard.form</field>
+<field name="model">route.visit.collect.payment.wizard</field>
+<field name="arch" type="xml">
+<form string="Collect Payment" create="0" edit="0" delete="0">
+<sheet>
+<group string="Visit Financial Summary" col="4">
+<field name="visit_id" readonly="1"/>
+<field name="visit_net_due_amount" readonly="1"/>
+<field name="visit_collected_amount" readonly="1"/>
+<field name="visit_remaining_due" readonly="1"/>
+</group>
+<separator string="Collection Decision"/>
+<group col="2">
+<group>
+<field name="collection_type" widget="radio"/>
+<field name="payment_mode"/>
+<field name="payment_date"/>
+<field name="amount" invisible="collection_type in ('defer_date', 'next_visit')"/>
+<field name="due_date" invisible="collection_type != 'defer_date'"/>
+<field name="promise_date" invisible="collection_type == 'full'"/>
+<field name="promise_amount" invisible="collection_type == 'full'"/>
+</group>
+<group>
+<field name="reference" invisible="payment_mode == 'cash'"/>
+<field name="bank_name" invisible="payment_mode != 'bank'"/>
+<field name="pos_terminal" invisible="payment_mode != 'pos'"/>
+</group>
+</group>
+<group>
+<field name="note" placeholder="Add note for partial payment, deferment, or next visit collection..."/>
+</group>
+<div class="alert alert-info mt-3" role="alert" invisible="collection_type != 'full'"> Full payment will save the full remaining due amount as a draft payment for confirmation. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'partial'"> Partial payment will save only part of the remaining due amount. Set promise date/amount and add a note for the carried-forward balance. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'defer_date'"> Defer to date will save a zero-amount draft with a required due date, promise amount, and note. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'next_visit'"> Carry to next visit will save a zero-amount draft with a required promise date, promise amount, and note. </div>
+</sheet>
+<footer>
+<button name="action_save_payment" string="Save Draft" type="object" class="btn-primary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
 </odoo>
