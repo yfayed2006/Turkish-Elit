@@ -244,6 +244,62 @@ class RouteVisit(models.Model):
         compute="_compute_visit_command_header",
         store=False,
     )
+    debt_risk_level = fields.Selection(
+        [
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+            ("critical", "Critical"),
+        ],
+        string="Debt Risk Level",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    debt_policy_action = fields.Selection(
+        [
+            ("allow", "Allow Refill"),
+            ("warning", "Warning"),
+            ("supervisor", "Supervisor Approval"),
+            ("block", "Block Refill"),
+        ],
+        string="Refill Restriction Hint",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    collection_first_required = fields.Boolean(
+        string="Collection First Required",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    debt_policy_reason = fields.Char(
+        string="Debt Policy Basis",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_aging_0_30_amount = fields.Monetary(
+        string="Aging 0-30",
+        currency_field="currency_id",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_aging_31_60_amount = fields.Monetary(
+        string="Aging 31-60",
+        currency_field="currency_id",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_aging_61_90_amount = fields.Monetary(
+        string="Aging 61-90",
+        currency_field="currency_id",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_aging_90_plus_amount = fields.Monetary(
+        string="Aging 90+",
+        currency_field="currency_id",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
 
     has_returns = fields.Boolean(
         string="Has Returns",
@@ -514,6 +570,143 @@ class RouteVisit(models.Model):
             "reason": ", ".join(reasons[:4]) if reasons else "healthy collection profile",
         }
 
+    def _get_debt_policy_context(self, outlet, priority_ctx=None):
+        if not outlet:
+            return {
+                "risk": "low",
+                "action": "allow",
+                "collection_first": False,
+                "reason": "No outlet linked",
+                "aging_0_30": 0.0,
+                "aging_31_60": 0.0,
+                "aging_61_90": 0.0,
+                "aging_90_plus": 0.0,
+            }
+
+        if priority_ctx is None:
+            priority_ctx = self._get_collection_priority_context(outlet)
+
+        current_due = getattr(outlet, "current_due_amount", 0.0) or 0.0
+        sales_average = getattr(outlet, "sales_last_3_months_average", 0.0) or 0.0
+        aging_0_30 = getattr(outlet, "aging_0_30_amount", 0.0) or 0.0
+        aging_31_60 = getattr(outlet, "aging_31_60_amount", 0.0) or 0.0
+        aging_61_90 = getattr(outlet, "aging_61_90_amount", 0.0) or 0.0
+        aging_90_plus = getattr(outlet, "aging_90_plus_amount", 0.0) or 0.0
+        overdue_promises = priority_ctx.get("overdue_promises", 0)
+        open_promises = priority_ctx.get("open_promises", 0)
+        unpaid_visits = priority_ctx.get("unpaid_visits", 0)
+        collection_trend = priority_ctx.get("collection_trend", "no_basis")
+        priority = priority_ctx.get("priority", "low")
+
+        reasons = []
+        risk = "low"
+        action = "allow"
+        collection_first = False
+
+        if aging_90_plus > 0:
+            risk = "critical"
+            action = "block"
+            collection_first = True
+            reasons.append("90+ aging outstanding")
+        elif aging_61_90 > 0:
+            risk = "high"
+            action = "supervisor"
+            collection_first = True
+            reasons.append("61-90 aging outstanding")
+        elif aging_31_60 > 0:
+            risk = "medium"
+            action = "warning"
+            reasons.append("31-60 aging present")
+
+        if overdue_promises > 0:
+            collection_first = True
+            if overdue_promises >= 2:
+                reasons.append("multiple overdue promises")
+            else:
+                reasons.append("overdue promise")
+            if risk == "low":
+                risk = "high"
+                action = "supervisor"
+            elif risk == "medium":
+                risk = "high"
+                action = "supervisor"
+
+        if priority == "critical":
+            collection_first = True
+            if risk != "critical":
+                risk = "critical"
+            if action != "block":
+                action = "block"
+            reasons.append("critical collection priority")
+        elif priority == "high":
+            collection_first = True
+            if risk == "low":
+                risk = "high"
+                action = "supervisor"
+            elif risk == "medium":
+                risk = "high"
+                action = "supervisor"
+            reasons.append("high collection priority")
+        elif priority == "medium" and risk == "low":
+            risk = "medium"
+            action = "warning"
+            reasons.append("medium collection priority")
+
+        if collection_trend == "weak":
+            collection_first = True
+            if risk in ("low", "medium"):
+                risk = "high"
+                if action == "allow":
+                    action = "supervisor"
+            reasons.append("weak collection trend")
+        elif collection_trend == "warning" and risk == "low":
+            risk = "medium"
+            action = "warning"
+            reasons.append("warning collection trend")
+
+        if current_due >= max(sales_average * 3.0, 5000.0):
+            if risk != "critical":
+                if risk in ("low", "medium"):
+                    risk = "high"
+            if action == "allow":
+                action = "warning"
+            reasons.append("very high due outstanding")
+        elif current_due >= max(sales_average * 1.5, 1500.0) and risk == "low":
+            risk = "medium"
+            action = "warning"
+            reasons.append("high due outstanding")
+
+        if open_promises >= 3 and action == "allow":
+            action = "warning"
+            reasons.append("many open promises")
+
+        if unpaid_visits >= 5 and action in ("allow", "warning"):
+            action = "supervisor"
+            reasons.append("many unpaid visits")
+
+        if not reasons:
+            reasons.append("healthy debt profile")
+
+        # normalize risk/action combinations
+        if risk == "critical":
+            action = "block"
+            collection_first = True
+        elif risk == "high" and action == "allow":
+            action = "supervisor"
+        elif risk == "medium" and action == "allow":
+            action = "warning"
+
+        return {
+            "risk": risk,
+            "action": action,
+            "collection_first": collection_first,
+            "reason": ", ".join(reasons[:4]),
+            "aging_0_30": aging_0_30,
+            "aging_31_60": aging_31_60,
+            "aging_61_90": aging_61_90,
+            "aging_90_plus": aging_90_plus,
+        }
+
     def _get_collection_priority_value(self, outlet):
         return self._get_collection_priority_context(outlet)["priority"]
 
@@ -534,7 +727,7 @@ class RouteVisit(models.Model):
             return "audit_only"
         return "regular"
 
-    def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions):
+    def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions, debt_policy_ctx=None):
         def _badge(label, style):
             return (
                 '<span style="display:inline-flex;align-items:center;white-space:nowrap;'
@@ -546,6 +739,7 @@ class RouteVisit(models.Model):
         alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
 
         promise_metrics = self._get_outlet_collection_promise_metrics(outlet) if outlet else {"open_promises": 0, "overdue_promises": 0}
+        debt_policy_ctx = debt_policy_ctx or self._get_debt_policy_context(outlet)
 
         if collection_priority == "critical":
             badges.append(_badge("Critical Debt", "background:#f8d7da;color:#b02a37;"))
@@ -558,6 +752,24 @@ class RouteVisit(models.Model):
             badges.append(_badge("Overdue Promise", "background:#fde2e4;color:#b02a37;"))
         elif promise_metrics.get("open_promises", 0) > 0:
             badges.append(_badge("Open Promise", "background:#e2f0ff;color:#1d4ed8;"))
+
+        if (debt_policy_ctx.get("aging_90_plus", 0.0) or 0.0) > 0:
+            badges.append(_badge("90+ Aging", "background:#fde2e4;color:#b02a37;"))
+        elif (debt_policy_ctx.get("aging_61_90", 0.0) or 0.0) > 0:
+            badges.append(_badge("61-90 Aging", "background:#fff3cd;color:#8a6d1d;"))
+        elif (debt_policy_ctx.get("aging_31_60", 0.0) or 0.0) > 0:
+            badges.append(_badge("31-60 Aging", "background:#fff3cd;color:#8a6d1d;"))
+
+        action = debt_policy_ctx.get("action")
+        if action == "block":
+            badges.append(_badge("Block Refill", "background:#fde2e4;color:#b02a37;"))
+        elif action == "supervisor":
+            badges.append(_badge("Supervisor Approval", "background:#ffe5d0;color:#b54708;"))
+        elif action == "warning":
+            badges.append(_badge("Refill Warning", "background:#fff3cd;color:#8a6d1d;"))
+
+        if debt_policy_ctx.get("collection_first") and collection_priority not in ("critical", "high"):
+            badges.append(_badge("Collection First", "background:#fde2e4;color:#b02a37;"))
 
         if open_shortages > 0:
             badges.append(_badge("Open Shortages", "background:#e2e3ff;color:#3d3d9b;"))
@@ -584,6 +796,7 @@ class RouteVisit(models.Model):
         "outlet_id.open_shortage_count",
         "outlet_id.near_expiry_product_count",
         "outlet_id.summary_alert_level",
+        "outlet_id.aging_0_30_amount",
         "outlet_id.aging_31_60_amount",
         "outlet_id.aging_61_90_amount",
         "outlet_id.aging_90_plus_amount",
@@ -607,6 +820,7 @@ class RouteVisit(models.Model):
             near_expiry = (getattr(outlet, "near_expiry_product_count", 0) or 0) if outlet else 0
 
             priority_ctx = rec._get_collection_priority_context(outlet)
+            debt_policy_ctx = rec._get_debt_policy_context(outlet, priority_ctx)
             priority = priority_ctx["priority"]
             recommendation = rec._get_recommended_visit_mode_value(outlet, priority)
 
@@ -617,6 +831,14 @@ class RouteVisit(models.Model):
             rec.outlet_unpaid_visit_count = priority_ctx["unpaid_visits"]
             rec.collection_trend_status = priority_ctx["collection_trend"]
             rec.collection_priority_reason = priority_ctx["reason"]
+            rec.debt_risk_level = debt_policy_ctx["risk"]
+            rec.debt_policy_action = debt_policy_ctx["action"]
+            rec.collection_first_required = debt_policy_ctx["collection_first"]
+            rec.debt_policy_reason = debt_policy_ctx["reason"]
+            rec.outlet_aging_0_30_amount = debt_policy_ctx["aging_0_30"]
+            rec.outlet_aging_31_60_amount = debt_policy_ctx["aging_31_60"]
+            rec.outlet_aging_61_90_amount = debt_policy_ctx["aging_61_90"]
+            rec.outlet_aging_90_plus_amount = debt_policy_ctx["aging_90_plus"]
             rec.visit_mode_recommendation = recommendation
             rec.outlet_current_due_amount = current_due
             rec.outlet_open_shortage_count = open_shortages
@@ -628,6 +850,7 @@ class RouteVisit(models.Model):
                 open_shortages,
                 near_expiry,
                 rec.pending_near_expiry_line_count or 0,
+                debt_policy_ctx,
             )
 
     @api.depends("sale_order_id")
