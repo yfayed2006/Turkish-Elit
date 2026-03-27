@@ -283,6 +283,20 @@
 <group string="Decision Flags" col="1">
 <field name="decision_flags_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
+<group string="Smart Actions" col="3">
+<group>
+<button name="action_open_unpaid_visits" type="object" string="Open Unpaid Visits" class="btn-secondary"/>
+<button name="action_open_near_expiry_stock" type="object" string="Open Near Expiry Stock" class="btn-secondary"/>
+</group>
+<group>
+<button name="action_open_risk_products" type="object" string="Open Risk Products" class="btn-secondary"/>
+<button name="action_view_open_shortages" type="object" string="Open Open Shortages" class="btn-secondary"/>
+</group>
+<group>
+<button name="action_open_last_3_months_sale_orders" type="object" string="Open Last 3 Months Sale Orders" class="btn-secondary"/>
+<button name="action_open_last_3_months_payments" type="object" string="Open Last 3 Months Payments" class="btn-secondary"/>
+</group>
+</group>
 <group string="Top 3 Selling Products by Qty (Last 3 Months)" col="1">
 <field name="top_selling_products_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
