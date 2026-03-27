@@ -14,6 +14,9 @@
 <field name="amount"/>
 <field name="remaining_due_amount" string="Unpaid Amount" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="due_date"/>
+<field name="promise_date"/>
+<field name="promise_amount"/>
+<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
 <field name="state"/>
 </list>
@@ -49,6 +52,9 @@
 <field name="collection_type" readonly="state != 'draft'"/>
 <field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
 <field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
+<field name="promise_date" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
+<field name="promise_amount" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
+<field name="promise_status" readonly="1" invisible="collection_type == 'full'"/>
 </group>
 <group>
 <field name="reference" readonly="state != 'draft'" invisible="payment_mode == 'cash'"/>
