@@ -197,14 +197,11 @@ class RouteVisit(models.Model):
                 and rec.visit_process_state in ("collection_done", "ready_to_close")
             )
 
-            visit_mode_label = dict(self._fields["visit_mode"].selection).get(rec.visit_mode, rec.visit_mode or _("Regular Visit"))
-            collection_priority_label = dict(self._fields["collection_priority"].selection).get(rec.collection_priority, rec.collection_priority or _("Low"))
-
             if rec.state == "draft":
                 rec.ux_stage = "arrival"
                 rec.ux_primary_action = "start_visit"
                 rec.ux_stage_title = "Start the visit"
-                rec.ux_stage_help = "Begin the visit and review the command header before moving to the next step."
+                rec.ux_stage_help = "Begin the visit."
 
             elif rec.state == "in_progress" and rec.visit_process_state == "pending":
                 rec.ux_stage = "load_balance"
@@ -228,7 +225,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
                 rec.ux_stage_title = "Check Return"
-                rec.ux_stage_help = "Is there any return in this visit? Choose No Returns or Scan Returns."
+                rec.ux_stage_help = "Use the main button to scan additional returns, or use Skip Additional Returns below if there are no more returns."
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
@@ -289,7 +286,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "collect_payment"
                 rec.ux_stage_title = "Collect payment"
-                rec.ux_stage_help = "Add a full payment, partial payment, deferment, or carry forward."
+                rec.ux_stage_help = "Add a full payment, partial payment, deferment, or carry forward. Use Skip Collection below only when collection is not possible."
 
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
