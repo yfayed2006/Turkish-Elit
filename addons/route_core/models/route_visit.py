@@ -470,6 +470,53 @@ class RouteVisit(models.Model):
         compute="_compute_slow_moving_snapshot",
         store=False,
     )
+    recommended_visit_frequency = fields.Selection(
+        [
+            ("daily", "Daily"),
+            ("every_2_days", "Every 2 Days"),
+            ("twice_weekly", "Twice Weekly"),
+            ("weekly", "Weekly"),
+            ("on_demand", "On Demand"),
+        ],
+        string="Recommended Visit Frequency",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    visit_frequency_reason = fields.Char(
+        string="Visit Frequency Basis",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_health_score = fields.Integer(
+        string="Outlet Health Score",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_health_status = fields.Selection(
+        [
+            ("healthy", "Healthy"),
+            ("needs_attention", "Needs Attention"),
+            ("critical", "Critical"),
+        ],
+        string="Outlet Health",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    outlet_health_reason = fields.Char(
+        string="Outlet Health Basis",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    recent_outlet_visit_count_30d = fields.Integer(
+        string="Visits Last 30 Days",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
+    days_since_last_outlet_visit = fields.Integer(
+        string="Days Since Last Visit",
+        compute="_compute_visit_command_header",
+        store=False,
+    )
 
 
     def _get_outlet_collection_promise_metrics(self, outlet):
@@ -754,7 +801,202 @@ class RouteVisit(models.Model):
             return "audit_only"
         return "regular"
 
-    def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions, debt_policy_ctx=None):
+    def _get_visit_frequency_context(self, outlet):
+        if not outlet:
+            return {
+                "frequency": "on_demand",
+                "recent_visits_30d": 0,
+                "days_since_last_visit": 0,
+                "reason": "No outlet linked",
+            }
+
+        Visit = self.env["route.visit"]
+        today = fields.Date.to_date(fields.Date.context_today(self))
+        domain = [("outlet_id", "=", outlet.id), ("state", "!=", "cancel")]
+        if self.id:
+            domain.append(("id", "!=", self.id))
+        visits = Visit.search(domain, order="date desc, id desc")
+
+        recent_visits = visits.filtered(lambda v: v.date and (today - v.date).days <= 30)
+        last_visit = visits[0] if visits else False
+        days_since_last_visit = 0
+        if last_visit and last_visit.date:
+            days_since_last_visit = max((today - last_visit.date).days, 0)
+
+        sales_trend = getattr(outlet, "sales_trend_status", "flat") or "flat"
+        collection_status = getattr(outlet, "collection_status", "no_basis") or "no_basis"
+        debt_risk = getattr(self, "debt_risk_level", False) or self._get_debt_policy_context(outlet).get("risk", "low")
+        collection_priority = getattr(self, "collection_priority", False) or self._get_collection_priority_context(outlet).get("priority", "low")
+        open_shortages = getattr(outlet, "open_shortage_count", 0) or 0
+        refill_needed = getattr(outlet, "refill_needed_count", 0) or 0
+        near_expiry = getattr(outlet, "near_expiry_product_count", 0) or 0
+        expired = getattr(outlet, "expired_product_count", 0) or 0
+        slow_lines = self.slow_moving_line_count or 0
+        very_slow_lines = self.very_slow_line_count or 0
+
+        score = 0
+        reasons = []
+
+        if collection_priority == "critical":
+            score += 4
+            reasons.append("critical collection priority")
+        elif collection_priority == "high":
+            score += 3
+            reasons.append("high collection priority")
+        elif collection_priority == "medium":
+            score += 1
+            reasons.append("medium collection priority")
+
+        if debt_risk == "critical":
+            score += 4
+            reasons.append("critical debt risk")
+        elif debt_risk == "high":
+            score += 3
+            reasons.append("high debt risk")
+        elif debt_risk == "medium":
+            score += 1
+            reasons.append("medium debt risk")
+
+        if open_shortages > 0:
+            score += 2
+            reasons.append("open shortages")
+        if refill_needed > 0:
+            score += 2
+            reasons.append("refill needed")
+        if expired > 0:
+            score += 2
+            reasons.append("expired stock")
+        elif near_expiry > 0:
+            score += 1
+            reasons.append("near expiry risk")
+
+        if sales_trend == "down":
+            score += 2
+            reasons.append("sales trend down")
+        elif sales_trend == "up":
+            score += 1
+            reasons.append("sales trend up")
+
+        if collection_status == "weak":
+            score += 2
+            reasons.append("weak collection trend")
+        elif collection_status == "warning":
+            score += 1
+            reasons.append("warning collection trend")
+
+        if very_slow_lines > 0:
+            score += 2
+            reasons.append("very slow shelf movement")
+        elif slow_lines > 0:
+            score += 1
+            reasons.append("slow shelf movement")
+
+        if days_since_last_visit >= 14:
+            score += 2
+            reasons.append("long time since last visit")
+        elif days_since_last_visit >= 7:
+            score += 1
+            reasons.append("visit overdue")
+
+        if score >= 11:
+            frequency = "daily"
+        elif score >= 8:
+            frequency = "every_2_days"
+        elif score >= 5:
+            frequency = "twice_weekly"
+        elif score >= 2:
+            frequency = "weekly"
+        else:
+            frequency = "on_demand"
+
+        return {
+            "frequency": frequency,
+            "recent_visits_30d": len(recent_visits),
+            "days_since_last_visit": days_since_last_visit,
+            "reason": ", ".join(reasons[:4]) if reasons else "healthy low-touch outlet",
+        }
+
+    def _get_outlet_health_context(self, outlet, priority_ctx=None, debt_policy_ctx=None, visit_frequency_ctx=None):
+        if not outlet:
+            return {
+                "score": 100,
+                "status": "healthy",
+                "reason": "No outlet linked",
+            }
+
+        priority_ctx = priority_ctx or self._get_collection_priority_context(outlet)
+        debt_policy_ctx = debt_policy_ctx or self._get_debt_policy_context(outlet, priority_ctx)
+        visit_frequency_ctx = visit_frequency_ctx or self._get_visit_frequency_context(outlet)
+
+        score = 100
+        reasons = []
+
+        collection_priority = priority_ctx.get("priority", "low")
+        debt_risk = debt_policy_ctx.get("risk", "low")
+        sales_trend = getattr(outlet, "sales_trend_status", "flat") or "flat"
+        collection_status = priority_ctx.get("collection_trend", "no_basis") or "no_basis"
+        open_shortages = getattr(outlet, "open_shortage_count", 0) or 0
+        refill_needed = getattr(outlet, "refill_needed_count", 0) or 0
+        near_expiry = getattr(outlet, "near_expiry_product_count", 0) or 0
+        expired = getattr(outlet, "expired_product_count", 0) or 0
+        slow_lines = self.slow_moving_line_count or 0
+        very_slow_lines = self.very_slow_line_count or 0
+        days_since_last_visit = visit_frequency_ctx.get("days_since_last_visit", 0) or 0
+
+        penalties = {
+            "collection_priority": {"low": 0, "medium": 8, "high": 18, "critical": 28},
+            "debt_risk": {"low": 0, "medium": 8, "high": 18, "critical": 28},
+            "sales_trend": {"up": 0, "flat": 2, "down": 10},
+            "collection_status": {"good": 0, "warning": 6, "weak": 12, "no_basis": 2},
+        }
+        score -= penalties["collection_priority"].get(collection_priority, 0)
+        score -= penalties["debt_risk"].get(debt_risk, 0)
+        score -= penalties["sales_trend"].get(sales_trend, 0)
+        score -= penalties["collection_status"].get(collection_status, 0)
+
+        if open_shortages > 0:
+            score -= 12
+            reasons.append("open shortages")
+        if refill_needed > 0:
+            score -= 8
+            reasons.append("refill needed")
+        if expired > 0:
+            score -= 12
+            reasons.append("expired stock")
+        elif near_expiry > 0:
+            score -= 6
+            reasons.append("near expiry risk")
+        if very_slow_lines > 0:
+            score -= 10
+            reasons.append("very slow movement")
+        elif slow_lines > 0:
+            score -= 5
+            reasons.append("slow movement")
+        if days_since_last_visit >= 14:
+            score -= 8
+            reasons.append("visit overdue")
+        elif days_since_last_visit >= 7:
+            score -= 4
+            reasons.append("visit cadence slipping")
+
+        score = max(min(int(round(score)), 100), 0)
+        if score >= 75:
+            status = "healthy"
+        elif score >= 45:
+            status = "needs_attention"
+        else:
+            status = "critical"
+
+        if not reasons:
+            reasons.append("balanced sales, collection, and stock profile")
+
+        return {
+            "score": score,
+            "status": status,
+            "reason": ", ".join(reasons[:4]),
+        }
+
+    def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions, debt_policy_ctx=None, health_ctx=None, visit_frequency_ctx=None):
         def _badge(label, style):
             return (
                 '<span style="display:inline-flex;align-items:center;white-space:nowrap;'
@@ -807,10 +1049,34 @@ class RouteVisit(models.Model):
         if pending_decisions > 0:
             badges.append(_badge("Pending Expiry Decision", "background:#ffe5d0;color:#b54708;"))
 
+        health_ctx = health_ctx or self._get_outlet_health_context(outlet, debt_policy_ctx=debt_policy_ctx)
+        visit_frequency_ctx = visit_frequency_ctx or self._get_visit_frequency_context(outlet)
+
         if alert_level == "critical":
             badges.append(_badge("Visit Now", "background:#f8d7da;color:#b02a37;"))
         elif alert_level == "warning":
             badges.append(_badge("Needs Follow-up", "background:#fff3cd;color:#8a6d1d;"))
+
+        health_status = health_ctx.get("status")
+        if health_status == "critical":
+            badges.append(_badge("Critical Outlet", "background:#f8d7da;color:#b02a37;"))
+        elif health_status == "needs_attention":
+            badges.append(_badge("Needs Attention", "background:#fff3cd;color:#8a6d1d;"))
+        elif health_status == "healthy" and not badges:
+            badges.append(_badge("Healthy Outlet", "background:#d1f7d6;color:#1e7e34;"))
+
+        frequency = visit_frequency_ctx.get("frequency")
+        frequency_labels = {
+            "daily": "Daily Route",
+            "every_2_days": "Every 2 Days",
+            "twice_weekly": "Twice Weekly",
+            "weekly": "Weekly Visit",
+            "on_demand": "On Demand",
+        }
+        if frequency in ("daily", "every_2_days"):
+            badges.append(_badge(frequency_labels[frequency], "background:#e2f0ff;color:#1d4ed8;"))
+        elif frequency == "twice_weekly":
+            badges.append(_badge(frequency_labels[frequency], "background:#eef2ff;color:#4338ca;"))
 
         if not badges:
             badges.append(_badge("Normal", "background:#d1f7d6;color:#1e7e34;"))
@@ -828,7 +1094,10 @@ class RouteVisit(models.Model):
         "outlet_id.aging_61_90_amount",
         "outlet_id.aging_90_plus_amount",
         "outlet_id.collection_status",
+        "outlet_id.sales_trend_status",
         "outlet_id.unpaid_visit_count",
+        "outlet_id.visit_count",
+        "outlet_id.last_visit_date",
         "outlet_id.sales_last_3_months_average",
         "outlet_id.deferred_payment_count",
         "outlet_id.refill_needed_count",
@@ -848,6 +1117,8 @@ class RouteVisit(models.Model):
 
             priority_ctx = rec._get_collection_priority_context(outlet)
             debt_policy_ctx = rec._get_debt_policy_context(outlet, priority_ctx)
+            visit_frequency_ctx = rec._get_visit_frequency_context(outlet)
+            health_ctx = rec._get_outlet_health_context(outlet, priority_ctx, debt_policy_ctx, visit_frequency_ctx)
             priority = priority_ctx["priority"]
             recommendation = rec._get_recommended_visit_mode_value(outlet, priority)
 
@@ -870,6 +1141,13 @@ class RouteVisit(models.Model):
             rec.outlet_current_due_amount = current_due
             rec.outlet_open_shortage_count = open_shortages
             rec.outlet_near_expiry_count = near_expiry
+            rec.recommended_visit_frequency = visit_frequency_ctx["frequency"]
+            rec.visit_frequency_reason = visit_frequency_ctx["reason"]
+            rec.recent_outlet_visit_count_30d = visit_frequency_ctx["recent_visits_30d"]
+            rec.days_since_last_outlet_visit = visit_frequency_ctx["days_since_last_visit"]
+            rec.outlet_health_score = health_ctx["score"]
+            rec.outlet_health_status = health_ctx["status"]
+            rec.outlet_health_reason = health_ctx["reason"]
             rec.outlet_summary_alert_level = getattr(outlet, "summary_alert_level", "normal") if outlet else "normal"
             rec.outlet_decision_flags_html = rec._build_visit_command_flags_html(
                 outlet,
@@ -878,6 +1156,8 @@ class RouteVisit(models.Model):
                 near_expiry,
                 rec.pending_near_expiry_line_count or 0,
                 debt_policy_ctx,
+                health_ctx,
+                visit_frequency_ctx,
             )
 
     @api.depends("sale_order_id")
@@ -1472,3 +1752,4 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
