@@ -1,4 +1,3 @@
-<odoo>
 <record id="view_route_visit_tree" model="ir.ui.view">
 <field name="name">route.visit.tree</field>
 <field name="model">route.visit</field>
@@ -146,15 +145,34 @@
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
 </div>
-<group string="Internal Tools" col="2">
-<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
-<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
+<group string="Visit Command Header" col="4">
+<group>
+<field name="outlet_id" readonly="1"/>
+<field name="name" readonly="1"/>
+<field name="start_datetime" readonly="1"/>
+</group>
+<group>
+<field name="outlet_current_due_amount" readonly="1"/>
+<field name="remaining_due_amount" readonly="1"/>
+<field name="collected_amount" readonly="1"/>
+</group>
+<group>
+<field name="outlet_open_shortage_count" readonly="1"/>
+<field name="outlet_near_expiry_count" readonly="1"/>
+<field name="pending_near_expiry_line_count" readonly="1"/>
+</group>
+<group>
+<field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
+<field name="visit_mode" readonly="1"/>
+<field name="visit_mode_recommendation" readonly="1"/>
+</group>
+</group>
+<group string="Decision Flags" invisible="not outlet_decision_flags_html">
+<field name="outlet_decision_flags_html" readonly="1" nolabel="1"/>
 </group>
 <group>
 <group>
-<field name="name" readonly="1"/>
 <field name="date" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="vehicle_id" readonly="1"/>
@@ -164,7 +182,6 @@
 </group>
 <group>
 <field name="sale_order_id" readonly="1"/>
-<field name="start_datetime" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
 </group>
 </group>
@@ -214,6 +231,12 @@
 </page>
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
+</page>
+<page string="Internal Tools">
+<group col="2">
+<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
+<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
+</group>
 </page>
 </notebook>
 </sheet>
@@ -274,15 +297,34 @@
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
 </div>
-<group string="Internal Tools" col="2">
-<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
-<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
+<group string="Visit Command Header" col="4">
+<group>
+<field name="outlet_id" readonly="1"/>
+<field name="name" readonly="1"/>
+<field name="start_datetime" readonly="1"/>
+</group>
+<group>
+<field name="outlet_current_due_amount" readonly="1"/>
+<field name="remaining_due_amount" readonly="1"/>
+<field name="collected_amount" readonly="1"/>
+</group>
+<group>
+<field name="outlet_open_shortage_count" readonly="1"/>
+<field name="outlet_near_expiry_count" readonly="1"/>
+<field name="pending_near_expiry_line_count" readonly="1"/>
+</group>
+<group>
+<field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
+<field name="visit_mode" readonly="1"/>
+<field name="visit_mode_recommendation" readonly="1"/>
+</group>
+</group>
+<group string="Decision Flags" invisible="not outlet_decision_flags_html">
+<field name="outlet_decision_flags_html" readonly="1" nolabel="1"/>
 </group>
 <group>
 <group>
-<field name="name" readonly="1"/>
 <field name="date" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="vehicle_id" readonly="1"/>
@@ -292,7 +334,6 @@
 </group>
 <group>
 <field name="sale_order_id" readonly="1"/>
-<field name="start_datetime" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
 </group>
 </group>
@@ -342,6 +383,12 @@
 </page>
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
+</page>
+<page string="Internal Tools">
+<group col="2">
+<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
+<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
+</group>
 </page>
 </notebook>
 </sheet>
