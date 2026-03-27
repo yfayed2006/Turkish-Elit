@@ -445,6 +445,33 @@ class RouteVisit(models.Model):
     )
 
 
+    slow_moving_line_count = fields.Integer(
+        string="Slow Moving Lines",
+        compute="_compute_slow_moving_snapshot",
+        store=False,
+    )
+    very_slow_line_count = fields.Integer(
+        string="Very Slow Lines",
+        compute="_compute_slow_moving_snapshot",
+        store=False,
+    )
+    no_sale_history_line_count = fields.Integer(
+        string="No Sale History Lines",
+        compute="_compute_slow_moving_snapshot",
+        store=False,
+    )
+    average_days_on_shelf = fields.Float(
+        string="Avg Days On Shelf",
+        compute="_compute_slow_moving_snapshot",
+        store=False,
+    )
+    oldest_days_on_shelf = fields.Integer(
+        string="Oldest Shelf Days",
+        compute="_compute_slow_moving_snapshot",
+        store=False,
+    )
+
+
     def _get_outlet_collection_promise_metrics(self, outlet):
         Payment = self.env["route.visit.payment"]
         if not outlet:
@@ -854,6 +881,25 @@ class RouteVisit(models.Model):
             )
 
     @api.depends("sale_order_id")
+    @api.depends(
+        "line_ids.movement_status",
+        "line_ids.days_on_shelf",
+        "line_ids.product_id",
+    )
+    def _compute_slow_moving_snapshot(self):
+        for rec in self:
+            lines = rec.line_ids.filtered(lambda l: l.product_id)
+            slow_lines = lines.filtered(lambda l: l.movement_status == "slow")
+            very_slow_lines = lines.filtered(lambda l: l.movement_status == "very_slow")
+            no_history_lines = lines.filtered(lambda l: l.movement_status == "no_sale_history")
+            shelf_days = [l.days_on_shelf for l in lines if (l.days_on_shelf or 0) > 0]
+
+            rec.slow_moving_line_count = len(slow_lines)
+            rec.very_slow_line_count = len(very_slow_lines)
+            rec.no_sale_history_line_count = len(no_history_lines)
+            rec.average_days_on_shelf = round(sum(shelf_days) / len(shelf_days), 1) if shelf_days else 0.0
+            rec.oldest_days_on_shelf = max(shelf_days) if shelf_days else 0
+
     def _compute_sale_order_count(self):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
@@ -1426,4 +1472,3 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
-
