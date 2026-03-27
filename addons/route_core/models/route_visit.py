@@ -363,8 +363,9 @@ class RouteVisit(models.Model):
     def _build_visit_command_flags_html(self, outlet, collection_priority, open_shortages, near_expiry, pending_decisions):
         def _badge(label, style):
             return (
-                '<span style="display:inline-block;margin:0 8px 8px 0;padding:6px 12px;'
-                'border-radius:999px;font-weight:600;%s">%s</span>'
+                '<span style="display:inline-flex;align-items:center;white-space:nowrap;'
+                'margin:0 6px 6px 0;padding:4px 10px;border-radius:999px;'
+                'font-weight:600;font-size:13px;line-height:1.35;%s">%s</span>'
             ) % (style, label)
 
         badges = []
