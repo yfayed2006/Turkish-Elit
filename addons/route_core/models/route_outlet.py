@@ -1391,3 +1391,132 @@ class RouteOutlet(models.Model):
             default_outlet_id=self.id,
         )
         return action
+
+
+    def _get_last_3_months_window(self):
+        self.ensure_one()
+        today = fields.Date.to_date(fields.Date.context_today(self))
+        current_month_start = today.replace(day=1)
+        window_start = current_month_start - relativedelta(months=2)
+        window_end = current_month_start + relativedelta(months=1)
+        return window_start, window_end
+
+    def action_open_unpaid_visits(self):
+        self.ensure_one()
+        visits = self.visit_ids.filtered(
+            lambda v: v.state != "cancel" and (v.remaining_due_amount or 0.0) > 0.0
+        ).sorted(key=lambda v: (v.date or fields.Date.today(), v.id), reverse=True)
+
+        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action["name"] = _("Unpaid Visits")
+        action["domain"] = [("id", "in", visits.ids)]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+            default_area_id=self.area_id.id,
+            default_partner_id=self.partner_id.id if self.partner_id else False,
+            create=0,
+        )
+        return action
+
+    def action_open_near_expiry_stock(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        balances = self.stock_balance_ids.filtered(
+            lambda b: bool(b.nearest_expiry_date) and (
+                b.nearest_expiry_date < today
+                or (b.nearest_alert_date and b.nearest_alert_date <= today)
+            )
+        ).sorted(
+            key=lambda b: (
+                b.nearest_expiry_date or fields.Date.to_date("9999-12-31"),
+                b.product_id.display_name or "",
+                b.id,
+            )
+        )
+
+        action = self.env.ref("route_core.action_outlet_stock_balance").read()[0]
+        action["name"] = _("Near Expiry Stock")
+        action["domain"] = [("id", "in", balances.ids)]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+            create=0,
+        )
+        return action
+
+    def action_open_risk_products(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        balances = self.stock_balance_ids.filtered(
+            lambda b: (b.qty or 0.0) <= 5.0
+            or (b.nearest_expiry_date and b.nearest_expiry_date < today)
+            or (b.nearest_alert_date and b.nearest_alert_date <= today)
+        ).sorted(
+            key=lambda b: (
+                b.nearest_expiry_date or fields.Date.to_date("9999-12-31"),
+                b.product_id.display_name or "",
+                b.id,
+            )
+        )
+
+        action = self.env.ref("route_core.action_outlet_stock_balance").read()[0]
+        action["name"] = _("Risk Products")
+        action["domain"] = [("id", "in", balances.ids)]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+            create=0,
+        )
+        return action
+
+    def action_open_last_3_months_sale_orders(self):
+        self.ensure_one()
+        window_start, window_end = self._get_last_3_months_window()
+        sale_orders = self.visit_ids.filtered(
+            lambda v: v.state != "cancel"
+            and v.sale_order_id
+            and v.date
+            and window_start <= v.date < window_end
+        ).mapped("sale_order_id")
+
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Last 3 Months Sale Orders"),
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+        }
+        try:
+            action = self.env["ir.actions.actions"]._for_xml_id("sale.action_orders")
+        except Exception:
+            pass
+
+        action["domain"] = [("id", "in", sale_orders.ids)]
+        action["context"] = dict(
+            self.env.context,
+            default_partner_id=self.partner_id.id if self.partner_id else False,
+            create=0,
+        )
+        return action
+
+    def action_open_last_3_months_payments(self):
+        self.ensure_one()
+        window_start, window_end = self._get_last_3_months_window()
+        start_dt = fields.Datetime.to_string(fields.Datetime.from_string(f"{window_start} 00:00:00"))
+        end_dt = fields.Datetime.to_string(fields.Datetime.from_string(f"{window_end} 00:00:00"))
+        payments = self.env["route.visit.payment"].search([
+            ("outlet_id", "=", self.id),
+            ("state", "=", "confirmed"),
+            ("payment_date", ">=", start_dt),
+            ("payment_date", "<", end_dt),
+        ], order="payment_date desc, id desc")
+
+        action = self.env.ref("route_core.action_route_visit_payment").read()[0]
+        action["name"] = _("Last 3 Months Payments")
+        action["domain"] = [("id", "in", payments.ids)]
+        action["context"] = dict(
+            self.env.context,
+            default_outlet_id=self.id,
+            create=0,
+        )
+        return action
