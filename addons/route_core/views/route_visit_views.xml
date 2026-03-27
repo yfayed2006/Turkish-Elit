@@ -168,7 +168,9 @@
 <field name="collection_priority_score" readonly="1"/>
 <field name="collection_trend_status" string="Collection Trend" readonly="1" widget="badge" decoration-success="collection_trend_status == 'good'" decoration-info="collection_trend_status == 'no_basis'" decoration-warning="collection_trend_status == 'warning'" decoration-danger="collection_trend_status == 'weak'"/>
 <field name="debt_risk_level" readonly="1" widget="badge" decoration-success="debt_risk_level == 'low'" decoration-info="debt_risk_level == 'medium'" decoration-warning="debt_risk_level == 'high'" decoration-danger="debt_risk_level == 'critical'"/>
-<field name="debt_policy_action" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
+<field name="debt_policy_action" string="Refill Restriction Hint" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
+<field name="outlet_health_status" string="Outlet Health" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'needs_attention'" decoration-danger="outlet_health_status == 'critical'"/>
+<field name="recommended_visit_frequency" string="Recommended Frequency" readonly="1"/>
 <field name="visit_mode" readonly="1"/>
 <field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
 </group>
@@ -220,6 +222,21 @@
 </group>
 <group>
 <field name="oldest_days_on_shelf" readonly="1"/>
+</group>
+</group>
+<group string="Visit Planning Snapshot" col="3">
+<group>
+<field name="recommended_visit_frequency" readonly="1"/>
+<field name="recent_outlet_visit_count_30d" readonly="1"/>
+</group>
+<group>
+<field name="days_since_last_outlet_visit" readonly="1"/>
+<field name="outlet_health_score" readonly="1"/>
+</group>
+<group>
+<field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'needs_attention'" decoration-danger="outlet_health_status == 'critical'"/>
+<field name="visit_frequency_reason" readonly="1"/>
+<field name="outlet_health_reason" readonly="1"/>
 </group>
 </group>
 <group string="Visit Details" col="2">
