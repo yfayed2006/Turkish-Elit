@@ -1,3 +1,5 @@
+from dateutil.relativedelta import relativedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -135,6 +137,26 @@ class RouteOutlet(models.Model):
         string="Unpaid Visits",
         compute="_compute_visit_stats",
     )
+    sales_current_month = fields.Monetary(
+        string="Current Month Sales",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    sales_previous_month = fields.Monetary(
+        string="Previous Month Sales",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    sales_two_months_ago = fields.Monetary(
+        string="2 Months Ago Sales",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
+    sales_last_3_months_total = fields.Monetary(
+        string="Last 3 Months Sales",
+        currency_field="currency_id",
+        compute="_compute_visit_stats",
+    )
     deferred_payment_count = fields.Integer(
         string="Deferred Payments",
         compute="_compute_payment_stats",
@@ -238,6 +260,10 @@ class RouteOutlet(models.Model):
         "visit_ids.date",
         "visit_ids.state",
         "visit_ids.sale_order_id",
+        "visit_ids.sale_order_id.amount_total",
+        "visit_ids.sale_order_id.amount_untaxed",
+        "visit_ids.sale_order_id.date_order",
+        "visit_ids.sale_order_id.state",
         "visit_ids.no_sale_reason",
         "visit_ids.payment_ids.amount",
         "visit_ids.payment_ids.state",
@@ -262,9 +288,43 @@ class RouteOutlet(models.Model):
                 False,
             )
 
-            sale_orders = visits.mapped("sale_order_id").filtered(lambda so: so)
+            sale_orders = visits.mapped("sale_order_id").filtered(lambda so: so and so.state != "cancel")
+            sale_orders = sale_orders.sorted(
+                key=lambda so: ((fields.Datetime.to_datetime(so.date_order) if so.date_order else fields.Datetime.now()), so.id),
+                reverse=True,
+            )
             record.sale_order_count = len(sale_orders)
             record.last_sale_order_id = sale_orders[:1] if sale_orders else False
+
+            today_date = fields.Date.to_date(today)
+            current_month_start = today_date.replace(day=1)
+            previous_month_start = current_month_start - relativedelta(months=1)
+            two_months_ago_start = current_month_start - relativedelta(months=2)
+            next_month_start = current_month_start + relativedelta(months=1)
+
+            monthly_sales = {
+                "current": 0.0,
+                "previous": 0.0,
+                "two_months_ago": 0.0,
+            }
+            for order in sale_orders:
+                order_date = fields.Datetime.to_datetime(order.date_order).date() if order.date_order else False
+                if not order_date:
+                    order_date = fields.Date.to_date(order.create_date) if order.create_date else False
+                amount = order.amount_total or order.amount_untaxed or 0.0
+                if not order_date:
+                    continue
+                if current_month_start <= order_date < next_month_start:
+                    monthly_sales["current"] += amount
+                elif previous_month_start <= order_date < current_month_start:
+                    monthly_sales["previous"] += amount
+                elif two_months_ago_start <= order_date < previous_month_start:
+                    monthly_sales["two_months_ago"] += amount
+
+            record.sales_current_month = monthly_sales["current"]
+            record.sales_previous_month = monthly_sales["previous"]
+            record.sales_two_months_ago = monthly_sales["two_months_ago"]
+            record.sales_last_3_months_total = sum(monthly_sales.values())
 
             record.current_due_amount = sum(
                 active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0).mapped("remaining_due_amount")
