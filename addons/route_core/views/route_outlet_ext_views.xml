@@ -7,6 +7,20 @@
 <xpath expr="//sheet/group[1]/group[2]/field[@name='active_stock_tracking']" position="after">
 <field name="stock_location_id"/>
 </xpath>
+<xpath expr="//page[@string='Summary']/group[.//field[@name='last_payment_amount']]" position="after">
+<group string="Monthly Sales Trend" col="3">
+<group>
+<field name="sales_current_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_previous_month" readonly="1"/>
+</group>
+<group>
+<field name="sales_two_months_ago" readonly="1"/>
+<field name="sales_last_3_months_total" readonly="1"/>
+</group>
+</group>
+</xpath>
 </field>
 </record>
 </odoo>
