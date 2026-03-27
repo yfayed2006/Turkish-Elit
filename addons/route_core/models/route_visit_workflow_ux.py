@@ -318,6 +318,11 @@ class RouteVisit(models.Model):
             },
         }
 
+    def action_ux_refresh_visit(self):
+        self.ensure_one()
+        self.action_recompute_visit_health()
+        return self._get_pda_form_action()
+
     def action_ux_start_visit(self):
         self.ensure_one()
         self.action_start_visit()
