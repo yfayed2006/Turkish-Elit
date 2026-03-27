@@ -283,6 +283,10 @@
 <group string="Decision Flags" col="1">
 <field name="decision_flags_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
+<group string="Internal Tools" col="2">
+<button name="action_recompute_summary" type="object" string="Recompute Summary" class="btn-secondary"/>
+<button name="action_outlet_diagnostics" type="object" string="Diagnostics" class="btn-secondary"/>
+</group>
 <group string="Smart Actions" col="3">
 <group>
 <button name="action_open_unpaid_visits" type="object" string="Open Unpaid Visits" class="btn-secondary"/>
