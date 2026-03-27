@@ -191,6 +191,9 @@
 <field name="collection_status" widget="badge" readonly="1" decoration-success="collection_status == 'good'" decoration-warning="collection_status == 'warning'" decoration-danger="collection_status == 'weak'" decoration-info="collection_status == 'no_basis'"/>
 </group>
 </group>
+<group string="Top 3 Selling Products by Qty (Last 3 Months)" col="1">
+<field name="top_selling_products_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
+</group>
 <group string="Top Risk Products" col="1">
 <field name="top_risk_products_html" nolabel="1" readonly="1" widget="html" colspan="4"/>
 </group>
