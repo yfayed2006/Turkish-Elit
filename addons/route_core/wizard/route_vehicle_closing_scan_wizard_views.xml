@@ -20,7 +20,7 @@
 <field name="last_qty" readonly="1"/>
 <field name="message" readonly="1"/>
 </group>
-<label string="Tip: if a product barcode exists on more than one lot, scan the lot code instead." class="text-muted"/>
+<div class="text-muted"> Tip: if a product barcode exists on more than one lot, scan the lot code instead. </div>
 </sheet>
 </form>
 </field>
