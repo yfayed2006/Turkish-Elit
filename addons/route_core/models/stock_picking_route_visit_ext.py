@@ -4,9 +4,9 @@ from odoo import fields, models
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
-    vehicle_closing_id = fields.Many2one(
-        "route.vehicle.closing",
-        string="Vehicle Closing",
+    route_visit_id = fields.Many2one(
+        "route.visit",
+        string="Route Visit",
         index=True,
         copy=False,
         ondelete="set null",
