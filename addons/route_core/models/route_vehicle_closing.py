@@ -91,6 +91,12 @@ class RouteVehicleClosing(models.Model):
         copy=False,
         tracking=True,
     )
+    count_started_datetime = fields.Datetime(
+        string="Count Started On",
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
     note = fields.Text(string="Notes")
     line_ids = fields.One2many(
         "route.vehicle.closing.line",
@@ -236,6 +242,17 @@ class RouteVehicleClosing(models.Model):
                     [dict(vals, closing_id=rec.id) for vals in line_vals]
                 )
             rec.snapshot_datetime = fields.Datetime.now()
+        return True
+
+    def action_start_count(self):
+        for rec in self:
+            if rec.state != "draft":
+                raise UserError(_("You can start the vehicle count only while the closing is in draft."))
+            if not rec.line_ids:
+                rec.action_refresh_snapshot()
+            rec.line_ids.write({"counted_qty": 0.0})
+            rec.count_started_datetime = fields.Datetime.now()
+            rec.message_post(body=_("Vehicle physical count started. Counted quantities were reset to zero for manual counting."))
         return True
 
     def action_close_day(self):
@@ -472,3 +489,4 @@ class RouteLoadingProposal(models.Model):
         if not self.plan_id:
             raise UserError(_("This loading proposal is not linked to a route plan."))
         return self.plan_id.action_open_vehicle_closing()
+
