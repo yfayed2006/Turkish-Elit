@@ -1246,7 +1246,7 @@ class RoutePlan(models.Model):
         helper_proposal = proposal or self.env["route.loading.proposal"].new(
             {
                 "plan_id": self.id,
-                "company_id": (self.company_id or self.env.company).id,
+                "company_id": self.env.company.id,
             }
         )
         default_source = proposal.source_location_id if proposal else False
@@ -1342,4 +1342,5 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
+
 
