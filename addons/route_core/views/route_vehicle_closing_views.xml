@@ -14,6 +14,7 @@
 <field name="total_counted_qty" optional="show"/>
 <field name="total_variance_qty" optional="show"/>
 <field name="snapshot_datetime" optional="show"/>
+<field name="count_started_datetime" optional="show"/>
 <field name="close_datetime" optional="show"/>
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
 </list>
@@ -26,8 +27,9 @@
 <form string="Vehicle Closing">
 <header>
 <button name="action_refresh_snapshot" type="object" string="Refresh Vehicle Snapshot" class="btn-secondary" invisible="state != 'draft'"/>
-<button name="action_start_count" type="object" string="Start Count" class="btn-secondary" invisible="state != 'draft'"/>
-<button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft'"/>
+<button name="action_start_count" type="object" string="Start Count" class="btn-secondary" invisible="state != 'draft' or count_started_datetime"/>
+<button name="action_open_scan_wizard" type="object" string="Scan Vehicle Stock" class="btn-secondary" invisible="state != 'draft' or not count_started_datetime"/>
+<button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_started_datetime"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state == 'draft'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
 </header>
@@ -92,7 +94,7 @@
 <field name="system_qty" readonly="1"/>
 <field name="reserved_qty" readonly="1" optional="show"/>
 <field name="available_qty" readonly="1" optional="show"/>
-<field name="counted_qty" readonly="parent.state != 'draft'"/>
+<field name="counted_qty" readonly="parent.state != 'draft' or not parent.count_started_datetime"/>
 <field name="variance_qty" readonly="1"/>
 <field name="variance_status" readonly="1" widget="badge" decoration-success="variance_status == 'match'" decoration-warning="variance_status == 'over'" decoration-danger="variance_status == 'short'"/>
 <field name="note" readonly="parent.state != 'draft'" optional="show"/>
