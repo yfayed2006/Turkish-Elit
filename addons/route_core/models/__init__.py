@@ -36,3 +36,5 @@ from . import route_visit_document_links_ext
 from . import route_loading_proposal
 from . import stock_quant_route_snapshot_ext
 from . import route_vehicle_closing
+
+from . import stock_picking_route_vehicle_closing_ext
