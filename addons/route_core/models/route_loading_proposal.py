@@ -277,25 +277,70 @@ class RouteLoadingProposal(models.Model):
             )
         return picking_type
 
+    def _get_mus_stock_location(self):
+        self.ensure_one()
+        location_model = self.env["stock.location"]
+
+        mus_location = location_model.search(
+            [
+                ("usage", "=", "internal"),
+                ("complete_name", "=", "MUS/Stock"),
+            ],
+            order="id asc",
+            limit=1,
+        )
+        if mus_location:
+            return mus_location
+
+        mus_location = location_model.search(
+            [
+                ("usage", "=", "internal"),
+                ("complete_name", "ilike", "MUS/Stock"),
+            ],
+            order="id asc",
+            limit=1,
+        )
+        if mus_location:
+            return mus_location
+
+        mus_location = location_model.search(
+            [
+                ("usage", "=", "internal"),
+                ("name", "=", "Stock"),
+                ("complete_name", "ilike", "MUS/%"),
+            ],
+            order="id asc",
+            limit=1,
+        )
+        if mus_location:
+            return mus_location
+
+        mus_location = location_model.search(
+            [
+                ("usage", "=", "internal"),
+                "|",
+                ("name", "=", "MUS/Stock"),
+                ("name", "ilike", "MUS/Stock"),
+            ],
+            order="id asc",
+            limit=1,
+        )
+        return mus_location
+
+    def _get_effective_source_location(self):
+        self.ensure_one()
+        mus_location = self._get_mus_stock_location()
+        if mus_location:
+            return mus_location
+        return self.source_location_id or False
+
     def _get_default_source_location(self):
         self.ensure_one()
         company = self.company_id or self.env.company
         location_model = self.env["stock.location"]
 
-        # Route Core preference: use MUS/Stock as the primary warehouse source when it exists.
-        preferred_location = location_model.search(
-            [
-                ("usage", "=", "internal"),
-                "|",
-                ("company_id", "=", company.id),
-                ("company_id", "=", False),
-                "|",
-                ("complete_name", "=", "MUS/Stock"),
-                ("name", "=", "MUS/Stock"),
-            ],
-            order="company_id desc, id asc",
-            limit=1,
-        )
+        # Route Core preference: force MUS/Stock as the primary warehouse source whenever it exists.
+        preferred_location = self._get_mus_stock_location()
         if preferred_location:
             return preferred_location
 
@@ -471,26 +516,30 @@ class RouteLoadingProposal(models.Model):
                     _("Vehicle '%s' does not have a vehicle stock location.")
                     % (rec.vehicle_id.display_name,)
                 )
-            if not rec.source_location_id:
+            effective_source = rec._get_effective_source_location()
+            if not effective_source:
                 raise UserError(
                     _(
                         "Please select the source warehouse location before approving this loading proposal."
                     )
                 )
-            if rec.source_location_id.usage != "internal":
+            if effective_source.usage != "internal":
                 raise UserError(_("The source location must be an internal location."))
-            if rec.source_location_id == rec.vehicle_id.stock_location_id:
+            if effective_source == rec.vehicle_id.stock_location_id:
                 raise UserError(
                     _("The source warehouse location and the vehicle location cannot be the same.")
                 )
+            if rec.source_location_id != effective_source:
+                rec.source_location_id = effective_source.id
 
     def _prepare_picking_vals(self):
         self.ensure_one()
         self._check_ready_for_approval()
         picking_type = self._get_internal_picking_type()
+        source_location = self._get_effective_source_location()
         return {
             "picking_type_id": picking_type.id,
-            "location_id": self.source_location_id.id,
+            "location_id": source_location.id,
             "location_dest_id": self.vehicle_id.stock_location_id.id,
             "origin": "%s / %s" % (self.plan_id.name or "Route Plan", self.name),
             "company_id": (self.company_id or self.env.company).id,
@@ -750,12 +799,13 @@ class RouteLoadingProposalLine(models.Model):
             line.source_available_qty = 0.0
             line.earliest_source_expiry_date = False
             line.source_lot_summary = False
-            if line.proposal_id.source_location_id and line.product_id:
-                grouped_lines[line.proposal_id.source_location_id.id] |= line
+            effective_source = line.proposal_id._get_effective_source_location() if line.proposal_id else False
+            if effective_source and line.product_id:
+                grouped_lines[effective_source.id] |= line
 
         Quant = self.env["stock.quant"]
         for _location_id, lines in grouped_lines.items():
-            location = lines[:1].proposal_id.source_location_id
+            location = lines[:1].proposal_id._get_effective_source_location()
             products = lines.mapped("product_id")
             quants = Quant.search(
                 [
@@ -1194,11 +1244,7 @@ class RoutePlan(models.Model):
 
         line_vals = self._build_loading_proposal_line_vals()
 
-        source_location = False
-        if proposal and proposal.source_location_id:
-            source_location = proposal.source_location_id
-        elif proposal:
-            source_location = proposal._get_default_source_location()
+        source_location = proposal._get_default_source_location() if proposal else False
 
         note = _(
             "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent sales baseline, product movement speed, and current vehicle balance. "
@@ -1242,4 +1288,3 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
-
