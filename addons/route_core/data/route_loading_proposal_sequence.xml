@@ -1,0 +1,9 @@
+<odoo>
+<record id="seq_route_loading_proposal" model="ir.sequence">
+<field name="name">Route Loading Proposal</field>
+<field name="code">route.loading.proposal</field>
+<field name="prefix">RLP/</field>
+<field name="padding">5</field>
+<field name="company_id" eval="False"/>
+</record>
+</odoo>
