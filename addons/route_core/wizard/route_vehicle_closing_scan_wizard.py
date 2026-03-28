@@ -7,7 +7,8 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
     _description = "Route Vehicle Closing Scan Wizard"
 
     closing_id = fields.Many2one("route.vehicle.closing", string="Vehicle Closing", required=True, readonly=True)
-    barcode = fields.Char(string="Scan Product / Lot")
+    product_barcode = fields.Char(string="Scan Product Barcode")
+    lot_code = fields.Char(string="Scan Lot Code")
     quantity = fields.Float(string="Quantity", default=1.0)
     last_line_id = fields.Many2one("route.vehicle.closing.line", string="Last Updated Line", readonly=True)
     last_product_id = fields.Many2one("product.product", string="Last Product", readonly=True)
@@ -15,22 +16,26 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
     last_qty = fields.Float(string="Last Added Qty", readonly=True)
     message = fields.Char(string="Message", readonly=True)
 
-    def _resolve_line(self, code):
+    def _resolve_line(self):
         self.ensure_one()
-        code = (code or "").strip()
-        if not code:
-            raise UserError(_("Please scan a product barcode or lot code first."))
-
         lines = self.closing_id.line_ids
-        lot_line = lines.filtered(lambda l: l.lot_id and ((l.lot_id.name or '').strip().lower() == code.lower()))[:1]
-        if lot_line:
-            return lot_line
+        lot_code = (self.lot_code or "").strip()
+        product_code = (self.product_barcode or "").strip()
 
-        product_lines = lines.filtered(lambda l: l.product_id and ((l.product_id.barcode or '').strip() == code))
+        if lot_code:
+            lot_line = lines.filtered(lambda l: l.lot_id and ((l.lot_id.name or '').strip().lower() == lot_code.lower()))[:1]
+            if lot_line:
+                return lot_line
+            raise UserError(_("Scanned lot code '%s' was not found in the vehicle closing lines.") % lot_code)
+
+        if not product_code:
+            raise UserError(_("Please scan a product barcode or a lot code first."))
+
+        product_lines = lines.filtered(lambda l: l.product_id and ((l.product_id.barcode or '').strip() == product_code))
         if not product_lines:
-            raise UserError(_("Scanned code '%s' was not found in the vehicle closing lines.") % code)
+            raise UserError(_("Scanned product barcode '%s' was not found in the vehicle closing lines.") % product_code)
         if len(product_lines) > 1:
-            raise UserError(_("This barcode exists on multiple lots. Please scan the lot code instead."))
+            raise UserError(_("This barcode exists on multiple lots. Please use the Lot Code field to scan the specific lot."))
         return product_lines[:1]
 
     def action_scan_add(self):
@@ -41,7 +46,7 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
             raise UserError(_("Please start the count first."))
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
-        line = self._resolve_line(self.barcode)
+        line = self._resolve_line()
         line.counted_qty = (line.counted_qty or 0.0) + self.quantity
         self.last_line_id = line
         self.last_product_id = line.product_id
@@ -51,8 +56,11 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
             'qty': self.quantity,
             'product': line.product_id.display_name,
         }
-        self.barcode = False
+        self.product_barcode = False
+        self.lot_code = False
         self.quantity = 1.0
+        self.closing_id.count_done = False
+        self.closing_id.count_done_datetime = False
         return {
             "type": "ir.actions.act_window",
             "name": _("Scan Vehicle Stock"),
@@ -64,4 +72,5 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
 
     def action_done(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window_close"}
+        self.closing_id.action_mark_count_done()
+        return self.closing_id._open_form_action()
