@@ -257,10 +257,87 @@ class RouteLoadingProposal(models.Model):
                 vals["name"] = self.env["ir.sequence"].next_by_code("route.loading.proposal") or "New"
         return super().create(vals_list)
 
+    def _get_source_warehouse(self, source_location=False):
+        self.ensure_one()
+        source_location = source_location or self._get_effective_source_location()
+        if not source_location:
+            return False
+
+        company = self.company_id or self.env.company
+        warehouse_model = self.env["stock.warehouse"]
+        warehouses = warehouse_model.search(
+            [
+                "|",
+                ("company_id", "=", company.id),
+                ("company_id", "=", False),
+            ]
+        )
+        if not warehouses:
+            return False
+
+        source_path = (source_location.complete_name or "").strip()
+        matches = []
+        for warehouse in warehouses:
+            root = getattr(warehouse, "lot_stock_id", False)
+            if not root:
+                continue
+            root_path = (root.complete_name or "").strip()
+            if not root_path:
+                continue
+            if source_location.id == root.id or source_path == root_path or source_path.startswith(root_path + "/"):
+                matches.append((len(root_path), warehouse.id, warehouse))
+
+        if matches:
+            matches.sort(key=lambda item: (-item[0], item[1]))
+            return matches[0][2]
+        return False
+
     def _get_internal_picking_type(self):
         self.ensure_one()
         company = self.company_id or self.env.company
-        picking_type = self.env["stock.picking.type"].search(
+        source_location = self._get_effective_source_location()
+        warehouse = self._get_source_warehouse(source_location)
+        picking_type_model = self.env["stock.picking.type"]
+
+        if warehouse:
+            int_type = getattr(warehouse, "int_type_id", False)
+            if int_type and getattr(int_type, "code", False) == "internal":
+                return int_type
+
+            if "warehouse_id" in picking_type_model._fields:
+                picking_type = picking_type_model.search(
+                    [
+                        ("code", "=", "internal"),
+                        ("warehouse_id", "=", warehouse.id),
+                        "|",
+                        ("company_id", "=", company.id),
+                        ("company_id", "=", False),
+                    ],
+                    order="company_id desc, sequence asc, id asc",
+                    limit=1,
+                )
+                if picking_type:
+                    return picking_type
+
+            root_location = getattr(warehouse, "lot_stock_id", False)
+            if root_location and "default_location_src_id" in picking_type_model._fields:
+                candidate_types = picking_type_model.search(
+                    [
+                        ("code", "=", "internal"),
+                        "|",
+                        ("company_id", "=", company.id),
+                        ("company_id", "=", False),
+                    ],
+                    order="company_id desc, sequence asc, id asc",
+                )
+                root_path = (root_location.complete_name or "").strip()
+                for picking_type in candidate_types:
+                    default_src = getattr(picking_type, "default_location_src_id", False)
+                    default_src_path = (default_src.complete_name or "").strip() if default_src else ""
+                    if default_src and (default_src.id == root_location.id or default_src_path == root_path or default_src_path.startswith(root_path + "/")):
+                        return picking_type
+
+        picking_type = picking_type_model.search(
             [
                 ("code", "=", "internal"),
                 "|",
@@ -555,7 +632,7 @@ class RouteLoadingProposal(models.Model):
             "location_id": source_location.id,
             "location_dest_id": self.vehicle_id.stock_location_id.id,
             "origin": "%s / %s" % (self.plan_id.name or "Route Plan", self.name),
-            "company_id": (self.company_id or self.env.company).id,
+            "company_id": self.env.company.id,
             "move_type": "direct",
             "note": _(
                 "Vehicle loading proposal approved for route plan %(plan)s and vehicle %(vehicle)s. Older available lots are allocated first."
@@ -1342,5 +1419,6 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
+
 
 
