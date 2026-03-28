@@ -46,7 +46,7 @@ class RouteLoadingSourceWizard(models.TransientModel):
 
     def _compute_company_id(self):
         for rec in self:
-            rec.company_id = rec.plan_id.company_id or rec.env.company
+            rec.company_id = rec.env.company
 
     def action_confirm(self):
         self.ensure_one()
