@@ -1,0 +1,9 @@
+<odoo>
+<record id="seq_route_vehicle_closing" model="ir.sequence">
+<field name="name">Route Vehicle Closing</field>
+<field name="code">route.vehicle.closing</field>
+<field name="prefix">RVC/</field>
+<field name="padding">5</field>
+<field name="company_id" eval="False"/>
+</record>
+</odoo>
