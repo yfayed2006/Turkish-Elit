@@ -25,3 +25,4 @@ access_route_loading_proposal_line_user,access.route.loading.proposal.line.user,
 access_route_loading_source_wizard_user,route.loading.source.wizard.user,model_route_loading_source_wizard,base.group_user,1,1,1,1
 access_route_vehicle_closing_user,access.route.vehicle.closing.user,model_route_vehicle_closing,base.group_user,1,1,1,1
 access_route_vehicle_closing_line_user,access.route.vehicle.closing.line.user,model_route_vehicle_closing_line,base.group_user,1,1,1,1
+access_route_vehicle_closing_scan_wizard_user,access.route.vehicle.closing.scan.wizard.user,model_route_vehicle_closing_scan_wizard,base.group_user,1,1,1,1
