@@ -1,0 +1,20 @@
+<odoo>
+<record id="view_route_loading_source_wizard_form" model="ir.ui.view">
+<field name="name">route.loading.source.wizard.form</field>
+<field name="model">route.loading.source.wizard</field>
+<field name="arch" type="xml">
+<form string="Choose Loading Source">
+<group>
+<field name="plan_id" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+<field name="destination_location_id" readonly="1"/>
+<field name="source_location_id" options="{'no_create': True}"/>
+</group>
+<footer>
+<button name="action_confirm" type="object" string="Apply Source and Continue" class="btn-primary"/>
+<button string="Cancel" class="btn-secondary" special="cancel"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
