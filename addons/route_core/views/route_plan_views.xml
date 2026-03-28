@@ -30,8 +30,10 @@
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Planning" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
-<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel'"/>
+<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel' or loading_proposal_count > 0"/>
 <button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_proposal_count == 0"/>
+<button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
+<button name="action_open_vehicle_closing" type="object" string="Close Vehicle Day" class="btn-secondary" invisible="not planning_finalized or not vehicle_id or state == 'cancel'"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
@@ -43,6 +45,9 @@
 </button>
 <button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_proposal_count == 0">
 <field name="loading_proposal_count" string="Loading Proposal" widget="statinfo"/>
+</button>
+<button name="action_open_vehicle_closing" type="object" class="oe_stat_button" icon="fa-check-square-o" invisible="vehicle_closing_count == 0">
+<field name="vehicle_closing_count" string="Vehicle Closings" widget="statinfo"/>
 </button>
 </div>
 <div class="oe_title">
@@ -66,7 +71,7 @@
 </group>
 </group>
 <separator string="Planning Readiness"/>
-<group col="4">
+<group col="6">
 <group string="Daily Planning">
 <field name="planning_finalized" readonly="1"/>
 <field name="planning_finalized_datetime" readonly="1" invisible="not planning_finalized_datetime"/>
@@ -74,6 +79,9 @@
 <group string="Loading Proposal">
 <field name="loading_proposal_count" readonly="1"/>
 <field name="loading_proposal_state" readonly="1"/>
+</group>
+<group string="Vehicle Closing">
+<field name="vehicle_closing_count" readonly="1"/>
 </group>
 </group>
 <separator string="Visit Summary"/>
@@ -162,7 +170,7 @@
 <field name="res_model">route.plan</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="view_route_plan_search"/>
-<field name="context"> { 'search_default_filter_my_plans': 1, 'search_default_filter_today': 1 } </field>
+<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1}</field>
 </record>
 <menuitem id="menu_route_plan" name="Route Plans" parent="menu_route_visit_root" action="action_route_plan" sequence="20"/>
 </odoo>
