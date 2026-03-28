@@ -377,6 +377,7 @@ class RouteVehicleClosing(models.Model):
             move_model = self.env["stock.move"]
             move_line_model = self.env["stock.move.line"]
             move_has_restrict_lot = "restrict_lot_id" in move_model._fields
+            move_has_description_picking = "description_picking" in move_model._fields
 
             action_labels = {
                 "send_damaged": _("To Damaged"),
@@ -403,7 +404,6 @@ class RouteVehicleClosing(models.Model):
                     if qty <= 0:
                         continue
                     move_vals = {
-                        "name": line.product_id.display_name,
                         "product_id": line.product_id.id,
                         "product_uom_qty": qty,
                         "product_uom": line.uom_id.id or line.product_id.uom_id.id,
@@ -413,6 +413,8 @@ class RouteVehicleClosing(models.Model):
                         "company_id": rec.company_id.id,
                         "origin": picking.origin,
                     }
+                    if move_has_description_picking:
+                        move_vals["description_picking"] = line.product_id.display_name
                     if move_has_restrict_lot and line.lot_id:
                         move_vals["restrict_lot_id"] = line.lot_id.id
                     move = move_model.create(move_vals)
@@ -609,3 +611,4 @@ class RoutePlan(models.Model):
             })
             closing.action_refresh_snapshot()
         return closing._open_form_action()
+
