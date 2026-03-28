@@ -279,8 +279,27 @@ class RouteLoadingProposal(models.Model):
 
     def _get_default_source_location(self):
         self.ensure_one()
-        picking_type = self._get_internal_picking_type()
+        company = self.company_id or self.env.company
+        location_model = self.env["stock.location"]
 
+        # Route Core preference: use MUS/Stock as the primary warehouse source when it exists.
+        preferred_location = location_model.search(
+            [
+                ("usage", "=", "internal"),
+                "|",
+                ("company_id", "=", company.id),
+                ("company_id", "=", False),
+                "|",
+                ("complete_name", "=", "MUS/Stock"),
+                ("name", "=", "MUS/Stock"),
+            ],
+            order="company_id desc, id asc",
+            limit=1,
+        )
+        if preferred_location:
+            return preferred_location
+
+        picking_type = self._get_internal_picking_type()
         if (
             "default_location_src_id" in picking_type._fields
             and picking_type.default_location_src_id
@@ -291,7 +310,7 @@ class RouteLoadingProposal(models.Model):
         warehouse = self.env["stock.warehouse"].search(
             [
                 "|",
-                ("company_id", "=", (self.company_id or self.env.company).id),
+                ("company_id", "=", company.id),
                 ("company_id", "=", False),
             ],
             order="company_id desc, id asc",
@@ -1223,3 +1242,4 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
+
