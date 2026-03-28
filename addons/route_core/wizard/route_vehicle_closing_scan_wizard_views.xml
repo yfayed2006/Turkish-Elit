@@ -4,10 +4,6 @@
 <field name="model">route.vehicle.closing.scan.wizard</field>
 <field name="arch" type="xml">
 <form string="Scan Vehicle Stock">
-<header>
-<button name="action_scan_add" type="object" string="Scan / Add" class="btn-primary"/>
-<button name="action_done" type="object" string="Done" class="btn-secondary"/>
-</header>
 <sheet>
 <group string="Vehicle Count" col="2">
 <field name="closing_id" readonly="1"/>
@@ -23,6 +19,11 @@
 </group>
 <div class="text-muted"> Tip: if a product barcode exists on more than one lot, use the Lot Code field to scan the specific lot. </div>
 </sheet>
+<footer>
+<button name="action_scan_add" type="object" string="Scan / Add" class="btn-primary"/>
+<button name="action_done" type="object" string="Done" class="btn-secondary"/>
+<button string="Discard" special="cancel" class="btn-secondary"/>
+</footer>
 </form>
 </field>
 </record>
