@@ -38,3 +38,5 @@ from . import stock_quant_route_snapshot_ext
 from . import route_vehicle_closing
 
 from . import stock_picking_route_vehicle_closing_ext
+
+from . import route_salesperson_shortage
