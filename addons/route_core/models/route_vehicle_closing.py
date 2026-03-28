@@ -32,10 +32,16 @@ class RouteVehicleClosing(models.Model):
     variance_review_done_datetime = fields.Datetime(string="Variance Review Completed On", readonly=True, copy=False, tracking=True)
     note = fields.Text(string="Notes")
     line_ids = fields.One2many("route.vehicle.closing.line", "closing_id", string="Closing Lines", copy=True)
+    reconciliation_picking_ids = fields.One2many("stock.picking", "vehicle_closing_id", string="Reconciliation Transfers", readonly=True)
+
     line_count = fields.Integer(string="Line Count", compute="_compute_totals")
     variance_line_count = fields.Integer(string="Variance Lines", compute="_compute_totals")
     reviewed_variance_line_count = fields.Integer(string="Reviewed Variance Lines", compute="_compute_totals")
     pending_variance_line_count = fields.Integer(string="Pending Variance Lines", compute="_compute_totals")
+    executable_variance_line_count = fields.Integer(string="Executable Variance Lines", compute="_compute_totals")
+    pending_execution_line_count = fields.Integer(string="Pending Execution Lines", compute="_compute_totals")
+    executed_variance_line_count = fields.Integer(string="Executed Variance Lines", compute="_compute_totals")
+    reconciliation_picking_count = fields.Integer(string="Reconciliation Transfers", compute="_compute_totals")
     total_system_qty = fields.Float(string="System Qty", compute="_compute_totals")
     total_counted_qty = fields.Float(string="Counted Qty", compute="_compute_totals")
     total_variance_qty = fields.Float(string="Net Variance Qty", compute="_compute_totals")
@@ -46,6 +52,11 @@ class RouteVehicleClosing(models.Model):
         ("in_progress", "Review In Progress"),
         ("done", "Review Completed"),
     ], string="Variance Review Status", compute="_compute_totals")
+    reconciliation_execution_status = fields.Selection([
+        ("not_needed", "No Execution Needed"),
+        ("pending", "Execution Pending"),
+        ("done", "Execution Completed"),
+    ], string="Reconciliation Execution Status", compute="_compute_totals")
 
     _sql_constraints = [(
         "route_vehicle_closing_plan_unique",
@@ -59,17 +70,26 @@ class RouteVehicleClosing(models.Model):
         "line_ids.counted_qty",
         "line_ids.variance_qty",
         "line_ids.review_status",
+        "line_ids.action_execution_status",
+        "line_ids.reconciliation_action",
         "variance_review_started_datetime",
         "variance_review_done",
+        "reconciliation_picking_ids",
     )
     def _compute_totals(self):
         for rec in self:
             variance_lines = rec.line_ids.filtered(lambda line: abs(line.variance_qty or 0.0) > 0.0001)
             reviewed_variance_lines = variance_lines.filtered(lambda line: line.review_status == "reviewed")
+            executable_lines = rec._get_executable_variance_lines()
+            executed_lines = executable_lines.filtered(lambda line: line.action_execution_status == "done")
             rec.line_count = len(rec.line_ids)
             rec.variance_line_count = len(variance_lines)
             rec.reviewed_variance_line_count = len(reviewed_variance_lines)
             rec.pending_variance_line_count = len(variance_lines) - len(reviewed_variance_lines)
+            rec.executable_variance_line_count = len(executable_lines)
+            rec.executed_variance_line_count = len(executed_lines)
+            rec.pending_execution_line_count = len(executable_lines) - len(executed_lines)
+            rec.reconciliation_picking_count = len(rec.reconciliation_picking_ids)
             rec.total_system_qty = sum(rec.line_ids.mapped("system_qty"))
             rec.total_counted_qty = sum(rec.line_ids.mapped("counted_qty"))
             rec.total_variance_qty = sum(rec.line_ids.mapped("variance_qty"))
@@ -82,6 +102,13 @@ class RouteVehicleClosing(models.Model):
                 rec.variance_review_status = "in_progress"
             else:
                 rec.variance_review_status = "pending"
+
+            if not executable_lines:
+                rec.reconciliation_execution_status = "not_needed"
+            elif len(executed_lines) == len(executable_lines):
+                rec.reconciliation_execution_status = "done"
+            else:
+                rec.reconciliation_execution_status = "pending"
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -134,6 +161,7 @@ class RouteVehicleClosing(models.Model):
                 "variance_reason": line.variance_reason,
                 "reconciliation_action": line.reconciliation_action,
                 "review_note": line.review_note,
+                "generated_picking_id": line.generated_picking_id.id,
             }
 
         line_vals = []
@@ -158,6 +186,7 @@ class RouteVehicleClosing(models.Model):
                 "variance_reason": previous.get("variance_reason", False),
                 "reconciliation_action": previous.get("reconciliation_action", False),
                 "review_note": previous.get("review_note", False),
+                "generated_picking_id": previous.get("generated_picking_id", False),
             })
 
         line_vals.sort(key=lambda vals: (
@@ -177,7 +206,7 @@ class RouteVehicleClosing(models.Model):
                 self.env["route.vehicle.closing.line"].create([dict(vals, closing_id=rec.id) for vals in line_vals])
             rec.snapshot_datetime = fields.Datetime.now()
             if not rec.count_started_datetime:
-                rec.line_ids.write({"counted_qty": rec.line_ids[:1].system_qty if False else 0.0})
+                rec.line_ids.write({"counted_qty": 0.0})
                 for line in rec.line_ids:
                     line.counted_qty = line.system_qty
         return True
@@ -192,9 +221,6 @@ class RouteVehicleClosing(models.Model):
         self.count_started_datetime = fields.Datetime.now()
         self.count_done = False
         self.count_done_datetime = False
-        self.variance_review_started_datetime = False
-        self.variance_review_done = False
-        self.variance_review_done_datetime = False
         self.message_post(body=_("Vehicle physical count started. Scan products or lots to build the counted quantities."))
         return self._open_scan_wizard_action()
 
@@ -272,6 +298,161 @@ class RouteVehicleClosing(models.Model):
             rec.variance_review_done_datetime = fields.Datetime.now()
             rec.message_post(body=_("Variance review completed. All variance lines now have a reason and reconciliation action."))
         return True
+
+    def _get_internal_picking_type(self):
+        self.ensure_one()
+        picking_type = self.env["stock.picking.type"].search([
+            ("code", "=", "internal"),
+            "|",
+            ("company_id", "=", self.company_id.id),
+            ("company_id", "=", False),
+        ], order="company_id desc, sequence asc, id asc", limit=1)
+        if not picking_type:
+            raise UserError(_("No Internal Transfer operation type was found for company '%s'.") % (self.company_id.display_name,))
+        return picking_type
+
+    def _get_root_internal_location(self, location):
+        root = location
+        while root.parent_path and root.location_id and root.location_id.usage == "internal":
+            root = root.location_id
+        return root
+
+    def _get_return_to_warehouse_location(self):
+        self.ensure_one()
+        if not self.vehicle_location_id:
+            return False
+        root = self._get_root_internal_location(self.vehicle_location_id)
+        return root if root and root.id != self.vehicle_location_id.id else False
+
+    def _get_reconciliation_destination_location(self, action_code):
+        self.ensure_one()
+        if action_code == "send_damaged":
+            location = self.company_id.return_damaged_location_id
+            if not location:
+                raise UserError(_("Please configure Return Damaged Location before creating damaged reconciliation transfers."))
+            return location
+        if action_code == "send_near_expiry":
+            location = self.company_id.return_near_expiry_location_id
+            if not location:
+                raise UserError(_("Please configure Return Near Expiry Location before creating near expiry reconciliation transfers."))
+            return location
+        if action_code == "return_to_warehouse":
+            location = self._get_return_to_warehouse_location()
+            if not location:
+                raise UserError(_("Could not determine the warehouse return location from the vehicle stock location."))
+            return location
+        return False
+
+    def _get_executable_variance_lines(self):
+        self.ensure_one()
+        return self.line_ids.filtered(
+            lambda line: abs(line.variance_qty or 0.0) > 0.0001
+            and line.variance_qty < 0
+            and line.reconciliation_action in ("send_damaged", "send_near_expiry", "return_to_warehouse")
+        )
+
+    def action_create_reconciliation_transfers(self):
+        for rec in self:
+            if rec.state != "closed":
+                raise UserError(_("Reconciliation transfers can be created only after closing the vehicle day."))
+            if rec.variance_line_count == 0:
+                raise UserError(_("There are no variance lines to execute."))
+            if not rec.variance_review_done:
+                raise UserError(_("Please complete the variance review first."))
+            executable_lines = rec._get_executable_variance_lines().filtered(lambda line: not line.generated_picking_id)
+            if not executable_lines:
+                raise UserError(_("There are no pending executable variance lines."))
+            if not rec.vehicle_location_id:
+                raise UserError(_("Please configure the vehicle stock location first."))
+
+            grouped_lines = {}
+            for line in executable_lines:
+                destination = rec._get_reconciliation_destination_location(line.reconciliation_action)
+                key = (line.reconciliation_action, destination.id)
+                grouped_lines.setdefault(key, {"destination": destination, "lines": self.env["route.vehicle.closing.line"]})
+                grouped_lines[key]["lines"] |= line
+
+            created_pickings = self.env["stock.picking"]
+            picking_type = rec._get_internal_picking_type()
+            move_model = self.env["stock.move"]
+            move_line_model = self.env["stock.move.line"]
+            move_has_restrict_lot = "restrict_lot_id" in move_model._fields
+
+            action_labels = {
+                "send_damaged": _("To Damaged"),
+                "send_near_expiry": _("To Near Expiry"),
+                "return_to_warehouse": _("Return to Warehouse"),
+            }
+
+            for (action_code, _dest_id), payload in grouped_lines.items():
+                destination = payload["destination"]
+                lines = payload["lines"]
+                picking = self.env["stock.picking"].create({
+                    "picking_type_id": picking_type.id,
+                    "location_id": rec.vehicle_location_id.id,
+                    "location_dest_id": destination.id,
+                    "origin": "%s - %s" % (rec.name, action_labels.get(action_code, action_code)),
+                    "partner_id": rec.plan_id.user_id.partner_id.id if rec.plan_id.user_id and rec.plan_id.user_id.partner_id else False,
+                    "move_type": "direct",
+                    "company_id": rec.company_id.id,
+                    "vehicle_closing_id": rec.id,
+                })
+
+                for line in lines:
+                    qty = abs(line.variance_qty or 0.0)
+                    if qty <= 0:
+                        continue
+                    move_vals = {
+                        "name": line.product_id.display_name,
+                        "product_id": line.product_id.id,
+                        "product_uom_qty": qty,
+                        "product_uom": line.uom_id.id or line.product_id.uom_id.id,
+                        "location_id": picking.location_id.id,
+                        "location_dest_id": picking.location_dest_id.id,
+                        "picking_id": picking.id,
+                        "company_id": rec.company_id.id,
+                        "origin": picking.origin,
+                    }
+                    if move_has_restrict_lot and line.lot_id:
+                        move_vals["restrict_lot_id"] = line.lot_id.id
+                    move = move_model.create(move_vals)
+                    if move.state == "draft":
+                        move._action_confirm()
+                    ml_vals = {
+                        "move_id": move.id,
+                        "picking_id": picking.id,
+                        "product_id": line.product_id.id,
+                        "product_uom_id": line.uom_id.id or line.product_id.uom_id.id,
+                        "qty_done": qty,
+                        "location_id": picking.location_id.id,
+                        "location_dest_id": picking.location_dest_id.id,
+                    }
+                    if line.lot_id:
+                        ml_vals["lot_id"] = line.lot_id.id
+                    move_line_model.create(ml_vals)
+                    line.generated_picking_id = picking.id
+
+                if picking.state == "draft":
+                    picking.action_confirm()
+                created_pickings |= picking
+
+            rec.message_post(body=_("Created %(count)s reconciliation transfer(s) for executable variance lines.") % {"count": len(created_pickings)})
+
+            if len(created_pickings) == 1:
+                return rec.action_view_reconciliation_transfers()
+        return True
+
+    def action_view_reconciliation_transfers(self):
+        self.ensure_one()
+        if not self.reconciliation_picking_ids:
+            raise UserError(_("No reconciliation transfers have been created yet."))
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        if len(self.reconciliation_picking_ids) == 1:
+            action["res_id"] = self.reconciliation_picking_ids.id
+            action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        else:
+            action["domain"] = [("id", "in", self.reconciliation_picking_ids.ids)]
+        return action
 
     def action_reset_to_draft(self):
         self.write({
@@ -356,6 +537,12 @@ class RouteVehicleClosingLine(models.Model):
         ("pending", "Pending Review"),
         ("reviewed", "Reviewed"),
     ], string="Review Status", compute="_compute_review_status")
+    generated_picking_id = fields.Many2one("stock.picking", string="Reconciliation Transfer", readonly=True, copy=False)
+    action_execution_status = fields.Selection([
+        ("not_needed", "No Execution Needed"),
+        ("pending", "Pending Execution"),
+        ("done", "Transfer Created"),
+    ], string="Execution Status", compute="_compute_action_execution_status")
     note = fields.Char(string="Line Note")
 
     @api.depends("system_qty", "counted_qty")
@@ -379,20 +566,23 @@ class RouteVehicleClosingLine(models.Model):
             else:
                 rec.review_status = "pending"
 
+    @api.depends("variance_qty", "reconciliation_action", "generated_picking_id")
+    def _compute_action_execution_status(self):
+        executable_actions = {"send_damaged", "send_near_expiry", "return_to_warehouse"}
+        for rec in self:
+            if abs(rec.variance_qty or 0.0) <= 0.0001 or rec.variance_qty >= 0 or rec.reconciliation_action not in executable_actions:
+                rec.action_execution_status = "not_needed"
+            elif rec.generated_picking_id:
+                rec.action_execution_status = "done"
+            else:
+                rec.action_execution_status = "pending"
+
 
 class RoutePlan(models.Model):
     _inherit = "route.plan"
 
-    vehicle_closing_ids = fields.One2many(
-        "route.vehicle.closing",
-        "plan_id",
-        string="Vehicle Closings",
-    )
-    vehicle_closing_count = fields.Integer(
-        string="Vehicle Closings",
-        compute="_compute_vehicle_closing_stats",
-        store=False,
-    )
+    vehicle_closing_ids = fields.One2many("route.vehicle.closing", "plan_id", string="Vehicle Closings")
+    vehicle_closing_count = fields.Integer(string="Vehicle Closings", compute="_compute_vehicle_closing_stats", store=False)
 
     def _compute_vehicle_closing_stats(self):
         for rec in self:
@@ -412,24 +602,10 @@ class RoutePlan(models.Model):
 
         closing = self._get_active_vehicle_closing()
         if not closing:
-            closing = self.env["route.vehicle.closing"].create(
-                {
-                    "plan_id": self.id,
-                    "company_id": self.env.company.id,
-                    "note": _(
-                        "End-of-day vehicle closing. Count the physical stock on the vehicle and compare it with the system stock snapshot."
-                    ),
-                }
-            )
+            closing = self.env["route.vehicle.closing"].create({
+                "plan_id": self.id,
+                "company_id": self.env.company.id,
+                "note": _("End-of-day vehicle closing. Count the physical stock on the vehicle and compare it with the system stock snapshot."),
+            })
             closing.action_refresh_snapshot()
         return closing._open_form_action()
-
-
-class RouteLoadingProposal(models.Model):
-    _inherit = "route.loading.proposal"
-
-    def action_open_vehicle_closing(self):
-        self.ensure_one()
-        if not self.plan_id:
-            raise UserError(_("This loading proposal is not linked to a route plan."))
-        return self.plan_id.action_open_vehicle_closing()
