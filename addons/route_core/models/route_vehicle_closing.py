@@ -17,20 +17,35 @@ class RouteVehicleClosing(models.Model):
     planning_finalized = fields.Boolean(string="Daily Planning Finalized", related="plan_id.planning_finalized", readonly=True, store=False)
     planning_finalized_datetime = fields.Datetime(string="Planning Finalized On", related="plan_id.planning_finalized_datetime", readonly=True, store=False)
     vehicle_location_id = fields.Many2one("stock.location", string="Vehicle Location", related="vehicle_id.stock_location_id", readonly=True, store=False)
-    state = fields.Selection([("draft", "Draft"), ("closed", "Closed"), ("cancelled", "Cancelled")], string="Status", default="draft", required=True, tracking=True)
+    state = fields.Selection([
+        ("draft", "Draft"),
+        ("closed", "Closed"),
+        ("cancelled", "Cancelled"),
+    ], string="Status", default="draft", required=True, tracking=True)
     snapshot_datetime = fields.Datetime(string="Snapshot Refreshed On", readonly=True, copy=False)
     close_datetime = fields.Datetime(string="Closed On", readonly=True, copy=False, tracking=True)
     count_started_datetime = fields.Datetime(string="Count Started On", readonly=True, copy=False, tracking=True)
     count_done = fields.Boolean(string="Count Completed", readonly=True, copy=False, tracking=True)
     count_done_datetime = fields.Datetime(string="Count Completed On", readonly=True, copy=False, tracking=True)
+    variance_review_started_datetime = fields.Datetime(string="Variance Review Started On", readonly=True, copy=False, tracking=True)
+    variance_review_done = fields.Boolean(string="Variance Review Completed", readonly=True, copy=False, tracking=True)
+    variance_review_done_datetime = fields.Datetime(string="Variance Review Completed On", readonly=True, copy=False, tracking=True)
     note = fields.Text(string="Notes")
     line_ids = fields.One2many("route.vehicle.closing.line", "closing_id", string="Closing Lines", copy=True)
     line_count = fields.Integer(string="Line Count", compute="_compute_totals")
     variance_line_count = fields.Integer(string="Variance Lines", compute="_compute_totals")
+    reviewed_variance_line_count = fields.Integer(string="Reviewed Variance Lines", compute="_compute_totals")
+    pending_variance_line_count = fields.Integer(string="Pending Variance Lines", compute="_compute_totals")
     total_system_qty = fields.Float(string="System Qty", compute="_compute_totals")
     total_counted_qty = fields.Float(string="Counted Qty", compute="_compute_totals")
     total_variance_qty = fields.Float(string="Net Variance Qty", compute="_compute_totals")
     total_abs_variance_qty = fields.Float(string="Absolute Variance Qty", compute="_compute_totals")
+    variance_review_status = fields.Selection([
+        ("clean", "No Variances"),
+        ("pending", "Pending Review"),
+        ("in_progress", "Review In Progress"),
+        ("done", "Review Completed"),
+    ], string="Variance Review Status", compute="_compute_totals")
 
     _sql_constraints = [(
         "route_vehicle_closing_plan_unique",
@@ -38,15 +53,35 @@ class RouteVehicleClosing(models.Model):
         "Only one vehicle closing is allowed for each route plan.",
     )]
 
-    @api.depends("line_ids", "line_ids.system_qty", "line_ids.counted_qty", "line_ids.variance_qty")
+    @api.depends(
+        "line_ids",
+        "line_ids.system_qty",
+        "line_ids.counted_qty",
+        "line_ids.variance_qty",
+        "line_ids.review_status",
+        "variance_review_started_datetime",
+        "variance_review_done",
+    )
     def _compute_totals(self):
         for rec in self:
+            variance_lines = rec.line_ids.filtered(lambda line: abs(line.variance_qty or 0.0) > 0.0001)
+            reviewed_variance_lines = variance_lines.filtered(lambda line: line.review_status == "reviewed")
             rec.line_count = len(rec.line_ids)
-            rec.variance_line_count = len(rec.line_ids.filtered(lambda line: abs(line.variance_qty or 0.0) > 0.0001))
+            rec.variance_line_count = len(variance_lines)
+            rec.reviewed_variance_line_count = len(reviewed_variance_lines)
+            rec.pending_variance_line_count = len(variance_lines) - len(reviewed_variance_lines)
             rec.total_system_qty = sum(rec.line_ids.mapped("system_qty"))
             rec.total_counted_qty = sum(rec.line_ids.mapped("counted_qty"))
             rec.total_variance_qty = sum(rec.line_ids.mapped("variance_qty"))
             rec.total_abs_variance_qty = sum(abs(line.variance_qty or 0.0) for line in rec.line_ids)
+            if not variance_lines:
+                rec.variance_review_status = "clean"
+            elif rec.variance_review_done:
+                rec.variance_review_status = "done"
+            elif rec.variance_review_started_datetime:
+                rec.variance_review_status = "in_progress"
+            else:
+                rec.variance_review_status = "pending"
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -93,7 +128,13 @@ class RouteVehicleClosing(models.Model):
         existing_map = {}
         for line in self.line_ids:
             key = (line.product_id.id, line.lot_id.id or False, line.location_id.id)
-            existing_map[key] = {"counted_qty": line.counted_qty, "note": line.note}
+            existing_map[key] = {
+                "counted_qty": line.counted_qty,
+                "note": line.note,
+                "variance_reason": line.variance_reason,
+                "reconciliation_action": line.reconciliation_action,
+                "review_note": line.review_note,
+            }
 
         line_vals = []
         for quant in self._get_vehicle_quants():
@@ -114,6 +155,9 @@ class RouteVehicleClosing(models.Model):
                 "available_qty": available_qty,
                 "counted_qty": previous.get("counted_qty", system_qty),
                 "note": previous.get("note", False),
+                "variance_reason": previous.get("variance_reason", False),
+                "reconciliation_action": previous.get("reconciliation_action", False),
+                "review_note": previous.get("review_note", False),
             })
 
         line_vals.sort(key=lambda vals: (
@@ -132,7 +176,6 @@ class RouteVehicleClosing(models.Model):
             if line_vals:
                 self.env["route.vehicle.closing.line"].create([dict(vals, closing_id=rec.id) for vals in line_vals])
             rec.snapshot_datetime = fields.Datetime.now()
-            # If count has not started yet, keep counted qty aligned with system snapshot.
             if not rec.count_started_datetime:
                 rec.line_ids.write({"counted_qty": rec.line_ids[:1].system_qty if False else 0.0})
                 for line in rec.line_ids:
@@ -149,6 +192,9 @@ class RouteVehicleClosing(models.Model):
         self.count_started_datetime = fields.Datetime.now()
         self.count_done = False
         self.count_done_datetime = False
+        self.variance_review_started_datetime = False
+        self.variance_review_done = False
+        self.variance_review_done_datetime = False
         self.message_post(body=_("Vehicle physical count started. Scan products or lots to build the counted quantities."))
         return self._open_scan_wizard_action()
 
@@ -187,15 +233,56 @@ class RouteVehicleClosing(models.Model):
                 raise UserError(_("Please set the vehicle stock location first."))
             if not rec.line_ids:
                 rec.action_refresh_snapshot()
-            rec.write({"state": "closed", "close_datetime": fields.Datetime.now()})
+            close_time = fields.Datetime.now()
+            vals = {"state": "closed", "close_datetime": close_time}
+            if not rec.variance_line_count:
+                vals.update({
+                    "variance_review_done": True,
+                    "variance_review_done_datetime": close_time,
+                })
+            rec.write(vals)
             if rec.variance_line_count:
-                rec.message_post(body=_("Vehicle day closed with %(count)s variance line(s). Net variance qty: %(qty).2f") % {"count": rec.variance_line_count, "qty": rec.total_variance_qty})
+                rec.message_post(body=_("Vehicle day closed with %(count)s variance line(s). Net variance qty: %(qty).2f. Start variance review to classify the differences.") % {"count": rec.variance_line_count, "qty": rec.total_variance_qty})
             else:
                 rec.message_post(body=_("Vehicle day closed with no stock variance."))
         return True
 
+    def action_start_variance_review(self):
+        for rec in self:
+            if rec.state != "closed":
+                raise UserError(_("Variance review can start only after the vehicle day is closed."))
+            if not rec.variance_line_count:
+                raise UserError(_("There are no variance lines to review."))
+            rec.variance_review_started_datetime = fields.Datetime.now()
+            rec.variance_review_done = False
+            rec.variance_review_done_datetime = False
+            rec.message_post(body=_("Variance review started. Please classify each variance line and choose a reconciliation action."))
+        return True
+
+    def action_complete_variance_review(self):
+        for rec in self:
+            if rec.state != "closed":
+                raise UserError(_("Variance review can be completed only after the vehicle day is closed."))
+            if not rec.variance_line_count:
+                raise UserError(_("There are no variance lines to review."))
+            pending_lines = rec.line_ids.filtered(lambda line: line.review_status == "pending")
+            if pending_lines:
+                raise UserError(_("Please review all variance lines before completing the variance review."))
+            rec.variance_review_done = True
+            rec.variance_review_done_datetime = fields.Datetime.now()
+            rec.message_post(body=_("Variance review completed. All variance lines now have a reason and reconciliation action."))
+        return True
+
     def action_reset_to_draft(self):
-        self.write({"state": "draft", "close_datetime": False, "count_done": False, "count_done_datetime": False})
+        self.write({
+            "state": "draft",
+            "close_datetime": False,
+            "count_done": False,
+            "count_done_datetime": False,
+            "variance_review_started_datetime": False,
+            "variance_review_done": False,
+            "variance_review_done_datetime": False,
+        })
         return True
 
     def action_cancel(self):
@@ -245,6 +332,30 @@ class RouteVehicleClosingLine(models.Model):
     counted_qty = fields.Float(string="Counted Qty", digits="Product Unit of Measure")
     variance_qty = fields.Float(string="Variance Qty", digits="Product Unit of Measure", compute="_compute_variance", store=True)
     variance_status = fields.Selection([("match", "Match"), ("short", "Short"), ("over", "Over")], string="Variance Status", compute="_compute_variance", store=True)
+    variance_reason = fields.Selection([
+        ("missing", "Missing / Lost"),
+        ("unrecorded_sale", "Unrecorded Sale"),
+        ("damaged", "Damaged / Broken"),
+        ("counting_error", "Counting Error"),
+        ("extra_load", "Extra Load / Transfer"),
+        ("unrecorded_return", "Unrecorded Return"),
+        ("previous_error", "Previous Error"),
+        ("other", "Other"),
+    ], string="Variance Reason")
+    reconciliation_action = fields.Selection([
+        ("investigate", "Investigate Later"),
+        ("stock_adjustment", "Stock Adjustment"),
+        ("send_damaged", "Send to Damaged"),
+        ("send_near_expiry", "Send to Near Expiry"),
+        ("return_to_warehouse", "Return to Warehouse"),
+        ("counting_error", "Count Error / Ignore"),
+    ], string="Reconciliation Action")
+    review_note = fields.Char(string="Review Note")
+    review_status = fields.Selection([
+        ("clean", "No Variance"),
+        ("pending", "Pending Review"),
+        ("reviewed", "Reviewed"),
+    ], string="Review Status", compute="_compute_review_status")
     note = fields.Char(string="Line Note")
 
     @api.depends("system_qty", "counted_qty")
@@ -257,6 +368,17 @@ class RouteVehicleClosingLine(models.Model):
                 rec.variance_status = "short"
             else:
                 rec.variance_status = "over"
+
+    @api.depends("variance_qty", "variance_reason", "reconciliation_action")
+    def _compute_review_status(self):
+        for rec in self:
+            if abs(rec.variance_qty or 0.0) <= 0.0001:
+                rec.review_status = "clean"
+            elif rec.variance_reason and rec.reconciliation_action:
+                rec.review_status = "reviewed"
+            else:
+                rec.review_status = "pending"
+
 
 class RoutePlan(models.Model):
     _inherit = "route.plan"
