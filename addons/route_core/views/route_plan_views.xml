@@ -30,7 +30,7 @@
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Planning" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
-<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel'"/>
+<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel' or loading_proposal_count > 0"/>
 <button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_proposal_count == 0"/>
 <button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
 </header>
