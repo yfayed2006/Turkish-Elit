@@ -35,3 +35,5 @@ from . import sale_order_missing_lot_ext
 
 from . import route_shortage
 from . import route_visit_document_links_ext
+
+from . import route_loading_proposal
