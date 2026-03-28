@@ -1,6 +1,6 @@
 <odoo>
-<record id="view_route_vehicle_closing_list" model="ir.ui.view">
-<field name="name">route.vehicle.closing.list</field>
+<record id="view_route_vehicle_closing_tree" model="ir.ui.view">
+<field name="name">route.vehicle.closing.tree</field>
 <field name="model">route.vehicle.closing</field>
 <field name="arch" type="xml">
 <list string="Vehicle Closings" create="0">
@@ -8,15 +8,16 @@
 <field name="plan_id"/>
 <field name="plan_date"/>
 <field name="vehicle_id"/>
-<field name="line_count"/>
-<field name="variance_line_count"/>
-<field name="total_system_qty" optional="show"/>
-<field name="total_counted_qty" optional="show"/>
-<field name="total_variance_qty" optional="show"/>
-<field name="snapshot_datetime" optional="show"/>
-<field name="count_started_datetime" optional="show"/>
-<field name="close_datetime" optional="show"/>
+<field name="user_id"/>
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
+<field name="count_started_datetime" optional="show"/>
+<field name="count_done_datetime" optional="show"/>
+<field name="snapshot_datetime" optional="show"/>
+<field name="close_datetime" optional="show"/>
+<field name="total_system_qty"/>
+<field name="total_counted_qty"/>
+<field name="total_variance_qty"/>
+<field name="variance_line_count"/>
 </list>
 </field>
 </record>
@@ -24,33 +25,35 @@
 <field name="name">route.vehicle.closing.form</field>
 <field name="model">route.vehicle.closing</field>
 <field name="arch" type="xml">
-<form string="Vehicle Closing">
+<form string="Vehicle Closing" create="0" delete="0">
 <header>
 <button name="action_refresh_snapshot" type="object" string="Refresh Vehicle Snapshot" class="btn-secondary" invisible="state != 'draft'"/>
 <button name="action_start_count" type="object" string="Start Count" class="btn-secondary" invisible="state != 'draft' or count_started_datetime"/>
 <button name="action_open_scan_wizard" type="object" string="Scan Vehicle Stock" class="btn-secondary" invisible="state != 'draft' or not count_started_datetime"/>
-<button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_started_datetime"/>
-<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state == 'draft'"/>
+<button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_done"/>
+<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state != 'closed'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
-<button name="action_open_route_plan" type="object" class="oe_stat_button" icon="fa-road">
+<button type="object" name="action_open_route_plan" class="oe_stat_button" icon="fa-road">
+<div class="o_stat_info">
 <span class="o_stat_text">Route Plan</span>
+</div>
 </button>
-<button name="action_open_vehicle_stock_snapshot" type="object" class="oe_stat_button" icon="fa-cubes" invisible="not vehicle_id">
+<button type="object" name="action_open_vehicle_stock_snapshot" class="oe_stat_button" icon="fa-cubes">
+<div class="o_stat_info">
 <span class="o_stat_text">Vehicle Stock Snapshot</span>
+</div>
 </button>
 </div>
 <div class="oe_title">
 <h1>
 <field name="name" readonly="1"/>
 </h1>
-<div class="mt8">
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,closed,cancelled" nolabel="1"/>
 </div>
-</div>
-<group string="Closing Information" col="2">
+<group string="Closing Information" col="4">
 <group>
 <field name="plan_id" readonly="1"/>
 <field name="plan_date" readonly="1"/>
@@ -63,6 +66,7 @@
 <field name="vehicle_location_id" readonly="1"/>
 <field name="snapshot_datetime" readonly="1" invisible="not snapshot_datetime"/>
 <field name="count_started_datetime" readonly="1" invisible="not count_started_datetime"/>
+<field name="count_done_datetime" readonly="1" invisible="not count_done_datetime"/>
 <field name="close_datetime" readonly="1" invisible="not close_datetime"/>
 </group>
 </group>
