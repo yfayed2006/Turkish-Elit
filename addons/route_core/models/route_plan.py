@@ -47,6 +47,18 @@ class RoutePlan(models.Model):
         default="draft",
         required=True,
     )
+    planning_finalized = fields.Boolean(
+        string="Daily Planning Finalized",
+        default=False,
+        copy=False,
+        help="Enable this after the supervisor finishes the vehicle's daily route planning. "
+        "The loading proposal is generated only from a finalized daily plan.",
+    )
+    planning_finalized_datetime = fields.Datetime(
+        string="Planning Finalized On",
+        copy=False,
+        readonly=True,
+    )
     notes = fields.Text(string="Notes")
 
     line_ids = fields.One2many(
@@ -199,6 +211,49 @@ class RoutePlan(models.Model):
             if rec.state != new_state:
                 rec.with_context(route_plan_skip_sync=True).write({"state": new_state})
 
+    def _mark_planning_as_unfinalized(self):
+        if self.env.context.get("route_plan_skip_loading_dirty"):
+            return
+        for rec in self.filtered("planning_finalized"):
+            rec.with_context(route_plan_skip_loading_dirty=True).write(
+                {
+                    "planning_finalized": False,
+                    "planning_finalized_datetime": False,
+                }
+            )
+
+    def action_finalize_daily_plan(self):
+        for rec in self:
+            if rec.state == "cancel":
+                raise UserError(_("You cannot finalize a cancelled route plan."))
+            if not rec.vehicle_id:
+                raise UserError(_("Please select a vehicle before finalizing the daily plan."))
+            if not getattr(rec.vehicle_id, "stock_location_id", False):
+                raise UserError(
+                    _("Vehicle '%s' does not have a vehicle stock location.")
+                    % (rec.vehicle_id.display_name,)
+                )
+            if not rec.line_ids.filtered("outlet_id"):
+                raise UserError(
+                    _("Please complete the vehicle's daily route planning before finalizing it.")
+                )
+            rec.with_context(route_plan_skip_loading_dirty=True).write(
+                {
+                    "planning_finalized": True,
+                    "planning_finalized_datetime": fields.Datetime.now(),
+                }
+            )
+        return True
+
+    def action_reopen_daily_plan(self):
+        self.with_context(route_plan_skip_loading_dirty=True).write(
+            {
+                "planning_finalized": False,
+                "planning_finalized_datetime": False,
+            }
+        )
+        return True
+
     def _prepare_visit_vals(self, line):
         self.ensure_one()
         return {
@@ -339,6 +394,7 @@ class RoutePlan(models.Model):
 
     def write(self, vals):
         protected_fields = {"date", "user_id", "vehicle_id"}
+        planning_change_fields = {"date", "user_id", "vehicle_id", "area_id"}
 
         if protected_fields.intersection(vals.keys()):
             for rec in self:
@@ -356,5 +412,10 @@ class RoutePlan(models.Model):
 
         if "state" not in vals or vals.get("state") != "cancel":
             self._sync_state_from_lines()
+
+        if planning_change_fields.intersection(vals.keys()) and not self.env.context.get(
+            "route_plan_skip_loading_dirty"
+        ):
+            self._mark_planning_as_unfinalized()
 
         return result
