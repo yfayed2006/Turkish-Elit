@@ -57,6 +57,7 @@ class RouteVehicleClosing(models.Model):
         ("pending", "Execution Pending"),
         ("done", "Execution Completed"),
     ], string="Reconciliation Execution Status", compute="_compute_totals")
+    salesperson_shortage_line_count = fields.Integer(string="Salesperson Shortage Lines", compute="_compute_totals")
 
     _sql_constraints = [(
         "route_vehicle_closing_plan_unique",
@@ -90,6 +91,7 @@ class RouteVehicleClosing(models.Model):
             rec.executed_variance_line_count = len(executed_lines)
             rec.pending_execution_line_count = len(executable_lines) - len(executed_lines)
             rec.reconciliation_picking_count = len(rec.reconciliation_picking_ids)
+            rec.salesperson_shortage_line_count = self.env["route.salesperson.shortage.line"].search_count([("closing_id", "=", rec.id)])
             rec.total_system_qty = sum(rec.line_ids.mapped("system_qty"))
             rec.total_counted_qty = sum(rec.line_ids.mapped("counted_qty"))
             rec.total_variance_qty = sum(rec.line_ids.mapped("variance_qty"))
@@ -296,6 +298,7 @@ class RouteVehicleClosing(models.Model):
                 raise UserError(_("Please review all variance lines before completing the variance review."))
             rec.variance_review_done = True
             rec.variance_review_done_datetime = fields.Datetime.now()
+            rec.action_sync_salesperson_shortage_ledger()
             rec.message_post(body=_("Variance review completed. All variance lines now have a reason and reconciliation action."))
         return True
 
@@ -553,6 +556,74 @@ class RouteVehicleClosing(models.Model):
             action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
         else:
             action["domain"] = [("id", "in", self.reconciliation_picking_ids.ids)]
+        return action
+
+    def _get_shortage_ledger_source_lines(self):
+        self.ensure_one()
+        excluded_reasons = {"counting_error"}
+        excluded_actions = {"counting_error"}
+        return self.line_ids.filtered(
+            lambda line: abs(line.variance_qty or 0.0) > 0.0001
+            and line.variance_qty < 0
+            and line.review_status == "reviewed"
+            and (line.variance_reason or "") not in excluded_reasons
+            and (line.reconciliation_action or "") not in excluded_actions
+        )
+
+    def action_sync_salesperson_shortage_ledger(self):
+        ledger_model = self.env["route.salesperson.shortage"]
+        line_model = self.env["route.salesperson.shortage.line"]
+        created_count = 0
+        for rec in self:
+            if not rec.variance_review_done:
+                raise UserError(_("Please complete the variance review before posting salesperson shortages."))
+            if not rec.user_id:
+                raise UserError(_("The vehicle closing is missing the salesperson."))
+            source_lines = rec._get_shortage_ledger_source_lines()
+            if not source_lines:
+                continue
+            ledger = ledger_model._get_or_create_monthly_ledger(
+                salesperson=rec.user_id,
+                month_date=ledger_model._month_start(rec.plan_date or fields.Date.context_today(rec)),
+                company=rec.company_id,
+            )
+            if ledger.state == "settled":
+                raise UserError(_("The monthly shortage ledger for %(salesperson)s and %(month)s is already settled. Reopen it first.") % {
+                    "salesperson": rec.user_id.display_name,
+                    "month": ledger.month_date,
+                })
+            if ledger.state == "open":
+                ledger.state = "under_review"
+            for line in source_lines:
+                existing = line_model.search([("closing_line_id", "=", line.id)], limit=1)
+                if existing:
+                    continue
+                line_model.create({
+                    "ledger_id": ledger.id,
+                    "shortage_date": rec.plan_date or fields.Date.context_today(rec),
+                    "closing_id": rec.id,
+                    "closing_line_id": line.id,
+                    "plan_id": rec.plan_id.id,
+                    "vehicle_id": rec.vehicle_id.id,
+                    "product_id": line.product_id.id,
+                    "uom_id": line.uom_id.id,
+                    "lot_id": line.lot_id.id or False,
+                    "variance_reason": line.variance_reason,
+                    "reconciliation_action": line.reconciliation_action,
+                    "review_note": line.review_note,
+                    "shortage_qty": abs(line.variance_qty or 0.0),
+                    "unit_price": getattr(line.product_id, "lst_price", 0.0),
+                    "shortage_amount": abs(line.variance_qty or 0.0) * (getattr(line.product_id, "lst_price", 0.0) or 0.0),
+                })
+                created_count += 1
+        if created_count:
+            self.message_post(body=_("Posted %(count)s salesperson shortage line(s) to the monthly shortage ledger.") % {"count": created_count})
+        return True
+
+    def action_open_salesperson_shortage_lines(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_salesperson_shortage_line").read()[0]
+        action["domain"] = [("closing_id", "=", self.id)]
         return action
 
     def action_reset_to_draft(self):
