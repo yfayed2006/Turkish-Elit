@@ -329,10 +329,23 @@ class RouteLoadingProposal(models.Model):
 
     def _get_effective_source_location(self):
         self.ensure_one()
-        mus_location = self._get_mus_stock_location()
-        if mus_location:
-            return mus_location
-        return self.source_location_id or False
+        return self.source_location_id or self._get_default_source_location() or False
+
+    def action_open_source_location_wizard(self):
+        self.ensure_one()
+        default_source = self.source_location_id or self._get_default_source_location()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Choose Loading Source"),
+            "res_model": "route.loading.source.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_plan_id": self.plan_id.id,
+                "default_proposal_id": self.id,
+                "default_source_location_id": default_source.id if default_source else False,
+            },
+        }
 
     def _get_default_source_location(self):
         self.ensure_one()
@@ -579,7 +592,7 @@ class RouteLoadingProposal(models.Model):
         self.ensure_one()
         if self.state != "draft":
             raise UserError(_("Only draft loading proposals can be refreshed."))
-        return self.plan_id.action_generate_loading_proposal()
+        return self.action_open_source_location_wizard()
 
     def action_approve(self):
         self.ensure_one()
@@ -1228,6 +1241,29 @@ class RoutePlan(models.Model):
         )
         return line_vals
 
+    def _get_loading_source_wizard_action(self, proposal=False):
+        self.ensure_one()
+        helper_proposal = proposal or self.env["route.loading.proposal"].new(
+            {
+                "plan_id": self.id,
+                "company_id": (self.company_id or self.env.company).id,
+            }
+        )
+        default_source = proposal.source_location_id if proposal else False
+        default_source = default_source or helper_proposal._get_default_source_location()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Choose Loading Source"),
+            "res_model": "route.loading.source.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_plan_id": self.id,
+                "default_proposal_id": proposal.id if proposal else False,
+                "default_source_location_id": default_source.id if default_source else False,
+            },
+        }
+
     def action_generate_loading_proposal(self):
         self.ensure_one()
 
@@ -1242,26 +1278,46 @@ class RoutePlan(models.Model):
         if proposal and proposal.state == "approved" and proposal.picking_id and proposal.picking_id.state != "cancel":
             return proposal._open_form_action()
 
-        line_vals = self._build_loading_proposal_line_vals()
+        return self._get_loading_source_wizard_action(proposal=proposal)
 
-        source_location = proposal._get_default_source_location() if proposal else False
+    def _generate_loading_proposal_with_source(self, source_location, proposal=False):
+        self.ensure_one()
+
+        if not self.planning_finalized:
+            raise UserError(
+                _(
+                    "Finalize the vehicle's daily route plan first, then generate the loading proposal from that final plan."
+                )
+            )
+        if not source_location:
+            raise UserError(_("Please choose a source warehouse location first."))
+        if source_location.usage != "internal":
+            raise UserError(_("The source location must be an internal location."))
+        if self.vehicle_id and getattr(self.vehicle_id, "stock_location_id", False) and source_location == self.vehicle_id.stock_location_id:
+            raise UserError(_("The source warehouse location and the vehicle location cannot be the same."))
+
+        proposal = proposal or self._get_active_loading_proposal()
+        if proposal and proposal.state == "approved" and proposal.picking_id and proposal.picking_id.state != "cancel":
+            return proposal
+
+        line_vals = self._build_loading_proposal_line_vals()
 
         note = _(
             "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent sales baseline, product movement speed, and current vehicle balance. "
             "Suggested load qty = max((current outlet need + open shortages) - vehicle balance, 0). "
+            "Supervisor-selected source location: %(source)s. "
             "When the transfer is created, older available lots are allocated first."
-        )
+        ) % {"source": source_location.display_name}
 
         if proposal:
             reset_vals = {
                 "state": "draft",
                 "approval_datetime": False,
                 "note": note,
+                "source_location_id": source_location.id,
             }
             if proposal.picking_id and proposal.picking_id.state == "cancel":
                 reset_vals["picking_id"] = False
-            if source_location:
-                reset_vals["source_location_id"] = source_location.id
             proposal.write(reset_vals)
             proposal.line_ids.unlink()
         else:
@@ -1269,18 +1325,16 @@ class RoutePlan(models.Model):
                 "plan_id": self.id,
                 "company_id": self.env.company.id,
                 "note": note,
+                "source_location_id": source_location.id,
             }
             proposal = self.env["route.loading.proposal"].create(create_vals)
-            source_location = proposal._get_default_source_location()
-            if source_location:
-                proposal.source_location_id = source_location.id
 
         if line_vals:
             self.env["route.loading.proposal.line"].create(
                 [dict(vals, proposal_id=proposal.id) for vals in line_vals]
             )
 
-        return proposal._open_form_action()
+        return proposal
 
     def action_view_loading_proposal(self):
         self.ensure_one()
@@ -1288,3 +1342,4 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
+
