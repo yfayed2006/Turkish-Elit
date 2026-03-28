@@ -856,8 +856,16 @@ class RoutePlan(models.Model):
                 ("visit_id.state", "!=", "cancel"),
                 ("visit_id.date", "<=", reference_date),
                 ("visit_id.date", ">=", lookback_start),
-            ],
-            order="visit_id.date desc, id desc",
+            ]
+        )
+
+        profile_lines = sorted(
+            profile_lines,
+            key=lambda line: (
+                line.visit_id.date or reference_date,
+                line.id,
+            ),
+            reverse=True,
         )
 
         latest_status_by_pair = {}
@@ -924,8 +932,7 @@ class RoutePlan(models.Model):
                 ("visit_id.date", "<=", reference_date),
                 ("visit_id.date", ">=", lookback_start),
                 ("sold_qty", ">", 0),
-            ],
-            order="visit_id.date desc, id desc",
+            ]
         )
 
         shortage_lines = self.env["route.shortage.line"].search(
