@@ -6,3 +6,6 @@ from . import route_visit_collect_payment_wizard
 
 from . import route_visit_missing_lot_wizard
 
+
+from . import route_loading_source_wizard
+
