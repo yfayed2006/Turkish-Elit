@@ -25,7 +25,7 @@
 <form string="Salesperson Shortage Ledger" create="0" delete="0">
 <header>
 <button name="action_start_review" type="object" string="Start Review" class="btn-primary" invisible="state != 'open'"/>
-<button name="action_finalize_settlement" type="object" string="Finalize Month" class="btn-primary" invisible="state == 'settled' or pending_line_count != 0"/>
+<button name="action_finalize_settlement" type="object" string="Finalize Month" class="btn-primary" invisible="state != 'under_review'"/>
 <button name="action_reopen" type="object" string="Reopen" class="btn-secondary" invisible="state != 'settled'"/>
 <field name="state" widget="statusbar" statusbar_visible="open,under_review,settled" nolabel="1"/>
 </header>
