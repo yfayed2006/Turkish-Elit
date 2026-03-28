@@ -180,12 +180,9 @@ no reconciliation action is required for this vehicle closing.
 <field name="vehicle_id"/>
 <field name="user_id"/>
 <field name="state"/>
-<field name="variance_review_status"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_closed" string="Closed" domain="[('state', '=', 'closed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
-<filter name="filter_variance_pending" string="Variance Review Pending" domain="[('variance_review_status', 'in', ['pending', 'in_progress'])]"/>
-<filter name="filter_variance_done" string="Variance Review Done" domain="[('variance_review_status', '=', 'done')]"/>
 <separator/>
 <filter name="group_by_plan_date" string="Plan Date" context="{'group_by': 'plan_date'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
