@@ -10,14 +10,17 @@
 <field name="vehicle_id"/>
 <field name="user_id"/>
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
+<field name="variance_review_status" widget="badge" decoration-info="variance_review_status == 'pending'" decoration-warning="variance_review_status == 'in_progress'" decoration-success="variance_review_status in ('clean', 'done')"/>
 <field name="count_started_datetime" optional="show"/>
 <field name="count_done_datetime" optional="show"/>
+<field name="variance_review_done_datetime" optional="show"/>
 <field name="snapshot_datetime" optional="show"/>
 <field name="close_datetime" optional="show"/>
 <field name="total_system_qty"/>
 <field name="total_counted_qty"/>
 <field name="total_variance_qty"/>
 <field name="variance_line_count"/>
+<field name="pending_variance_line_count" optional="show"/>
 </list>
 </field>
 </record>
@@ -31,6 +34,8 @@
 <button name="action_start_count" type="object" string="Start Count" class="btn-primary" invisible="state != 'draft' or count_started_datetime"/>
 <button name="action_open_scan_wizard" type="object" string="Scan Vehicle Stock" class="btn-primary" invisible="state != 'draft' or not count_started_datetime or count_done"/>
 <button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_done"/>
+<button name="action_start_variance_review" type="object" string="Review Variances" class="btn-primary" invisible="state != 'closed' or variance_line_count == 0 or variance_review_started_datetime"/>
+<button name="action_complete_variance_review" type="object" string="Complete Variance Review" class="btn-primary" invisible="state != 'closed' or variance_line_count == 0 or not variance_review_started_datetime or variance_review_done or pending_variance_line_count != 0"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state != 'closed'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state != 'draft' or count_done"/>
 </header>
@@ -67,6 +72,8 @@
 <field name="snapshot_datetime" readonly="1" invisible="not snapshot_datetime"/>
 <field name="count_started_datetime" readonly="1" invisible="not count_started_datetime"/>
 <field name="count_done_datetime" readonly="1" invisible="not count_done_datetime"/>
+<field name="variance_review_started_datetime" readonly="1" invisible="not variance_review_started_datetime"/>
+<field name="variance_review_done_datetime" readonly="1" invisible="not variance_review_done_datetime"/>
 <field name="close_datetime" readonly="1" invisible="not close_datetime"/>
 </group>
 </group>
@@ -88,17 +95,44 @@ use Scan Vehicle Stock, then press Done in the scan window before closing the ve
 Close Vehicle Day to finalize the vehicle closing.
 </div>
 </group>
+<group invisible="state != 'closed' or variance_line_count == 0 or variance_review_started_datetime" class="mt8 mb8">
+<div class="alert alert-warning" role="alert">
+<strong>Variance review required:</strong>
+review each variance line, choose a reason, and choose the next reconciliation action.
+</div>
+</group>
+<group invisible="state != 'closed' or variance_line_count == 0 or not variance_review_started_datetime or variance_review_done" class="mt8 mb8">
+<div class="alert alert-info" role="alert">
+<strong>Variance review in progress:</strong>
+fill in all variance lines, then complete the review.
+</div>
+</group>
+<group invisible="state != 'closed' or variance_line_count == 0 or not variance_review_done" class="mt8 mb8">
+<div class="alert alert-success" role="alert">
+<strong>Variance review completed:</strong>
+all variance lines now have a reason and reconciliation action.
+</div>
+</group>
+<group invisible="state != 'closed' or variance_line_count != 0" class="mt8 mb8">
+<div class="alert alert-success" role="alert">
+<strong>No variances:</strong>
+no reconciliation action is required for this vehicle closing.
+</div>
+</group>
 <separator string="Closing Summary"/>
 <group col="4">
 <group string="Counts">
 <field name="line_count" readonly="1"/>
 <field name="variance_line_count" readonly="1"/>
+<field name="reviewed_variance_line_count" readonly="1"/>
+<field name="pending_variance_line_count" readonly="1"/>
 </group>
 <group string="Quantities">
 <field name="total_system_qty" readonly="1"/>
 <field name="total_counted_qty" readonly="1"/>
 <field name="total_variance_qty" readonly="1"/>
 <field name="total_abs_variance_qty" readonly="1"/>
+<field name="variance_review_status" readonly="1" widget="badge" decoration-info="variance_review_status == 'pending'" decoration-warning="variance_review_status == 'in_progress'" decoration-success="variance_review_status in ('clean', 'done')"/>
 </group>
 </group>
 <notebook>
@@ -119,7 +153,11 @@ Close Vehicle Day to finalize the vehicle closing.
 <field name="counted_qty" readonly="parent.state != 'draft' or not parent.count_started_datetime"/>
 <field name="variance_qty" readonly="1"/>
 <field name="variance_status" readonly="1" widget="badge" decoration-success="variance_status == 'match'" decoration-warning="variance_status == 'over'" decoration-danger="variance_status == 'short'"/>
-<field name="note" readonly="parent.state != 'draft'" optional="show"/>
+<field name="review_status" readonly="1" widget="badge" optional="show" decoration-info="review_status == 'pending'" decoration-success="review_status in ('clean', 'reviewed')"/>
+<field name="variance_reason" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
+<field name="reconciliation_action" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
+<field name="review_note" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
+<field name="note" readonly="parent.state != 'draft'" optional="hide"/>
 </list>
 </field>
 </page>
@@ -142,9 +180,12 @@ Close Vehicle Day to finalize the vehicle closing.
 <field name="vehicle_id"/>
 <field name="user_id"/>
 <field name="state"/>
+<field name="variance_review_status"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_closed" string="Closed" domain="[('state', '=', 'closed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<filter name="filter_variance_pending" string="Variance Review Pending" domain="[('variance_review_status', 'in', ['pending', 'in_progress'])]"/>
+<filter name="filter_variance_done" string="Variance Review Done" domain="[('variance_review_status', '=', 'done')]"/>
 <separator/>
 <filter name="group_by_plan_date" string="Plan Date" context="{'group_by': 'plan_date'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
