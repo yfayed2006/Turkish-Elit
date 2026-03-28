@@ -27,12 +27,12 @@
 <field name="arch" type="xml">
 <form string="Vehicle Closing" create="0" delete="0">
 <header>
-<button name="action_refresh_snapshot" type="object" string="Refresh Vehicle Snapshot" class="btn-secondary" invisible="state != 'draft'"/>
+<button name="action_refresh_snapshot" type="object" string="Refresh Vehicle Snapshot" class="btn-secondary" invisible="state != 'draft' or count_done"/>
 <button name="action_start_count" type="object" string="Start Count" class="btn-primary" invisible="state != 'draft' or count_started_datetime"/>
-<button name="action_open_scan_wizard" type="object" string="Scan Vehicle Stock" class="btn-primary" invisible="state != 'draft' or not count_started_datetime"/>
+<button name="action_open_scan_wizard" type="object" string="Scan Vehicle Stock" class="btn-primary" invisible="state != 'draft' or not count_started_datetime or count_done"/>
 <button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_done"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state != 'closed'"/>
-<button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
+<button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state != 'draft' or count_done"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
@@ -80,6 +80,12 @@ Start Count to begin the physical vehicle count.
 <div class="alert alert-warning" role="alert">
 <strong>Count in progress:</strong>
 use Scan Vehicle Stock, then press Done in the scan window before closing the vehicle day.
+</div>
+</group>
+<group invisible="state != 'draft' or not count_done" class="mt8 mb8">
+<div class="alert alert-success" role="alert">
+<strong>Count completed:</strong>
+Close Vehicle Day to finalize the vehicle closing.
 </div>
 </group>
 <separator string="Closing Summary"/>
