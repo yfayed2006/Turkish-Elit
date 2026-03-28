@@ -299,9 +299,42 @@ class RouteVehicleClosing(models.Model):
             rec.message_post(body=_("Variance review completed. All variance lines now have a reason and reconciliation action."))
         return True
 
+    def _get_main_warehouse_location(self):
+        self.ensure_one()
+        if not self.vehicle_location_id:
+            return False
+        root = self._get_root_internal_location(self.vehicle_location_id)
+        return root if root and root.usage == "internal" else False
+
     def _get_internal_picking_type(self):
         self.ensure_one()
-        picking_type = self.env["stock.picking.type"].search([
+        picking_type_model = self.env["stock.picking.type"]
+        main_location = self._get_main_warehouse_location()
+
+        if main_location:
+            picking_type = picking_type_model.search([
+                ("code", "=", "internal"),
+                ("warehouse_id.lot_stock_id", "=", main_location.id),
+                "|",
+                ("company_id", "=", self.company_id.id),
+                ("company_id", "=", False),
+            ], order="company_id desc, sequence asc, id asc", limit=1)
+            if picking_type:
+                return picking_type
+
+            picking_type = picking_type_model.search([
+                ("code", "=", "internal"),
+                "|",
+                ("default_location_src_id", "child_of", main_location.id),
+                ("default_location_dest_id", "child_of", main_location.id),
+                "|",
+                ("company_id", "=", self.company_id.id),
+                ("company_id", "=", False),
+            ], order="company_id desc, sequence asc, id asc", limit=1)
+            if picking_type:
+                return picking_type
+
+        picking_type = picking_type_model.search([
             ("code", "=", "internal"),
             "|",
             ("company_id", "=", self.company_id.id),
