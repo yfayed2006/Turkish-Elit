@@ -733,6 +733,34 @@ class RouteLoadingProposal(models.Model):
             "target": "current",
         }
 
+    def action_open_vehicle_stock_snapshot(self):
+        self.ensure_one()
+        vehicle = self.vehicle_id
+        vehicle_location = getattr(vehicle, "stock_location_id", False)
+        if not vehicle or not vehicle_location:
+            raise UserError(_("Please set the vehicle stock location first."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Vehicle Stock Snapshot"),
+            "res_model": "stock.quant",
+            "view_mode": "list,form",
+            "views": [
+                (self.env.ref("route_core.view_route_vehicle_stock_snapshot_list").id, "list"),
+                (False, "form"),
+            ],
+            "search_view_id": self.env.ref("route_core.view_route_vehicle_stock_snapshot_search").id,
+            "target": "current",
+            "domain": [
+                ("location_id", "child_of", vehicle_location.id),
+                ("quantity", ">", 0),
+            ],
+            "context": {
+                "search_default_filter_positive_qty": 1,
+                "default_location_id": vehicle_location.id,
+            },
+        }
+
     def action_reset_to_draft(self):
         self.ensure_one()
         if self.picking_id and self.picking_id.state not in ("cancel",):
@@ -1419,6 +1447,35 @@ class RoutePlan(models.Model):
         if not proposal:
             raise UserError(_("No loading proposal has been generated for this route plan yet."))
         return proposal._open_form_action()
+
+    def action_open_vehicle_stock_snapshot(self):
+        self.ensure_one()
+        vehicle = self.vehicle_id
+        vehicle_location = getattr(vehicle, "stock_location_id", False)
+        if not vehicle or not vehicle_location:
+            raise UserError(_("Please set the vehicle stock location first."))
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Vehicle Stock Snapshot"),
+            "res_model": "stock.quant",
+            "view_mode": "list,form",
+            "views": [
+                (self.env.ref("route_core.view_route_vehicle_stock_snapshot_list").id, "list"),
+                (False, "form"),
+            ],
+            "search_view_id": self.env.ref("route_core.view_route_vehicle_stock_snapshot_search").id,
+            "target": "current",
+            "domain": [
+                ("location_id", "child_of", vehicle_location.id),
+                ("quantity", ">", 0),
+            ],
+            "context": {
+                "search_default_filter_positive_qty": 1,
+                "default_location_id": vehicle_location.id,
+            },
+        }
+
 
 
 
