@@ -1,0 +1,28 @@
+<odoo>
+<record id="view_route_vehicle_closing_scan_wizard_form" model="ir.ui.view">
+<field name="name">route.vehicle.closing.scan.wizard.form</field>
+<field name="model">route.vehicle.closing.scan.wizard</field>
+<field name="arch" type="xml">
+<form string="Scan Vehicle Stock">
+<header>
+<button name="action_scan_add" type="object" string="Scan / Add" class="btn-primary"/>
+<button name="action_done" type="object" string="Done" class="btn-secondary"/>
+</header>
+<sheet>
+<group string="Vehicle Count">
+<field name="closing_id" readonly="1"/>
+<field name="barcode" placeholder="Scan product barcode or lot code"/>
+<field name="quantity"/>
+</group>
+<group string="Last Scan" col="2">
+<field name="last_product_id" readonly="1"/>
+<field name="last_lot_id" readonly="1"/>
+<field name="last_qty" readonly="1"/>
+<field name="message" readonly="1"/>
+</group>
+<label string="Tip: if a product barcode exists on more than one lot, scan the lot code instead." class="text-muted"/>
+</sheet>
+</form>
+</field>
+</record>
+</odoo>
