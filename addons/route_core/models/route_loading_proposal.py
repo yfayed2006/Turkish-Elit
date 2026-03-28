@@ -1,4 +1,5 @@
 from collections import defaultdict
+import math
 from datetime import date as pydate
 from datetime import timedelta
 
@@ -9,6 +10,30 @@ from odoo.exceptions import UserError, ValidationError
 
 
 _MAX_DATE = pydate(9999, 12, 31)
+
+
+def _is_discrete_uom(product):
+    uom = getattr(product, "uom_id", False)
+    if not uom:
+        return False
+    rounding = getattr(uom, "rounding", 0.0) or 0.0
+    name = (getattr(uom, "name", "") or "").strip().lower()
+    discrete_names = {"piece", "pieces", "unit", "units", "pc", "pcs", "قطعة"}
+    return rounding >= 1.0 or name in discrete_names
+
+
+def _qty_up(product, qty):
+    qty = max(qty or 0.0, 0.0)
+    if _is_discrete_uom(product):
+        return float(math.ceil(qty - 1e-9))
+    return qty
+
+
+def _qty_down(product, qty):
+    qty = max(qty or 0.0, 0.0)
+    if _is_discrete_uom(product):
+        return float(math.floor(qty + 1e-9))
+    return qty
 
 
 def _lot_priority_date(lot):
@@ -744,7 +769,7 @@ class RouteLoadingProposalLine(models.Model):
 
             for line in lines:
                 product_id = line.product_id.id
-                line.source_available_qty = qty_map.get(product_id, 0.0)
+                line.source_available_qty = _qty_down(line.product_id, qty_map.get(product_id, 0.0))
                 line.earliest_source_expiry_date = earliest_expiry_map.get(product_id)
                 lot_names = [name for _key, name in sorted(lot_names_map.get(product_id, [])) if name]
                 if lot_names:
@@ -753,6 +778,62 @@ class RouteLoadingProposalLine(models.Model):
                     if len(unique_names) > 3:
                         preview = "%s ..." % preview
                     line.source_lot_summary = preview
+
+    @api.onchange("approved_qty")
+    def _onchange_approved_qty(self):
+        for rec in self:
+            rec.approved_qty = _qty_up(rec.product_id, rec.approved_qty)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        Product = self.env["product.product"]
+        for vals in vals_list:
+            product = Product.browse(vals.get("product_id")) if vals.get("product_id") else False
+            for field_name in (
+                "recent_sales_baseline_qty",
+                "current_outlet_need_qty",
+                "open_shortage_qty",
+                "suggested_load_qty",
+                "approved_qty",
+            ):
+                if field_name in vals:
+                    vals[field_name] = _qty_up(product, vals.get(field_name))
+            for field_name in ("outlet_balance_qty", "vehicle_available_qty"):
+                if field_name in vals:
+                    vals[field_name] = _qty_down(product, vals.get(field_name))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if any(
+            field_name in vals
+            for field_name in (
+                "recent_sales_baseline_qty",
+                "outlet_balance_qty",
+                "current_outlet_need_qty",
+                "open_shortage_qty",
+                "vehicle_available_qty",
+                "suggested_load_qty",
+                "approved_qty",
+            )
+        ):
+            for rec in self:
+                local_vals = dict(vals)
+                product = rec.product_id
+                for field_name in (
+                    "recent_sales_baseline_qty",
+                    "current_outlet_need_qty",
+                    "open_shortage_qty",
+                    "suggested_load_qty",
+                    "approved_qty",
+                ):
+                    if field_name in local_vals:
+                        local_vals[field_name] = _qty_up(product, local_vals.get(field_name))
+                for field_name in ("outlet_balance_qty", "vehicle_available_qty"):
+                    if field_name in local_vals:
+                        local_vals[field_name] = _qty_down(product, local_vals.get(field_name))
+                super(RouteLoadingProposalLine, rec).write(local_vals)
+            return True
+        return super().write(vals)
 
     @api.constrains(
         "recent_sales_baseline_qty",
@@ -953,7 +1034,7 @@ class RoutePlan(models.Model):
         for outlet in outlets:
             for balance in outlet.stock_balance_ids.filtered("product_id"):
                 key = (outlet.id, balance.product_id.id)
-                balance_qty_map[key] = balance.qty or 0.0
+                balance_qty_map[key] = _qty_down(balance.product_id, balance.qty or 0.0)
                 if balance.unit_price and not product_price_map.get(balance.product_id.id):
                     product_price_map[balance.product_id.id] = balance.unit_price
                 candidate_products_by_outlet[outlet.id].add(balance.product_id.id)
@@ -973,7 +1054,7 @@ class RoutePlan(models.Model):
             if not outlet or not product:
                 continue
             key = (outlet.id, product.id)
-            shortage_qty_map[key] += shortage_line.qty_remaining or 0.0
+            shortage_qty_map[key] += _qty_up(product, shortage_line.qty_remaining or 0.0)
             candidate_products_by_outlet[outlet.id].add(product.id)
             if shortage_line.unit_price and not product_price_map.get(product.id):
                 product_price_map[product.id] = shortage_line.unit_price
@@ -982,7 +1063,7 @@ class RoutePlan(models.Model):
         for key, entries in sales_entries.items():
             recent_entries = sorted(entries, key=lambda item: (item[0], item[1]), reverse=True)[:3]
             if recent_entries:
-                baseline_qty_map[key] = sum(item[2] for item in recent_entries) / len(recent_entries)
+                baseline_qty_map[key] = _qty_up(self.env["product.product"].browse(key[1]), sum(item[2] for item in recent_entries) / len(recent_entries))
 
         movement_profile_map = self._get_product_movement_profiles(
             outlets,
@@ -997,7 +1078,7 @@ class RoutePlan(models.Model):
                 stock_qty = balance_qty_map.get((outlet.id, product_id), 0.0)
                 baseline_qty = baseline_qty_map.get((outlet.id, product_id), 0.0)
                 shortage_qty = shortage_qty_map.get((outlet.id, product_id), 0.0)
-                current_need_qty = max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0)
+                current_need_qty = _qty_up(self.env["product.product"].browse(product_id), max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0))
 
                 if current_need_qty <= 0 and shortage_qty <= 0:
                     continue
@@ -1033,8 +1114,9 @@ class RoutePlan(models.Model):
                 continue
 
             total_required_qty = (bucket["current_outlet_need_qty"] or 0.0) + (bucket["open_shortage_qty"] or 0.0)
-            vehicle_available_qty = vehicle_qty_map.get(product_id, 0.0)
-            suggested_load_qty = max(total_required_qty - vehicle_available_qty, 0.0)
+            vehicle_available_qty = _qty_down(product, vehicle_qty_map.get(product_id, 0.0))
+            total_required_qty = _qty_up(product, total_required_qty)
+            suggested_load_qty = _qty_up(product, max(total_required_qty - vehicle_available_qty, 0.0))
             outlet_names = sorted(bucket["outlet_names"])
             unit_price = product_price_map.get(product_id) or product.lst_price or 0.0
 
