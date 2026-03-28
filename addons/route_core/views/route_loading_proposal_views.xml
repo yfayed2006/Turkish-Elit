@@ -26,6 +26,7 @@
 <form string="Vehicle Loading Proposal">
 <header>
 <button name="action_refresh_from_plan" type="object" string="Refresh from Final Plan" class="btn-secondary" invisible="state != 'draft'"/>
+<button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
 <button name="action_approve" type="object" string="Approve and Create Transfer" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state == 'draft'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
