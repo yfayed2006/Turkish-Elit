@@ -299,8 +299,66 @@ class RouteVehicleClosing(models.Model):
             rec.message_post(body=_("Variance review completed. All variance lines now have a reason and reconciliation action."))
         return True
 
+    def _get_location_ancestors(self, location):
+        ancestors = self.env["stock.location"]
+        current = location
+        while current:
+            ancestors |= current
+            current = current.location_id
+        return ancestors
+
+    def _get_main_warehouse(self):
+        self.ensure_one()
+        if not self.vehicle_location_id:
+            return False
+
+        warehouse_model = self.env["stock.warehouse"]
+        ancestors = []
+        current = self.vehicle_location_id
+        while current:
+            ancestors.append(current)
+            current = current.location_id
+        ancestor_ids = [loc.id for loc in ancestors]
+
+        for location in reversed(ancestors):
+            warehouse = warehouse_model.search([
+                ("lot_stock_id", "=", location.id),
+                "|",
+                ("company_id", "=", self.company_id.id),
+                ("company_id", "=", False),
+            ], order="company_id desc, id asc", limit=1)
+            if warehouse:
+                return warehouse
+
+        for location in reversed(ancestors):
+            warehouse = warehouse_model.search([
+                ("view_location_id", "=", location.id),
+                "|",
+                ("company_id", "=", self.company_id.id),
+                ("company_id", "=", False),
+            ], order="company_id desc, id asc", limit=1)
+            if warehouse:
+                return warehouse
+
+        candidate_warehouses = warehouse_model.search([
+            "|",
+            ("company_id", "=", self.company_id.id),
+            ("company_id", "=", False),
+        ])
+        for warehouse in candidate_warehouses:
+            lot_stock = warehouse.lot_stock_id
+            view_location = warehouse.view_location_id
+            if lot_stock and lot_stock.id in ancestor_ids:
+                return warehouse
+            if view_location and view_location.id in ancestor_ids:
+                return warehouse
+        return False
+
     def _get_main_warehouse_location(self):
         self.ensure_one()
+        warehouse = self._get_main_warehouse()
+        if warehouse and warehouse.lot_stock_id:
+            return warehouse.lot_stock_id
         if not self.vehicle_location_id:
             return False
         root = self._get_root_internal_location(self.vehicle_location_id)
@@ -309,12 +367,16 @@ class RouteVehicleClosing(models.Model):
     def _get_internal_picking_type(self):
         self.ensure_one()
         picking_type_model = self.env["stock.picking.type"]
+        warehouse = self._get_main_warehouse()
         main_location = self._get_main_warehouse_location()
 
-        if main_location:
+        if warehouse:
+            if "int_type_id" in warehouse._fields and warehouse.int_type_id and warehouse.int_type_id.code == "internal":
+                return warehouse.int_type_id
+
             picking_type = picking_type_model.search([
                 ("code", "=", "internal"),
-                ("warehouse_id.lot_stock_id", "=", main_location.id),
+                ("warehouse_id", "=", warehouse.id),
                 "|",
                 ("company_id", "=", self.company_id.id),
                 ("company_id", "=", False),
@@ -322,6 +384,7 @@ class RouteVehicleClosing(models.Model):
             if picking_type:
                 return picking_type
 
+        if main_location:
             picking_type = picking_type_model.search([
                 ("code", "=", "internal"),
                 "|",
@@ -352,6 +415,9 @@ class RouteVehicleClosing(models.Model):
 
     def _get_return_to_warehouse_location(self):
         self.ensure_one()
+        warehouse = self._get_main_warehouse()
+        if warehouse and warehouse.lot_stock_id:
+            return warehouse.lot_stock_id
         if not self.vehicle_location_id:
             return False
         root = self._get_root_internal_location(self.vehicle_location_id)
