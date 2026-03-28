@@ -10,7 +10,8 @@
 <field name="vehicle_id"/>
 <field name="user_id"/>
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
-<field name="variance_review_status" widget="badge" decoration-info="variance_review_status == 'pending'" decoration-warning="variance_review_status == 'in_progress'" decoration-success="variance_review_status in ('clean', 'done')"/>
+<field name="variance_review_status" widget="badge" optional="show" decoration-info="variance_review_status == 'pending'" decoration-warning="variance_review_status == 'in_progress'" decoration-success="variance_review_status in ('clean', 'done')"/>
+<field name="reconciliation_execution_status" widget="badge" optional="show" decoration-info="reconciliation_execution_status == 'pending'" decoration-success="reconciliation_execution_status in ('not_needed', 'done')"/>
 <field name="count_started_datetime" optional="show"/>
 <field name="count_done_datetime" optional="show"/>
 <field name="variance_review_done_datetime" optional="show"/>
@@ -21,6 +22,8 @@
 <field name="total_variance_qty"/>
 <field name="variance_line_count"/>
 <field name="pending_variance_line_count" optional="show"/>
+<field name="pending_execution_line_count" optional="show"/>
+<field name="reconciliation_picking_count" optional="show"/>
 </list>
 </field>
 </record>
@@ -36,6 +39,8 @@
 <button name="action_close_day" type="object" string="Close Vehicle Day" class="btn-primary" invisible="state != 'draft' or not count_done"/>
 <button name="action_start_variance_review" type="object" string="Review Variances" class="btn-primary" invisible="state != 'closed' or variance_line_count == 0 or variance_review_started_datetime"/>
 <button name="action_complete_variance_review" type="object" string="Complete Variance Review" class="btn-primary" invisible="state != 'closed' or variance_line_count == 0 or not variance_review_started_datetime or variance_review_done or pending_variance_line_count != 0"/>
+<button name="action_create_reconciliation_transfers" type="object" string="Create Reconciliation Transfers" class="btn-primary" invisible="state != 'closed' or not variance_review_done or pending_execution_line_count == 0"/>
+<button name="action_view_reconciliation_transfers" type="object" string="Open Reconciliation Transfers" class="btn-secondary" invisible="reconciliation_picking_count == 0"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state != 'closed'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state != 'draft' or count_done"/>
 </header>
@@ -50,6 +55,9 @@
 <div class="o_stat_info">
 <span class="o_stat_text">Vehicle Stock Snapshot</span>
 </div>
+</button>
+<button type="object" name="action_view_reconciliation_transfers" class="oe_stat_button" icon="fa-exchange" invisible="reconciliation_picking_count == 0">
+<field name="reconciliation_picking_count" string="Reconciliation Transfers" widget="statinfo"/>
 </button>
 </div>
 <div class="oe_title">
@@ -119,6 +127,18 @@ all variance lines now have a reason and reconciliation action.
 no reconciliation action is required for this vehicle closing.
 </div>
 </group>
+<group invisible="state != 'closed' or not variance_review_done or executable_variance_line_count == 0 or pending_execution_line_count == 0" class="mt8 mb8">
+<div class="alert alert-warning" role="alert">
+<strong>Execution pending:</strong>
+create reconciliation transfers for lines marked Send to Damaged, Send to Near Expiry, or Return to Warehouse.
+</div>
+</group>
+<group invisible="state != 'closed' or not variance_review_done or executed_variance_line_count == 0" class="mt8 mb8">
+<div class="alert alert-success" role="alert">
+<strong>Reconciliation transfers created:</strong>
+review and validate the generated transfers from the Open Reconciliation Transfers button.
+</div>
+</group>
 <separator string="Closing Summary"/>
 <group col="4">
 <group string="Counts">
@@ -126,6 +146,9 @@ no reconciliation action is required for this vehicle closing.
 <field name="variance_line_count" readonly="1"/>
 <field name="reviewed_variance_line_count" readonly="1"/>
 <field name="pending_variance_line_count" readonly="1"/>
+<field name="executable_variance_line_count" readonly="1"/>
+<field name="pending_execution_line_count" readonly="1"/>
+<field name="executed_variance_line_count" readonly="1"/>
 </group>
 <group string="Quantities">
 <field name="total_system_qty" readonly="1"/>
@@ -133,6 +156,8 @@ no reconciliation action is required for this vehicle closing.
 <field name="total_variance_qty" readonly="1"/>
 <field name="total_abs_variance_qty" readonly="1"/>
 <field name="variance_review_status" readonly="1" widget="badge" decoration-info="variance_review_status == 'pending'" decoration-warning="variance_review_status == 'in_progress'" decoration-success="variance_review_status in ('clean', 'done')"/>
+<field name="reconciliation_execution_status" readonly="1" widget="badge" decoration-info="reconciliation_execution_status == 'pending'" decoration-success="reconciliation_execution_status in ('not_needed', 'done')"/>
+<field name="reconciliation_picking_count" readonly="1"/>
 </group>
 </group>
 <notebook>
@@ -156,6 +181,8 @@ no reconciliation action is required for this vehicle closing.
 <field name="review_status" readonly="1" widget="badge" optional="show" decoration-info="review_status == 'pending'" decoration-success="review_status in ('clean', 'reviewed')"/>
 <field name="variance_reason" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
 <field name="reconciliation_action" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
+<field name="action_execution_status" readonly="1" optional="show" widget="badge" decoration-info="action_execution_status == 'pending'" decoration-success="action_execution_status in ('not_needed', 'done')"/>
+<field name="generated_picking_id" readonly="1" optional="show"/>
 <field name="review_note" readonly="parent.state != 'closed' or not parent.variance_review_started_datetime or parent.variance_review_done or variance_qty == 0" optional="show"/>
 <field name="note" readonly="parent.state != 'draft'" optional="hide"/>
 </list>
