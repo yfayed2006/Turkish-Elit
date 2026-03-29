@@ -243,6 +243,40 @@ class RoutePlan(models.Model):
                     )
                 )
 
+    def _get_active_plan_lines(self, exclude_line=None):
+        self.ensure_one()
+        active_lines = self.line_ids.filtered(
+            lambda l: l.state == "in_progress"
+            or (l.visit_id and l.visit_id.state == "in_progress")
+        )
+        if exclude_line:
+            active_lines = active_lines.filtered(lambda l: l.id != exclude_line.id)
+        return active_lines
+
+    def _ensure_single_active_visit(self, current_line=None):
+        for rec in self:
+            exclude_line = current_line if current_line and current_line.plan_id == rec else None
+            active_lines = rec._get_active_plan_lines(exclude_line=exclude_line)
+            if not active_lines:
+                continue
+
+            active_line = active_lines[0]
+            outlet_name = active_line.outlet_id.display_name or _("Unknown Outlet")
+            visit_label = _("draft visit")
+            if active_line.visit_id:
+                visit_label = active_line.visit_id.display_name or active_line.visit_id.name
+
+            raise UserError(
+                _(
+                    "There is already an active visit on this route plan for outlet '%(outlet)s' (%(visit)s). "
+                    "Please open or finish the current visit before starting another one."
+                )
+                % {
+                    "outlet": outlet_name,
+                    "visit": visit_label,
+                }
+            )
+
     def action_finalize_daily_plan(self):
         for rec in self:
             if rec.state == "cancel":
@@ -291,7 +325,8 @@ class RoutePlan(models.Model):
         self.ensure_one()
 
         if line.visit_id:
-            if line.state == "pending":
+            self._ensure_single_active_visit(current_line=line)
+            if line.state not in ("visited", "skipped") and line.visit_id.state not in ("done", "cancel"):
                 line.write({"state": "in_progress"})
             return line.visit_id
 
@@ -302,6 +337,8 @@ class RoutePlan(models.Model):
                     "Please click 'Finalize Daily Plan' first."
                 )
             )
+
+        self._ensure_single_active_visit(current_line=line)
 
         if not line.outlet_id:
             raise UserError(_("Cannot create a visit for a route line without an outlet."))
