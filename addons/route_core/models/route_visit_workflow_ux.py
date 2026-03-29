@@ -182,6 +182,7 @@ class RouteVisit(models.Model):
         "refill_picking_count",
         "return_picking_ids",
         "return_picking_count",
+        "remaining_due_amount",
         "line_ids.product_id",
         "line_ids.previous_qty",
         "line_ids.counted_qty",
@@ -213,6 +214,7 @@ class RouteVisit(models.Model):
 
             has_draft_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
             has_confirmed_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "confirmed"))
+            no_due_to_collect = (rec.remaining_due_amount or 0.0) <= 0.0
 
             rec.ux_can_scan_barcode = (
                 rec.state == "in_progress"
@@ -268,6 +270,7 @@ class RouteVisit(models.Model):
                 and not rec.ux_can_open_pending_refill
                 and not has_draft_payments
                 and not rec.collection_skip_reason
+                and not no_due_to_collect
             )
 
             rec.ux_can_confirm_payments = (
@@ -288,8 +291,16 @@ class RouteVisit(models.Model):
             )
 
             rec.ux_can_finish_visit = (
-                rec.state == "in_progress"
-                and rec.visit_process_state in ("collection_done", "ready_to_close")
+                (
+                    rec.state == "in_progress"
+                    and rec.visit_process_state in ("collection_done", "ready_to_close")
+                )
+                or (
+                    can_enter_collection
+                    and not rec.ux_can_open_pending_refill
+                    and not has_draft_payments
+                    and no_due_to_collect
+                )
             )
 
             if rec.state == "draft":
@@ -371,6 +382,18 @@ class RouteVisit(models.Model):
                 rec.ux_primary_action = "confirm_payments"
                 rec.ux_stage_title = "Confirm payments"
                 rec.ux_stage_help = "Review and confirm the drafted payment decisions."
+
+            elif (
+                can_enter_collection
+                and not has_confirmed_payments
+                and not rec.collection_skip_reason
+                and not rec.ux_can_open_pending_refill
+                and no_due_to_collect
+            ):
+                rec.ux_stage = "ready_to_close"
+                rec.ux_primary_action = "finish_visit"
+                rec.ux_stage_title = "Finish visit"
+                rec.ux_stage_help = "No payment is due on this visit. Close the visit."
 
             elif (
                 can_enter_collection
@@ -503,7 +526,8 @@ class RouteVisit(models.Model):
         self.ensure_one()
 
         if self.remaining_due_amount <= 0 and not self.collection_skip_reason:
-            raise UserError(_("There is no remaining due amount to collect on this visit."))
+            self._action_mark_collection_done()
+            return self._get_pda_form_action()
 
         return {
             "type": "ir.actions.act_window",
@@ -545,7 +569,14 @@ class RouteVisit(models.Model):
         self.ensure_one()
 
         if self.visit_process_state not in ("collection_done", "ready_to_close"):
-            raise UserError(_("The visit is not yet ready for closing."))
+            if (
+                self.visit_process_state == "reconciled"
+                and (self.remaining_due_amount or 0.0) <= 0.0
+                and not (self.has_pending_refill or self.refill_backorder_id)
+            ):
+                self._action_mark_collection_done()
+            else:
+                raise UserError(_("The visit is not yet ready for closing."))
 
         sold_lines = self.line_ids.filtered(lambda l: (l.sold_qty or 0.0) > 0)
         if sold_lines and not self.sale_order_id:
