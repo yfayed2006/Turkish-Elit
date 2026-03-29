@@ -42,6 +42,8 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="refill_credit_warning_visible" invisible="1"/>
+<field name="refill_credit_warning_html" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -49,6 +51,9 @@
 <div class="mt-1">
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
+</div>
+<div invisible="not refill_credit_warning_visible">
+<field name="refill_credit_warning_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <div class="d-flex flex-wrap gap-2 mb-3">
 <button name="action_ux_no_returns" string="Skip Additional Returns" type="object" class="btn-secondary btn-sm" invisible="ux_primary_action != 'returns_step'"/>
@@ -112,6 +117,8 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="refill_credit_warning_visible" invisible="1"/>
+<field name="refill_credit_warning_html" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -119,6 +126,9 @@
 <div class="mt-1">
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
+</div>
+<div invisible="not refill_credit_warning_visible">
+<field name="refill_credit_warning_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <div class="d-flex flex-wrap gap-2 mb-3">
 <button name="action_ux_no_returns" string="Skip Additional Returns" type="object" class="btn-secondary btn-sm" invisible="ux_primary_action != 'returns_step'"/>
