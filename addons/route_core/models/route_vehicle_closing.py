@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -142,6 +144,45 @@ class RouteVehicleClosing(models.Model):
             "target": "new",
         }
 
+    def _get_in_progress_plan_lines(self):
+        self.ensure_one()
+        return self.plan_id.line_ids.filtered(
+            lambda line: line.state == "in_progress"
+            or (line.visit_id and line.visit_id.state == "in_progress")
+        )
+
+    def _get_pending_plan_lines(self):
+        self.ensure_one()
+        return self.plan_id.line_ids.filtered(lambda line: line.state == "pending")
+
+    def _open_pending_visit_resolution_wizard_action(self):
+        self.ensure_one()
+        pending_lines = self._get_pending_plan_lines()
+        if not pending_lines:
+            return False
+
+        next_day = fields.Date.to_date(self.plan_date or fields.Date.context_today(self)) + timedelta(days=1)
+        commands = []
+        for line in pending_lines:
+            commands.append((0, 0, {
+                "plan_line_id": line.id,
+                "decision": "carry_forward",
+                "target_date": next_day,
+            }))
+
+        wizard = self.env["route.vehicle.closing.pending.visit.wizard"].create({
+            "closing_id": self.id,
+            "line_ids": commands,
+        })
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Resolve Pending Visits"),
+            "res_model": "route.vehicle.closing.pending.visit.wizard",
+            "res_id": wizard.id,
+            "view_mode": "form",
+            "target": "new",
+        }
+
     def _get_vehicle_quants(self):
         self.ensure_one()
         vehicle_location = self.vehicle_location_id
@@ -261,6 +302,22 @@ class RouteVehicleClosing(models.Model):
                 raise UserError(_("Please set the vehicle stock location first."))
             if not rec.line_ids:
                 rec.action_refresh_snapshot()
+
+            active_lines = rec._get_in_progress_plan_lines()
+            if active_lines:
+                outlet_names = ", ".join(active_lines.mapped("outlet_id.display_name"))
+                raise UserError(
+                    _(
+                        "You cannot close the vehicle day while visits are still in progress: %(outlets)s. "
+                        "Please finish or cancel them first."
+                    )
+                    % {"outlets": outlet_names}
+                )
+
+            pending_lines = rec._get_pending_plan_lines()
+            if pending_lines and not self.env.context.get("route_vehicle_closing_pending_resolved"):
+                return rec._open_pending_visit_resolution_wizard_action()
+
             close_time = fields.Datetime.now()
             vals = {"state": "closed", "close_datetime": close_time}
             if not rec.variance_line_count:
@@ -781,4 +838,3 @@ class RoutePlan(models.Model):
             })
             closing.action_refresh_snapshot()
         return closing._open_form_action()
-
