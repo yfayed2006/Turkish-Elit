@@ -132,7 +132,10 @@ class RoutePlan(models.Model):
             rec.visited_count = len(lines.filtered(lambda l: l.state == "visited"))
             rec.skipped_count = len(lines.filtered(lambda l: l.state == "skipped"))
             rec.in_progress_count = len(
-                lines.filtered(lambda l: l.visit_id and l.visit_id.state == "in_progress")
+                lines.filtered(
+                    lambda l: l.state == "in_progress"
+                    or (l.visit_id and l.visit_id.state == "in_progress")
+                )
             )
 
     @api.depends("line_ids.outlet_id", "area_id", "date")
@@ -288,6 +291,8 @@ class RoutePlan(models.Model):
         self.ensure_one()
 
         if line.visit_id:
+            if line.state == "pending":
+                line.write({"state": "in_progress"})
             return line.visit_id
 
         if not self.planning_finalized:
@@ -306,7 +311,7 @@ class RoutePlan(models.Model):
             route_plan_allow_visit_create=True
         ).create(visit_vals)
 
-        line.write({"visit_id": visit.id})
+        line.write({"visit_id": visit.id, "state": "in_progress"})
         return visit
 
     def _get_open_shortage_domain(self):
