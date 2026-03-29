@@ -1,52 +1,46 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <!-- Vehicle: add stock location to list -->
-    <record id="view_route_vehicle_list_location_ext" model="ir.ui.view">
-        <field name="name">route.vehicle.list.location.ext</field>
-        <field name="model">route.vehicle</field>
-        <field name="inherit_id" ref="route_core.view_route_vehicle_list"/>
-        <field name="arch" type="xml">
-            <xpath expr="//list/field[@name='name']" position="after">
-                <field name="stock_location_id" optional="show"/>
-            </xpath>
-        </field>
-    </record>
-
-    <!-- Vehicle: add stock location to form -->
-    <record id="view_route_vehicle_form_location_ext" model="ir.ui.view">
-        <field name="name">route.vehicle.form.location.ext</field>
-        <field name="model">route.vehicle</field>
-        <field name="inherit_id" ref="route_core.view_route_vehicle_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//form/sheet/group/group[1]/field[@name='plate_no']" position="after">
-                <field name="stock_location_id" options="{'no_create': True}"/>
-            </xpath>
-        </field>
-    </record>
-
-    <!-- Outlet: add stock location to list -->
-    <record id="view_route_outlet_list_location_ext" model="ir.ui.view">
-        <field name="name">route.outlet.list.location.ext</field>
-        <field name="model">route.outlet</field>
-        <field name="inherit_id" ref="route_core.view_route_outlet_list"/>
-        <field name="arch" type="xml">
-            <xpath expr="//list/field[@name='area_id']" position="after">
-                <field name="stock_location_id" optional="show"/>
-            </xpath>
-        </field>
-    </record>
-
-    <!-- Outlet: add stock location to form -->
-    <record id="view_route_outlet_form_location_ext" model="ir.ui.view">
-        <field name="name">route.outlet.form.location.ext</field>
-        <field name="model">route.outlet</field>
-        <field name="inherit_id" ref="route_core.view_route_outlet_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//form/sheet/group/group[1]/field[@name='area_id']" position="after">
-                <field name="stock_location_id" options="{'no_create': True}"/>
-            </xpath>
-        </field>
-    </record>
-
+<!--  Vehicle: add stock location to list  -->
+<record id="view_route_vehicle_list_location_ext" model="ir.ui.view">
+<field name="name">route.vehicle.list.location.ext</field>
+<field name="model">route.vehicle</field>
+<field name="inherit_id" ref="route_core.view_route_vehicle_list"/>
+<field name="arch" type="xml">
+<xpath expr="//list/field[@name='name']" position="after">
+<field name="stock_location_id" optional="show"/>
+</xpath>
+</field>
+</record>
+<!--  Vehicle: add stock location to form  -->
+<record id="view_route_vehicle_form_location_ext" model="ir.ui.view">
+<field name="name">route.vehicle.form.location.ext</field>
+<field name="model">route.vehicle</field>
+<field name="inherit_id" ref="route_core.view_route_vehicle_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/sheet/group/group[1]/field[@name='plate_no']" position="after">
+<field name="stock_location_id" options="{'no_create': True}"/>
+</xpath>
+</field>
+</record>
+<!--  Outlet: add stock location to list  -->
+<record id="view_route_outlet_list_location_ext" model="ir.ui.view">
+<field name="name">route.outlet.list.location.ext</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_list"/>
+<field name="arch" type="xml">
+<xpath expr="//list/field[@name='area_id']" position="after">
+<field name="stock_location_id" optional="show"/>
+</xpath>
+</field>
+</record>
+<!--  Outlet: add stock location to form  -->
+<record id="view_route_outlet_form_location_ext" model="ir.ui.view">
+<field name="name">route.outlet.form.location.ext</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/sheet/group/group[1]/field[@name='area_id']" position="after">
+<field name="stock_location_id" domain="[('usage', '=', 'internal')]" context="{ 'default_name': name, 'default_usage': 'internal', 'default_company_id': company_id, 'default_active': True }" options="{ 'no_create': False, 'no_create_edit': False, 'no_open': False }"/>
+</xpath>
+</field>
+</record>
 </odoo>
