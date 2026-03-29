@@ -69,6 +69,24 @@ class RoutePlanLine(models.Model):
     def _plan_sync_context_key(self):
         return "route_plan_line_skip_plan_sync"
 
+    def _ensure_line_editable(self, action_label=None):
+        for rec in self:
+            if rec.plan_id and rec.plan_id.planning_finalized:
+                if action_label:
+                    raise UserError(
+                        _(
+                            "You cannot %s after Finalize Daily Plan. "
+                            "Please reopen the daily plan first."
+                        )
+                        % action_label
+                    )
+                raise UserError(
+                    _(
+                        "This route plan is locked after Finalize Daily Plan. "
+                        "Please reopen the daily plan first."
+                    )
+                )
+
     @api.depends("visit_id", "visit_id.state", "state")
     def _compute_button_label(self):
         for rec in self:
@@ -196,9 +214,16 @@ class RoutePlanLine(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if not vals.get("area_id") and vals.get("plan_id"):
+            if vals.get("plan_id"):
                 plan = self.env["route.plan"].browse(vals["plan_id"])
-                if plan.exists() and plan.area_id:
+                if plan.exists() and plan.planning_finalized:
+                    raise UserError(
+                        _(
+                            "You cannot add route plan lines after Finalize Daily Plan. "
+                            "Please reopen the daily plan first."
+                        )
+                    )
+                if not vals.get("area_id") and plan.exists() and plan.area_id:
                     vals["area_id"] = plan.area_id.id
 
         records = super().create(vals_list)
@@ -208,6 +233,11 @@ class RoutePlanLine(models.Model):
         return records
 
     def write(self, vals):
+        allowed_locked_fields = {"visit_id", "state"}
+        restricted_locked_fields = set(vals.keys()) - allowed_locked_fields
+        if restricted_locked_fields:
+            self._ensure_line_editable(_("edit planned visits"))
+
         result = super().write(vals)
         self._check_unique_outlet_per_plan()
         self._check_area_matches_outlet()
@@ -216,6 +246,7 @@ class RoutePlanLine(models.Model):
         return result
 
     def unlink(self):
+        self._ensure_line_editable(_("remove planned visits"))
         plans = self.mapped("plan_id")
         result = super().unlink()
         if plans:
