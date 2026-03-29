@@ -98,6 +98,15 @@ class RoutePlan(models.Model):
         string="Open Shortage Candidates",
         compute="_compute_shortage_counts",
     )
+    pending_review_count = fields.Integer(
+        string="Old Pending Visits",
+        compute="_compute_pending_review_stats",
+    )
+    pending_review_summary = fields.Char(
+        string="Old Pending Summary",
+        compute="_compute_pending_review_stats",
+        store=False,
+    )
 
     area_summary = fields.Char(
         string="Areas",
@@ -152,6 +161,17 @@ class RoutePlan(models.Model):
                 candidate_domain.append(("area_id", "=", rec.area_id.id))
             rec.open_shortage_candidate_count = Shortage.search_count(candidate_domain)
 
+    @api.depends("date", "area_id", "line_ids.area_id", "line_ids.outlet_id")
+    def _compute_pending_review_stats(self):
+        for rec in self:
+            pending_lines = rec._get_previous_pending_lines()
+            rec.pending_review_count = len(pending_lines)
+            outlet_names = pending_lines.mapped("outlet_id.display_name")
+            rec.pending_review_summary = self._format_summary_names(
+                [name for name in outlet_names if name],
+                max_items=3,
+            )
+
     @api.depends(
         "area_id",
         "line_ids.area_id",
@@ -193,6 +213,32 @@ class RoutePlan(models.Model):
         if len(names) <= max_items:
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
+
+    def _get_pending_review_area_ids(self):
+        self.ensure_one()
+        area_ids = set(self.line_ids.mapped("area_id").ids)
+        if self.area_id:
+            area_ids.add(self.area_id.id)
+        return list(area_ids)
+
+    def _get_previous_pending_lines(self):
+        self.ensure_one()
+        if not self.date:
+            return self.env["route.plan.line"]
+
+        domain = [
+            ("state", "=", "pending"),
+            ("plan_id", "!=", self.id),
+            ("plan_id.date", "<", self.date),
+            ("outlet_id", "!=", False),
+            ("plan_id.state", "!=", "cancel"),
+        ]
+        area_ids = self._get_pending_review_area_ids()
+        if area_ids:
+            domain.append(("area_id", "in", area_ids))
+        else:
+            return self.env["route.plan.line"]
+        return self.env["route.plan.line"].search(domain, order="plan_id.date asc, sequence asc, id asc")
 
     def _sync_state_from_lines(self):
         for rec in self:
@@ -279,6 +325,14 @@ class RoutePlan(models.Model):
 
     def action_finalize_daily_plan(self):
         for rec in self:
+            if rec.pending_review_count:
+                raise UserError(
+                    _(
+                        "There are %(count)s pending visit(s) from previous days in this area. "
+                        "Please review them before finalizing today's plan."
+                    )
+                    % {"count": rec.pending_review_count}
+                )
             if rec.state == "cancel":
                 raise UserError(_("You cannot finalize a cancelled route plan."))
             if not rec.vehicle_id:
@@ -450,6 +504,22 @@ class RoutePlan(models.Model):
             "context": {
                 "default_plan_id": self.id,
                 "default_area_id": self.area_id.id if self.area_id else False,
+            },
+        }
+
+    def action_open_pending_visit_review_wizard(self):
+        self.ensure_one()
+        self._ensure_plan_editable(_("review pending visits"))
+        if not self.pending_review_count:
+            raise UserError(_("There are no pending visits from previous days for this area."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Review Pending Visits"),
+            "res_model": "route.plan.pending.visit.review.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_plan_id": self.id,
             },
         }
 
