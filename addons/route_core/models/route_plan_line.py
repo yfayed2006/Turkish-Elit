@@ -15,6 +15,9 @@ class RoutePlanLine(models.Model):
             ("customer_unavailable", "Customer Not Available"),
             ("access_problem", "Delivery/Access Problem"),
             ("postponed_by_supervisor", "Postponed by Supervisor"),
+            ("carried_forward", "Carried Forward"),
+            ("rescheduled", "Rescheduled"),
+            ("cancelled_by_supervisor", "Cancelled by Supervisor"),
             ("other", "Other"),
         ]
 
@@ -136,6 +139,38 @@ class RoutePlanLine(models.Model):
                 raise UserError(_("This route plan line is already skipped."))
             if rec.state == "visited" or (rec.visit_id and rec.visit_id.state == "done"):
                 raise UserError(_("You cannot skip a visit line that is already completed."))
+
+    def action_apply_pending_supervisor_decision(self, decision, note=False):
+        self.ensure_one()
+        if self.state != "pending":
+            raise UserError(_("Only pending visit lines can be reviewed by the supervisor."))
+
+        reason_map = {
+            "carry_forward": "carried_forward",
+            "reschedule": "rescheduled",
+            "cancel": "cancelled_by_supervisor",
+        }
+        reason = reason_map.get(decision)
+        if not reason:
+            raise UserError(_("Unsupported supervisor decision."))
+
+        now = fields.Datetime.now()
+        if self.visit_id and self.visit_id.state not in ("done", "cancel"):
+            self.visit_id.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+                "end_datetime": now,
+                "no_sale_reason": self._build_skip_reason_text(reason, note),
+            })
+
+        self.write({
+            "state": "skipped",
+            "skip_reason": reason,
+            "skip_note": note or False,
+            "skipped_by_id": self.env.user.id,
+            "skipped_datetime": now,
+        })
+        return True
 
     @api.depends("visit_id", "visit_id.state", "state")
     def _compute_button_label(self):
