@@ -7,7 +7,7 @@
     "depends": ["base", "sale", "mail", "stock", "contacts"],
     "data": [
         "security/ir.model.access.csv",
-        "security/route_plan_skip_visit_security.xml",
+        "security/route_vehicle_closing_pending_visit_security.xml",
         "data/route_visit_sequence.xml",
         "data/route_outlet_sequence.xml",
         "data/route_vehicle_sequence.xml",
@@ -48,6 +48,7 @@
         "wizard/route_visit_missing_lot_wizard_views.xml",
         "wizard/route_loading_source_wizard_views.xml",
         "wizard/route_vehicle_closing_scan_wizard_views.xml",
+        "wizard/route_vehicle_closing_pending_visit_wizard_views.xml",
     ],
     "assets": {
         "web.assets_backend": [
