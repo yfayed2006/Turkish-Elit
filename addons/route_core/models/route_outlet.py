@@ -75,6 +75,18 @@ class RouteOutlet(models.Model):
     country_id = fields.Many2one("res.country", string="Country")
     zip = fields.Char(string="ZIP")
     note = fields.Text(string="Notes")
+    shelf_credit_limit_amount = fields.Monetary(
+        string="Shelf Credit Limit",
+        currency_field="currency_id",
+        default=0.0,
+        help="Maximum allowed shelf stock value for this outlet. Refill transfer is blocked if projected shelf value exceeds this amount.",
+    )
+    remaining_shelf_credit_amount = fields.Monetary(
+        string="Remaining Shelf Capacity",
+        currency_field="currency_id",
+        compute="_compute_remaining_shelf_credit_amount",
+    )
+
 
     visit_ids = fields.One2many(
         "route.visit",
@@ -573,6 +585,14 @@ class RouteOutlet(models.Model):
         if rate >= 60.0:
             return "warning"
         return "weak"
+
+    @api.depends("shelf_credit_limit_amount", "stock_total_value")
+    def _compute_remaining_shelf_credit_amount(self):
+        for record in self:
+            limit_amount = record.shelf_credit_limit_amount or 0.0
+            current_value = record.stock_total_value or 0.0
+            remaining_amount = limit_amount - current_value
+            record.remaining_shelf_credit_amount = remaining_amount if remaining_amount > 0 else 0.0
 
     @api.onchange("route_country_id")
     def _onchange_route_country_id(self):
@@ -1394,6 +1414,12 @@ class RouteOutlet(models.Model):
             if record.commission_rate < 0 or record.commission_rate > 100:
                 raise ValidationError("Commission % must be between 0 and 100.")
 
+    @api.constrains("shelf_credit_limit_amount")
+    def _check_shelf_credit_limit_amount(self):
+        for record in self:
+            if (record.shelf_credit_limit_amount or 0.0) < 0:
+                raise ValidationError("Shelf Credit Limit must be zero or greater.")
+
     def _phase0_notification(self, title, message, notif_type="success", sticky=False):
         self.ensure_one()
         return {
@@ -1701,4 +1727,3 @@ class RouteOutlet(models.Model):
             create=0,
         )
         return action
-
