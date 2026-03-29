@@ -1,5 +1,5 @@
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class RoutePlan(models.Model):
@@ -222,6 +222,24 @@ class RoutePlan(models.Model):
                 }
             )
 
+    def _ensure_plan_editable(self, action_label=None):
+        for rec in self:
+            if rec.planning_finalized:
+                if action_label:
+                    raise UserError(
+                        _(
+                            "You cannot %s after Finalize Daily Plan. "
+                            "Please click 'Reopen Daily Plan' first."
+                        )
+                        % action_label
+                    )
+                raise UserError(
+                    _(
+                        "This route plan is locked because Daily Planning has been finalized. "
+                        "Please click 'Reopen Daily Plan' first."
+                    )
+                )
+
     def action_finalize_daily_plan(self):
         for rec in self:
             if rec.state == "cancel":
@@ -288,7 +306,7 @@ class RoutePlan(models.Model):
             route_plan_allow_visit_create=True
         ).create(visit_vals)
 
-        line.visit_id = visit.id
+        line.write({"visit_id": visit.id})
         return visit
 
     def _get_open_shortage_domain(self):
@@ -300,6 +318,7 @@ class RoutePlan(models.Model):
 
     def action_add_open_shortages(self):
         self.ensure_one()
+        self._ensure_plan_editable(_("add open shortages"))
 
         shortages = self.env["route.shortage"].search(
             self._get_open_shortage_domain(),
@@ -379,6 +398,7 @@ class RoutePlan(models.Model):
 
     def action_open_add_area_outlets_wizard(self):
         self.ensure_one()
+        self._ensure_plan_editable(_("add visits by area"))
         return {
             "type": "ir.actions.act_window",
             "name": _("Add Visits by Area"),
@@ -403,6 +423,7 @@ class RoutePlan(models.Model):
     def write(self, vals):
         protected_fields = {"date", "user_id", "vehicle_id"}
         planning_change_fields = {"date", "user_id", "vehicle_id", "area_id"}
+        allowed_locked_write_fields = {"planning_finalized", "planning_finalized_datetime", "state"}
 
         if protected_fields.intersection(vals.keys()):
             for rec in self:
@@ -410,6 +431,17 @@ class RoutePlan(models.Model):
                     raise UserError(
                         _(
                             "You cannot change Plan Date, Salesperson, or Vehicle after visits have already been created from this plan."
+                        )
+                    )
+
+        restricted_locked_fields = set(vals.keys()) - allowed_locked_write_fields
+        if restricted_locked_fields and not self.env.context.get("route_plan_skip_locked_check"):
+            for rec in self:
+                if rec.planning_finalized:
+                    raise UserError(
+                        _(
+                            "This route plan is locked after Finalize Daily Plan. "
+                            "Please click 'Reopen Daily Plan' first before editing it."
                         )
                     )
 
