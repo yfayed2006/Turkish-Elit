@@ -25,10 +25,19 @@ class RouteVisit(models.Model):
         store=False,
     )
 
-    refill_credit_warning_html = fields.Html(
-        string="Refill Credit Warning",
+    refill_credit_warning_level = fields.Selection(
+        [
+            ("warning", "Warning"),
+            ("danger", "Danger"),
+        ],
+        string="Refill Credit Warning Level",
         compute="_compute_refill_credit_warning",
-        sanitize=False,
+        store=False,
+    )
+
+    refill_credit_warning_text = fields.Text(
+        string="Refill Credit Warning Text",
+        compute="_compute_refill_credit_warning",
         store=False,
     )
 
@@ -47,35 +56,34 @@ class RouteVisit(models.Model):
     def _compute_refill_credit_warning(self):
         for rec in self:
             rec.refill_credit_warning_visible = False
-            rec.refill_credit_warning_html = False
+            rec.refill_credit_warning_level = False
+            rec.refill_credit_warning_text = False
 
             outlet = rec.outlet_id
             if not outlet:
                 continue
 
             limit_amount = outlet.shelf_credit_limit_amount or 0.0
+            if limit_amount <= 0:
+                continue
+
             current_shelf_value = outlet.stock_total_value or 0.0
             refill_value = rec._get_refill_total_value()
             projected_shelf_value = current_shelf_value + refill_value
             available_capacity = max(limit_amount - current_shelf_value, 0.0)
-            over_limit_by = max(projected_shelf_value - limit_amount, 0.0)
-
-            if limit_amount <= 0:
-                continue
 
             if projected_shelf_value > limit_amount and refill_value > 0:
                 rec.refill_credit_warning_visible = True
-                rec.refill_credit_warning_html = _(
-                    "<div class='alert alert-danger mb-3' role='alert'>"
-                    "<strong>Refill warning:</strong> Outlet shelf credit limit will be exceeded."
-                    "<br/>Outlet: %(outlet)s"
-                    "<br/>Current shelf value: %(current).2f"
-                    "<br/>Refill value: %(refill).2f"
-                    "<br/>Projected shelf value: %(projected).2f"
-                    "<br/>Shelf credit limit: %(limit).2f"
-                    "<br/>Available capacity before refill: %(available).2f"
-                    "<br/>Over limit by: %(over).2f"
-                    "</div>"
+                rec.refill_credit_warning_level = "danger"
+                rec.refill_credit_warning_text = _(
+                    "Outlet shelf credit limit will be exceeded.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Refill value: %(refill).2f\n"
+                    "Projected shelf value: %(projected).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Available capacity before refill: %(available).2f\n"
+                    "Over limit by: %(over).2f"
                 ) % {
                     "outlet": outlet.display_name,
                     "current": current_shelf_value,
@@ -83,18 +91,17 @@ class RouteVisit(models.Model):
                     "projected": projected_shelf_value,
                     "limit": limit_amount,
                     "available": available_capacity,
-                    "over": over_limit_by,
+                    "over": max(projected_shelf_value - limit_amount, 0.0),
                 }
             elif current_shelf_value > limit_amount:
                 rec.refill_credit_warning_visible = True
-                rec.refill_credit_warning_html = _(
-                    "<div class='alert alert-warning mb-3' role='alert'>"
-                    "<strong>Outlet already over shelf credit limit.</strong>"
-                    "<br/>Outlet: %(outlet)s"
-                    "<br/>Current shelf value: %(current).2f"
-                    "<br/>Shelf credit limit: %(limit).2f"
-                    "<br/>Over limit by: %(over).2f"
-                    "</div>"
+                rec.refill_credit_warning_level = "warning"
+                rec.refill_credit_warning_text = _(
+                    "Outlet is already over shelf credit limit.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Over limit by: %(over).2f"
                 ) % {
                     "outlet": outlet.display_name,
                     "current": current_shelf_value,
