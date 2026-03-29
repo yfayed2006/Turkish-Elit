@@ -68,6 +68,101 @@ class RouteVisit(models.Model):
 
     ux_can_finish_visit = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
+    refill_credit_warning_visible = fields.Boolean(
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+    refill_credit_warning_level = fields.Selection(
+        [
+            ("warning", "Warning"),
+            ("danger", "Danger"),
+        ],
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+    refill_credit_warning_text = fields.Text(
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+
+    @api.depends(
+        "visit_process_state",
+        "outlet_id",
+        "outlet_id.shelf_credit_limit_amount",
+        "outlet_id.stock_total_value",
+        "line_ids.supplied_qty",
+        "line_ids.unit_price",
+        "refill_datetime",
+        "refill_picking_id",
+    )
+    def _compute_refill_credit_warning(self):
+        for rec in self:
+            rec.refill_credit_warning_visible = False
+            rec.refill_credit_warning_level = False
+            rec.refill_credit_warning_text = False
+
+            if rec.visit_process_state != "reconciled":
+                continue
+
+            outlet = rec.outlet_id
+            if not outlet:
+                continue
+
+            limit_amount = outlet.shelf_credit_limit_amount or 0.0
+            if limit_amount <= 0:
+                continue
+
+            current_shelf_value = outlet.stock_total_value or 0.0
+
+            if hasattr(rec, "_get_refill_total_value"):
+                refill_value = rec._get_refill_total_value()
+            else:
+                refill_value = sum(
+                    (line.supplied_qty or 0.0) * (line.unit_price or 0.0)
+                    for line in rec.line_ids
+                    if (line.supplied_qty or 0.0) > 0
+                )
+
+            projected_shelf_value = current_shelf_value + refill_value
+            available_capacity = max(limit_amount - current_shelf_value, 0.0)
+
+            if projected_shelf_value > limit_amount and refill_value > 0:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_level = "danger"
+                rec.refill_credit_warning_text = _(
+                    "Outlet shelf credit limit will be exceeded.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Refill value: %(refill).2f\n"
+                    "Projected shelf value: %(projected).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Available capacity before refill: %(available).2f\n"
+                    "Over limit by: %(over).2f"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "refill": refill_value,
+                    "projected": projected_shelf_value,
+                    "limit": limit_amount,
+                    "available": available_capacity,
+                    "over": max(projected_shelf_value - limit_amount, 0.0),
+                }
+            elif current_shelf_value > limit_amount:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_level = "warning"
+                rec.refill_credit_warning_text = _(
+                    "Outlet is already over shelf credit limit.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Over limit by: %(over).2f"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "limit": limit_amount,
+                    "over": max(current_shelf_value - limit_amount, 0.0),
+                }
+
     @api.depends(
         "state",
         "visit_process_state",
