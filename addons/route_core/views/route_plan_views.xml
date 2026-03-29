@@ -28,7 +28,7 @@
 <form string="Route Plan">
 <header>
 <button name="action_open_pda_screen" type="object" string="PDA Screen" class="btn-primary"/>
-<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0 or not area_id"/>
+<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0"/>
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
@@ -44,7 +44,7 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 <strong>Reopen Daily Plan</strong>
 .
 </div>
-<div class="alert alert-info" role="alert" invisible="previous_pending_visit_count == 0 or not area_id">
+<div class="alert alert-info" role="alert" invisible="previous_pending_visit_count == 0">
 <strong>Previous pending visits detected:</strong>
 This area has
 <field name="previous_pending_visit_count" readonly="1" class="oe_inline"/>
@@ -132,7 +132,7 @@ Please review them before today's execution.
 <group>
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized"/>
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" icon="fa-exclamation-triangle" invisible="planning_finalized"/>
-<button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0 or not area_id"/>
+<button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0"/>
 </group>
 <field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
 <list editable="bottom">
