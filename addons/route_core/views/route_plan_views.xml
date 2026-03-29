@@ -27,15 +27,21 @@
 <form string="Route Plan">
 <header>
 <button name="action_open_pda_screen" type="object" string="PDA Screen" class="btn-primary"/>
-<button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary"/>
+<button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
-<button name="action_reopen_daily_plan" type="object" string="Reopen Planning" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
+<button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
 <button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel' or loading_proposal_count > 0"/>
 <button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_proposal_count == 0"/>
 <button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
 <button name="action_open_vehicle_closing" type="object" string="Close Vehicle Day" class="btn-secondary" invisible="not planning_finalized or not vehicle_id or state == 'cancel'"/>
 </header>
 <sheet>
+<div class="alert alert-warning" role="alert" invisible="not planning_finalized">
+<strong>Planning Locked:</strong>
+This route plan has been finalized. You cannot edit the plan, add visits, remove visits, or add open shortages until you click
+<strong>Reopen Daily Plan</strong>
+.
+</div>
 <div class="oe_button_box" name="button_box">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker" invisible="visit_count == 0">
 <field name="visit_count" string="Executed Visits" widget="statinfo"/>
@@ -60,12 +66,12 @@
 </div>
 <group string="Plan Information" col="2">
 <group>
-<field name="date"/>
-<field name="user_id"/>
-<field name="vehicle_id"/>
+<field name="date" readonly="planning_finalized"/>
+<field name="user_id" readonly="planning_finalized"/>
+<field name="vehicle_id" readonly="planning_finalized"/>
 </group>
 <group>
-<field name="area_id"/>
+<field name="area_id" readonly="planning_finalized"/>
 <field name="area_summary" readonly="1"/>
 <field name="outlet_summary" readonly="1"/>
 </group>
@@ -104,10 +110,10 @@
 <notebook>
 <page string="Planned Visits">
 <group>
-<button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus"/>
-<button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" icon="fa-exclamation-triangle"/>
+<button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized"/>
+<button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" icon="fa-exclamation-triangle" invisible="planning_finalized"/>
 </group>
-<field name="line_ids" context="{'default_area_id': area_id}">
+<field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
 <list editable="bottom">
 <field name="sequence" widget="handle"/>
 <field name="area_id"/>
@@ -123,7 +129,7 @@
 </field>
 </page>
 <page string="Notes">
-<field name="notes" placeholder="Internal notes..."/>
+<field name="notes" placeholder="Internal notes..." readonly="planning_finalized"/>
 </page>
 </notebook>
 </sheet>
