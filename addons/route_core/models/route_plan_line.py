@@ -48,6 +48,7 @@ class RoutePlanLine(models.Model):
     state = fields.Selection(
         [
             ("pending", "Pending"),
+            ("in_progress", "In Progress"),
             ("visited", "Visited"),
             ("skipped", "Skipped"),
         ],
@@ -193,6 +194,8 @@ class RoutePlanLine(models.Model):
         visit = self.visit_id
         if not visit:
             visit = self.plan_id._create_visit_for_line(self)
+        elif self.state not in ("visited", "skipped") and visit.state not in ("done", "cancel"):
+            self.write({"state": "in_progress"})
 
         return self._get_pda_visit_action(visit)
 
