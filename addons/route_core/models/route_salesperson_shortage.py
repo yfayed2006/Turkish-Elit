@@ -21,6 +21,11 @@ class RouteSalespersonShortage(models.Model):
     note = fields.Text(string="Notes")
     settled_on = fields.Datetime(string="Settled On", readonly=True, copy=False, tracking=True)
     settled_by_id = fields.Many2one("res.users", string="Settled By", readonly=True, copy=False, tracking=True)
+    deduction_record_count = fields.Integer(string="Deduction Records", compute="_compute_totals")
+    deduction_record_id = fields.Many2one("route.salesperson.deduction", string="Deduction Record", compute="_compute_totals")
+    deduction_amount = fields.Float(string="Deduction Amount", compute="_compute_totals")
+    admin_settled_amount = fields.Float(string="Admin Settled Amount", compute="_compute_totals")
+    waived_amount = fields.Float(string="Waived Amount", compute="_compute_totals")
 
     line_count = fields.Integer(string="Lines", compute="_compute_totals")
     pending_line_count = fields.Integer(string="Pending Lines", compute="_compute_totals")
@@ -47,6 +52,8 @@ class RouteSalespersonShortage(models.Model):
         "line_ids.shortage_amount",
         "line_ids.settlement_decision",
         "line_ids.is_finalized",
+        "line_ids.deduction_record_id",
+        "line_ids.deduction_record_id.state",
     )
     def _compute_totals(self):
         for rec in self:
@@ -62,6 +69,15 @@ class RouteSalespersonShortage(models.Model):
             rec.total_shortage_amount = sum(rec.line_ids.mapped("shortage_amount"))
             rec.pending_amount = sum(pending.mapped("shortage_amount"))
             rec.finalized_amount = sum(finalized.mapped("shortage_amount"))
+            deduct_lines = finalized.filtered(lambda line: line.settlement_decision == "deduct")
+            admin_lines = finalized.filtered(lambda line: line.settlement_decision == "settle_admin")
+            waived_lines = finalized.filtered(lambda line: line.settlement_decision == "waive")
+            deduction_records = deduct_lines.mapped("deduction_record_id")
+            rec.deduction_record_count = len(deduction_records)
+            rec.deduction_record_id = deduction_records[:1].id if deduction_records else False
+            rec.deduction_amount = sum(deduct_lines.mapped("shortage_amount"))
+            rec.admin_settled_amount = sum(admin_lines.mapped("shortage_amount"))
+            rec.waived_amount = sum(waived_lines.mapped("shortage_amount"))
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -96,6 +112,53 @@ class RouteSalespersonShortage(models.Model):
         self.write({"state": "under_review"})
         return True
 
+    def _sync_deduction_record(self):
+        deduction_model = self.env["route.salesperson.deduction"]
+        for rec in self:
+            deduct_lines = rec.line_ids.filtered(lambda line: line.is_finalized and line.settlement_decision == "deduct")
+            existing = deduction_model.search([("ledger_id", "=", rec.id)], limit=1)
+            if existing and existing.state == "executed":
+                executed_lines = existing.line_ids
+                if set(executed_lines.ids) != set(deduct_lines.ids):
+                    raise UserError(_("You cannot change deduction lines because the monthly deduction record has already been executed."))
+                continue
+            if not deduct_lines:
+                if existing:
+                    rec.line_ids.filtered(lambda line: line.deduction_record_id == existing).write({"deduction_record_id": False})
+                    existing.unlink()
+                continue
+            deduction = existing or deduction_model.create({
+                "ledger_id": rec.id,
+                "company_id": rec.company_id.id,
+                "note": _("Monthly deduction record generated from the approved salesperson shortage ledger."),
+            })
+            rec.line_ids.filtered(lambda line: line.deduction_record_id == deduction and line not in deduct_lines).write({"deduction_record_id": False})
+            deduct_lines.write({"deduction_record_id": deduction.id})
+            if deduction.state == "cancelled":
+                deduction.state = "draft"
+
+    def action_sync_deduction_record(self):
+        for rec in self:
+            if rec.state != "settled":
+                raise UserError(_("Deduction records can be synchronized only after the monthly ledger is settled."))
+            rec._sync_deduction_record()
+        return True
+
+    def action_open_deduction_record(self):
+        self.ensure_one()
+        self._sync_deduction_record()
+        deduction = self.env["route.salesperson.deduction"].search([("ledger_id", "=", self.id)], limit=1)
+        if not deduction:
+            raise UserError(_("There is no deduction record for this monthly ledger."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Monthly Deduction Execution"),
+            "res_model": "route.salesperson.deduction",
+            "res_id": deduction.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
     def action_finalize_settlement(self):
         for rec in self:
             pending = rec.line_ids.filtered(lambda line: line.settlement_decision == "pending")
@@ -112,19 +175,28 @@ class RouteSalespersonShortage(models.Model):
                 "settled_on": now,
                 "settled_by_id": self.env.user.id,
             })
+            rec._sync_deduction_record()
         return True
 
     def action_reopen(self):
-        self.write({
-            "state": "under_review",
-            "settled_on": False,
-            "settled_by_id": False,
-        })
-        self.mapped("line_ids").write({
-            "is_finalized": False,
-            "finalized_on": False,
-            "finalized_by_id": False,
-        })
+        for rec in self:
+            deduction = self.env["route.salesperson.deduction"].search([("ledger_id", "=", rec.id)], limit=1)
+            if deduction and deduction.state == "executed":
+                raise UserError(_("You cannot reopen this monthly ledger because its deduction record has already been executed."))
+            if deduction:
+                rec.line_ids.filtered(lambda line: line.deduction_record_id == deduction).write({"deduction_record_id": False})
+                deduction.unlink()
+            rec.write({
+                "state": "under_review",
+                "settled_on": False,
+                "settled_by_id": False,
+            })
+            rec.mapped("line_ids").write({
+                "is_finalized": False,
+                "finalized_on": False,
+                "finalized_by_id": False,
+                "deduction_record_id": False,
+            })
         return True
 
 
@@ -157,6 +229,7 @@ class RouteSalespersonShortageLine(models.Model):
         ("waive", "Waive / Ignore"),
     ], string="Settlement Decision", default="pending", required=True)
     settlement_note = fields.Char(string="Settlement Note")
+    deduction_record_id = fields.Many2one("route.salesperson.deduction", string="Deduction Record", readonly=True, copy=False)
     is_finalized = fields.Boolean(string="Finalized", default=False, readonly=True, copy=False)
     finalized_on = fields.Datetime(string="Finalized On", readonly=True, copy=False)
     finalized_by_id = fields.Many2one("res.users", string="Finalized By", readonly=True, copy=False)
@@ -166,6 +239,14 @@ class RouteSalespersonShortageLine(models.Model):
         ("settled", "Admin Settled"),
         ("waived", "Waived"),
     ], string="Settlement Status", compute="_compute_settlement_status")
+    execution_status = fields.Selection([
+        ("pending", "Pending"),
+        ("deduction_draft", "Deduction Draft"),
+        ("deduction_approved", "Deduction Approved"),
+        ("deducted", "Deducted"),
+        ("admin_settled", "Admin Settled"),
+        ("waived", "Waived"),
+    ], string="Execution Status", compute="_compute_execution_status")
 
     _sql_constraints = [
         (
@@ -186,6 +267,27 @@ class RouteSalespersonShortageLine(models.Model):
                 rec.settlement_status = "settled"
             else:
                 rec.settlement_status = "waived"
+
+    @api.depends("is_finalized", "settlement_decision", "deduction_record_id", "deduction_record_id.state")
+    def _compute_execution_status(self):
+        for rec in self:
+            if not rec.is_finalized or rec.settlement_decision == "pending":
+                rec.execution_status = "pending"
+            elif rec.settlement_decision == "settle_admin":
+                rec.execution_status = "admin_settled"
+            elif rec.settlement_decision == "waive":
+                rec.execution_status = "waived"
+            elif rec.settlement_decision == "deduct":
+                if not rec.deduction_record_id or rec.deduction_record_id.state == "draft":
+                    rec.execution_status = "deduction_draft"
+                elif rec.deduction_record_id.state == "approved":
+                    rec.execution_status = "deduction_approved"
+                elif rec.deduction_record_id.state == "executed":
+                    rec.execution_status = "deducted"
+                else:
+                    rec.execution_status = "pending"
+            else:
+                rec.execution_status = "pending"
 
     def action_finalize_lines(self):
         for rec in self:
