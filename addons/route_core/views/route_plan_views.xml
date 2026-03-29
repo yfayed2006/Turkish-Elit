@@ -182,7 +182,6 @@ Please review them before today's execution.
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 <filter name="filter_cancel" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
 <filter name="filter_planning_finalized" string="Planning Finalized" domain="[('planning_finalized', '=', True)]"/>
-<filter name="filter_has_previous_pending" string="Has Previous Pending" domain="[('previous_pending_visit_count', '>', 0)]"/>
 <separator/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
