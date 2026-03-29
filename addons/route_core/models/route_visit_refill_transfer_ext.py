@@ -80,6 +80,45 @@ class RouteVisit(models.Model):
                     "location_dest_id": move.location_dest_id.id,
                 })
 
+    def _get_refill_total_value(self):
+        self.ensure_one()
+        return sum(
+            (line.supplied_qty or 0.0) * (line.unit_price or 0.0)
+            for line in self._get_refill_transfer_lines()
+        )
+
+    def _check_outlet_shelf_credit_limit(self):
+        self.ensure_one()
+        outlet = self.outlet_id
+        limit_amount = outlet.shelf_credit_limit_amount or 0.0
+        if limit_amount <= 0:
+            return
+
+        current_shelf_value = outlet.stock_total_value or 0.0
+        refill_value = self._get_refill_total_value()
+        projected_shelf_value = current_shelf_value + refill_value
+
+        if projected_shelf_value > limit_amount:
+            raise UserError(
+                _(
+                    "Outlet shelf credit limit exceeded.\n\n"
+                    "Outlet: %s\n"
+                    "Current shelf value: %.2f\n"
+                    "Refill value: %.2f\n"
+                    "Projected shelf value: %.2f\n"
+                    "Shelf credit limit: %.2f\n"
+                    "Available capacity before refill: %.2f"
+                )
+                % (
+                    outlet.display_name,
+                    current_shelf_value,
+                    refill_value,
+                    projected_shelf_value,
+                    limit_amount,
+                    max(limit_amount - current_shelf_value, 0.0),
+                )
+            )
+
     def _create_refill_picking(self):
         self.ensure_one()
 
@@ -97,6 +136,8 @@ class RouteVisit(models.Model):
         lines = self._get_refill_transfer_lines()
         if not lines:
             raise UserError(_("There are no refill quantities to transfer."))
+
+        self._check_outlet_shelf_credit_limit()
 
         picking_vals = self._prepare_refill_picking_vals()
         picking = self.env["stock.picking"].create(picking_vals)
