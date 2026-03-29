@@ -1,0 +1,76 @@
+<odoo>
+<record id="view_route_city_tree" model="ir.ui.view">
+<field name="name">route.city.tree</field>
+<field name="model">route.city</field>
+<field name="arch" type="xml">
+<list string="Route Cities">
+<field name="name"/>
+<field name="country_id"/>
+<field name="area_count"/>
+<field name="active"/>
+</list>
+</field>
+</record>
+<record id="view_route_city_form" model="ir.ui.view">
+<field name="name">route.city.form</field>
+<field name="model">route.city</field>
+<field name="arch" type="xml">
+<form string="Route City">
+<header>
+<button name="action_save_and_back" string="Save and Back" type="object" class="btn-primary"/>
+</header>
+<sheet>
+<div class="oe_button_box" name="button_box">
+<button name="action_view_areas" type="object" class="oe_stat_button" icon="fa-map">
+<field name="area_count" string="Areas" widget="statinfo"/>
+</button>
+</div>
+<group>
+<group>
+<field name="name"/>
+<field name="country_id"/>
+<field name="active"/>
+</group>
+<group>
+<field name="notes"/>
+</group>
+</group>
+<notebook>
+<page string="Areas">
+<field name="area_ids" context="{'default_city_id': id}">
+<list editable="bottom">
+<field name="name"/>
+<field name="country_id" readonly="1"/>
+<field name="code"/>
+<field name="active"/>
+</list>
+</field>
+</page>
+</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_city_search" model="ir.ui.view">
+<field name="name">route.city.search</field>
+<field name="model">route.city</field>
+<field name="arch" type="xml">
+<search string="Search Cities">
+<field name="name"/>
+<field name="country_id"/>
+<filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="filter_inactive" string="Archived" domain="[('active', '=', False)]"/>
+<separator/>
+<filter name="group_by_country" string="Country" context="{'group_by': 'country_id'}"/>
+</search>
+</field>
+</record>
+<record id="action_route_city" model="ir.actions.act_window">
+<field name="name">Cities</field>
+<field name="res_model">route.city</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_city_search"/>
+</record>
+<menuitem id="menu_route_configuration" name="Configuration" parent="menu_route_visit_root" sequence="50"/>
+<menuitem id="menu_route_city" name="Cities" parent="menu_route_configuration" action="action_route_city" sequence="5"/>
+</odoo>
