@@ -14,8 +14,6 @@
 <field name="partner_id"/>
 <field name="summary_alert_level" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
 <field name="current_due_amount" sum="Total Due"/>
-<field name="shelf_credit_limit_amount" optional="show"/>
-<field name="remaining_shelf_credit_amount" optional="show"/>
 <field name="open_shortage_count" string="Open Shortages" widget="badge" decoration-warning="open_shortage_count > 0"/>
 <field name="near_expiry_product_count" string="Near Expiry" widget="badge" decoration-warning="near_expiry_product_count > 0"/>
 <field name="last_visit_date"/>
@@ -61,8 +59,8 @@
 <field name="barcode"/>
 <field name="route_country_id" required="1"/>
 <field name="route_city_id" required="1" domain="[('country_id', '=', route_country_id)]" context="{'default_country_id': route_country_id}" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
-<field name="route_area_name" required="1"/>
-<field name="area_id" invisible="1"/>
+<field name="area_id" string="Route Area" required="1" domain="[('city_id', '=', route_city_id)]" context="{'default_city_id': route_city_id}" options="{'no_quick_create': True, 'no_create_edit': False, 'no_open': False}"/>
+<field name="route_area_name" invisible="1"/>
 <field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}"/>
 <field name="active"/>
 </group>
@@ -70,8 +68,8 @@
 <field name="phone"/>
 <field name="mobile"/>
 <field name="default_commission_rate"/>
-<field name="shelf_credit_limit_amount"/>
-<field name="remaining_shelf_credit_amount" readonly="1"/>
+<field name="shelf_credit_limit"/>
+<field name="remaining_shelf_capacity" readonly="1"/>
 <field name="active_stock_tracking"/>
 <field name="open_shortage_count" readonly="1"/>
 </group>
@@ -100,8 +98,6 @@
 <field name="next_planned_visit_date" readonly="1"/>
 <field name="stock_total_qty" readonly="1"/>
 <field name="stock_total_value" readonly="1"/>
-<field name="shelf_credit_limit_amount" readonly="1"/>
-<field name="remaining_shelf_credit_amount" readonly="1"/>
 </group>
 <group>
 <field name="near_expiry_product_count" readonly="1"/>
@@ -120,17 +116,17 @@
 <field name="partner_id" readonly="1"/>
 <field name="route_country_id" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
-<field name="route_area_name" readonly="1"/>
+<field name="area_id" readonly="1"/>
 <field name="phone" readonly="1"/>
 <field name="mobile" readonly="1"/>
 <field name="commission_rate" readonly="1"/>
-<field name="shelf_credit_limit_amount" readonly="1"/>
-<field name="remaining_shelf_credit_amount" readonly="1"/>
 </group>
 <group>
 <field name="stock_location_id" readonly="1"/>
 <field name="active_stock_tracking" readonly="1"/>
 <field name="default_commission_rate" readonly="1"/>
+<field name="shelf_credit_limit" readonly="1"/>
+<field name="remaining_shelf_capacity" readonly="1"/>
 <field name="active" readonly="1"/>
 </group>
 </group>
@@ -376,7 +372,7 @@
 <field name="country_id"/>
 <field name="route_country_id" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
-<field name="route_area_name" readonly="1"/>
+<field name="area_id" readonly="1"/>
 </group>
 </group>
 <group>
