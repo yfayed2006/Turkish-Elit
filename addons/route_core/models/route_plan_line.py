@@ -252,7 +252,6 @@ class RoutePlanLine(models.Model):
             return self._get_pda_visit_action(visit)
 
         self.plan_id._ensure_single_active_visit(current_line=self)
-        self.plan_id._ensure_no_unresolved_previous_pending(self)
 
         if not visit:
             visit = self.plan_id._create_visit_for_line(self)
@@ -315,7 +314,75 @@ class RoutePlanLine(models.Model):
         })
         return True
 
-    def action_resolve_previous_pending(self, decision, current_plan, target_date=False, note=False):
+    def _get_matching_line_in_plan(self, plan):
+        self.ensure_one()
+        if not plan:
+            return self.env["route.plan.line"]
+        return plan.line_ids.filtered(lambda line: line.outlet_id.id == self.outlet_id.id)[:1]
+
+    def _ensure_current_plan_line_can_be_reworked(self, current_line):
+        self.ensure_one()
+        if not current_line:
+            return
+
+        if current_line.state == "visited" or (current_line.visit_id and current_line.visit_id.state == "done"):
+            raise UserError(
+                _(
+                    "Outlet '%s' is already completed in the current route plan. "
+                    "You cannot cancel or reschedule it from pending review."
+                )
+                % (current_line.outlet_id.display_name,)
+            )
+
+        if current_line.state == "in_progress" or (current_line.visit_id and current_line.visit_id.state == "in_progress"):
+            raise UserError(
+                _(
+                    "Outlet '%s' is already in progress in the current route plan. "
+                    "Please finish or cancel the current visit first."
+                )
+                % (current_line.outlet_id.display_name,)
+            )
+
+    def _build_resolution_note(self, auto_note, note=False):
+        if note:
+            return (auto_note + "\n" + note) if auto_note else note
+        return auto_note or False
+
+    def _apply_supervisor_skip_to_current_line(self, current_line, reason, note=False, now=False):
+        self.ensure_one()
+        current_line.ensure_one()
+        now = now or fields.Datetime.now()
+
+        combined_note = self._build_resolution_note(
+            _("Resolved from previous pending review of %s.") % (self.outlet_id.display_name,),
+            note,
+        )
+
+        if current_line.visit_id and current_line.visit_id.state not in ("done", "cancel"):
+            current_line.visit_id.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+                "end_datetime": now,
+                "no_sale_reason": current_line._build_skip_reason_text(reason, combined_note),
+            })
+
+        current_line.write({
+            "state": "skipped",
+            "visit_id": False,
+            "skip_reason": reason,
+            "skip_note": combined_note,
+            "skipped_by_id": self.env.user.id,
+            "skipped_datetime": now,
+        })
+
+    def action_resolve_previous_pending(
+        self,
+        decision,
+        current_plan,
+        target_date=False,
+        note=False,
+        apply_current_plan_effect=True,
+    ):
         self.ensure_one()
 
         if self.state != "pending":
@@ -328,6 +395,7 @@ class RoutePlanLine(models.Model):
         target_plan = False
         auto_note = False
         skip_reason = False
+        current_line = self._get_matching_line_in_plan(current_plan) if apply_current_plan_effect else self.env["route.plan.line"]
 
         if decision == "carry_forward":
             target_plan = current_plan
@@ -348,6 +416,9 @@ class RoutePlanLine(models.Model):
         else:
             raise UserError(_("Unsupported pending visit decision."))
 
+        if apply_current_plan_effect and current_line and decision in ("cancel", "reschedule"):
+            self._ensure_current_plan_line_can_be_reworked(current_line)
+
         if self.visit_id and self.visit_id.state not in ("done", "cancel"):
             self.visit_id.with_context(route_visit_force_write=True).write({
                 "state": "cancel",
@@ -356,12 +427,9 @@ class RoutePlanLine(models.Model):
                 "no_sale_reason": self._build_skip_reason_text(skip_reason, note),
             })
 
-        if target_plan:
-            existing_line = target_plan.line_ids.filtered(
-                lambda line: line.outlet_id.id == self.outlet_id.id
-            )[:1]
-
-            if not existing_line:
+        if target_plan and apply_current_plan_effect:
+            existing_target_line = self._get_matching_line_in_plan(target_plan)
+            if not existing_target_line:
                 target_plan._ensure_plan_editable(_("load pending visits into this route plan"))
                 next_sequence = max(target_plan.line_ids.mapped("sequence") or [0]) + 10
                 self.env["route.plan.line"].create({
@@ -372,15 +440,32 @@ class RoutePlanLine(models.Model):
                     "note": self.note or False,
                 })
 
-        combined_note = auto_note
-        if note:
-            combined_note = (auto_note + "\n" + note) if auto_note else note
+        if apply_current_plan_effect and current_line:
+            if decision == "cancel":
+                self._apply_supervisor_skip_to_current_line(
+                    current_line=current_line,
+                    reason="cancelled_by_supervisor",
+                    note=note,
+                    now=now,
+                )
+            elif decision == "reschedule":
+                if current_line.plan_id.planning_finalized or current_line.visit_id:
+                    self._apply_supervisor_skip_to_current_line(
+                        current_line=current_line,
+                        reason="rescheduled",
+                        note=note,
+                        now=now,
+                    )
+                else:
+                    current_line.unlink()
+
+        combined_note = self._build_resolution_note(auto_note, note)
 
         vals = {
             "state": "skipped",
             "visit_id": False,
             "skip_reason": skip_reason,
-            "skip_note": combined_note or False,
+            "skip_note": combined_note,
             "skipped_by_id": self.env.user.id,
             "skipped_datetime": now,
         }
