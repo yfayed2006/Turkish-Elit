@@ -272,6 +272,14 @@ class RoutePlan(models.Model):
         if line.visit_id:
             return line.visit_id
 
+        if not self.planning_finalized:
+            raise UserError(
+                _(
+                    "You cannot start visits before finalizing the daily plan. "
+                    "Please click 'Finalize Daily Plan' first."
+                )
+            )
+
         if not line.outlet_id:
             raise UserError(_("Cannot create a visit for a route line without an outlet."))
 
