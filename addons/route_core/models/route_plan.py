@@ -189,7 +189,7 @@ class RoutePlan(models.Model):
             rec.area_summary = self._format_summary_names(unique_area_names, max_items=2)
             rec.outlet_summary = self._format_summary_names(unique_outlet_names, max_items=2)
 
-    @api.depends("area_id", "date", "line_ids.outlet_id", "line_ids.state")
+    @api.depends("area_id", "date", "line_ids.area_id", "line_ids.outlet_id", "line_ids.state")
     def _compute_pending_review_stats(self):
         for rec in self:
             pending_lines = rec._get_previous_pending_lines()
@@ -220,17 +220,31 @@ class RoutePlan(models.Model):
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
 
-    def _get_previous_pending_lines(self):
+    def _get_effective_area_ids(self):
         self.ensure_one()
-        if not self.area_id or not self.date:
+        area_ids = set(self.line_ids.mapped("area_id").ids)
+        if self.area_id:
+            area_ids.add(self.area_id.id)
+        return list(area_ids)
+
+    def _get_previous_pending_lines(self, outlet=None):
+        self.ensure_one()
+        if not self.date:
+            return self.env["route.plan.line"]
+
+        area_ids = self._get_effective_area_ids()
+        if not area_ids:
             return self.env["route.plan.line"]
 
         domain = [
             ("state", "=", "pending"),
-            ("area_id", "=", self.area_id.id),
+            ("area_id", "in", area_ids),
             ("plan_id", "!=", self.id),
             ("plan_id.date", "<", self.date),
         ]
+        if outlet:
+            domain.append(("outlet_id", "=", outlet.id))
+
         lines = self.env["route.plan.line"].search(domain, order="sequence asc, id asc")
         return lines.sorted(
             key=lambda line: (
@@ -240,16 +254,39 @@ class RoutePlan(models.Model):
             )
         )
 
-    def _get_or_create_plan_for_date(self, target_date):
+    def _ensure_no_unresolved_previous_pending(self, line):
+        self.ensure_one()
+        previous_pending = self._get_previous_pending_lines(outlet=line.outlet_id)[:1]
+        if not previous_pending:
+            return
+
+        source_line = previous_pending[0]
+        raise UserError(
+            _(
+                "There is an older pending visit for outlet '%(outlet)s' in route plan '%(plan)s' dated %(date)s. "
+                "Please review pending visits first, then decide Carry Forward, Reschedule, or Cancel before starting a new visit for this outlet."
+            )
+            % {
+                "outlet": source_line.outlet_id.display_name or _("Unknown Outlet"),
+                "plan": source_line.plan_id.display_name or source_line.plan_id.name,
+                "date": fields.Date.to_string(source_line.plan_id.date) if source_line.plan_id.date else _("Unknown Date"),
+            }
+        )
+
+    def _get_or_create_plan_for_date(self, target_date, area=None):
         self.ensure_one()
         if not target_date:
             raise UserError(_("Please select a target date."))
+
+        area = area or self.area_id or self.line_ids[:1].area_id
+        if not area:
+            raise UserError(_("Please set the route area first."))
 
         plan = self.search([
             ("date", "=", target_date),
             ("user_id", "=", self.user_id.id),
             ("vehicle_id", "=", self.vehicle_id.id),
-            ("area_id", "=", self.area_id.id),
+            ("area_id", "=", area.id),
             ("state", "!=", "cancel"),
         ], limit=1)
 
@@ -260,7 +297,7 @@ class RoutePlan(models.Model):
             "date": target_date,
             "user_id": self.user_id.id,
             "vehicle_id": self.vehicle_id.id,
-            "area_id": self.area_id.id,
+            "area_id": area.id,
             "notes": _("Auto-created from pending visit review of %s.") % (self.name,),
         })
 
@@ -349,12 +386,10 @@ class RoutePlan(models.Model):
 
     def action_open_pending_visit_review_wizard(self):
         self.ensure_one()
-        if not self.area_id:
-            raise UserError(_("Please select an area first."))
 
         pending_lines = self._get_previous_pending_lines()
         if not pending_lines:
-            raise UserError(_("There are no previous pending visits for this area."))
+            raise UserError(_("There are no previous pending visits for this route plan area."))
 
         wizard = self.env["route.plan.pending.visit.review.wizard"].create({
             "plan_id": self.id,
@@ -441,6 +476,7 @@ class RoutePlan(models.Model):
             )
 
         self._ensure_single_active_visit(current_line=line)
+        self._ensure_no_unresolved_previous_pending(line)
 
         if not line.outlet_id:
             raise UserError(_("Cannot create a visit for a route line without an outlet."))
