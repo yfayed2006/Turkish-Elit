@@ -1,0 +1,147 @@
+<odoo>
+<record id="action_report_route_salesperson_monthly_statement" model="ir.actions.report">
+<field name="name">Salesperson Monthly Statement</field>
+<field name="model">route.salesperson.shortage</field>
+<field name="report_type">qweb-pdf</field>
+<field name="report_name">route_core.report_route_salesperson_monthly_statement</field>
+<field name="report_file">route_core.report_route_salesperson_monthly_statement</field>
+<field name="print_report_name">'Salesperson Monthly Statement - %s' % (object.name or '')</field>
+<field name="binding_model_id" ref="model_route_salesperson_shortage"/>
+<field name="binding_type">report</field>
+</record>
+<template id="report_route_salesperson_monthly_statement">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+<t t-call="web.external_layout">
+<div class="page">
+<h2>Salesperson Monthly Statement</h2>
+<table class="table table-sm o_main_table" style="width:100%; margin-bottom: 16px;">
+<tbody>
+<tr>
+<td>
+<strong>Ledger</strong>
+</td>
+<td>
+<span t-field="doc.name"/>
+</td>
+<td>
+<strong>Month</strong>
+</td>
+<td>
+<span t-field="doc.month_date"/>
+</td>
+</tr>
+<tr>
+<td>
+<strong>Salesperson</strong>
+</td>
+<td>
+<span t-field="doc.salesperson_id"/>
+</td>
+<td>
+<strong>Status</strong>
+</td>
+<td>
+<span t-esc="dict(doc._fields['state'].selection).get(doc.state)"/>
+</td>
+</tr>
+<tr>
+<td>
+<strong>Total Lines</strong>
+</td>
+<td>
+<span t-field="doc.line_count"/>
+</td>
+<td>
+<strong>Total Amount</strong>
+</td>
+<td>
+<span t-field="doc.total_shortage_amount"/>
+</td>
+</tr>
+<tr>
+<td>
+<strong>Deduction Amount</strong>
+</td>
+<td>
+<span t-field="doc.deduction_amount"/>
+</td>
+<td>
+<strong>Admin Settled Amount</strong>
+</td>
+<td>
+<span t-field="doc.admin_settled_amount"/>
+</td>
+</tr>
+<tr>
+<td>
+<strong>Waived Amount</strong>
+</td>
+<td>
+<span t-field="doc.waived_amount"/>
+</td>
+<td>
+<strong>Finalized On</strong>
+</td>
+<td>
+<span t-field="doc.settled_on"/>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Shortage Lines</h3>
+<table class="table table-sm table-bordered" style="width:100%; border-collapse: collapse;">
+<thead>
+<tr>
+<th>Date</th>
+<th>Vehicle</th>
+<th>Product</th>
+<th>Lot</th>
+<th class="text-end">Qty</th>
+<th class="text-end">Amount</th>
+<th>Decision</th>
+<th>Execution</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="doc.line_ids" t-as="line">
+<td>
+<span t-field="line.shortage_date"/>
+</td>
+<td>
+<span t-field="line.vehicle_id"/>
+</td>
+<td>
+<span t-field="line.product_id"/>
+</td>
+<td>
+<span t-field="line.lot_id"/>
+</td>
+<td class="text-end">
+<span t-field="line.shortage_qty"/>
+</td>
+<td class="text-end">
+<span t-field="line.shortage_amount"/>
+</td>
+<td>
+<span t-esc="dict(line._fields['settlement_decision'].selection).get(line.settlement_decision)"/>
+</td>
+<td>
+<span t-esc="dict(line._fields['execution_status'].selection).get(line.execution_status)"/>
+</td>
+</tr>
+</tbody>
+</table>
+<div style="margin-top: 18px;">
+<strong>Notes:</strong>
+<div t-if="doc.note">
+<span t-field="doc.note"/>
+</div>
+<div t-if="not doc.note">-</div>
+</div>
+</div>
+</t>
+</t>
+</t>
+</template>
+</odoo>
