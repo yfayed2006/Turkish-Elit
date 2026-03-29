@@ -28,8 +28,19 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
         for rec in self:
             rec.outlet_ids = [(5, 0, 0)]
 
+    def _ensure_plan_editable(self):
+        self.ensure_one()
+        if self.plan_id and self.plan_id.planning_finalized:
+            raise UserError(
+                _(
+                    "You cannot add visits by area after Finalize Daily Plan. "
+                    "Please click 'Reopen Daily Plan' first."
+                )
+            )
+
     def action_select_all_outlets(self):
         self.ensure_one()
+        self._ensure_plan_editable()
 
         if not self.area_id:
             raise UserError(_("Please select an area first."))
@@ -47,6 +58,7 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
 
     def action_clear_selection(self):
         self.ensure_one()
+        self._ensure_plan_editable()
         self.outlet_ids = [(5, 0, 0)]
 
         return {
@@ -59,6 +71,7 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
 
     def action_add_selected_outlets(self):
         self.ensure_one()
+        self._ensure_plan_editable()
 
         if not self.plan_id:
             raise UserError(_("Route Plan is required."))
@@ -90,6 +103,10 @@ class RoutePlanAddAreaOutletsWizard(models.TransientModel):
                 "outlet_id": outlet.id,
             })
             next_sequence += 10
+
+        self.env["route.plan.line"].create(vals_list)
+
+        return {"type": "ir.actions.act_window_close"}
 
         self.env["route.plan.line"].create(vals_list)
 
