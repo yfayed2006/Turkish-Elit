@@ -9,25 +9,22 @@
 <field name="plan_id" readonly="1"/>
 <field name="pending_count" readonly="1"/>
 </group>
-<div class="alert alert-warning" role="alert">
-<strong>Supervisor review required:</strong>
-Choose whether each pending visit should be carried forward to the current plan, rescheduled to another date, or cancelled.
-</div>
-<field name="review_line_ids" nolabel="1">
+<div class="text-muted"> Review pending visits from previous route plans in the same area, then decide whether to carry them forward, reschedule them, or cancel them. </div>
+<field name="line_ids" nolabel="1">
 <list editable="bottom" create="0" delete="0">
-<field name="source_plan_date" readonly="1"/>
 <field name="source_plan_id" readonly="1"/>
+<field name="source_plan_date" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="outlet_id" readonly="1"/>
-<field name="visit_id" readonly="1" optional="show"/>
+<field name="current_plan_has_outlet" readonly="1" optional="show"/>
 <field name="decision"/>
-<field name="reschedule_date" readonly="decision != 'reschedule'"/>
-<field name="supervisor_note"/>
+<field name="target_date" invisible="decision != 'reschedule'"/>
+<field name="note"/>
 </list>
 </field>
 </sheet>
 <footer>
-<button name="action_confirm" type="object" string="Apply Decisions" class="btn-primary"/>
+<button name="action_apply_review" type="object" string="Apply Decisions" class="btn-primary"/>
 <button string="Discard" special="cancel" class="btn-secondary"/>
 </footer>
 </form>
