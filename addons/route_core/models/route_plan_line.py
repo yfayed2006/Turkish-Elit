@@ -192,9 +192,18 @@ class RoutePlanLine(models.Model):
             raise UserError(_("Please save the route plan first."))
 
         visit = self.visit_id
+        is_completed_line = self.state in ("visited", "skipped") or (
+            visit and visit.state in ("done", "cancel")
+        )
+
+        if is_completed_line and visit:
+            return self._get_pda_visit_action(visit)
+
+        self.plan_id._ensure_single_active_visit(current_line=self)
+
         if not visit:
             visit = self.plan_id._create_visit_for_line(self)
-        elif self.state not in ("visited", "skipped") and visit.state not in ("done", "cancel"):
+        elif visit.state not in ("done", "cancel"):
             self.write({"state": "in_progress"})
 
         return self._get_pda_visit_action(visit)
