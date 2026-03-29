@@ -121,10 +121,13 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 <field name="partner_id" readonly="1"/>
 <field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
+<field name="skip_reason" optional="show"/>
 <field name="visit_id" string="Follow-up Visit" readonly="1"/>
 <field name="note" string="Line Note"/>
 <button name="action_view_outlet_shortages" type="object" string="Shortages" icon="fa-exclamation-triangle"/>
-<button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id"/>
+<button name="action_open_skip_visit_wizard" type="object" string="Skip Visit" icon="fa-step-forward" invisible="state in ('visited', 'skipped') or visit_id.state == 'done'"/>
+<button name="action_reopen_line" type="object" string="Reopen Line" icon="fa-undo" invisible="state != 'skipped'"/>
+<button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id or state == 'skipped'"/>
 <button name="action_open_or_create_visit" type="object" string="Open Visit" icon="fa-external-link" invisible="not visit_id or state in ('visited', 'skipped') or visit_id.state in ('done', 'cancel')"/>
 <button name="action_open_or_create_visit" type="object" string="View Visit" icon="fa-eye" invisible="not visit_id or (state not in ('visited', 'skipped') and visit_id.state not in ('done', 'cancel'))"/>
 </list>
