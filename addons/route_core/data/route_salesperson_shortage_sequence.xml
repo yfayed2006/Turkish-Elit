@@ -1,8 +1,8 @@
 <odoo>
-<record id="seq_route_salesperson_shortage" model="ir.sequence">
-<field name="name">Route Salesperson Shortage</field>
-<field name="code">route.salesperson.shortage</field>
-<field name="prefix">RSL/%(year)s/%(month)s/</field>
+<record id="seq_route_salesperson_deduction" model="ir.sequence">
+<field name="name">Route Salesperson Deduction</field>
+<field name="code">route.salesperson.deduction</field>
+<field name="prefix">RSD/%(year)s/%(month)s/</field>
 <field name="padding">4</field>
 <field name="company_id" eval="False"/>
 </record>
