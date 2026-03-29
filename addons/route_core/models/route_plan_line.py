@@ -140,38 +140,6 @@ class RoutePlanLine(models.Model):
             if rec.state == "visited" or (rec.visit_id and rec.visit_id.state == "done"):
                 raise UserError(_("You cannot skip a visit line that is already completed."))
 
-    def action_apply_pending_supervisor_decision(self, decision, note=False):
-        self.ensure_one()
-        if self.state != "pending":
-            raise UserError(_("Only pending visit lines can be reviewed by the supervisor."))
-
-        reason_map = {
-            "carry_forward": "carried_forward",
-            "reschedule": "rescheduled",
-            "cancel": "cancelled_by_supervisor",
-        }
-        reason = reason_map.get(decision)
-        if not reason:
-            raise UserError(_("Unsupported supervisor decision."))
-
-        now = fields.Datetime.now()
-        if self.visit_id and self.visit_id.state not in ("done", "cancel"):
-            self.visit_id.with_context(route_visit_force_write=True).write({
-                "state": "cancel",
-                "visit_process_state": "cancel",
-                "end_datetime": now,
-                "no_sale_reason": self._build_skip_reason_text(reason, note),
-            })
-
-        self.write({
-            "state": "skipped",
-            "skip_reason": reason,
-            "skip_note": note or False,
-            "skipped_by_id": self.env.user.id,
-            "skipped_datetime": now,
-        })
-        return True
-
     @api.depends("visit_id", "visit_id.state", "state")
     def _compute_button_label(self):
         for rec in self:
@@ -345,6 +313,78 @@ class RoutePlanLine(models.Model):
             "skipped_datetime": now,
         })
         return True
+
+    def action_resolve_previous_pending(self, decision, current_plan, target_date=False, note=False):
+        self.ensure_one()
+
+        if self.state != "pending":
+            return False
+
+        if not current_plan:
+            raise UserError(_("A target route plan is required."))
+
+        now = fields.Datetime.now()
+        target_plan = False
+        auto_note = False
+        skip_reason = False
+
+        if decision == "carry_forward":
+            target_plan = current_plan
+            auto_note = _("Carried forward to plan %s.") % (target_plan.name,)
+            skip_reason = "carried_forward"
+        elif decision == "reschedule":
+            if not target_date:
+                raise UserError(_("Please select a target date for rescheduling."))
+            target_plan = current_plan._get_or_create_plan_for_date(target_date)
+            auto_note = _("Rescheduled to %s (%s).") % (
+                fields.Date.to_string(target_plan.date),
+                target_plan.name,
+            )
+            skip_reason = "rescheduled"
+        elif decision == "cancel":
+            auto_note = _("Cancelled by supervisor.")
+            skip_reason = "cancelled_by_supervisor"
+        else:
+            raise UserError(_("Unsupported pending visit decision."))
+
+        if self.visit_id and self.visit_id.state not in ("done", "cancel"):
+            self.visit_id.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+                "end_datetime": now,
+                "no_sale_reason": self._build_skip_reason_text(skip_reason, note),
+            })
+
+        if target_plan:
+            existing_line = target_plan.line_ids.filtered(
+                lambda line: line.outlet_id.id == self.outlet_id.id
+            )[:1]
+
+            if not existing_line:
+                target_plan._ensure_plan_editable(_("load pending visits into this route plan"))
+                next_sequence = max(target_plan.line_ids.mapped("sequence") or [0]) + 10
+                self.env["route.plan.line"].create({
+                    "plan_id": target_plan.id,
+                    "sequence": next_sequence,
+                    "area_id": self.area_id.id,
+                    "outlet_id": self.outlet_id.id,
+                    "note": self.note or False,
+                })
+
+        combined_note = auto_note
+        if note:
+            combined_note = (auto_note + "\n" + note) if auto_note else note
+
+        vals = {
+            "state": "skipped",
+            "visit_id": False,
+            "skip_reason": skip_reason,
+            "skip_note": combined_note or False,
+            "skipped_by_id": self.env.user.id,
+            "skipped_datetime": now,
+        }
+        self.write(vals)
+        return target_plan
 
     def action_reopen_line(self):
         self.ensure_one()
