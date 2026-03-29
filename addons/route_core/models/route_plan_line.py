@@ -9,6 +9,15 @@ class RoutePlanLine(models.Model):
     _description = "Route Plan Line"
     _order = "sequence, id"
 
+    def _skip_reason_selection(self):
+        return [
+            ("outlet_closed", "Outlet Closed"),
+            ("customer_unavailable", "Customer Not Available"),
+            ("access_problem", "Delivery/Access Problem"),
+            ("postponed_by_supervisor", "Postponed by Supervisor"),
+            ("other", "Other"),
+        ]
+
     sequence = fields.Integer(
         string="Sequence",
         default=10,
@@ -65,6 +74,28 @@ class RoutePlanLine(models.Model):
         string="Open Shortages",
         compute="_compute_shortage_count",
     )
+    skip_reason = fields.Selection(
+        selection=_skip_reason_selection,
+        string="Skip Reason",
+        readonly=True,
+        copy=False,
+    )
+    skip_note = fields.Text(
+        string="Skip Note",
+        readonly=True,
+        copy=False,
+    )
+    skipped_by_id = fields.Many2one(
+        "res.users",
+        string="Skipped By",
+        readonly=True,
+        copy=False,
+    )
+    skipped_datetime = fields.Datetime(
+        string="Skipped On",
+        readonly=True,
+        copy=False,
+    )
 
     @property
     def _plan_sync_context_key(self):
@@ -87,6 +118,24 @@ class RoutePlanLine(models.Model):
                         "Please reopen the daily plan first."
                     )
                 )
+
+    def _get_skip_reason_label(self, reason):
+        return dict(self._skip_reason_selection()).get(reason, reason or "")
+
+    def _build_skip_reason_text(self, reason, note=None):
+        label = self._get_skip_reason_label(reason)
+        if note:
+            return "%s - %s" % (label, note)
+        return label
+
+    def _ensure_can_skip(self):
+        for rec in self:
+            if not rec.plan_id:
+                raise UserError(_("Please save the route plan first."))
+            if rec.state == "skipped":
+                raise UserError(_("This route plan line is already skipped."))
+            if rec.state == "visited" or (rec.visit_id and rec.visit_id.state == "done"):
+                raise UserError(_("You cannot skip a visit line that is already completed."))
 
     @api.depends("visit_id", "visit_id.state", "state")
     def _compute_button_label(self):
@@ -223,6 +272,64 @@ class RoutePlanLine(models.Model):
         }
         return action
 
+    def action_open_skip_visit_wizard(self):
+        self.ensure_one()
+        self._ensure_can_skip()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Skip Visit"),
+            "res_model": "route.plan.skip.visit.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_line_id": self.id,
+            },
+        }
+
+    def action_skip_visit(self, reason, note=False):
+        self.ensure_one()
+        self._ensure_can_skip()
+
+        if not reason:
+            raise UserError(_("Please select a skip reason."))
+
+        now = fields.Datetime.now()
+        if self.visit_id and self.visit_id.state not in ("done", "cancel"):
+            self.visit_id.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+                "end_datetime": now,
+                "no_sale_reason": self._build_skip_reason_text(reason, note),
+            })
+
+        self.write({
+            "state": "skipped",
+            "skip_reason": reason,
+            "skip_note": note or False,
+            "skipped_by_id": self.env.user.id,
+            "skipped_datetime": now,
+        })
+        return True
+
+    def action_reopen_line(self):
+        self.ensure_one()
+
+        if self.state != "skipped":
+            raise UserError(_("Only skipped lines can be reopened."))
+
+        vals = {
+            "state": "pending",
+            "skip_reason": False,
+            "skip_note": False,
+            "skipped_by_id": False,
+            "skipped_datetime": False,
+        }
+        if self.visit_id and self.visit_id.state == "cancel":
+            vals["visit_id"] = False
+
+        self.write(vals)
+        return {"type": "ir.actions.client", "tag": "reload"}
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -245,7 +352,14 @@ class RoutePlanLine(models.Model):
         return records
 
     def write(self, vals):
-        allowed_locked_fields = {"visit_id", "state"}
+        allowed_locked_fields = {
+            "visit_id",
+            "state",
+            "skip_reason",
+            "skip_note",
+            "skipped_by_id",
+            "skipped_datetime",
+        }
         restricted_locked_fields = set(vals.keys()) - allowed_locked_fields
         if restricted_locked_fields:
             self._ensure_line_editable(_("edit planned visits"))
