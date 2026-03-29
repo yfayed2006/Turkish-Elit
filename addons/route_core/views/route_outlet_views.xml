@@ -68,8 +68,6 @@
 <field name="phone"/>
 <field name="mobile"/>
 <field name="default_commission_rate"/>
-<field name="shelf_credit_limit"/>
-<field name="remaining_shelf_capacity" readonly="1"/>
 <field name="active_stock_tracking"/>
 <field name="open_shortage_count" readonly="1"/>
 </group>
@@ -125,8 +123,6 @@
 <field name="stock_location_id" readonly="1"/>
 <field name="active_stock_tracking" readonly="1"/>
 <field name="default_commission_rate" readonly="1"/>
-<field name="shelf_credit_limit" readonly="1"/>
-<field name="remaining_shelf_capacity" readonly="1"/>
 <field name="active" readonly="1"/>
 </group>
 </group>
