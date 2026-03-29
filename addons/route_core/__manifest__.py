@@ -7,6 +7,7 @@
     "depends": ["base", "sale", "mail", "stock", "contacts"],
     "data": [
         "security/ir.model.access.csv",
+        "security/route_plan_skip_visit_security.xml",
         "data/route_visit_sequence.xml",
         "data/route_outlet_sequence.xml",
         "data/route_vehicle_sequence.xml",
