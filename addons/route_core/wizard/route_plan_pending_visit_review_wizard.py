@@ -27,14 +27,60 @@ class RoutePlanPendingVisitReviewWizard(models.TransientModel):
         for rec in self:
             rec.pending_count = len(rec.line_ids)
 
+    def _validate_grouped_decisions(self):
+        self.ensure_one()
+        grouped = {}
+        for line in self.line_ids:
+            outlet = line.outlet_id
+            if not outlet:
+                continue
+            grouped.setdefault(outlet.id, self.env["route.plan.pending.visit.review.wizard.line"])
+            grouped[outlet.id] |= line
+
+        for outlet_id, lines in grouped.items():
+            decisions = set(lines.mapped("decision"))
+            if len(decisions) > 1:
+                outlet_name = lines[:1].outlet_id.display_name or _("Unknown Outlet")
+                raise UserError(
+                    _(
+                        "Please choose one consistent decision for outlet '%s'. "
+                        "The same outlet appears more than once in previous pending visits."
+                    )
+                    % outlet_name
+                )
+
+            decision = list(decisions)[0] if decisions else False
+            if decision == "reschedule":
+                target_dates = set(lines.mapped("target_date"))
+                if len(target_dates) > 1:
+                    outlet_name = lines[:1].outlet_id.display_name or _("Unknown Outlet")
+                    raise UserError(
+                        _(
+                            "Please use one target date only for outlet '%s'."
+                        )
+                        % outlet_name
+                    )
+
+        return grouped
+
     def action_apply_review(self):
         self.ensure_one()
 
         if not self.line_ids:
             raise UserError(_("There are no pending visits to review."))
 
-        for line in self.line_ids:
-            line.action_apply_decision()
+        grouped = self._validate_grouped_decisions()
+
+        for _outlet_id, lines in grouped.items():
+            sorted_lines = lines.sorted(
+                key=lambda line: (
+                    line.source_plan_date or fields.Date.today(),
+                    line.source_line_id.sequence or 0,
+                    line.source_line_id.id or 0,
+                )
+            )
+            for idx, line in enumerate(sorted_lines):
+                line.action_apply_decision(apply_current_plan_effect=(idx == 0))
 
         return {"type": "ir.actions.client", "tag": "reload"}
 
@@ -119,12 +165,13 @@ class RoutePlanPendingVisitReviewWizardLine(models.TransientModel):
             elif rec.decision == "cancel":
                 rec.target_date = False
 
-    def action_apply_decision(self):
+    def action_apply_decision(self, apply_current_plan_effect=True):
         self.ensure_one()
         self.source_line_id.action_resolve_previous_pending(
             decision=self.decision,
             current_plan=self.wizard_id.plan_id,
             target_date=self.target_date,
             note=self.note,
+            apply_current_plan_effect=apply_current_plan_effect,
         )
         return True
