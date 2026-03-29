@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -19,9 +19,88 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    refill_credit_warning_visible = fields.Boolean(
+        string="Refill Credit Warning Visible",
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+
+    refill_credit_warning_html = fields.Html(
+        string="Refill Credit Warning",
+        compute="_compute_refill_credit_warning",
+        sanitize=False,
+        store=False,
+    )
+
     def _compute_refill_picking_count(self):
         for rec in self:
             rec.refill_picking_count = 1 if rec.refill_picking_id else 0
+
+    @api.depends(
+        "outlet_id",
+        "outlet_id.shelf_credit_limit_amount",
+        "outlet_id.stock_total_value",
+        "line_ids.supplied_qty",
+        "line_ids.unit_price",
+        "visit_process_state",
+    )
+    def _compute_refill_credit_warning(self):
+        for rec in self:
+            rec.refill_credit_warning_visible = False
+            rec.refill_credit_warning_html = False
+
+            outlet = rec.outlet_id
+            if not outlet:
+                continue
+
+            limit_amount = outlet.shelf_credit_limit_amount or 0.0
+            current_shelf_value = outlet.stock_total_value or 0.0
+            refill_value = rec._get_refill_total_value()
+            projected_shelf_value = current_shelf_value + refill_value
+            available_capacity = max(limit_amount - current_shelf_value, 0.0)
+            over_limit_by = max(projected_shelf_value - limit_amount, 0.0)
+
+            if limit_amount <= 0:
+                continue
+
+            if projected_shelf_value > limit_amount and refill_value > 0:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_html = _(
+                    "<div class='alert alert-danger mb-3' role='alert'>"
+                    "<strong>Refill warning:</strong> Outlet shelf credit limit will be exceeded."
+                    "<br/>Outlet: %(outlet)s"
+                    "<br/>Current shelf value: %(current).2f"
+                    "<br/>Refill value: %(refill).2f"
+                    "<br/>Projected shelf value: %(projected).2f"
+                    "<br/>Shelf credit limit: %(limit).2f"
+                    "<br/>Available capacity before refill: %(available).2f"
+                    "<br/>Over limit by: %(over).2f"
+                    "</div>"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "refill": refill_value,
+                    "projected": projected_shelf_value,
+                    "limit": limit_amount,
+                    "available": available_capacity,
+                    "over": over_limit_by,
+                }
+            elif current_shelf_value > limit_amount:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_html = _(
+                    "<div class='alert alert-warning mb-3' role='alert'>"
+                    "<strong>Outlet already over shelf credit limit.</strong>"
+                    "<br/>Outlet: %(outlet)s"
+                    "<br/>Current shelf value: %(current).2f"
+                    "<br/>Shelf credit limit: %(limit).2f"
+                    "<br/>Over limit by: %(over).2f"
+                    "</div>"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "limit": limit_amount,
+                    "over": max(current_shelf_value - limit_amount, 0.0),
+                }
 
     def _get_refill_transfer_lines(self):
         self.ensure_one()
