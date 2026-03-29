@@ -8,6 +8,8 @@
 <field name="barcode"/>
 <field name="name"/>
 <field name="area_id"/>
+<field name="route_city_id" optional="show"/>
+<field name="route_country_id" optional="show"/>
 <field name="partner_id"/>
 <field name="summary_alert_level" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
 <field name="current_due_amount" sum="Total Due"/>
@@ -55,6 +57,8 @@
 <field name="code" readonly="1"/>
 <field name="barcode"/>
 <field name="area_id"/>
+<field name="route_city_id" readonly="1"/>
+<field name="route_country_id" readonly="1"/>
 <field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}"/>
 <field name="active"/>
 </group>
@@ -107,6 +111,8 @@
 <group>
 <field name="partner_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
+<field name="route_city_id" readonly="1"/>
+<field name="route_country_id" readonly="1"/>
 <field name="phone" readonly="1"/>
 <field name="mobile" readonly="1"/>
 <field name="commission_rate" readonly="1"/>
@@ -358,6 +364,8 @@
 <group>
 <field name="state_id"/>
 <field name="country_id"/>
+<field name="route_city_id" readonly="1"/>
+<field name="route_country_id" readonly="1"/>
 </group>
 </group>
 <group>
