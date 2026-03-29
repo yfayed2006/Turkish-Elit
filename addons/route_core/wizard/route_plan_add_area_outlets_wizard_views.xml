@@ -10,7 +10,7 @@
 <field name="area_id"/>
 </group>
 <group string="Outlets">
-<field name="outlet_ids" domain="[('area_id', '=', area_id)]" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True, 'no_open': False}" placeholder="Select outlets from the chosen area"/>
+<field name="outlet_ids" widget="many2many_tags" domain="[('area_id', '=', area_id)]" options="{'no_create': True, 'no_create_edit': True, 'no_open': False}" placeholder="Select outlets from the chosen area"/>
 </group>
 <div class="text-muted"> Select one area first, then choose one or more outlets from that area. </div>
 </sheet>
@@ -23,4 +23,4 @@
 </form>
 </field>
 </record>
-</odo
+</odoo>
