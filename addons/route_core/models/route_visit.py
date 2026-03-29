@@ -1230,17 +1230,32 @@ class RouteVisit(models.Model):
 
     def _sync_plan_line_state(self):
         plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
+        force_pending_line = self.env.context.get("route_visit_force_pending_line")
         for line in plan_lines:
-            if line.visit_id.state == "done":
-                line.state = "visited"
-            elif line.visit_id.state == "cancel":
-                line.state = "skipped"
+            visit_state = line.visit_id.state
+            if visit_state == "done":
+                new_state = "visited"
+            elif visit_state == "cancel":
+                new_state = "skipped"
+            elif visit_state == "in_progress":
+                new_state = "in_progress"
+            elif visit_state == "draft" and line.state == "in_progress" and not force_pending_line:
+                new_state = "in_progress"
             else:
-                line.state = "pending"
+                new_state = "pending"
+
+            if line.state != new_state:
+                line.write({"state": new_state})
 
     def _get_plan_line(self):
         self.ensure_one()
         return self.env["route.plan.line"].search([("visit_id", "=", self.id)], limit=1)
+
+    def _ensure_single_active_plan_visit(self):
+        for rec in self:
+            plan_line = rec._get_plan_line()
+            if plan_line and plan_line.plan_id:
+                plan_line.plan_id._ensure_single_active_visit(current_line=plan_line)
 
     def _raise_pending_near_expiry_error(self):
         self.ensure_one()
@@ -1438,6 +1453,8 @@ class RouteVisit(models.Model):
                 raise UserError(_("Please select an outlet before starting the visit."))
             if not rec.vehicle_id:
                 raise UserError(_("Please select a vehicle before starting the visit."))
+
+            rec._ensure_single_active_plan_visit()
 
             rec.write({
                 "state": "in_progress",
@@ -1655,7 +1672,7 @@ class RouteVisit(models.Model):
 
     def action_reset_to_draft(self):
         for rec in self:
-            rec.with_context(route_visit_force_write=True).write({
+            rec.with_context(route_visit_force_write=True, route_visit_force_pending_line=True).write({
                 "state": "draft",
                 "visit_process_state": "draft",
                 "start_datetime": False,
