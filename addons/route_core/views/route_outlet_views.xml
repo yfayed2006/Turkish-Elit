@@ -7,6 +7,7 @@
 <field name="code"/>
 <field name="barcode"/>
 <field name="name"/>
+<field name="area_id" optional="hide"/>
 <field name="route_country_id" optional="show"/>
 <field name="route_city_id" optional="show"/>
 <field name="route_area_name"/>
