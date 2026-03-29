@@ -35,19 +35,19 @@ class RouteOutlet(models.Model):
         required=True,
         ondelete="restrict",
     )
-    route_city_id = fields.Many2one(
-        "route.city",
-        string="Route City",
-        related="area_id.city_id",
-        store=True,
-        readonly=True,
-    )
     route_country_id = fields.Many2one(
         "res.country",
         string="Route Country",
-        related="area_id.country_id",
-        store=True,
-        readonly=True,
+        index=True,
+    )
+    route_city_id = fields.Many2one(
+        "route.city",
+        string="Route City",
+        ondelete="restrict",
+        index=True,
+    )
+    route_area_name = fields.Char(
+        string="Route Area",
     )
 
     partner_id = fields.Many2one(
@@ -573,6 +573,72 @@ class RouteOutlet(models.Model):
         if rate >= 60.0:
             return "warning"
         return "weak"
+
+    @api.onchange("route_country_id")
+    def _onchange_route_country_id(self):
+        for rec in self:
+            if rec.route_city_id and rec.route_city_id.country_id != rec.route_country_id:
+                rec.route_city_id = False
+            rec.area_id = False
+
+    @api.onchange("route_city_id")
+    def _onchange_route_city_id(self):
+        for rec in self:
+            if rec.route_city_id:
+                rec.route_country_id = rec.route_city_id.country_id
+            rec.area_id = False
+
+    @api.onchange("area_id")
+    def _onchange_area_id(self):
+        for rec in self:
+            if rec.area_id:
+                rec.route_city_id = rec.area_id.city_id
+                rec.route_country_id = rec.area_id.country_id
+                rec.route_area_name = rec.area_id.name
+
+    def _prepare_route_area_vals(self, vals):
+        country_id = vals.get("route_country_id")
+        city_id = vals.get("route_city_id")
+        area_name = vals.get("route_area_name")
+
+        if country_id is None:
+            country_id = self.route_country_id.id if self else False
+        if city_id is None:
+            city_id = self.route_city_id.id if self else False
+        if area_name is None:
+            area_name = self.route_area_name if self else False
+
+        area_name = (area_name or "").strip()
+
+        if not country_id:
+            raise ValidationError(_("Please select Route Country first."))
+        if not city_id:
+            raise ValidationError(_("Please select Route City first."))
+        if not area_name:
+            raise ValidationError(_("Please enter Route Area name."))
+
+        city = self.env["route.city"].browse(city_id)
+        if not city.exists():
+            raise ValidationError(_("Selected Route City does not exist."))
+        if city.country_id.id != country_id:
+            raise ValidationError(_("Selected Route City must belong to the selected Route Country."))
+
+        area = self.env["route.area"].search(
+            [
+                ("name", "=", area_name),
+                ("city_id", "=", city_id),
+            ],
+            limit=1,
+        )
+        if not area:
+            area = self.env["route.area"].create(
+                {
+                    "name": area_name,
+                    "city_id": city_id,
+                    "active": True,
+                }
+            )
+        return area
 
     @api.depends(
         "visit_ids",
@@ -1350,6 +1416,21 @@ class RouteOutlet(models.Model):
                 vals["commission_rate"] = 20.0
             if not vals.get("company_id"):
                 vals["company_id"] = self.env.company.id
+
+            if not vals.get("area_id"):
+                outlet = self.env["route.outlet"]
+                area = outlet._prepare_route_area_vals(vals)
+                vals["area_id"] = area.id
+                vals["route_country_id"] = area.country_id.id
+                vals["route_city_id"] = area.city_id.id
+                vals["route_area_name"] = area.name
+            elif vals.get("area_id") and not vals.get("route_area_name"):
+                area = self.env["route.area"].browse(vals["area_id"])
+                if area.exists():
+                    vals.setdefault("route_country_id", area.country_id.id)
+                    vals.setdefault("route_city_id", area.city_id.id)
+                    vals["route_area_name"] = area.name
+
         return super().create(vals_list)
 
     def write(self, vals):
@@ -1357,6 +1438,29 @@ class RouteOutlet(models.Model):
             missing_company = any(not record.company_id for record in self)
             if missing_company:
                 vals = dict(vals, company_id=self.env.company.id)
+
+        geo_keys = {"route_country_id", "route_city_id", "route_area_name"}
+        if geo_keys.intersection(vals.keys()) and not vals.get("area_id"):
+            for record in self:
+                area = record._prepare_route_area_vals(vals)
+                item_vals = dict(vals)
+                item_vals["area_id"] = area.id
+                item_vals["route_country_id"] = area.country_id.id
+                item_vals["route_city_id"] = area.city_id.id
+                item_vals["route_area_name"] = area.name
+                super(RouteOutlet, record).write(item_vals)
+            return True
+
+        if vals.get("area_id") and "route_area_name" not in vals:
+            area = self.env["route.area"].browse(vals["area_id"])
+            if area.exists():
+                vals = dict(
+                    vals,
+                    route_country_id=area.country_id.id,
+                    route_city_id=area.city_id.id,
+                    route_area_name=area.name,
+                )
+
         return super().write(vals)
 
     def action_recompute_summary(self):
