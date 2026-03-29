@@ -35,6 +35,20 @@ class RouteOutlet(models.Model):
         required=True,
         ondelete="restrict",
     )
+    route_city_id = fields.Many2one(
+        "route.city",
+        string="Route City",
+        related="area_id.city_id",
+        store=True,
+        readonly=True,
+    )
+    route_country_id = fields.Many2one(
+        "res.country",
+        string="Route Country",
+        related="area_id.country_id",
+        store=True,
+        readonly=True,
+    )
 
     partner_id = fields.Many2one(
         "res.partner",
@@ -912,8 +926,6 @@ class RouteOutlet(models.Model):
             record.next_planned_visit_date = next_line.plan_id.date if next_line else False
             record.open_plan_count = len(pending_lines.mapped("plan_id"))
 
-
-
     @api.depends(
         "stock_balance_ids",
         "stock_balance_ids.product_id",
@@ -1457,7 +1469,6 @@ class RouteOutlet(models.Model):
             default_outlet_id=self.id,
         )
         return action
-
 
     def _get_last_3_months_window(self):
         self.ensure_one()
