@@ -28,3 +28,4 @@ access_route_vehicle_closing_line_user,access.route.vehicle.closing.line.user,mo
 access_route_vehicle_closing_scan_wizard_user,access.route.vehicle.closing.scan.wizard.user,model_route_vehicle_closing_scan_wizard,base.group_user,1,1,1,1
 access_route_salesperson_shortage_user,access.route.salesperson.shortage.user,model_route_salesperson_shortage,base.group_user,1,1,1,1
 access_route_salesperson_shortage_line_user,access.route.salesperson.shortage.line.user,model_route_salesperson_shortage_line,base.group_user,1,1,1,1
+access_route_salesperson_deduction_user,access.route.salesperson.deduction.user,model_route_salesperson_deduction,base.group_user,1,1,1,1
