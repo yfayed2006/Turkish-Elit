@@ -1,116 +1,101 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
-    <record id="view_route_area_tree" model="ir.ui.view">
-        <field name="name">route.area.tree</field>
-        <field name="model">route.area</field>
-        <field name="arch" type="xml">
-            <list string="Route Areas">
-                <field name="name"/>
-                <field name="code"/>
-                <field name="visit_count"/>
-                <field name="outlet_count"/>
-                <field name="active"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_route_area_form" model="ir.ui.view">
-        <field name="name">route.area.form</field>
-        <field name="model">route.area</field>
-        <field name="arch" type="xml">
-            <form string="Route Area">
-                <header>
-                    <button
-                        name="action_save_and_back"
-                        string="Save and Back"
-                        type="object"
-                        class="btn-primary"
-                    />
-                </header>
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button
-                            name="action_view_visits"
-                            type="object"
-                            class="oe_stat_button"
-                            icon="fa-map-marker"
-                        >
-                            <field name="visit_count" string="Visits" widget="statinfo"/>
-                        </button>
-
-                        <button
-                            name="action_view_outlets"
-                            type="object"
-                            class="oe_stat_button"
-                            icon="fa-building"
-                        >
-                            <field name="outlet_count" string="Outlets" widget="statinfo"/>
-                        </button>
-                    </div>
-
-                    <group>
-                        <group>
-                            <field name="name"/>
-                            <field name="code"/>
-                            <field name="active"/>
-                        </group>
-                        <group>
-                            <field name="notes"/>
-                        </group>
-                    </group>
-
-                    <notebook>
-                        <page string="Outlets">
-                            <field name="outlet_ids" context="{'default_area_id': id}">
-                                <list editable="bottom">
-                                    <field name="code" readonly="1"/>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="phone"/>
-                                    <field name="mobile"/>
-                                    <field name="active"/>
-                                </list>
-                            </field>
-                        </page>
-
-                        <page string="Visits">
-                            <field name="visit_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="state"/>
-                                    <field name="start_datetime"/>
-                                    <field name="end_datetime"/>
-                                    <field name="sale_order_id"/>
-                                </list>
-                            </field>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_route_area" model="ir.actions.act_window">
-        <field name="name">Areas</field>
-        <field name="res_model">route.area</field>
-        <field name="view_mode">list,form</field>
-    </record>
-
-    <menuitem
-        id="menu_route_configuration"
-        name="Configuration"
-        parent="menu_route_visit_root"
-        sequence="50"
-    />
-
-    <menuitem
-        id="menu_route_area"
-        name="Areas"
-        parent="menu_route_configuration"
-        action="action_route_area"
-        sequence="10"
-    />
-
+<record id="view_route_area_tree" model="ir.ui.view">
+<field name="name">route.area.tree</field>
+<field name="model">route.area</field>
+<field name="arch" type="xml">
+<list string="Route Areas">
+<field name="name"/>
+<field name="city_id" optional="show"/>
+<field name="country_id" optional="show"/>
+<field name="code"/>
+<field name="visit_count"/>
+<field name="outlet_count"/>
+<field name="active"/>
+</list>
+</field>
+</record>
+<record id="view_route_area_form" model="ir.ui.view">
+<field name="name">route.area.form</field>
+<field name="model">route.area</field>
+<field name="arch" type="xml">
+<form string="Route Area">
+<header>
+<button name="action_save_and_back" string="Save and Back" type="object" class="btn-primary"/>
+</header>
+<sheet>
+<div class="oe_button_box" name="button_box">
+<button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="visit_count" string="Visits" widget="statinfo"/>
+</button>
+<button name="action_view_outlets" type="object" class="oe_stat_button" icon="fa-building">
+<field name="outlet_count" string="Outlets" widget="statinfo"/>
+</button>
+</div>
+<group>
+<group>
+<field name="name"/>
+<field name="city_id" options="{'no_create_edit': False}"/>
+<field name="country_id" readonly="1"/>
+<field name="code"/>
+<field name="active"/>
+</group>
+<group>
+<field name="notes"/>
+</group>
+</group>
+<notebook>
+<page string="Outlets">
+<field name="outlet_ids" context="{'default_area_id': id}">
+<list editable="bottom">
+<field name="code" readonly="1"/>
+<field name="name"/>
+<field name="partner_id"/>
+<field name="phone"/>
+<field name="mobile"/>
+<field name="active"/>
+</list>
+</field>
+</page>
+<page string="Visits">
+<field name="visit_ids" readonly="1">
+<list>
+<field name="name"/>
+<field name="partner_id"/>
+<field name="state"/>
+<field name="start_datetime"/>
+<field name="end_datetime"/>
+<field name="sale_order_id"/>
+</list>
+</field>
+</page>
+</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_area_search" model="ir.ui.view">
+<field name="name">route.area.search</field>
+<field name="model">route.area</field>
+<field name="arch" type="xml">
+<search string="Search Areas">
+<field name="name"/>
+<field name="code"/>
+<field name="city_id"/>
+<field name="country_id"/>
+<filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="filter_inactive" string="Archived" domain="[('active', '=', False)]"/>
+<separator/>
+<filter name="group_by_country" string="Country" context="{'group_by': 'country_id'}"/>
+<filter name="group_by_city" string="City" context="{'group_by': 'city_id'}"/>
+</search>
+</field>
+</record>
+<record id="action_route_area" model="ir.actions.act_window">
+<field name="name">Areas</field>
+<field name="res_model">route.area</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_area_search"/>
+</record>
+<menuitem id="menu_route_configuration" name="Configuration" parent="menu_route_visit_root" sequence="50"/>
+<menuitem id="menu_route_area" name="Areas" parent="menu_route_configuration" action="action_route_area" sequence="10"/>
 </odoo>
