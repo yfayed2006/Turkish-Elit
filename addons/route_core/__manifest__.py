@@ -40,6 +40,7 @@
         "views/route_visit_document_links_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
+        "wizard/route_plan_skip_visit_wizard_views.xml",
         "wizard/route_visit_scan_wizard_views.xml",
         "wizard/route_visit_return_scan_wizard_views.xml",
         "wizard/route_visit_collect_payment_wizard_views.xml",
