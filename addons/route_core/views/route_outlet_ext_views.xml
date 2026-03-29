@@ -5,7 +5,7 @@
 <field name="inherit_id" ref="route_core.view_route_outlet_form"/>
 <field name="arch" type="xml">
 <xpath expr="//sheet/group[1]/group[2]/field[@name='active_stock_tracking']" position="after">
-<field name="stock_location_id"/>
+<field name="stock_location_id" domain="[('usage', '=', 'internal')]" context="{ 'default_name': name, 'default_usage': 'internal', 'default_company_id': company_id, 'default_active': True }" options="{ 'no_create': False, 'no_create_edit': False, 'no_open': False }"/>
 </xpath>
 <xpath expr="//page[@string='Summary']/group[@string='Financial Summary']" position="after">
 <group string="Monthly Sales Trend" col="4">
