@@ -252,6 +252,7 @@ class RoutePlanLine(models.Model):
             return self._get_pda_visit_action(visit)
 
         self.plan_id._ensure_single_active_visit(current_line=self)
+        self.plan_id._ensure_no_unresolved_previous_pending(self)
 
         if not visit:
             visit = self.plan_id._create_visit_for_line(self)
@@ -335,7 +336,7 @@ class RoutePlanLine(models.Model):
         elif decision == "reschedule":
             if not target_date:
                 raise UserError(_("Please select a target date for rescheduling."))
-            target_plan = current_plan._get_or_create_plan_for_date(target_date)
+            target_plan = current_plan._get_or_create_plan_for_date(target_date, area=self.area_id)
             auto_note = _("Rescheduled to %s (%s).") % (
                 fields.Date.to_string(target_plan.date),
                 target_plan.name,
