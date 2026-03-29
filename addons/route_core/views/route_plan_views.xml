@@ -14,6 +14,7 @@
 <field name="visited_count"/>
 <field name="open_shortage_candidate_count" string="Open Shortages"/>
 <field name="shortage_count" string="Planned Shortages"/>
+<field name="pending_review_count" string="Old Pending" optional="show"/>
 <field name="planning_finalized"/>
 <field name="loading_proposal_state" widget="badge" optional="show"/>
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
@@ -27,6 +28,7 @@
 <form string="Route Plan">
 <header>
 <button name="action_open_pda_screen" type="object" string="PDA Screen" class="btn-primary"/>
+<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="pending_review_count == 0 or planning_finalized or state == 'cancel'"/>
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
@@ -36,6 +38,12 @@
 <button name="action_open_vehicle_closing" type="object" string="Close Vehicle Day" class="btn-secondary" invisible="not planning_finalized or not vehicle_id or state == 'cancel'"/>
 </header>
 <sheet>
+<field name="pending_review_count" invisible="1"/>
+<field name="pending_review_summary" invisible="1"/>
+<div class="alert alert-info" role="alert" invisible="pending_review_count == 0 or planning_finalized">
+<strong>Pending visits from previous days:</strong>
+There are old pending visits in this area. Review them before finalizing today's plan.
+</div>
 <div class="alert alert-warning" role="alert" invisible="not planning_finalized">
 <strong>Planning Locked:</strong>
 This route plan has been finalized. You cannot edit the plan, add visits, remove visits, or add open shortages until you click
@@ -48,6 +56,9 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 </button>
 <button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
 <field name="shortage_count" string="Shortages" widget="statinfo"/>
+</button>
+<button name="action_open_pending_visit_review_wizard" type="object" class="oe_stat_button" icon="fa-history" invisible="pending_review_count == 0 or planning_finalized">
+<field name="pending_review_count" string="Old Pending" widget="statinfo"/>
 </button>
 <button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_proposal_count == 0">
 <field name="loading_proposal_count" string="Loading Proposal" widget="statinfo"/>
@@ -74,6 +85,7 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 <field name="area_id" readonly="planning_finalized"/>
 <field name="area_summary" readonly="1"/>
 <field name="outlet_summary" readonly="1"/>
+<field name="pending_review_summary" readonly="1" invisible="pending_review_count == 0"/>
 </group>
 </group>
 <separator string="Planning Readiness"/>
@@ -81,6 +93,9 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 <group string="Daily Planning">
 <field name="planning_finalized" readonly="1"/>
 <field name="planning_finalized_datetime" readonly="1" invisible="not planning_finalized_datetime"/>
+</group>
+<group string="Old Pending Visits">
+<field name="pending_review_count" readonly="1"/>
 </group>
 <group string="Loading Proposal">
 <field name="loading_proposal_count" readonly="1"/>
@@ -111,6 +126,7 @@ This route plan has been finalized. You cannot edit the plan, add visits, remove
 <page string="Planned Visits">
 <group>
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized"/>
+<button name="action_open_pending_visit_review_wizard" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="pending_review_count == 0 or planning_finalized"/>
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" icon="fa-exclamation-triangle" invisible="planning_finalized"/>
 </group>
 <field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
