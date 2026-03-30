@@ -25,6 +25,8 @@ class RoutePdaHome(models.TransientModel):
     outlet_balance_count = fields.Integer(string="Outlet Stock", compute="_compute_dashboard")
     payment_count = fields.Integer(string="Payments Today", compute="_compute_dashboard")
     product_count = fields.Integer(string="Products", compute="_compute_dashboard")
+    vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
+    warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
 
     current_visit_name = fields.Char(string="Current Visit", compute="_compute_dashboard")
     current_visit_outlet_name = fields.Char(string="Current Outlet", compute="_compute_dashboard")
@@ -68,6 +70,18 @@ class RoutePdaHome(models.TransientModel):
     def action_back_home(self):
         return self._open_self_view("route_core.view_route_pda_home_form", "PDA Home")
 
+    def action_open_snapshot_center_screen(self):
+        return self._open_self_view("route_core.view_route_pda_snapshot_center_form", "Snapshot Center")
+
+    def action_open_review_center_screen(self):
+        return self._open_self_view("route_core.view_route_pda_review_center_form", "Alerts and Review")
+
+    def action_open_product_center_screen(self):
+        return self._open_self_view("route_core.view_route_pda_product_center_form", "Product Center")
+
+    def action_open_outlet_center_screen(self):
+        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Outlet Center")
+
     def action_open_today_overview_screen(self):
         return self._open_self_view("route_core.view_route_pda_today_overview_form", "Today Overview")
 
@@ -101,6 +115,42 @@ class RoutePdaHome(models.TransientModel):
         action["context"] = base_context
         return action
 
+    def _get_current_vehicle(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        current_visit = self.env["route.visit"].search([
+            ("user_id", "=", self.env.user.id),
+            ("state", "=", "in_progress"),
+        ], order="start_datetime desc, id desc", limit=1)
+        if current_visit and current_visit.vehicle_id:
+            return current_visit.vehicle_id
+        plan = self.env["route.plan"].search([
+            ("user_id", "=", self.env.user.id),
+            ("date", "=", today),
+            ("vehicle_id", "!=", False),
+        ], order="id desc", limit=1)
+        return plan.vehicle_id
+
+    def _get_main_warehouse_location(self):
+        self.ensure_one()
+        warehouse = self.env["stock.warehouse"].search([("company_id", "=", self.env.company.id)], order="id", limit=1)
+        return warehouse.lot_stock_id if warehouse else False
+
+    def _open_quants_by_location(self, location, title):
+        action = self.env.ref("stock.quants_action").sudo().read()[0]
+        action["name"] = title
+        if location:
+            action["domain"] = [("location_id", "child_of", location.id), ("quantity", ">", 0)]
+        else:
+            action["domain"] = [("id", "=", 0)]
+        action["views"] = [
+            (self.env.ref("route_core.view_route_vehicle_stock_snapshot_list").id, "list"),
+            (False, "form"),
+        ]
+        action["search_view_id"] = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search").id
+        action["context"] = {"search_default_filter_positive_qty": 1, "create": 0, "delete": 0}
+        return action
+
     @api.depends("user_id")
     def _compute_dashboard(self):
         Visit = self.env["route.visit"]
@@ -112,6 +162,7 @@ class RoutePdaHome(models.TransientModel):
         OutletBalance = self.env["outlet.stock.balance"]
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
+        Quant = self.env["stock.quant"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -152,8 +203,11 @@ class RoutePdaHome(models.TransientModel):
                 ("state", "=", "confirmed"),
             ])
 
+            vehicle = rec._get_current_vehicle()
+            warehouse_loc = rec._get_main_warehouse_location()
+
             rec.user_display_name = user.display_name or "-"
-            rec.today_display_label = fields.Date.to_string(today) if today else "-"
+            rec.today_display_label = today.strftime("%b %d") if today else "-"
 
             rec.today_plan_count = len(today_plans)
             rec.today_visit_count = len(today_visits)
@@ -165,6 +219,8 @@ class RoutePdaHome(models.TransientModel):
             rec.outlet_balance_count = OutletBalance.search_count([])
             rec.payment_count = len(today_payments)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
+            rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
+            rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
 
             rec.current_visit_name = current_visit.display_name if current_visit else "No active visit"
             rec.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit and current_visit.outlet_id else "-"
@@ -274,4 +330,14 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_products(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_route_pda_products", name="Products")
+        return self._prepare_action("route_core.action_route_pda_products", name="All Products")
+
+    def action_open_vehicle_products(self):
+        self.ensure_one()
+        vehicle = self._get_current_vehicle()
+        location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        return self._open_quants_by_location(location, "Vehicle Products")
+
+    def action_open_main_warehouse_products(self):
+        self.ensure_one()
+        return self._open_quants_by_location(self._get_main_warehouse_location(), "Main Warehouse Products")
