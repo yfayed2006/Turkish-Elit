@@ -1,0 +1,245 @@
+.route_pda_home_sheet {
+    max-width: 1180px;
+}
+
+.route_pda_home_header {
+    margin-bottom: 16px;
+}
+
+.route_pda_home_title {
+    font-size: 2.1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.route_pda_home_subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2e7d8a;
+    flex-wrap: wrap;
+}
+
+.route_pda_home_subtitle .o_field_widget {
+    display: inline-flex;
+}
+
+.route_pda_home_subtitle .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.route_pda_home_sep {
+    color: #111827;
+}
+
+.route_pda_section {
+    margin-top: 18px;
+}
+
+.route_pda_section_title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    text-transform: uppercase;
+}
+
+.route_pda_apps_grid,
+.route_pda_metric_grid,
+.route_pda_card_grid {
+    display: grid;
+    gap: 12px;
+}
+
+.route_pda_apps_grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.route_pda_metric_grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.route_pda_card_grid_3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.route_pda_card_grid_2,
+.route_pda_finance_grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.route_pda_app_btn,
+.route_pda_metric_btn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 112px;
+    border-radius: 14px !important;
+    border: 1px solid #e5e7eb !important;
+    background: #f8fafc !important;
+    color: #1f2937 !important;
+    box-shadow: none !important;
+    gap: 8px;
+    padding: 14px 10px !important;
+    text-align: center;
+}
+
+.route_pda_app_btn:hover,
+.route_pda_metric_btn:hover {
+    background: #eef2f7 !important;
+}
+
+.route_pda_app_btn_primary {
+    background: #7a536f !important;
+    color: #ffffff !important;
+    border-color: #7a536f !important;
+}
+
+.route_pda_app_btn_primary:hover {
+    background: #6a465f !important;
+}
+
+.route_pda_app_icon {
+    font-size: 1.55rem;
+    line-height: 1;
+}
+
+.route_pda_app_label {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+.route_pda_metric_value,
+.route_pda_metric_value .o_field_widget,
+.route_pda_info_value,
+.route_pda_info_value .o_field_widget {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.route_pda_metric_value .o_input,
+.route_pda_info_value .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    text-align: center;
+}
+
+.route_pda_metric_value .o_input {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+.route_pda_metric_label {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-align: center;
+}
+
+.route_pda_info_card {
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.route_pda_info_card_emphasis {
+    background: #faf5ff;
+    border-color: #ddd6fe;
+}
+
+.route_pda_info_label {
+    font-size: 0.92rem;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.route_pda_info_value .o_input {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #111827;
+    text-align: left;
+}
+
+.route_pda_info_value {
+    justify-content: flex-start;
+}
+
+.route_pda_money_value .o_input {
+    font-size: 1.35rem;
+}
+
+@media (max-width: 992px) {
+    .route_pda_apps_grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .route_pda_metric_grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .route_pda_card_grid_3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .route_pda_home_sheet {
+        max-width: 100%;
+    }
+
+    .route_pda_home_title {
+        font-size: 2rem;
+    }
+
+    .route_pda_apps_grid,
+    .route_pda_metric_grid,
+    .route_pda_card_grid_3,
+    .route_pda_card_grid_2,
+    .route_pda_finance_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .route_pda_app_btn,
+    .route_pda_metric_btn {
+        min-height: 104px;
+        padding: 12px 8px !important;
+    }
+
+    .route_pda_app_label {
+        font-size: 0.95rem;
+    }
+
+    .route_pda_info_card {
+        min-height: 88px;
+        padding: 12px 14px;
+    }
+
+    .route_pda_info_value .o_input,
+    .route_pda_money_value .o_input {
+        font-size: 1.2rem;
+    }
+}
