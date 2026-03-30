@@ -9,9 +9,11 @@ class RoutePdaHome(models.TransientModel):
 
     name = fields.Char(default="PDA Home", readonly=True)
     user_id = fields.Many2one("res.users", string="Salesperson", default=lambda self: self.env.user, readonly=True)
+    user_display_name = fields.Char(string="Salesperson Name", compute="_compute_dashboard")
     company_id = fields.Many2one("res.company", string="Company", default=lambda self: self.env.company, readonly=True)
     currency_id = fields.Many2one("res.currency", related="company_id.currency_id", readonly=True)
     today_date = fields.Date(string="Today", default=fields.Date.context_today, readonly=True)
+    today_display_label = fields.Char(string="Today Label", compute="_compute_dashboard")
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
@@ -22,6 +24,7 @@ class RoutePdaHome(models.TransientModel):
     outlet_count = fields.Integer(string="Outlets", compute="_compute_dashboard")
     outlet_balance_count = fields.Integer(string="Outlet Stock", compute="_compute_dashboard")
     payment_count = fields.Integer(string="Payments Today", compute="_compute_dashboard")
+    product_count = fields.Integer(string="Products", compute="_compute_dashboard")
 
     current_visit_name = fields.Char(string="Current Visit", compute="_compute_dashboard")
     current_visit_outlet_name = fields.Char(string="Current Outlet", compute="_compute_dashboard")
@@ -47,6 +50,35 @@ class RoutePdaHome(models.TransientModel):
             "target": "current",
             "context": {"create": 0, "edit": 0, "delete": 0},
         }
+
+    def _open_self_view(self, view_xmlid, title):
+        self.ensure_one()
+        view = self.env.ref(view_xmlid)
+        return {
+            "type": "ir.actions.act_window",
+            "name": title,
+            "res_model": "route.pda.home",
+            "res_id": self.id,
+            "view_mode": "form",
+            "views": [(view.id, "form")],
+            "target": "current",
+            "context": {"create": 0, "edit": 0, "delete": 0},
+        }
+
+    def action_back_home(self):
+        return self._open_self_view("route_core.view_route_pda_home_form", "PDA Home")
+
+    def action_open_today_overview_screen(self):
+        return self._open_self_view("route_core.view_route_pda_today_overview_form", "Today Overview")
+
+    def action_open_current_visit_snapshot_screen(self):
+        return self._open_self_view("route_core.view_route_pda_current_visit_snapshot_form", "Current Visit Snapshot")
+
+    def action_open_collections_snapshot_screen(self):
+        return self._open_self_view("route_core.view_route_pda_collections_snapshot_form", "Collections Snapshot")
+
+    def action_open_reference_counts_screen(self):
+        return self._open_self_view("route_core.view_route_pda_reference_counts_form", "Reference Counts")
 
     def _today_bounds(self):
         today = fields.Date.context_today(self)
@@ -79,6 +111,7 @@ class RoutePdaHome(models.TransientModel):
         Outlet = self.env["route.outlet"]
         OutletBalance = self.env["outlet.stock.balance"]
         Payment = self.env["route.visit.payment"]
+        Product = self.env["product.template"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -119,6 +152,9 @@ class RoutePdaHome(models.TransientModel):
                 ("state", "=", "confirmed"),
             ])
 
+            rec.user_display_name = user.display_name or "-"
+            rec.today_display_label = fields.Date.to_string(today) if today else "-"
+
             rec.today_plan_count = len(today_plans)
             rec.today_visit_count = len(today_visits)
             rec.current_visit_count = 1 if current_visit else 0
@@ -128,6 +164,7 @@ class RoutePdaHome(models.TransientModel):
             rec.outlet_count = Outlet.search_count([])
             rec.outlet_balance_count = OutletBalance.search_count([])
             rec.payment_count = len(today_payments)
+            rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
 
             rec.current_visit_name = current_visit.display_name if current_visit else "No active visit"
             rec.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit and current_visit.outlet_id else "-"
@@ -234,3 +271,7 @@ class RoutePdaHome(models.TransientModel):
             name="Visit Payments",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
+
+    def action_open_products(self):
+        self.ensure_one()
+        return self._prepare_action("route_core.action_route_pda_products", name="Products")
