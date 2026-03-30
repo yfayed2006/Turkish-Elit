@@ -4,65 +4,184 @@
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
 <form string="PDA Home" create="0" edit="0" delete="0">
-<sheet>
-<div class="oe_title">
-<h1>PDA Home</h1>
-<h2>
-<field name="user_id" readonly="1"/>
-<span> - </span>
-<field name="today_date" readonly="1"/>
-</h2>
+<sheet class="route_pda_home_sheet">
+<div class="route_pda_home_header">
+<div class="route_pda_home_title_block">
+<h1 class="route_pda_home_title">PDA Home</h1>
+<div class="route_pda_home_subtitle">
+<field name="user_id" readonly="1" class="oe_inline" options="{'no_open': True, 'no_create': True}"/>
+<span class="route_pda_home_sep">-</span>
+<field name="today_date" readonly="1" class="oe_inline"/>
 </div>
-<div class="oe_button_box" name="button_box">
-<button type="object" name="action_open_today_plans" class="oe_stat_button" icon="fa-calendar">
-<field name="today_plan_count" widget="statinfo" string="Today's Plans"/>
+</div>
+</div>
+<div class="route_pda_section route_pda_apps_section">
+<div class="route_pda_section_title">Quick Access</div>
+<div class="route_pda_apps_grid">
+<button type="object" name="action_open_my_pda_visits" class="btn route_pda_app_btn route_pda_app_btn_primary">
+<i class="fa fa-map-marker route_pda_app_icon"/>
+<span class="route_pda_app_label">PDA Visits</span>
 </button>
-<button type="object" name="action_open_my_pda_visits" class="oe_stat_button" icon="fa-map-marker">
-<field name="today_visit_count" widget="statinfo" string="Today's Visits"/>
+<button type="object" name="action_open_current_visit" class="btn route_pda_app_btn route_pda_app_btn_primary">
+<i class="fa fa-play-circle route_pda_app_icon"/>
+<span class="route_pda_app_label">Current Visit</span>
 </button>
-<button type="object" name="action_open_current_visit" class="oe_stat_button" icon="fa-play-circle">
-<field name="current_visit_count" widget="statinfo" string="Current Visit"/>
+<button type="object" name="action_open_today_plans" class="btn route_pda_app_btn">
+<i class="fa fa-calendar route_pda_app_icon"/>
+<span class="route_pda_app_label">Today's Plans</span>
 </button>
-<button type="object" name="action_open_my_vehicle_closing" class="oe_stat_button" icon="fa-truck">
-<field name="vehicle_closing_count" widget="statinfo" string="Vehicle Closing"/>
+<button type="object" name="action_open_payments" class="btn route_pda_app_btn">
+<i class="fa fa-credit-card route_pda_app_icon"/>
+<span class="route_pda_app_label">Payments</span>
 </button>
-<button type="object" name="action_open_my_shortages" class="oe_stat_button" icon="fa-exclamation-triangle">
-<field name="shortage_count" widget="statinfo" string="Shortages"/>
+<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_app_btn">
+<i class="fa fa-truck route_pda_app_icon"/>
+<span class="route_pda_app_label">Vehicle Closing</span>
 </button>
-<button type="object" name="action_open_payments" class="oe_stat_button" icon="fa-money">
-<field name="payment_count" widget="statinfo" string="Payments Today"/>
+<button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn">
+<i class="fa fa-exclamation-triangle route_pda_app_icon"/>
+<span class="route_pda_app_label">Shortages</span>
+</button>
+<button type="object" name="action_open_my_salesperson_shortages" class="btn route_pda_app_btn">
+<i class="fa fa-warning route_pda_app_icon"/>
+<span class="route_pda_app_label">Salesperson Shortages</span>
+</button>
+<button type="object" name="action_open_my_history" class="btn route_pda_app_btn">
+<i class="fa fa-history route_pda_app_icon"/>
+<span class="route_pda_app_label">Visit History</span>
+</button>
+<button type="object" name="action_open_outlets" class="btn route_pda_app_btn">
+<i class="fa fa-building route_pda_app_icon"/>
+<span class="route_pda_app_label">Outlets</span>
+</button>
+<button type="object" name="action_open_outlet_balances" class="btn route_pda_app_btn">
+<i class="fa fa-cubes route_pda_app_icon"/>
+<span class="route_pda_app_label">Outlet Stock</span>
 </button>
 </div>
-<group string="Current Visit Snapshot" col="3">
-<field name="current_visit_name" readonly="1"/>
-<field name="current_visit_outlet_name" readonly="1"/>
-<field name="current_vehicle_name" readonly="1"/>
-</group>
-<group string="Collections Snapshot" col="5">
-<field name="cash_today_amount" widget="monetary" readonly="1"/>
-<field name="bank_today_amount" widget="monetary" readonly="1"/>
-<field name="pos_today_amount" widget="monetary" readonly="1"/>
-<field name="open_promise_amount" widget="monetary" readonly="1"/>
-<field name="remaining_due_amount" widget="monetary" readonly="1"/>
-</group>
-<separator string="Quick Access"/>
-<group col="2">
-<button type="object" name="action_open_my_pda_visits" string="Open PDA Visits" icon="fa-map-marker" class="oe_highlight"/>
-<button type="object" name="action_open_current_visit" string="Open Current Visit" icon="fa-play-circle" class="oe_highlight"/>
-<button type="object" name="action_open_my_history" string="Visit History" icon="fa-history"/>
-<button type="object" name="action_open_my_vehicle_closing" string="Vehicle Closing" icon="fa-truck"/>
-<button type="object" name="action_open_my_shortages" string="Shortages" icon="fa-exclamation-triangle"/>
-<button type="object" name="action_open_my_salesperson_shortages" string="Salesperson Shortages" icon="fa-warning"/>
-<button type="object" name="action_open_outlets" string="Outlets" icon="fa-building"/>
-<button type="object" name="action_open_outlet_balances" string="Outlet Stock" icon="fa-cubes"/>
-<button type="object" name="action_open_payments" string="Visit Payments" icon="fa-credit-card"/>
-<button type="object" name="action_open_today_plans" string="Today's Plans" icon="fa-calendar"/>
-</group>
-<group string="Reference Counts" col="3">
-<field name="salesperson_shortage_count" readonly="1"/>
-<field name="outlet_count" readonly="1"/>
-<field name="outlet_balance_count" readonly="1"/>
-</group>
+</div>
+<div class="route_pda_section">
+<div class="route_pda_section_title">Today Overview</div>
+<div class="route_pda_metric_grid">
+<button type="object" name="action_open_today_plans" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="today_plan_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Plans</span>
+</button>
+<button type="object" name="action_open_my_pda_visits" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="today_visit_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Visits</span>
+</button>
+<button type="object" name="action_open_current_visit" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="current_visit_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Active Visit</span>
+</button>
+<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="vehicle_closing_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Closing</span>
+</button>
+<button type="object" name="action_open_my_shortages" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="shortage_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Shortages</span>
+</button>
+<button type="object" name="action_open_payments" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="payment_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Payments</span>
+</button>
+</div>
+</div>
+<div class="route_pda_section">
+<div class="route_pda_section_title">Current Visit Snapshot</div>
+<div class="route_pda_card_grid route_pda_card_grid_3">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Current Visit</div>
+<div class="route_pda_info_value">
+<field name="current_visit_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Current Outlet</div>
+<div class="route_pda_info_value">
+<field name="current_visit_outlet_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Vehicle</div>
+<div class="route_pda_info_value">
+<field name="current_vehicle_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_section">
+<div class="route_pda_section_title">Collections Snapshot</div>
+<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_finance_grid">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Cash In Hand</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Bank Transfer</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="bank_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">POS</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Open Promises</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_emphasis">
+<div class="route_pda_info_label">Remaining Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_section">
+<div class="route_pda_section_title">Reference Counts</div>
+<div class="route_pda_card_grid route_pda_card_grid_3">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Salesperson Shortages</div>
+<div class="route_pda_info_value">
+<field name="salesperson_shortage_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Outlets</div>
+<div class="route_pda_info_value">
+<field name="outlet_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Outlet Stock</div>
+<div class="route_pda_info_value">
+<field name="outlet_balance_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 </sheet>
 </form>
 </field>
