@@ -43,3 +43,5 @@ from . import stock_picking_route_vehicle_closing_ext
 from . import route_salesperson_shortage
 
 from . import route_salesperson_deduction
+
+from . import route_pda_home
