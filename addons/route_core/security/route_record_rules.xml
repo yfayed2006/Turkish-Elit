@@ -1,0 +1,80 @@
+<odoo>
+<record id="rule_route_plan_salesperson_own" model="ir.rule">
+<field name="name">Route Plan - salesperson own plans only</field>
+<field name="model_id" ref="model_route_plan"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_plan_line_salesperson_own" model="ir.rule">
+<field name="name">Route Plan Line - salesperson own plan lines only</field>
+<field name="model_id" ref="model_route_plan_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('plan_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_visit_salesperson_own" model="ir.rule">
+<field name="name">Route Visit - salesperson own visits only</field>
+<field name="model_id" ref="model_route_visit"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_visit_line_salesperson_own" model="ir.rule">
+<field name="name">Route Visit Line - salesperson own visit lines only</field>
+<field name="model_id" ref="model_route_visit_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('visit_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_visit_payment_salesperson_own" model="ir.rule">
+<field name="name">Route Visit Payment - salesperson own payments only</field>
+<field name="model_id" ref="model_route_visit_payment"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('salesperson_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_refill_backorder_salesperson_own" model="ir.rule">
+<field name="name">Route Refill Backorder - salesperson own only</field>
+<field name="model_id" ref="model_route_refill_backorder"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('visit_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_refill_backorder_line_salesperson_own" model="ir.rule">
+<field name="name">Route Refill Backorder Line - salesperson own only</field>
+<field name="model_id" ref="model_route_refill_backorder_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('backorder_id.visit_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_shortage_salesperson_own" model="ir.rule">
+<field name="name">Route Shortage - salesperson own shortages only</field>
+<field name="model_id" ref="model_route_shortage"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_shortage_line_salesperson_own" model="ir.rule">
+<field name="name">Route Shortage Line - salesperson own shortages only</field>
+<field name="model_id" ref="model_route_shortage_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('shortage_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_vehicle_closing_salesperson_own" model="ir.rule">
+<field name="name">Route Vehicle Closing - salesperson own closings only</field>
+<field name="model_id" ref="model_route_vehicle_closing"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_vehicle_closing_line_salesperson_own" model="ir.rule">
+<field name="name">Route Vehicle Closing Line - salesperson own closings only</field>
+<field name="model_id" ref="model_route_vehicle_closing_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('closing_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_salesperson_shortage_salesperson_own" model="ir.rule">
+<field name="name">Route Salesperson Shortage - salesperson own ledgers only</field>
+<field name="model_id" ref="model_route_salesperson_shortage"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('salesperson_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_salesperson_shortage_line_salesperson_own" model="ir.rule">
+<field name="name">Route Salesperson Shortage Line - salesperson own ledgers only</field>
+<field name="model_id" ref="model_route_salesperson_shortage_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('salesperson_id', '=', user.id)]</field>
+</record>
+</odoo>
