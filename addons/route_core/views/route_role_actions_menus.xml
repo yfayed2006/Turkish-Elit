@@ -80,13 +80,13 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan_salesperson" sequence="200" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage_salesperson" sequence="240" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_personal_shortages" name="My Salesperson Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_salesperson_shortage_salesperson" sequence="250" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_outlets" name="Outlets" parent="route_core.menu_route_visit_root" action="route_core.action_route_outlet_salesperson" sequence="260" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_outlet_balances" name="Outlet Stock Balances" parent="route_core.menu_route_visit_root" action="route_core.action_outlet_stock_balance_salesperson" sequence="270" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_payments" name="Visit Payments" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_payment_salesperson" sequence="280" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan" sequence="200" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda" sequence="210" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit" sequence="220" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing" sequence="230" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage" sequence="240" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_personal_shortages" name="My Salesperson Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_salesperson_shortage" sequence="250" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_outlets" name="Outlets" parent="route_core.menu_route_visit_root" action="route_core.action_route_outlet" sequence="260" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_outlet_balances" name="Outlet Stock Balances" parent="route_core.menu_route_visit_root" action="route_core.action_outlet_stock_balance" sequence="270" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_payments" name="Visit Payments" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_payment" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
