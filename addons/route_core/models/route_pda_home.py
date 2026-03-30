@@ -133,7 +133,32 @@ class RoutePdaHome(models.TransientModel):
 
     def _get_main_warehouse_location(self):
         self.ensure_one()
-        warehouse = self.env["stock.warehouse"].search([("company_id", "=", self.env.company.id)], order="id", limit=1)
+        today = fields.Date.context_today(self)
+        vehicle = self._get_current_vehicle()
+
+        proposal_domain = [
+            ("company_id", "=", self.env.company.id),
+            ("user_id", "=", self.env.user.id),
+            ("plan_date", "=", today),
+            ("source_location_id", "!=", False),
+            ("state", "in", ["approved", "draft"]),
+        ]
+        if vehicle:
+            proposal_domain.append(("vehicle_id", "=", vehicle.id))
+
+        proposal = self.env["route.loading.proposal"].search(
+            proposal_domain,
+            order="state desc, approval_datetime desc, id desc",
+            limit=1,
+        )
+        if proposal and proposal.source_location_id:
+            return proposal.source_location_id
+
+        warehouse = self.env["stock.warehouse"].search(
+            [("company_id", "=", self.env.company.id)],
+            order="id",
+            limit=1,
+        )
         return warehouse.lot_stock_id if warehouse else False
 
     def _open_quants_by_location(self, location, title):
@@ -346,4 +371,8 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_main_warehouse_products(self):
         self.ensure_one()
-        return self._open_quants_by_location(self._get_main_warehouse_location(), "Main Warehouse Products")
+        location = self._get_main_warehouse_location()
+        title = "Main Warehouse Products"
+        if location:
+            title = f"Main Warehouse Products - {location.display_name}"
+        return self._open_quants_by_location(location, title)
