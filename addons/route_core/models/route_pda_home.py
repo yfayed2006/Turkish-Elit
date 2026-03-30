@@ -135,24 +135,49 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         today = fields.Date.context_today(self)
         vehicle = self._get_current_vehicle()
+        Proposal = self.env["route.loading.proposal"].sudo()
 
-        proposal_domain = [
+        base_domain = [
             ("company_id", "=", self.env.company.id),
             ("user_id", "=", self.env.user.id),
-            ("plan_date", "=", today),
-            ("source_location_id", "!=", False),
-            ("state", "in", ["approved", "draft"]),
         ]
         if vehicle:
-            proposal_domain.append(("vehicle_id", "=", vehicle.id))
+            base_domain.append(("vehicle_id", "=", vehicle.id))
 
-        proposal = self.env["route.loading.proposal"].sudo().search(
-            proposal_domain,
-            order="state desc, approval_datetime desc, id desc",
+        # First priority: the actual approved transfer source used to load the vehicle.
+        approved_today = Proposal.search(
+            base_domain + [("plan_date", "=", today), ("state", "=", "approved")],
+            order="approval_datetime desc, id desc",
             limit=1,
         )
-        if proposal and proposal.source_location_id:
-            return proposal.source_location_id
+        if approved_today:
+            picking_source = getattr(getattr(approved_today, "picking_id", False), "location_id", False)
+            if picking_source:
+                return picking_source
+            if approved_today.source_location_id:
+                return approved_today.source_location_id
+
+        # Second priority: any latest approved proposal for this vehicle/salesperson.
+        approved_any = Proposal.search(
+            base_domain + [("state", "=", "approved")],
+            order="approval_datetime desc, id desc",
+            limit=1,
+        )
+        if approved_any:
+            picking_source = getattr(getattr(approved_any, "picking_id", False), "location_id", False)
+            if picking_source:
+                return picking_source
+            if approved_any.source_location_id:
+                return approved_any.source_location_id
+
+        # Third priority: latest draft for today if supervisor prepared a proposal but has not approved yet.
+        draft_today = Proposal.search(
+            base_domain + [("plan_date", "=", today), ("state", "=", "draft")],
+            order="id desc",
+            limit=1,
+        )
+        if draft_today and draft_today.source_location_id:
+            return draft_today.source_location_id
 
         warehouse = self.env["stock.warehouse"].search(
             [("company_id", "=", self.env.company.id)],
