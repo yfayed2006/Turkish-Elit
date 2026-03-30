@@ -91,3 +91,8 @@ access_route_pda_home_salesperson,access.route.pda.home.salesperson,model_route_
 access_route_pda_home_supervisor,access.route.pda.home.supervisor,model_route_pda_home,route_core.group_route_supervisor,1,1,1,1
 access_route_pda_home_management,access.route.pda.home.management,model_route_pda_home,route_core.group_route_management,1,1,1,1
 access_product_template_route_salesperson,access.product.template.route.salesperson,product.model_product_template,route_core.group_route_salesperson,1,0,0,0
+access_product_product_route_salesperson,access.product.product.route.salesperson,product.model_product_product,route_core.group_route_salesperson,1,0,0,0
+access_stock_quant_route_salesperson,access.stock.quant.route.salesperson,stock.model_stock_quant,route_core.group_route_salesperson,1,0,0,0
+access_stock_location_route_salesperson,access.stock.location.route.salesperson,stock.model_stock_location,route_core.group_route_salesperson,1,0,0,0
+access_stock_lot_route_salesperson,access.stock.lot.route.salesperson,stock.model_stock_lot,route_core.group_route_salesperson,1,0,0,0
+access_stock_warehouse_route_salesperson,access.stock.warehouse.route.salesperson,stock.model_stock_warehouse,route_core.group_route_salesperson,1,0,0,0
