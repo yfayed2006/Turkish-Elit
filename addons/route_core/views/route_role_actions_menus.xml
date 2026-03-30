@@ -80,6 +80,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
+<menuitem id="menu_route_salesperson_home" name="PDA Home" parent="route_core.menu_route_visit_root" action="route_core.server_action_open_route_pda_home" sequence="190" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan" sequence="200" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit" sequence="220" groups="route_core.group_route_salesperson"/>
