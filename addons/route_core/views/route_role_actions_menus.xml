@@ -35,9 +35,6 @@
 <record id="menu_route_visit_payment" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 </record>
-<record id="menu_route_refill_backorder" model="ir.ui.menu">
-<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
 <record id="menu_route_vehicle" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 </record>
