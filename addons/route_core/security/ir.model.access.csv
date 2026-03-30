@@ -90,3 +90,4 @@ access_route_salesperson_deduction_management,access.route.salesperson.deduction
 access_route_pda_home_salesperson,access.route.pda.home.salesperson,model_route_pda_home,route_core.group_route_salesperson,1,1,1,1
 access_route_pda_home_supervisor,access.route.pda.home.supervisor,model_route_pda_home,route_core.group_route_supervisor,1,1,1,1
 access_route_pda_home_management,access.route.pda.home.management,model_route_pda_home,route_core.group_route_management,1,1,1,1
+access_product_template_route_salesperson,access.product.template.route.salesperson,product.model_product_template,route_core.group_route_salesperson,1,0,0,0
