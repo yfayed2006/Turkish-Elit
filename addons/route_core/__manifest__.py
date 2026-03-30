@@ -6,7 +6,9 @@
     "license": "LGPL-3",
     "depends": ["base", "sale", "mail", "stock", "contacts"],
     "data": [
+        "security/route_security_groups.xml",
         "security/ir.model.access.csv",
+        "security/route_record_rules.xml",
         "security/route_vehicle_closing_pending_visit_security.xml",
         "security/route_plan_skip_visit_security.xml",
         "security/route_plan_pending_visit_review_security.xml",
@@ -41,6 +43,8 @@
         "reports/route_salesperson_shortage_report.xml",
         "views/route_salesperson_shortage_views.xml",
         "views/route_visit_document_links_views.xml",
+        "views/route_role_actions_menus.xml",
+        "views/route_role_ui_security_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
         "wizard/route_plan_skip_visit_wizard_views.xml",
