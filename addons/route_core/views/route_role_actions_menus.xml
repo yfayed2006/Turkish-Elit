@@ -30,11 +30,6 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">50</field>
 </record>
-<record id="menu_route_vehicle" model="ir.ui.menu">
-<field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
-<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-<field name="sequence">60</field>
-</record>
 <record id="menu_route_shortage" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
@@ -50,37 +45,41 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">30</field>
 </record>
-<record id="menu_outlet_stock_balance_root" model="ir.ui.menu">
+<record id="menu_outlet_stock_balance" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">40</field>
 </record>
-<record id="menu_route_visit_payment_root" model="ir.ui.menu">
+<record id="menu_route_visit_payment" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">50</field>
 </record>
-<record id="menu_route_return_settings" model="ir.ui.menu">
+<record id="menu_route_configuration" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_management_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">10</field>
 </record>
-<record id="menu_route_config_root" model="ir.ui.menu">
-<field name="parent_id" ref="route_core.menu_route_management_workspace"/>
+<record id="menu_route_vehicle" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">20</field>
+</record>
+<record id="menu_route_return_settings" model="ir.ui.menu">
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+<field name="sequence">30</field>
 </record>
 <record id="menu_route_city" model="ir.ui.menu">
-<field name="parent_id" ref="route_core.menu_route_config_root"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+<field name="sequence">5</field>
+</record>
+<record id="menu_route_area" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">10</field>
 </record>
-<record id="menu_route_area" model="ir.ui.menu">
-<field name="parent_id" ref="route_core.menu_route_config_root"/>
+<record id="menu_route_product_barcode" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-<field name="sequence">20</field>
+<field name="sequence">60</field>
 </record>
-<!--  Salesperson menus remain under root  -->
 <menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan_salesperson" sequence="200" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
