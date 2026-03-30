@@ -5,19 +5,17 @@
 <field name="arch" type="xml">
 <form string="PDA Home" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet">
-<div class="route_pda_home_header">
-<div class="route_pda_home_title_block">
+<div class="route_pda_home_header route_pda_home_header_compact">
 <h1 class="route_pda_home_title">PDA Home</h1>
-<div class="route_pda_home_subtitle">
-<field name="user_id" readonly="1" class="oe_inline" options="{'no_open': True, 'no_create': True}"/>
-<span class="route_pda_home_sep">-</span>
-<field name="today_date" readonly="1" class="oe_inline"/>
+<div class="route_pda_home_subtitle_text route_pda_home_subtitle_compact">
+<field name="user_display_name" readonly="1" nolabel="1" class="oe_inline"/>
+<span class="route_pda_home_sep">•</span>
+<field name="today_display_label" readonly="1" nolabel="1" class="oe_inline"/>
 </div>
 </div>
-</div>
-<div class="route_pda_section route_pda_apps_section">
-<div class="route_pda_section_title">Quick Access</div>
-<div class="route_pda_apps_grid">
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Daily Operations</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2">
 <button type="object" name="action_open_my_pda_visits" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-map-marker route_pda_app_icon"/>
 <span class="route_pda_app_label">PDA Visits</span>
@@ -26,42 +24,178 @@
 <i class="fa fa-play-circle route_pda_app_icon"/>
 <span class="route_pda_app_label">Current Visit</span>
 </button>
-<button type="object" name="action_open_today_plans" class="btn route_pda_app_btn">
-<i class="fa fa-calendar route_pda_app_icon"/>
-<span class="route_pda_app_label">Today's Plans</span>
-</button>
-<button type="object" name="action_open_payments" class="btn route_pda_app_btn">
-<i class="fa fa-credit-card route_pda_app_icon"/>
-<span class="route_pda_app_label">Payments</span>
-</button>
-<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_app_btn">
+<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-truck route_pda_app_icon"/>
 <span class="route_pda_app_label">Vehicle Closing</span>
 </button>
-<button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn">
+<button type="object" name="action_open_payments" class="btn route_pda_app_btn route_pda_app_btn_info">
+<i class="fa fa-credit-card route_pda_app_icon"/>
+<span class="route_pda_app_label">Payments</span>
+</button>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_snapshot">
+<div class="route_pda_group_title">Workspaces</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2">
+<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
+<i class="fa fa-th-large route_pda_app_icon"/>
+<span class="route_pda_app_label">Snapshot Center</span>
+</button>
+<button type="object" name="action_open_product_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-tags route_pda_app_icon"/>
+<span class="route_pda_app_label">Product Center</span>
+</button>
+<button type="object" name="action_open_review_center_screen" class="btn route_pda_app_btn route_pda_app_btn_alert">
+<i class="fa fa-warning route_pda_app_icon"/>
+<span class="route_pda_app_label">Alerts and Review</span>
+</button>
+<button type="object" name="action_open_outlet_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-building route_pda_app_icon"/>
+<span class="route_pda_app_label">Outlet Center</span>
+</button>
+</div>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_snapshot_center_form" model="ir.ui.view">
+<field name="name">route.pda.home.snapshot.center.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Snapshot Center" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Home</span>
+</button>
+<h2 class="route_pda_detail_title">Snapshot Center</h2>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
+<button type="object" name="action_open_today_overview_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
+<i class="fa fa-calendar route_pda_app_icon"/>
+<span class="route_pda_app_label">Today Overview</span>
+</button>
+<button type="object" name="action_open_current_visit_snapshot_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
+<i class="fa fa-map-pin route_pda_app_icon"/>
+<span class="route_pda_app_label">Current Visit Snapshot</span>
+</button>
+<button type="object" name="action_open_collections_snapshot_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
+<i class="fa fa-money route_pda_app_icon"/>
+<span class="route_pda_app_label">Collections Snapshot</span>
+</button>
+<button type="object" name="action_open_reference_counts_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
+<i class="fa fa-bar-chart route_pda_app_icon"/>
+<span class="route_pda_app_label">Reference Counts</span>
+</button>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_review_center_form" model="ir.ui.view">
+<field name="name">route.pda.home.review.center.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Alerts and Review" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Home</span>
+</button>
+<h2 class="route_pda_detail_title">Alerts and Review</h2>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
+<button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-exclamation-triangle route_pda_app_icon"/>
 <span class="route_pda_app_label">Shortages</span>
 </button>
-<button type="object" name="action_open_my_salesperson_shortages" class="btn route_pda_app_btn">
+<button type="object" name="action_open_my_salesperson_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-warning route_pda_app_icon"/>
 <span class="route_pda_app_label">Salesperson Shortages</span>
 </button>
-<button type="object" name="action_open_my_history" class="btn route_pda_app_btn">
+<button type="object" name="action_open_my_history" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-history route_pda_app_icon"/>
 <span class="route_pda_app_label">Visit History</span>
 </button>
-<button type="object" name="action_open_outlets" class="btn route_pda_app_btn">
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_product_center_form" model="ir.ui.view">
+<field name="name">route.pda.home.product.center.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Product Center" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Home</span>
+</button>
+<h2 class="route_pda_detail_title">Product Center</h2>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
+<button type="object" name="action_open_vehicle_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-truck route_pda_app_icon"/>
+<span class="route_pda_app_label">Vehicle Products</span>
+</button>
+<button type="object" name="action_open_main_warehouse_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-home route_pda_app_icon"/>
+<span class="route_pda_app_label">Main Warehouse Products</span>
+</button>
+<button type="object" name="action_open_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-tags route_pda_app_icon"/>
+<span class="route_pda_app_label">All Products</span>
+</button>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_outlet_center_form" model="ir.ui.view">
+<field name="name">route.pda.home.outlet.center.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Outlet Center" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Home</span>
+</button>
+<h2 class="route_pda_detail_title">Outlet Center</h2>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
+<button type="object" name="action_open_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-building route_pda_app_icon"/>
 <span class="route_pda_app_label">Outlets</span>
 </button>
-<button type="object" name="action_open_outlet_balances" class="btn route_pda_app_btn">
+<button type="object" name="action_open_outlet_balances" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-cubes route_pda_app_icon"/>
 <span class="route_pda_app_label">Outlet Stock</span>
 </button>
 </div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_today_overview_form" model="ir.ui.view">
+<field name="name">route.pda.home.today.overview.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Today Overview" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Snapshot Center</span>
+</button>
+<h2 class="route_pda_detail_title">Today Overview</h2>
 </div>
-<div class="route_pda_section">
-<div class="route_pda_section_title">Today Overview</div>
 <div class="route_pda_metric_grid">
 <button type="object" name="action_open_today_plans" class="btn route_pda_metric_btn">
 <span class="route_pda_metric_value">
@@ -100,10 +234,24 @@
 <span class="route_pda_metric_label">Payments</span>
 </button>
 </div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_current_visit_snapshot_form" model="ir.ui.view">
+<field name="name">route.pda.home.current.visit.snapshot.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Current Visit Snapshot" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Snapshot Center</span>
+</button>
+<h2 class="route_pda_detail_title">Current Visit Snapshot</h2>
 </div>
-<div class="route_pda_section">
-<div class="route_pda_section_title">Current Visit Snapshot</div>
-<div class="route_pda_card_grid route_pda_card_grid_3">
+<div class="route_pda_card_grid route_pda_card_grid_2">
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Current Visit</div>
 <div class="route_pda_info_value">
@@ -123,9 +271,23 @@
 </div>
 </div>
 </div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_collections_snapshot_form" model="ir.ui.view">
+<field name="name">route.pda.home.collections.snapshot.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Collections Snapshot" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Snapshot Center</span>
+</button>
+<h2 class="route_pda_detail_title">Collections Snapshot</h2>
 </div>
-<div class="route_pda_section">
-<div class="route_pda_section_title">Collections Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_finance_grid">
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Cash In Hand</div>
@@ -158,10 +320,24 @@
 </div>
 </div>
 </div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_reference_counts_form" model="ir.ui.view">
+<field name="name">route.pda.home.reference.counts.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Reference Counts" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Snapshot Center</span>
+</button>
+<h2 class="route_pda_detail_title">Reference Counts</h2>
 </div>
-<div class="route_pda_section">
-<div class="route_pda_section_title">Reference Counts</div>
-<div class="route_pda_card_grid route_pda_card_grid_3">
+<div class="route_pda_card_grid route_pda_card_grid_2">
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Salesperson Shortages</div>
 <div class="route_pda_info_value">
@@ -180,11 +356,35 @@
 <field name="outlet_balance_count" readonly="1" nolabel="1"/>
 </div>
 </div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Products</div>
+<div class="route_pda_info_value">
+<field name="product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Vehicle Products</div>
+<div class="route_pda_info_value">
+<field name="vehicle_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Main Warehouse Products</div>
+<div class="route_pda_info_value">
+<field name="warehouse_product_count" readonly="1" nolabel="1"/>
+</div>
 </div>
 </div>
 </sheet>
 </form>
 </field>
+</record>
+<record id="action_route_pda_products" model="ir.actions.act_window">
+<field name="name">Products</field>
+<field name="res_model">product.template</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="domain">[("sale_ok", "=", True), ("active", "=", True)]</field>
+<field name="context">{"search_default_filter_to_sell": 1, "create": 0}</field>
 </record>
 <record id="server_action_open_route_pda_home" model="ir.actions.server">
 <field name="name">Open PDA Home</field>
