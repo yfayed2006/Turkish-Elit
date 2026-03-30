@@ -137,19 +137,25 @@ class RoutePdaHome(models.TransientModel):
         return warehouse.lot_stock_id if warehouse else False
 
     def _open_quants_by_location(self, location, title):
-        action = self.env.ref("stock.quants_action").sudo().read()[0]
-        action["name"] = title
+        self.ensure_one()
+        list_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_list")
+        search_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search")
+        domain = [("quantity", ">", 0)]
         if location:
-            action["domain"] = [("location_id", "child_of", location.id), ("quantity", ">", 0)]
+            domain.insert(0, ("location_id", "child_of", location.id))
         else:
-            action["domain"] = [("id", "=", 0)]
-        action["views"] = [
-            (self.env.ref("route_core.view_route_vehicle_stock_snapshot_list").id, "list"),
-            (False, "form"),
-        ]
-        action["search_view_id"] = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search").id
-        action["context"] = {"search_default_filter_positive_qty": 1, "create": 0, "delete": 0}
-        return action
+            domain = [("id", "=", 0)]
+        return {
+            "type": "ir.actions.act_window",
+            "name": title,
+            "res_model": "stock.quant",
+            "view_mode": "list,form",
+            "views": [(list_view.id, "list"), (False, "form")],
+            "search_view_id": search_view.id,
+            "domain": domain,
+            "target": "current",
+            "context": {"search_default_filter_positive_qty": 1, "create": 0, "delete": 0},
+        }
 
     @api.depends("user_id")
     def _compute_dashboard(self):
