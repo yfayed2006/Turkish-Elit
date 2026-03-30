@@ -146,7 +146,7 @@ class RoutePdaHome(models.TransientModel):
         if vehicle:
             proposal_domain.append(("vehicle_id", "=", vehicle.id))
 
-        proposal = self.env["route.loading.proposal"].search(
+        proposal = self.env["route.loading.proposal"].sudo().search(
             proposal_domain,
             order="state desc, approval_datetime desc, id desc",
             limit=1,
