@@ -87,3 +87,6 @@ access_route_salesperson_shortage_line_supervisor,access.route.salesperson.short
 access_route_salesperson_shortage_line_management,access.route.salesperson.shortage.line.management,model_route_salesperson_shortage_line,route_core.group_route_management,1,1,1,1
 access_route_salesperson_deduction_supervisor,access.route.salesperson.deduction.supervisor,model_route_salesperson_deduction,route_core.group_route_supervisor,1,1,1,1
 access_route_salesperson_deduction_management,access.route.salesperson.deduction.management,model_route_salesperson_deduction,route_core.group_route_management,1,1,1,1
+access_route_pda_home_salesperson,access.route.pda.home.salesperson,model_route_pda_home,route_core.group_route_salesperson,1,1,1,1
+access_route_pda_home_supervisor,access.route.pda.home.supervisor,model_route_pda_home,route_core.group_route_supervisor,1,1,1,1
+access_route_pda_home_management,access.route.pda.home.management,model_route_pda_home,route_core.group_route_management,1,1,1,1
