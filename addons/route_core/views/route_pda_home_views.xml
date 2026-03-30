@@ -1,0 +1,76 @@
+<odoo>
+<record id="view_route_pda_home_form" model="ir.ui.view">
+<field name="name">route.pda.home.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="PDA Home" create="0" edit="0" delete="0">
+<sheet>
+<div class="oe_title">
+<h1>PDA Home</h1>
+<h2>
+<field name="user_id" readonly="1"/>
+<span> - </span>
+<field name="today_date" readonly="1"/>
+</h2>
+</div>
+<div class="oe_button_box" name="button_box">
+<button type="object" name="action_open_today_plans" class="oe_stat_button" icon="fa-calendar">
+<field name="today_plan_count" widget="statinfo" string="Today's Plans"/>
+</button>
+<button type="object" name="action_open_my_pda_visits" class="oe_stat_button" icon="fa-map-marker">
+<field name="today_visit_count" widget="statinfo" string="Today's Visits"/>
+</button>
+<button type="object" name="action_open_current_visit" class="oe_stat_button" icon="fa-play-circle">
+<field name="current_visit_count" widget="statinfo" string="Current Visit"/>
+</button>
+<button type="object" name="action_open_my_vehicle_closing" class="oe_stat_button" icon="fa-truck">
+<field name="vehicle_closing_count" widget="statinfo" string="Vehicle Closing"/>
+</button>
+<button type="object" name="action_open_my_shortages" class="oe_stat_button" icon="fa-exclamation-triangle">
+<field name="shortage_count" widget="statinfo" string="Shortages"/>
+</button>
+<button type="object" name="action_open_payments" class="oe_stat_button" icon="fa-money">
+<field name="payment_count" widget="statinfo" string="Payments Today"/>
+</button>
+</div>
+<group string="Current Visit Snapshot" col="3">
+<field name="current_visit_name" readonly="1"/>
+<field name="current_visit_outlet_name" readonly="1"/>
+<field name="current_vehicle_name" readonly="1"/>
+</group>
+<group string="Collections Snapshot" col="5">
+<field name="cash_today_amount" widget="monetary" readonly="1"/>
+<field name="bank_today_amount" widget="monetary" readonly="1"/>
+<field name="pos_today_amount" widget="monetary" readonly="1"/>
+<field name="open_promise_amount" widget="monetary" readonly="1"/>
+<field name="remaining_due_amount" widget="monetary" readonly="1"/>
+</group>
+<separator string="Quick Access"/>
+<group col="2">
+<button type="object" name="action_open_my_pda_visits" string="Open PDA Visits" icon="fa-map-marker" class="oe_highlight"/>
+<button type="object" name="action_open_current_visit" string="Open Current Visit" icon="fa-play-circle" class="oe_highlight"/>
+<button type="object" name="action_open_my_history" string="Visit History" icon="fa-history"/>
+<button type="object" name="action_open_my_vehicle_closing" string="Vehicle Closing" icon="fa-truck"/>
+<button type="object" name="action_open_my_shortages" string="Shortages" icon="fa-exclamation-triangle"/>
+<button type="object" name="action_open_my_salesperson_shortages" string="Salesperson Shortages" icon="fa-warning"/>
+<button type="object" name="action_open_outlets" string="Outlets" icon="fa-building"/>
+<button type="object" name="action_open_outlet_balances" string="Outlet Stock" icon="fa-cubes"/>
+<button type="object" name="action_open_payments" string="Visit Payments" icon="fa-credit-card"/>
+<button type="object" name="action_open_today_plans" string="Today's Plans" icon="fa-calendar"/>
+</group>
+<group string="Reference Counts" col="3">
+<field name="salesperson_shortage_count" readonly="1"/>
+<field name="outlet_count" readonly="1"/>
+<field name="outlet_balance_count" readonly="1"/>
+</group>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_pda_home" model="ir.actions.server">
+<field name="name">Open PDA Home</field>
+<field name="model_id" ref="model_route_pda_home"/>
+<field name="state">code</field>
+<field name="code">action = env['route.pda.home'].action_open_dashboard()</field>
+</record>
+</odoo>
