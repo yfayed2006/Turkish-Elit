@@ -25,10 +25,10 @@
 <xpath expr="//button[@name='action_open_vehicle_stock_snapshot']" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//button[@name='action_view_loading_proposal' and contains(@class, 'oe_stat_button')]" position="attributes">
+<xpath expr="//button[@name='action_view_loading_proposal' and hasclass('oe_stat_button')]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//button[@name='action_open_pending_visit_review_wizard' and contains(@class, 'oe_stat_button')]" position="attributes">
+<xpath expr="//button[@name='action_open_pending_visit_review_wizard' and hasclass('oe_stat_button')]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 <xpath expr="//button[@name='action_open_add_area_outlets_wizard']" position="attributes">
