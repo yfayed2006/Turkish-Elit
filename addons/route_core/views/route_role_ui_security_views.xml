@@ -1,0 +1,99 @@
+<odoo>
+<record id="view_route_plan_form_role_security" model="ir.ui.view">
+<field name="name">route.plan.form.role.security</field>
+<field name="model">route.plan</field>
+<field name="inherit_id" ref="route_core.view_route_plan_form"/>
+<field name="arch" type="xml">
+<xpath expr="//button[@name='action_open_pending_visit_review_wizard']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_add_open_shortages']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_finalize_daily_plan']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_reopen_daily_plan']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_generate_loading_proposal']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_view_loading_proposal']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_open_vehicle_stock_snapshot']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_view_loading_proposal' and contains(@class, 'oe_stat_button')]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_open_pending_visit_review_wizard' and contains(@class, 'oe_stat_button')]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_open_add_area_outlets_wizard']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_load_previous_pending_visits']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_reopen_line']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+</field>
+</record>
+<record id="view_route_shortage_form_role_security" model="ir.ui.view">
+<field name="name">route.shortage.form.role.security</field>
+<field name="model">route.shortage</field>
+<field name="inherit_id" ref="route_core.view_route_shortage_form"/>
+<field name="arch" type="xml">
+<xpath expr="//button[@name='action_mark_planned']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_mark_done']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_reopen']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_cancel']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+</field>
+</record>
+<record id="view_route_salesperson_shortage_form_role_security" model="ir.ui.view">
+<field name="name">route.salesperson.shortage.form.role.security</field>
+<field name="model">route.salesperson.shortage</field>
+<field name="inherit_id" ref="route_core.view_route_salesperson_shortage_form"/>
+<field name="arch" type="xml">
+<xpath expr="//button[@name='action_start_review']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_finalize_settlement']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_sync_deduction_record']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_open_deduction_record']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_reopen']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_form_role_security" model="ir.ui.view">
+<field name="name">route.outlet.form.role.security</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_form"/>
+<field name="arch" type="xml">
+<xpath expr="//button[@name='action_recompute_summary']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_outlet_diagnostics']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+</field>
+</record>
+</odoo>
