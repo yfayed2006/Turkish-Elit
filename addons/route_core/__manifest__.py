@@ -1,6 +1,6 @@
 {
     "name": "Route Core",
-    "version": "19.0.1.0.16",
+    "version": "19.0.1.0.17",
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
@@ -61,6 +61,7 @@
     "assets": {
         "web.assets_backend": [
             "route_core/static/src/js/route_visit_scan_focus.js",
+            "route_core/static/src/css/route_pda_home.css",
         ],
     },
     "installable": True,
