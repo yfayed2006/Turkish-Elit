@@ -1,0 +1,155 @@
+<odoo>
+<record id="menu_route_visit_root" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson'), ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_configuration" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_plan" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_visit_history" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_loading_proposal" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_vehicle_closing" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_salesperson_shortage" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_salesperson_deduction" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_shortage" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_outlet" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_outlet_stock_balance" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_visit_payment" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_refill_backorder" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_vehicle" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_city" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_area" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_product_barcode" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_return_settings" model="ir.ui.menu">
+<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+<record id="action_route_plan_salesperson" model="ir.actions.act_window">
+<field name="name">My Route Plans</field>
+<field name="res_model">route.plan</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_plan_search"/>
+<field name="domain">[('user_id', '=', uid)]</field>
+<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_pda_salesperson" model="ir.actions.act_window">
+<field name="name">My PDA Visits</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">kanban,form,list</field>
+<field name="search_view_id" ref="route_core.view_route_visit_search"/>
+<field name="domain">[('user_id', '=', uid)]</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0, 'pda_mode': True}</field>
+<field name="help" type="html">
+<p class="o_view_nocontent_smiling_face">Open your route visits in PDA mode.</p>
+</field>
+</record>
+<record id="action_route_visit_pda_salesperson_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="route_core.view_route_visit_pda_kanban"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
+</record>
+<record id="action_route_visit_pda_salesperson_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
+</record>
+<record id="action_route_visit_pda_salesperson_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_visit_tree"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
+</record>
+<record id="action_route_visit_history_salesperson" model="ir.actions.act_window">
+<field name="name">My Visit History</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_visit_search"/>
+<field name="domain">[('user_id', '=', uid)]</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_vehicle_closing_salesperson" model="ir.actions.act_window">
+<field name="name">My Vehicle Closings</field>
+<field name="res_model">route.vehicle.closing</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_vehicle_closing_search"/>
+<field name="domain">[('user_id', '=', uid)]</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_shortage_salesperson" model="ir.actions.act_window">
+<field name="name">My Shortages</field>
+<field name="res_model">route.shortage</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_shortage_search"/>
+<field name="domain">[('user_id', '=', uid)]</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_salesperson_shortage_salesperson" model="ir.actions.act_window">
+<field name="name">My Salesperson Shortages</field>
+<field name="res_model">route.salesperson.shortage</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_salesperson_shortage_search"/>
+<field name="domain">[('salesperson_id', '=', uid)]</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_outlet_salesperson" model="ir.actions.act_window">
+<field name="name">Outlets</field>
+<field name="res_model">route.outlet</field>
+<field name="view_mode">list,form</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_outlet_stock_balance_salesperson" model="ir.actions.act_window">
+<field name="name">Outlet Stock Balances</field>
+<field name="res_model">outlet.stock.balance</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_outlet_stock_balance_search"/>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_payment_salesperson" model="ir.actions.act_window">
+<field name="name">My Payments</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_visit_payment_search"/>
+<field name="domain">[('salesperson_id', '=', uid)]</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<menuitem id="menu_route_salesperson_pda" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="11" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_plan" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan_salesperson" sequence="12" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="13" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="14" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage_salesperson" sequence="15" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_ledger" name="My Salesperson Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_salesperson_shortage_salesperson" sequence="16" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_outlets" name="Outlets" parent="route_core.menu_route_visit_root" action="route_core.action_route_outlet_salesperson" sequence="17" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_stock" name="Outlet Stock Balances" parent="route_core.menu_route_visit_root" action="route_core.action_outlet_stock_balance_salesperson" sequence="18" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_payments" name="My Payments" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_payment_salesperson" sequence="19" groups="route_core.group_route_salesperson"/>
+</odoo>
