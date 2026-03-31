@@ -79,7 +79,7 @@
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
-<search string="Visit Payments">
+<search string="Route Payments">
 <field name="source_type"/>
 <field name="visit_id"/>
 <field name="sale_order_id"/>
@@ -130,11 +130,27 @@
 </field>
 </record>
 <record id="action_route_visit_payment" model="ir.actions.act_window">
-<field name="name">Visit Payments</field>
+<field name="name">All Payments</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="view_route_visit_payment_search"/>
 <field name="context">{'search_default_filter_my_payments': 1}</field>
 </record>
-<menuitem id="menu_route_visit_payment" name="Visit Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
+<record id="action_route_visit_collection" model="ir.actions.act_window">
+<field name="name">My Visit Collections</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="domain">[('source_type', '=', 'visit')]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_visit_source': 1, 'default_source_type': 'visit'}</field>
+</record>
+<record id="action_route_direct_sale_payment" model="ir.actions.act_window">
+<field name="name">My Direct Sale Payments</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="domain">[('source_type', '=', 'direct_sale')]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_direct_sale_source': 1, 'default_source_type': 'direct_sale'}</field>
+</record>
+<menuitem id="menu_route_visit_payment" name="All Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
 </odoo>
