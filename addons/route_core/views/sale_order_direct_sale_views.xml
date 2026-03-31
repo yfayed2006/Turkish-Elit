@@ -22,12 +22,10 @@
 <field name="direct_sale_collected_amount" invisible="route_order_mode != 'direct_sale'" readonly="1"/>
 <field name="direct_sale_remaining_due" invisible="route_order_mode != 'direct_sale'" readonly="1"/>
 <field name="direct_sale_payment_count" invisible="1" readonly="1"/>
-<field name="route_use_lot_serial_tracking" invisible="1" readonly="1"/>
-<field name="route_use_expiry_tracking" invisible="1" readonly="1"/>
 </xpath>
 <xpath expr="//field[@name='order_line']/tree/field[@name='product_uom_qty'] | //field[@name='order_line']/list/field[@name='product_uom_qty']" position="after">
-<field name="route_lot_id" string="Lot/Serial" column_invisible="parent.route_order_mode != 'direct_sale' or not parent.route_use_lot_serial_tracking" optional="show"/>
-<field name="route_expiry_date" string="Expiry" column_invisible="parent.route_order_mode != 'direct_sale' or not parent.route_use_lot_serial_tracking or not parent.route_use_expiry_tracking" optional="show" readonly="1"/>
+<field name="route_lot_id" string="Lot/Serial" column_invisible="parent.route_order_mode != 'direct_sale'" optional="show"/>
+<field name="route_expiry_date" string="Expiry" column_invisible="parent.route_order_mode != 'direct_sale'" optional="show" readonly="1"/>
 </xpath>
 </field>
 </record>
