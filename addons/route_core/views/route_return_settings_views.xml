@@ -8,7 +8,7 @@
 <group string="Route Product Settings">
 <group>
 <field name="route_enable_direct_sale"/>
-<field name="route_enable_direct_return" invisible="route_enable_direct_sale == False"/>
+<field name="route_enable_direct_return"/>
 <field name="route_enable_lot_serial_tracking"/>
 <field name="route_enable_expiry_tracking" invisible="route_enable_lot_serial_tracking == False"/>
 </group>
