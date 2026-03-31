@@ -49,6 +49,10 @@
 <i class="fa fa-warning route_pda_app_icon"/>
 <span class="route_pda_app_label">Alerts and Review</span>
 </button>
+<button type="object" name="action_open_sales_center_screen" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-shopping-cart route_pda_app_icon"/>
+<span class="route_pda_app_label">Sales Center</span>
+</button>
 <button type="object" name="action_open_outlet_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-building route_pda_app_icon"/>
 <span class="route_pda_app_label">Outlet Center</span>
@@ -150,6 +154,33 @@
 <button type="object" name="action_open_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
 <span class="route_pda_app_label">All Products</span>
+</button>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_pda_sales_center_form" model="ir.ui.view">
+<field name="name">route.pda.home.sales.center.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Sales Center" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Home</span>
+</button>
+<h2 class="route_pda_detail_title">Sales Center</h2>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
+<button type="object" name="action_open_direct_sale_outlets" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-building route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Outlets</span>
+</button>
+<button type="object" name="action_create_direct_sale" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-plus-square route_pda_app_icon"/>
+<span class="route_pda_app_label">Create Direct Sale</span>
 </button>
 </div>
 </sheet>
