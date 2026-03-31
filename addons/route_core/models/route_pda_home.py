@@ -376,7 +376,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_action(
             "route_core.action_route_outlet",
             name="Direct Sale Outlets",
-            domain=[("outlet_operation_mode", "=", "direct_sale")],
+            domain=[("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)],
             context={"search_default_filter_direct_sale_outlets": 1},
         )
 
@@ -421,7 +421,7 @@ class RoutePdaHome(models.TransientModel):
             "res_model": "sale.order",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("route_order_mode", "=", "direct_sale")],
+            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id)],
             "context": {"create": 0, "delete": 0},
         }
 
