@@ -57,7 +57,36 @@ class RouteDirectReturn(models.Model):
 
     @api.model
     def _default_vehicle(self):
-        return self.env["route.vehicle"].search([("user_id", "=", self.env.user.id)], order="id desc", limit=1)
+        today = fields.Date.context_today(self)
+
+        current_visit = self.env["route.visit"].search([
+            ("user_id", "=", self.env.user.id),
+            ("state", "=", "in_progress"),
+            ("vehicle_id", "!=", False),
+        ], order="start_datetime desc, id desc", limit=1)
+        if current_visit and current_visit.vehicle_id:
+            return current_visit.vehicle_id
+
+        today_plan = self.env["route.plan"].search([
+            ("user_id", "=", self.env.user.id),
+            ("date", "=", today),
+            ("vehicle_id", "!=", False),
+        ], order="id desc", limit=1)
+        if today_plan and today_plan.vehicle_id:
+            return today_plan.vehicle_id
+
+        latest_visit = self.env["route.visit"].search([
+            ("user_id", "=", self.env.user.id),
+            ("vehicle_id", "!=", False),
+        ], order="date desc, id desc", limit=1)
+        if latest_visit and latest_visit.vehicle_id:
+            return latest_visit.vehicle_id
+
+        latest_plan = self.env["route.plan"].search([
+            ("user_id", "=", self.env.user.id),
+            ("vehicle_id", "!=", False),
+        ], order="date desc, id desc", limit=1)
+        return latest_plan.vehicle_id if latest_plan else False
 
     @api.model
     def default_get(self, fields_list):
