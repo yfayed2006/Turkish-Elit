@@ -28,9 +28,9 @@
 <i class="fa fa-truck route_pda_app_icon"/>
 <span class="route_pda_app_label">Vehicle Closing</span>
 </button>
-<button type="object" name="action_open_payments" class="btn route_pda_app_btn route_pda_app_btn_info">
+<button type="object" name="action_open_visit_collections" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-credit-card route_pda_app_icon"/>
-<span class="route_pda_app_label">Payments</span>
+<span class="route_pda_app_label">Visit Collections</span>
 </button>
 </div>
 </div>
@@ -198,6 +198,10 @@
 <i class="fa fa-undo route_pda_app_icon"/>
 <span class="route_pda_app_label">Direct Sale Returns</span>
 </button>
+<button type="object" name="action_open_direct_sale_payments" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-credit-card route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Payments</span>
+</button>
 </div>
 </sheet>
 </form>
@@ -274,11 +278,17 @@
 </span>
 <span class="route_pda_metric_label">Shortages</span>
 </button>
-<button type="object" name="action_open_payments" class="btn route_pda_metric_btn">
+<button type="object" name="action_open_visit_collections" class="btn route_pda_metric_btn">
 <span class="route_pda_metric_value">
-<field name="payment_count" readonly="1" nolabel="1"/>
+<field name="visit_collection_count" readonly="1" nolabel="1"/>
 </span>
-<span class="route_pda_metric_label">Payments</span>
+<span class="route_pda_metric_label">Visit Collections</span>
+</button>
+<button type="object" name="action_open_direct_sale_payments" class="btn route_pda_metric_btn">
+<span class="route_pda_metric_value">
+<field name="direct_sale_payment_count" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_metric_label">Direct Sale Payments</span>
 </button>
 </div>
 </sheet>
@@ -358,6 +368,18 @@
 <div class="route_pda_info_label">Open Promises</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Visit Collections Today</div>
+<div class="route_pda_info_value">
+<field name="visit_collection_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Direct Sale Payments Today</div>
+<div class="route_pda_info_value">
+<field name="direct_sale_payment_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_info_card_emphasis">
