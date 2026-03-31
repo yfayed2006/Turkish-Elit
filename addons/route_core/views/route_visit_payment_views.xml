@@ -154,7 +154,6 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
-<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
@@ -205,7 +204,6 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
-<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
 <filter name="filter_open_promises" string="Open Promises" domain="[('promise_status', 'in', ('open', 'due_today', 'overdue'))]"/>
 <separator/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
@@ -254,7 +252,6 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
-<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
 <filter name="filter_open_promises" string="Open Promises" domain="[('promise_status', 'in', ('open', 'due_today', 'overdue'))]"/>
 <separator/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
