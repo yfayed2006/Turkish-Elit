@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class RoutePdaHome(models.TransientModel):
@@ -14,6 +15,8 @@ class RoutePdaHome(models.TransientModel):
     currency_id = fields.Many2one("res.currency", related="company_id.currency_id", readonly=True)
     today_date = fields.Date(string="Today", default=fields.Date.context_today, readonly=True)
     today_display_label = fields.Char(string="Today Label", compute="_compute_dashboard")
+    route_enable_direct_sale = fields.Boolean(related="company_id.route_enable_direct_sale", readonly=True, store=False)
+    route_enable_direct_return = fields.Boolean(related="company_id.route_enable_direct_return", readonly=True, store=False)
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
@@ -39,6 +42,18 @@ class RoutePdaHome(models.TransientModel):
     pos_today_amount = fields.Monetary(string="POS", currency_field="currency_id", compute="_compute_dashboard")
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
+
+    def _ensure_direct_sale_enabled(self):
+        self.ensure_one()
+        if not self.company_id.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+
+    def _ensure_direct_return_enabled(self):
+        self.ensure_one()
+        if not self.company_id.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        if not self.company_id.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
 
     @api.model
     def action_open_dashboard(self):
@@ -82,6 +97,7 @@ class RoutePdaHome(models.TransientModel):
         return self._open_self_view("route_core.view_route_pda_product_center_form", "Product Center")
 
     def action_open_sales_center_screen(self):
+        self._ensure_direct_sale_enabled()
         return self._open_self_view("route_core.view_route_pda_sales_center_form", "Sales Center")
 
     def action_open_outlet_center_screen(self):
@@ -377,6 +393,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_orders(self):
         self.ensure_one()
+        self._ensure_direct_sale_enabled()
         action = {
             "type": "ir.actions.act_window",
             "name": "Direct Sale Orders",
@@ -408,6 +425,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_deliveries(self):
         self.ensure_one()
+        self._ensure_direct_sale_enabled()
         orders = self._get_direct_sale_order_recordset()
         pickings = self.env["stock.picking"].search([
             ("origin", "in", orders.mapped("name")),
@@ -420,6 +438,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_returns(self):
         self.ensure_one()
+        self._ensure_direct_return_enabled()
         orders = self._get_direct_sale_order_recordset()
         deliveries = self.env["stock.picking"].search([
             ("origin", "in", orders.mapped("name")),
@@ -443,6 +462,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
+        self._ensure_direct_sale_enabled()
         return self._prepare_action(
             "route_core.action_route_outlet",
             name="Direct Sale Outlets",
@@ -451,6 +471,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_create_direct_sale(self):
         self.ensure_one()
+        self._ensure_direct_sale_enabled()
         vehicle = self._get_current_vehicle()
         source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
         default_outlet = self.env["route.outlet"].search([("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)], order="id desc", limit=1)
@@ -476,6 +497,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_create_direct_return(self):
         self.ensure_one()
+        self._ensure_direct_return_enabled()
         default_outlet = self.env["route.outlet"].search([
             ("outlet_operation_mode", "=", "direct_sale"),
             ("active", "=", True),
@@ -516,6 +538,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_payments(self):
         self.ensure_one()
+        self._ensure_direct_sale_enabled()
         return self._prepare_action(
             "route_core.action_route_direct_sale_payment",
             name="My Direct Sale Payments",
