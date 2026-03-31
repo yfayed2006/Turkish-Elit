@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -7,10 +7,27 @@ class RouteVisitPayment(models.Model):
     _description = "Route Visit Payment"
     _order = "payment_date desc, id desc"
 
+    source_type = fields.Selection(
+        [
+            ("visit", "Visit"),
+            ("direct_sale", "Direct Sale"),
+        ],
+        string="Source Type",
+        required=True,
+        default="visit",
+    )
+
     visit_id = fields.Many2one(
         "route.visit",
         string="Visit",
-        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+
+    sale_order_id = fields.Many2one(
+        "sale.order",
+        string="Direct Sale Order",
+        domain=[("route_order_mode", "=", "direct_sale")],
         ondelete="cascade",
         index=True,
     )
@@ -18,7 +35,7 @@ class RouteVisitPayment(models.Model):
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
-        related="visit_id.outlet_id",
+        compute="_compute_source_context",
         store=True,
         readonly=True,
     )
@@ -26,7 +43,7 @@ class RouteVisitPayment(models.Model):
     area_id = fields.Many2one(
         "route.area",
         string="Area",
-        related="visit_id.area_id",
+        compute="_compute_source_context",
         store=True,
         readonly=True,
     )
@@ -34,7 +51,14 @@ class RouteVisitPayment(models.Model):
     salesperson_id = fields.Many2one(
         "res.users",
         string="Salesperson",
-        related="visit_id.user_id",
+        compute="_compute_source_context",
+        store=True,
+        readonly=True,
+    )
+
+    source_document_ref = fields.Char(
+        string="Source Document",
+        compute="_compute_source_context",
         store=True,
         readonly=True,
     )
@@ -65,6 +89,7 @@ class RouteVisitPayment(models.Model):
             ("cash", "Cash"),
             ("bank", "Bank Transfer"),
             ("pos", "POS"),
+            ("deferred", "Deferred"),
         ],
         string="Payment Mode",
         required=True,
@@ -134,29 +159,137 @@ class RouteVisitPayment(models.Model):
     )
 
     visit_remaining_due = fields.Monetary(
-        string="Visit Remaining Due",
+        string="Current Remaining Due",
         currency_field="currency_id",
         compute="_compute_visit_remaining_due",
         store=False,
     )
 
-    @api.depends("visit_id.remaining_due_amount")
+    @api.depends(
+        "source_type",
+        "visit_id",
+        "visit_id.outlet_id",
+        "visit_id.area_id",
+        "visit_id.user_id",
+        "sale_order_id",
+        "sale_order_id.name",
+        "sale_order_id.route_outlet_id",
+        "sale_order_id.route_outlet_id.area_id",
+        "sale_order_id.user_id",
+    )
+    def _compute_source_context(self):
+        for rec in self:
+            outlet = False
+            area = False
+            salesperson = False
+            source_ref = False
+
+            if rec.source_type == "direct_sale" and rec.sale_order_id:
+                outlet = rec.sale_order_id.route_outlet_id
+                area = outlet.area_id if outlet else False
+                salesperson = rec.sale_order_id.user_id
+                source_ref = rec.sale_order_id.name
+            elif rec.visit_id:
+                outlet = rec.visit_id.outlet_id
+                area = rec.visit_id.area_id
+                salesperson = rec.visit_id.user_id
+                source_ref = rec.visit_id.display_name or rec.visit_id.name
+
+            rec.outlet_id = outlet
+            rec.area_id = area
+            rec.salesperson_id = salesperson
+            rec.source_document_ref = source_ref
+
+    def _get_target_model(self):
+        self.ensure_one()
+        if self.source_type == "direct_sale":
+            return self.sale_order_id
+        return self.visit_id
+
+    def _get_target_total_amount(self):
+        self.ensure_one()
+        if self.source_type == "direct_sale":
+            return self.sale_order_id.amount_total or 0.0
+
+        total_sales = 0.0
+        for line in self.visit_id.line_ids:
+            sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
+            unit_price = getattr(line, "unit_price", 0.0) or 0.0
+            total_sales += sold_qty * unit_price
+        return total_sales
+
+    def _get_confirmed_target_payments(self, exclude_self=False):
+        self.ensure_one()
+        domain = [("state", "=", "confirmed")]
+        if self.source_type == "direct_sale":
+            domain.append(("sale_order_id", "=", self.sale_order_id.id or 0))
+        else:
+            domain.append(("visit_id", "=", self.visit_id.id or 0))
+
+        payments = self.search(domain)
+        if exclude_self and self.id:
+            payments = payments.filtered(lambda p: p.id != self.id)
+        return payments
+
+    def _get_target_remaining_due(self, exclude_self=False):
+        self.ensure_one()
+        total_amount = self._get_target_total_amount()
+        confirmed_amount = sum(self._get_confirmed_target_payments(exclude_self=exclude_self).mapped("amount"))
+        return max((total_amount or 0.0) - (confirmed_amount or 0.0), 0.0)
+
+    def _get_target_label(self):
+        self.ensure_one()
+        if self.source_type == "direct_sale":
+            return _("direct sale order")
+        return _("visit")
+
+    @api.depends(
+        "source_type",
+        "visit_id.remaining_due_amount",
+        "visit_id.payment_ids.amount",
+        "visit_id.payment_ids.state",
+        "sale_order_id.amount_total",
+        "sale_order_id.direct_sale_payment_ids.amount",
+        "sale_order_id.direct_sale_payment_ids.state",
+    )
     def _compute_visit_remaining_due(self):
         for rec in self:
-            rec.visit_remaining_due = rec.visit_id.remaining_due_amount or 0.0
+            rec.visit_remaining_due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
 
-    @api.depends("visit_id.remaining_due_amount")
+    @api.depends(
+        "source_type",
+        "visit_id.remaining_due_amount",
+        "visit_id.payment_ids.amount",
+        "visit_id.payment_ids.state",
+        "sale_order_id.amount_total",
+        "sale_order_id.direct_sale_payment_ids.amount",
+        "sale_order_id.direct_sale_payment_ids.state",
+    )
     def _compute_remaining_due_amount(self):
         for rec in self:
-            rec.remaining_due_amount = rec.visit_id.remaining_due_amount or 0.0
+            rec.remaining_due_amount = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
 
-    @api.depends("promise_amount", "promise_date", "visit_id.remaining_due_amount", "state")
+    @api.depends(
+        "promise_amount",
+        "promise_date",
+        "state",
+        "source_type",
+        "visit_id.remaining_due_amount",
+        "visit_id.payment_ids.amount",
+        "visit_id.payment_ids.state",
+        "sale_order_id.amount_total",
+        "sale_order_id.direct_sale_payment_ids.amount",
+        "sale_order_id.direct_sale_payment_ids.state",
+    )
     def _compute_promise_status(self):
         today = fields.Date.context_today(self)
         for rec in self:
             if rec.state == "cancelled" or (rec.promise_amount or 0.0) <= 0:
                 rec.promise_status = False
-            elif (rec.visit_id.remaining_due_amount or 0.0) <= 0:
+                continue
+
+            remaining_due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed"))
+            if remaining_due <= 0:
                 rec.promise_status = "closed"
             elif rec.promise_date and rec.promise_date < today:
                 rec.promise_status = "overdue"
@@ -169,8 +302,25 @@ class RouteVisitPayment(models.Model):
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
         visit_id = self.env.context.get("default_visit_id")
-        if visit_id:
+        sale_order_id = self.env.context.get("default_sale_order_id")
+
+        if sale_order_id:
+            order = self.env["sale.order"].browse(sale_order_id)
+            vals.setdefault("source_type", "direct_sale")
+            vals.setdefault("sale_order_id", sale_order_id)
+            vals.setdefault("payment_mode", order.route_payment_mode or "cash")
+            if "amount" in fields_list:
+                vals["amount"] = max(order._get_route_payment_remaining_due() if hasattr(order, "_get_route_payment_remaining_due") else (order.amount_total or 0.0), 0.0)
+            if "collection_type" in fields_list:
+                vals.setdefault("collection_type", "defer_date" if order.route_payment_mode == "deferred" else "full")
+            if order.route_payment_mode == "deferred":
+                vals.setdefault("due_date", order.route_payment_due_date)
+                vals.setdefault("promise_date", order.route_payment_due_date)
+                vals.setdefault("promise_amount", max(order._get_route_payment_remaining_due() if hasattr(order, "_get_route_payment_remaining_due") else (order.amount_total or 0.0), 0.0))
+                vals.setdefault("amount", 0.0)
+        elif visit_id:
             visit = self.env["route.visit"].browse(visit_id)
+            vals.setdefault("source_type", "visit")
             vals.setdefault("visit_id", visit_id)
             if "amount" in fields_list:
                 vals["amount"] = max(visit.remaining_due_amount or 0.0, 0.0)
@@ -178,9 +328,17 @@ class RouteVisitPayment(models.Model):
                 vals.setdefault("collection_type", "full")
         return vals
 
+    @api.onchange("source_type")
+    def _onchange_source_type(self):
+        for rec in self:
+            if rec.source_type == "direct_sale":
+                rec.visit_id = False
+            else:
+                rec.sale_order_id = False
+
     def _sync_promise_fields(self):
         for rec in self:
-            due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+            due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
             if rec.collection_type == "full":
                 rec.promise_date = False
                 rec.promise_amount = 0.0
@@ -192,10 +350,13 @@ class RouteVisitPayment(models.Model):
             elif rec.collection_type == "next_visit":
                 rec.promise_amount = due
 
-    @api.onchange("visit_id")
-    def _onchange_visit_id_set_amount(self):
+    @api.onchange("visit_id", "sale_order_id", "source_type")
+    def _onchange_payment_target_set_amount(self):
         for rec in self:
-            due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+            due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
+            if rec.source_type == "direct_sale" and rec.sale_order_id and rec.sale_order_id.route_payment_mode == "deferred" and rec.collection_type == "full":
+                rec.collection_type = "defer_date"
+                rec.payment_mode = "deferred"
             if rec.collection_type == "full":
                 rec.amount = due
             elif rec.collection_type == "partial":
@@ -206,7 +367,7 @@ class RouteVisitPayment(models.Model):
     @api.onchange("collection_type", "amount", "due_date", "promise_date")
     def _onchange_collection_type(self):
         for rec in self:
-            due = max(rec.visit_id.remaining_due_amount, 0.0) if rec.visit_id else 0.0
+            due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
 
             if rec.collection_type == "full":
                 rec.amount = due
@@ -228,61 +389,81 @@ class RouteVisitPayment(models.Model):
 
             rec._sync_promise_fields()
 
-    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id")
+    @api.constrains("source_type", "visit_id", "sale_order_id")
+    def _check_source_target(self):
+        for rec in self:
+            if rec.source_type == "visit":
+                if not rec.visit_id:
+                    raise ValidationError(_("A Visit is required for payments with source type Visit."))
+                if rec.sale_order_id:
+                    raise ValidationError(_("Do not set a Direct Sale Order when the payment source type is Visit."))
+            elif rec.source_type == "direct_sale":
+                if not rec.sale_order_id:
+                    raise ValidationError(_("A Direct Sale Order is required for payments with source type Direct Sale."))
+                if rec.visit_id:
+                    raise ValidationError(_("Do not set a Visit when the payment source type is Direct Sale."))
+                if rec.sale_order_id.route_order_mode != "direct_sale":
+                    raise ValidationError(_("Only Direct Sale orders can be used here."))
+
+    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id")
     def _check_payment_rules(self):
         for rec in self:
-            due = rec.visit_id.remaining_due_amount or 0.0
+            if not rec._get_target_model():
+                continue
+
+            due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed"))
+            target_label = rec._get_target_label()
 
             if rec.amount < 0:
-                raise ValidationError("Payment amount cannot be negative.")
+                raise ValidationError(_("Payment amount cannot be negative."))
 
             if rec.collection_type == "full":
                 if due <= 0:
-                    raise ValidationError("There is no remaining due amount on this visit.")
+                    raise ValidationError(_("There is no remaining due amount on this %s.") % target_label)
                 if rec.amount <= 0:
-                    raise ValidationError("Full payment amount must be greater than zero.")
+                    raise ValidationError(_("Full payment amount must be greater than zero."))
                 if rec.amount > due:
-                    raise ValidationError("Full payment cannot be more than the remaining due amount.")
+                    raise ValidationError(_("Full payment cannot be more than the remaining due amount."))
 
             elif rec.collection_type == "partial":
                 if due <= 0:
-                    raise ValidationError("There is no remaining due amount on this visit.")
+                    raise ValidationError(_("There is no remaining due amount on this %s.") % target_label)
                 if rec.amount <= 0:
-                    raise ValidationError("Partial payment amount must be greater than zero.")
+                    raise ValidationError(_("Partial payment amount must be greater than zero."))
                 if rec.amount >= due:
                     raise ValidationError(
-                        "Partial payment must be less than the remaining due amount. Use Full Payment instead."
+                        _("Partial payment must be less than the remaining due amount. Use Full Payment instead.")
                     )
                 if (rec.promise_amount or 0.0) <= 0:
-                    raise ValidationError("Please set the promised unpaid amount.")
+                    raise ValidationError(_("Please set the promised unpaid amount."))
                 if not rec.promise_date:
-                    raise ValidationError("Please set the promise to pay date for the carried-forward balance.")
+                    raise ValidationError(_("Please set the promise to pay date for the carried-forward balance."))
                 if not rec.note:
-                    raise ValidationError("Please add a note for the carried-forward balance.")
+                    raise ValidationError(_("Please add a note for the carried-forward balance."))
 
             elif rec.collection_type == "defer_date":
                 if rec.amount != 0:
-                    raise ValidationError("Deferred payment to a specific date must have amount = 0.")
+                    raise ValidationError(_("Deferred payment to a specific date must have amount = 0."))
                 if not rec.due_date:
-                    raise ValidationError("Please set the deferred due date.")
+                    raise ValidationError(_("Please set the deferred due date."))
                 if (rec.promise_amount or 0.0) <= 0:
-                    raise ValidationError("Please set the promise to pay amount.")
+                    raise ValidationError(_("Please set the promise to pay amount."))
                 if not (rec.promise_date or rec.due_date):
-                    raise ValidationError("Please set the promise to pay date.")
+                    raise ValidationError(_("Please set the promise to pay date."))
                 if not rec.note:
-                    raise ValidationError("Please add a note explaining the deferment.")
+                    raise ValidationError(_("Please add a note explaining the deferment."))
 
             elif rec.collection_type == "next_visit":
                 if rec.amount != 0:
-                    raise ValidationError("Carry to next visit must have amount = 0.")
+                    raise ValidationError(_("Carry to next visit must have amount = 0."))
                 if rec.due_date:
-                    raise ValidationError("Do not set a due date when carrying payment to the next visit.")
+                    raise ValidationError(_("Do not set a due date when carrying payment to the next visit."))
                 if (rec.promise_amount or 0.0) <= 0:
-                    raise ValidationError("Please set the promise to pay amount.")
+                    raise ValidationError(_("Please set the promise to pay amount."))
                 if not rec.promise_date:
-                    raise ValidationError("Please set the promise to pay date for the next visit.")
+                    raise ValidationError(_("Please set the promise to pay date for the next visit."))
                 if not rec.note:
-                    raise ValidationError("Please add a note explaining why payment is carried to next visit.")
+                    raise ValidationError(_("Please add a note explaining why payment is carried to next visit."))
 
     def action_confirm(self):
         for rec in self:
@@ -300,7 +481,7 @@ class RouteVisitPayment(models.Model):
     def unlink(self):
         for rec in self:
             if rec.state == "confirmed":
-                raise ValidationError("You cannot delete a confirmed payment.")
+                raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
 
 
