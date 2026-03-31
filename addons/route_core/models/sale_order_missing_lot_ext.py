@@ -38,6 +38,7 @@ class SaleOrderLine(models.Model):
                 and line.product_id
                 and line.product_id.tracking != "none"
                 and line.order_id.route_source_location_id
+                and line.order_id.company_id.route_enable_lot_serial_tracking
             ):
                 quants = Quant.search(
                     [
@@ -56,7 +57,11 @@ class SaleOrderLine(models.Model):
     @api.onchange("product_id", "order_id.route_source_location_id")
     def _onchange_route_product_or_source(self):
         for line in self:
-            if not line.product_id or line.product_id.tracking == "none":
+            if (
+                not line.product_id
+                or line.product_id.tracking == "none"
+                or not line.order_id.company_id.route_enable_lot_serial_tracking
+            ):
                 line.route_lot_id = False
                 continue
             if line.order_id.route_order_mode != "direct_sale":
@@ -97,13 +102,19 @@ class SaleOrder(models.Model):
             source_location=source_location,
             dest_location=dest_location,
         )
-        if getattr(order_line, "route_lot_id", False) and "restrict_lot_id" in self.env["stock.move"]._fields:
+        if (
+            self.company_id.route_enable_lot_serial_tracking
+            and getattr(order_line, "route_lot_id", False)
+            and "restrict_lot_id" in self.env["stock.move"]._fields
+        ):
             vals["restrict_lot_id"] = order_line.route_lot_id.id
         return vals
 
     def _check_direct_sale_tracked_lines(self):
         Quant = self.env["stock.quant"]
         for order in self.filtered(lambda o: o.route_order_mode == "direct_sale"):
+            if not order.company_id.route_enable_lot_serial_tracking:
+                continue
             for line in order.order_line.filtered(
                 lambda l: l.product_id and not l.display_type and (l.product_uom_qty or 0.0) > 0
             ):
@@ -167,7 +178,7 @@ class SaleOrder(models.Model):
 
             tracking = getattr(move.product_id, "tracking", "none") or "none"
             lot = False
-            if line and tracking in ("lot", "serial"):
+            if line and self.company_id.route_enable_lot_serial_tracking and tracking in ("lot", "serial"):
                 lot = getattr(line, "route_lot_id", False) or getattr(line, "lot_id", False)
 
             if lot:
@@ -217,3 +228,4 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
+
