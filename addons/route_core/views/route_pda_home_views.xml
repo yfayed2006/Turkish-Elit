@@ -186,6 +186,14 @@
 <i class="fa fa-shopping-cart route_pda_app_icon"/>
 <span class="route_pda_app_label">Direct Sale Orders</span>
 </button>
+<button type="object" name="action_open_direct_sale_deliveries" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-truck route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Deliveries</span>
+</button>
+<button type="object" name="action_open_direct_sale_returns" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-undo route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Returns</span>
+</button>
 </div>
 </sheet>
 </form>
