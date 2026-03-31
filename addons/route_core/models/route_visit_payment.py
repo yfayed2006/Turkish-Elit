@@ -485,4 +485,3 @@ class RouteVisitPayment(models.Model):
         return super().unlink()
 
 
-
