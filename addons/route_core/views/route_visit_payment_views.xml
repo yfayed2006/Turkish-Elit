@@ -4,9 +4,12 @@
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
 <list>
-<field name="visit_id"/>
+<field name="source_type" widget="badge"/>
+<field name="source_document_ref"/>
+<field name="visit_id" optional="hide"/>
+<field name="sale_order_id" optional="hide"/>
 <field name="outlet_id"/>
-<field name="area_id"/>
+<field name="area_id" optional="hide"/>
 <field name="salesperson_id"/>
 <field name="payment_date"/>
 <field name="payment_mode"/>
@@ -34,13 +37,16 @@
 <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
 </header>
 <sheet>
-<group string="Visit Financial Status" col="2">
+<group string="Payment Financial Status" col="2">
 <group>
-<field name="visit_id" readonly="state != 'draft'"/>
+<field name="source_type" readonly="state != 'draft'"/>
+<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'"/>
+<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'"/>
+<field name="source_document_ref" readonly="1"/>
 <field name="outlet_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="salesperson_id" readonly="1"/>
-<field name="visit_remaining_due" readonly="1"/>
+<field name="visit_remaining_due" readonly="1" string="Current Remaining Due"/>
 </group>
 <group>
 <field name="payment_date" readonly="state != 'draft'"/>
@@ -57,7 +63,7 @@
 <field name="promise_status" readonly="1" invisible="collection_type == 'full'"/>
 </group>
 <group>
-<field name="reference" readonly="state != 'draft'" invisible="payment_mode == 'cash'"/>
+<field name="reference" readonly="state != 'draft'" invisible="payment_mode in ('cash', 'deferred')"/>
 <field name="bank_name" readonly="state != 'draft'" invisible="payment_mode != 'bank'"/>
 <field name="pos_terminal" readonly="state != 'draft'" invisible="payment_mode != 'pos'"/>
 </group>
@@ -74,7 +80,9 @@
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
 <search string="Visit Payments">
+<field name="source_type"/>
 <field name="visit_id"/>
+<field name="sale_order_id"/>
 <field name="outlet_id"/>
 <field name="area_id"/>
 <field name="salesperson_id"/>
@@ -82,10 +90,15 @@
 <field name="collection_type"/>
 <field name="state"/>
 <field name="reference"/>
+<field name="source_document_ref"/>
 <filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_visit_source" string="Visit" domain="[('source_type', '=', 'visit')]"/>
+<filter name="filter_direct_sale_source" string="Direct Sale" domain="[('source_type', '=', 'direct_sale')]"/>
+<separator/>
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
 <filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
@@ -96,6 +109,7 @@
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
+<filter name="group_by_source_type" string="Source Type" domain="[]" context="{'group_by': 'source_type'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
@@ -104,6 +118,7 @@
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
 <searchpanel>
+<field name="source_type" string="Source Type"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="salesperson_id" string="Salesperson"/>
