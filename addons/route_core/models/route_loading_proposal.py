@@ -1073,14 +1073,23 @@ class RoutePlan(models.Model):
     )
 
     def _compute_loading_proposal_stats(self):
+        Proposal = self.env["route.loading.proposal"].sudo()
+        grouped = {}
+        if self.ids:
+            for proposal in Proposal.search([("plan_id", "in", self.ids)], order="id desc"):
+                grouped.setdefault(proposal.plan_id.id, []).append(proposal)
         for rec in self:
-            proposals = rec.loading_proposal_ids.sorted(key=lambda proposal: proposal.id, reverse=True)
+            proposals = grouped.get(rec.id, [])
             rec.loading_proposal_count = len(proposals)
-            rec.loading_proposal_state = proposals[:1].state if proposals else False
+            rec.loading_proposal_state = proposals[0].state if proposals else False
 
     def _get_active_loading_proposal(self):
         self.ensure_one()
-        return self.loading_proposal_ids.sorted(key=lambda proposal: proposal.id, reverse=True)[:1]
+        return self.env["route.loading.proposal"].sudo().search(
+            [("plan_id", "=", self.id)],
+            order="id desc",
+            limit=1,
+        )
 
     def _get_loading_vehicle_qty_map(self):
         self.ensure_one()
@@ -1475,6 +1484,7 @@ class RoutePlan(models.Model):
                 "default_location_id": vehicle_location.id,
             },
         }
+
 
 
 
