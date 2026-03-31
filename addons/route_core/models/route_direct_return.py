@@ -39,6 +39,19 @@ class RouteDirectReturn(models.Model):
     picking_ids = fields.One2many("stock.picking", "route_direct_return_id", string="Generated Returns")
     picking_count = fields.Integer(string="Return Pickings", compute="_compute_picking_count")
 
+    route_enable_lot_serial_tracking = fields.Boolean(
+        string="Enable Lot/Serial Workflow",
+        related="company_id.route_enable_lot_serial_tracking",
+        readonly=True,
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        string="Enable Expiry Workflow",
+        related="company_id.route_enable_expiry_tracking",
+        readonly=True,
+        store=False,
+    )
+
     @api.depends("picking_ids")
     def _compute_picking_count(self):
         for rec in self:
@@ -225,8 +238,21 @@ class RouteDirectReturn(models.Model):
                 raise UserError(_("Every return line must have a product."))
             if line.quantity <= 0:
                 raise UserError(_("Return quantity must be greater than zero for product %s.") % line.product_id.display_name)
-            if line.product_id.tracking != "none" and not line.lot_name:
-                raise UserError(_("Lot/Serial is required for tracked product %s.") % line.product_id.display_name)
+            if self.route_enable_lot_serial_tracking:
+                if line.product_id.tracking != "none" and not line.lot_name:
+                    raise UserError(_("Lot/Serial is required for tracked product %s.") % line.product_id.display_name)
+            else:
+                if line.product_id.tracking != "none":
+                    raise UserError(
+                        _("Product %s is tracked in Inventory. Enable Route Lot/Serial Workflow or use a non-tracked product for this direct return.")
+                        % line.product_id.display_name
+                    )
+                if line.lot_name:
+                    line.lot_name = False
+                if line.expiry_date:
+                    line.expiry_date = False
+            if not self.route_enable_expiry_tracking and line.expiry_date:
+                line.expiry_date = False
             if not line.destination_location_id:
                 line.destination_location_id = self._get_default_destination_for_reason(line.return_reason)
             lines_by_dest[line.destination_location_id] |= line
@@ -274,7 +300,7 @@ class RouteDirectReturn(models.Model):
                     "location_id": customer_location.id,
                     "location_dest_id": destination.id,
                 }
-                if move.product_id.tracking != "none":
+                if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none":
                     lot = self._get_or_create_lot(move.product_id, line.lot_name)
                     if lot:
                         ml_vals["lot_id"] = lot.id
@@ -322,6 +348,8 @@ class RouteDirectReturnLine(models.Model):
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
     lot_name = fields.Char(string="Lot/Serial")
     expiry_date = fields.Date(string="Expiry")
+    route_enable_lot_serial_tracking = fields.Boolean(related="return_id.route_enable_lot_serial_tracking", readonly=True, store=False)
+    route_enable_expiry_tracking = fields.Boolean(related="return_id.route_enable_expiry_tracking", readonly=True, store=False)
     return_reason = fields.Selection(
         [
             ("saleable", "Saleable Return"),
@@ -365,6 +393,15 @@ class RouteDirectReturnLine(models.Model):
                     line.destination_location_id = line.return_id._get_default_destination_for_reason(line.return_reason)
                 except UserError:
                     line.destination_location_id = False
+
+    @api.onchange("route_enable_lot_serial_tracking", "route_enable_expiry_tracking")
+    def _onchange_route_feature_flags(self):
+        for line in self:
+            if not line.route_enable_lot_serial_tracking:
+                line.lot_name = False
+                line.expiry_date = False
+            elif not line.route_enable_expiry_tracking:
+                line.expiry_date = False
 
     @api.constrains("quantity")
     def _check_quantity(self):
