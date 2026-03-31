@@ -1,3 +1,5 @@
+<odoo>
+<data>
 <record id="view_res_company_form_route_return_settings" model="ir.ui.view">
 <field name="name">res.company.form.route.return.settings</field>
 <field name="model">res.company</field>
@@ -34,4 +36,5 @@
 <field name="context">{}</field>
 </record>
 <menuitem id="menu_route_return_settings" name="Route Settings" parent="menu_route_configuration" action="action_route_return_settings" sequence="30"/>
+</data>
 </odoo>
