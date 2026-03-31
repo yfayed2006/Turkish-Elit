@@ -31,6 +31,25 @@ class SaleOrder(models.Model):
         default="cash",
     )
     route_payment_due_date = fields.Date(string="Deferred Due Date")
+    direct_sale_payment_ids = fields.One2many(
+        "route.visit.payment",
+        "sale_order_id",
+        string="Direct Sale Payments",
+    )
+    direct_sale_payment_count = fields.Integer(
+        string="Payment Count",
+        compute="_compute_direct_sale_payment_summary",
+    )
+    direct_sale_collected_amount = fields.Monetary(
+        string="Collected Amount",
+        currency_field="currency_id",
+        compute="_compute_direct_sale_payment_summary",
+    )
+    direct_sale_remaining_due = fields.Monetary(
+        string="Remaining Due",
+        currency_field="currency_id",
+        compute="_compute_direct_sale_payment_summary",
+    )
 
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
@@ -69,6 +88,98 @@ class SaleOrder(models.Model):
                     if "partner_shipping_id" in self._fields:
                         vals["partner_shipping_id"] = delivery_partner
         return vals
+
+
+    @api.depends("amount_total", "direct_sale_payment_ids.amount", "direct_sale_payment_ids.state")
+    def _compute_direct_sale_payment_summary(self):
+        for order in self:
+            active_payments = order.direct_sale_payment_ids.filtered(lambda p: p.state != "cancelled")
+            confirmed_payments = active_payments.filtered(lambda p: p.state == "confirmed")
+            order.direct_sale_payment_count = len(active_payments)
+            order.direct_sale_collected_amount = sum(confirmed_payments.mapped("amount"))
+            order.direct_sale_remaining_due = order._get_route_payment_remaining_due()
+
+    def _get_route_payment_records(self):
+        self.ensure_one()
+        return self.direct_sale_payment_ids.filtered(lambda p: p.state != "cancelled").sorted(
+            key=lambda p: (p.payment_date or fields.Datetime.now(), p.id),
+            reverse=True,
+        )
+
+    def _get_route_payment_confirmed_amount(self, exclude_payment=None):
+        self.ensure_one()
+        payments = self.direct_sale_payment_ids.filtered(lambda p: p.state == "confirmed")
+        if exclude_payment:
+            payments = payments.filtered(lambda p: p.id != exclude_payment.id)
+        return sum(payments.mapped("amount"))
+
+    def _get_route_payment_remaining_due(self, exclude_payment=None):
+        self.ensure_one()
+        if self.route_order_mode != "direct_sale":
+            return 0.0
+        return max((self.amount_total or 0.0) - self._get_route_payment_confirmed_amount(exclude_payment=exclude_payment), 0.0)
+
+    def _prepare_direct_sale_payment_vals(self):
+        self.ensure_one()
+        remaining_due = self._get_route_payment_remaining_due()
+        if remaining_due <= 0:
+            return False
+
+        payment_mode = self.route_payment_mode or "cash"
+        vals = {
+            "source_type": "direct_sale",
+            "sale_order_id": self.id,
+            "payment_date": self.date_order or fields.Datetime.now(),
+            "payment_mode": payment_mode,
+            "reference": self.name,
+        }
+
+        if payment_mode == "deferred":
+            vals.update(
+                {
+                    "collection_type": "defer_date",
+                    "amount": 0.0,
+                    "due_date": self.route_payment_due_date,
+                    "promise_date": self.route_payment_due_date,
+                    "promise_amount": remaining_due,
+                    "note": _("Auto-created deferred collection record from direct sale order %s.") % (self.name or "-"),
+                }
+            )
+        else:
+            vals.update(
+                {
+                    "collection_type": "full",
+                    "amount": remaining_due,
+                    "note": _("Auto-created payment record from direct sale order %s.") % (self.name or "-"),
+                }
+            )
+
+        return vals
+
+    def _ensure_direct_sale_payment_record(self):
+        Payment = self.env["route.visit.payment"]
+        for order in self:
+            if order.route_order_mode != "direct_sale":
+                continue
+            existing = order.direct_sale_payment_ids.filtered(lambda p: p.state != "cancelled")
+            if existing:
+                continue
+            vals = order._prepare_direct_sale_payment_vals()
+            if not vals:
+                continue
+            payment = Payment.create(vals)
+            payment.action_confirm()
+
+    def action_open_direct_sale_payments(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_visit_payment").read()[0]
+        action["name"] = _("Direct Sale Payments")
+        action["domain"] = [("sale_order_id", "=", self.id)]
+        action["context"] = {
+            "default_source_type": "direct_sale",
+            "default_sale_order_id": self.id,
+        }
+        return action
 
 
     def _get_linked_route_visit(self):
@@ -530,5 +641,7 @@ class SaleOrder(models.Model):
             delivery_result = order._create_and_validate_direct_sale_delivery()
             if isinstance(delivery_result, dict):
                 action_result = delivery_result
+            elif order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
+                order._ensure_direct_sale_payment_record()
 
         return action_result
