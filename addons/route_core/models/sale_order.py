@@ -51,6 +51,30 @@ class SaleOrder(models.Model):
         compute="_compute_direct_sale_payment_summary",
     )
 
+
+    route_enable_direct_sale = fields.Boolean(
+        related="company_id.route_enable_direct_sale",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_return = fields.Boolean(
+        related="company_id.route_enable_direct_return",
+        readonly=True,
+        store=False,
+    )
+
+    def _ensure_route_direct_sale_enabled(self):
+        for order in self:
+            if not order.company_id.route_enable_direct_sale:
+                raise UserError(_("Direct Sale is disabled in Route Settings."))
+
+    def _ensure_route_direct_return_enabled(self):
+        for order in self:
+            if not order.company_id.route_enable_direct_sale:
+                raise UserError(_("Direct Sale is disabled in Route Settings."))
+            if not order.company_id.route_enable_direct_return:
+                raise UserError(_("Direct Return is disabled in Route Settings."))
+
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
         for order in self:
@@ -72,10 +96,29 @@ class SaleOrder(models.Model):
                 if vehicle and getattr(vehicle, "stock_location_id", False):
                     order.route_source_location_id = vehicle.stock_location_id
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("route_order_mode") == "direct_sale":
+                company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
+                if not company.route_enable_direct_sale:
+                    raise UserError(_("Direct Sale is disabled in Route Settings."))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("route_order_mode") == "direct_sale":
+            for order in self:
+                company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else order.company_id
+                if not company.route_enable_direct_sale:
+                    raise UserError(_("Direct Sale is disabled in Route Settings."))
+        return super().write(vals)
+
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
         if vals.get("route_order_mode") == "direct_sale":
+            if not self.env.company.route_enable_direct_sale:
+                raise UserError(_("Direct Sale is disabled in Route Settings."))
             outlet_id = vals.get("route_outlet_id")
             if outlet_id:
                 outlet = self.env["route.outlet"].browse(outlet_id)
@@ -172,6 +215,7 @@ class SaleOrder(models.Model):
 
     def action_open_direct_sale_payments(self):
         self.ensure_one()
+        self._ensure_route_direct_sale_enabled()
         action = self.env.ref("route_core.action_route_direct_sale_payment").read()[0]
         action["name"] = _("Direct Sale Payments")
         action["domain"] = [("sale_order_id", "=", self.id)]
@@ -537,6 +581,7 @@ class SaleOrder(models.Model):
 
     def action_open_direct_sale_deliveries(self):
         self.ensure_one()
+        self._ensure_route_direct_sale_enabled()
         pickings = self._get_direct_sale_deliveries()
         action = self._get_stock_picking_action(_("Direct Sale Deliveries"))
         action["domain"] = [("id", "in", pickings.ids)]
@@ -550,6 +595,7 @@ class SaleOrder(models.Model):
 
     def action_open_direct_sale_returns(self):
         self.ensure_one()
+        self._ensure_route_direct_return_enabled()
         pickings = self._get_direct_sale_return_pickings()
         action = self._get_stock_picking_action(_("Direct Sale Returns"))
         action["domain"] = [("id", "in", pickings.ids)]
@@ -563,6 +609,7 @@ class SaleOrder(models.Model):
 
     def action_create_direct_return(self):
         self.ensure_one()
+        self._ensure_route_direct_return_enabled()
         if self.route_order_mode != "direct_sale":
             raise UserError(_("Create Return is available only for Direct Sale orders."))
 
@@ -628,6 +675,7 @@ class SaleOrder(models.Model):
                 action_result = delivery_result
 
         for order in direct_sale_orders:
+            order._ensure_route_direct_sale_enabled()
             if not order.route_outlet_id:
                 raise UserError(_("Route Outlet is required for Direct Sale orders."))
             if not order.partner_id:
@@ -645,4 +693,5 @@ class SaleOrder(models.Model):
                 order._ensure_direct_sale_payment_record()
 
         return action_result
+
 
