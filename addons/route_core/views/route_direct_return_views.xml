@@ -36,7 +36,7 @@
 <field name="user_id" readonly="1"/>
 <field name="vehicle_id" readonly="state != 'draft'"/>
 <field name="sale_order_id" readonly="state != 'draft'" domain="[('route_order_mode', '=', 'direct_sale'), ('route_outlet_id', '=', outlet_id)]"/>
-<field name="reference_picking_id" readonly="state != 'draft'" domain="[('origin', '=', sale_order_id.name), ('state', '=', 'done')]"/>
+<field name="reference_picking_id" readonly="state != 'draft'"/>
 </group>
 </group>
 <group>
