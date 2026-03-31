@@ -58,6 +58,17 @@ class RouteOutlet(models.Model):
         help="Main related contact/customer for this outlet.",
     )
 
+    outlet_operation_mode = fields.Selection(
+        [
+            ("consignment", "Consignment"),
+            ("direct_sale", "Direct Sale"),
+        ],
+        string="Outlet Operation Mode",
+        required=True,
+        default="consignment",
+        help="Consignment = our stock remains under route counting and refill workflow. Direct Sale = outlet buys products directly from us.",
+    )
+
     commission_rate = fields.Float(
         string="Commission %",
         required=True,
