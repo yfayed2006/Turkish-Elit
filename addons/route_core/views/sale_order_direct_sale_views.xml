@@ -1,0 +1,16 @@
+<odoo>
+<record id="view_sale_order_form_route_direct_sale" model="ir.ui.view">
+<field name="name">sale.order.form.route.direct.sale</field>
+<field name="model">sale.order</field>
+<field name="inherit_id" ref="sale.view_order_form"/>
+<field name="arch" type="xml">
+<xpath expr="//field[@name='partner_id']" position="after">
+<field name="route_order_mode"/>
+<field name="route_outlet_id" invisible="route_order_mode != 'direct_sale'"/>
+<field name="route_source_location_id" invisible="route_order_mode != 'direct_sale'"/>
+<field name="route_payment_mode" invisible="route_order_mode != 'direct_sale'"/>
+<field name="route_payment_due_date" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'"/>
+</xpath>
+</field>
+</record>
+</odoo>
