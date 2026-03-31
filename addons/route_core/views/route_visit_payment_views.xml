@@ -1,11 +1,12 @@
 <odoo>
+<!--  Admin / all payments  -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
 <list>
 <field name="source_type" widget="badge"/>
-<field name="source_document_ref"/>
+<field name="source_document_ref" string="Source Document"/>
 <field name="visit_id" optional="hide"/>
 <field name="sale_order_id" optional="hide"/>
 <field name="outlet_id"/>
@@ -14,14 +15,61 @@
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
-<field name="amount"/>
-<field name="remaining_due_amount" string="Unpaid Amount" widget="badge" decoration-danger="remaining_due_amount > 0"/>
-<field name="due_date"/>
-<field name="promise_date"/>
-<field name="promise_amount"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="due_date" optional="hide"/>
+<field name="promise_date" optional="hide"/>
+<field name="promise_amount" optional="hide"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="reference"/>
-<field name="state"/>
+<field name="reference" optional="hide"/>
+<field name="state" optional="hide"/>
+</list>
+</field>
+</record>
+<!--  Tailored visit list  -->
+<record id="view_route_visit_collection_list" model="ir.ui.view">
+<field name="name">route.visit.collection.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list>
+<field name="source_document_ref" string="Visit"/>
+<field name="outlet_id"/>
+<field name="area_id" optional="hide"/>
+<field name="salesperson_id" optional="hide"/>
+<field name="payment_date"/>
+<field name="payment_mode" string="Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="due_date" string="Due Date" optional="hide"/>
+<field name="promise_date" string="Next Promise" optional="hide"/>
+<field name="promise_amount" string="Promise Amount" optional="hide"/>
+<field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="state" string="Status" optional="hide"/>
+</list>
+</field>
+</record>
+<!--  Tailored direct sale list  -->
+<record id="view_route_direct_sale_payment_list" model="ir.ui.view">
+<field name="name">route.direct.sale.payment.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list>
+<field name="source_document_ref" string="Order"/>
+<field name="outlet_id"/>
+<field name="area_id" optional="hide"/>
+<field name="salesperson_id" optional="hide"/>
+<field name="payment_date"/>
+<field name="payment_mode" string="Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="due_date" string="Due Date" optional="hide"/>
+<field name="promise_date" string="Next Promise" optional="hide"/>
+<field name="promise_amount" string="Promise Amount" optional="hide"/>
+<field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="reference" string="Reference" optional="hide"/>
+<field name="state" string="Status" optional="hide"/>
 </list>
 </field>
 </record>
@@ -39,14 +87,14 @@
 <sheet>
 <group string="Payment Financial Status" col="2">
 <group>
-<field name="source_type" readonly="state != 'draft'"/>
+<field name="source_type" invisible="1"/>
 <field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'"/>
 <field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'"/>
-<field name="source_document_ref" readonly="1"/>
+<field name="source_document_ref" readonly="1" string="Source Document"/>
 <field name="outlet_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="salesperson_id" readonly="1"/>
-<field name="visit_remaining_due" readonly="1" string="Current Remaining Due"/>
+<field name="visit_remaining_due" readonly="1" string="Current Open Due"/>
 </group>
 <group>
 <field name="payment_date" readonly="state != 'draft'"/>
@@ -75,6 +123,7 @@
 </form>
 </field>
 </record>
+<!--  Admin / all payments search  -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -105,6 +154,7 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
+<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
@@ -129,6 +179,103 @@
 </search>
 </field>
 </record>
+<!--  Visit collections search  -->
+<record id="view_route_visit_collection_search" model="ir.ui.view">
+<field name="name">route.visit.collection.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Visit Collections">
+<field name="visit_id" string="Visit"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="state"/>
+<field name="source_document_ref" string="Visit"/>
+<filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
+<filter name="filter_open_promises" string="Open Promises" domain="[('promise_status', 'in', ('open', 'due_today', 'overdue'))]"/>
+<separator/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="payment_mode" string="Payment Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<!--  Direct sale payments search  -->
+<record id="view_route_direct_sale_payment_search" model="ir.ui.view">
+<field name="name">route.direct.sale.payment.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Direct Sale Payments">
+<field name="sale_order_id" string="Order"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="state"/>
+<field name="reference"/>
+<field name="source_document_ref" string="Order"/>
+<filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_open_due" string="Open Due" domain="[('remaining_due_amount', '>', 0)]"/>
+<filter name="filter_open_promises" string="Open Promises" domain="[('promise_status', 'in', ('open', 'due_today', 'overdue'))]"/>
+<separator/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="payment_mode" string="Payment Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
 <record id="action_route_visit_payment" model="ir.actions.act_window">
 <field name="name">All Payments</field>
 <field name="res_model">route.visit.payment</field>
@@ -140,17 +287,19 @@
 <field name="name">My Visit Collections</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">list,form</field>
-<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="view_id" ref="view_route_visit_collection_list"/>
+<field name="search_view_id" ref="view_route_visit_collection_search"/>
 <field name="domain">[('source_type', '=', 'visit')]</field>
-<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_visit_source': 1, 'default_source_type': 'visit'}</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'visit'}</field>
 </record>
 <record id="action_route_direct_sale_payment" model="ir.actions.act_window">
 <field name="name">My Direct Sale Payments</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">list,form</field>
-<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="view_id" ref="view_route_direct_sale_payment_list"/>
+<field name="search_view_id" ref="view_route_direct_sale_payment_search"/>
 <field name="domain">[('source_type', '=', 'direct_sale')]</field>
-<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_direct_sale_source': 1, 'default_source_type': 'direct_sale'}</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'direct_sale'}</field>
 </record>
 <menuitem id="menu_route_visit_payment" name="All Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
 </odoo>
