@@ -182,6 +182,10 @@
 <i class="fa fa-plus-square route_pda_app_icon"/>
 <span class="route_pda_app_label">Create Direct Sale</span>
 </button>
+<button type="object" name="action_open_direct_sale_orders" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-shopping-cart route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Orders</span>
+</button>
 </div>
 </sheet>
 </form>
