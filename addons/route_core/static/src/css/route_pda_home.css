@@ -1,265 +1,247 @@
 
 .route_pda_home_sheet {
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 12px 16px 24px 16px;
+    max-width: 1180px;
 }
 
-.route_pda_home_header_compact {
-    margin-bottom: 18px;
-}
-
-.route_pda_home_title {
-    font-size: 42px;
-    font-weight: 700;
-    margin: 0 0 8px 0;
-}
-
-.route_pda_home_subtitle_compact {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 18px;
-    font-weight: 600;
-    color: #527f8c;
-    flex-wrap: wrap;
-}
-
-.route_pda_home_sep {
-    color: #202939;
-}
-
-.route_pda_group {
-    margin-bottom: 18px;
-    border-radius: 22px;
-    padding: 14px;
-}
-
-.route_pda_group_operations { background: #f8f4f8; }
-.route_pda_group_snapshot { background: #f5f7fb; }
-.route_pda_group_catalog { background: #f4f7f4; }
-.route_pda_group_alerts { background: #fbf6f4; }
-
-.route_pda_group_title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #202939;
-    margin: 0 0 12px 2px;
-    text-transform: uppercase;
-}
-
-.route_pda_apps_grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.route_pda_center_grid {
-    margin-top: 6px;
-}
-
-.route_pda_app_btn {
-    min-height: 128px;
-    border-radius: 22px !important;
-    border: 2px solid rgba(32, 41, 57, 0.07) !important;
-    box-shadow: none !important;
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 14px 10px !important;
-    white-space: normal !important;
-    text-align: center !important;
-}
-
-.route_pda_app_btn_primary {
-    background: #81607d !important;
-    color: #fff !important;
-}
-
-.route_pda_app_btn_info {
-    background: #eaf0fb !important;
-    color: #1e2b44 !important;
-}
-
-.route_pda_app_btn_catalog {
-    background: #eef5ef !important;
-    color: #1f2f26 !important;
-}
-
-.route_pda_app_btn_alert {
-    background: #fcf2f2 !important;
-    color: #40242a !important;
-}
-
-.route_pda_app_btn_snapshot {
-    background: #f1effa !important;
-    color: #2c2540 !important;
-}
-
-.route_pda_app_icon {
-    font-size: 34px;
-    line-height: 1;
-}
-
-.route_pda_app_label {
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.25;
-}
-
-.route_pda_detail_header {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.route_pda_home_header {
     margin-bottom: 16px;
 }
 
-.route_pda_back_btn {
-    align-self: flex-start;
-    border-radius: 14px !important;
-    padding: 10px 14px !important;
-    background: #f3f4f7 !important;
-    border: 1px solid #dde2ea !important;
-    color: #1f2a3d !important;
-    font-weight: 600;
-}
-
-.route_pda_detail_title {
-    font-size: 28px;
+.route_pda_home_title {
+    font-size: 2.1rem;
     font-weight: 700;
     margin: 0;
 }
 
+.route_pda_home_subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2e7d8a;
+    flex-wrap: wrap;
+}
+
+.route_pda_home_subtitle .o_field_widget {
+    display: inline-flex;
+}
+
+.route_pda_home_subtitle .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.route_pda_home_sep {
+    color: #111827;
+}
+
+.route_pda_section {
+    margin-top: 18px;
+}
+
+.route_pda_section_title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    text-transform: uppercase;
+}
+
+.route_pda_apps_grid,
 .route_pda_metric_grid,
 .route_pda_card_grid {
     display: grid;
+    gap: 12px;
+}
+
+.route_pda_apps_grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.route_pda_metric_grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.route_pda_card_grid_3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.route_pda_card_grid_2,
+.route_pda_finance_grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
 }
 
-.route_pda_metric_btn,
-.route_pda_info_card {
-    min-height: 130px;
-    border-radius: 22px;
-    background: #fff;
-    border: 2px solid #e7e9ee;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 18px 14px;
-}
-
+.route_pda_app_btn,
 .route_pda_metric_btn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 112px;
+    border-radius: 14px !important;
+    border: 1px solid #e5e7eb !important;
+    background: #f8fafc !important;
+    color: #1f2937 !important;
     box-shadow: none !important;
+    gap: 8px;
+    padding: 14px 10px !important;
+    text-align: center;
 }
 
-.route_pda_metric_value {
-    font-size: 46px;
-    font-weight: 700;
+.route_pda_app_btn:hover,
+.route_pda_metric_btn:hover {
+    background: #eef2f7 !important;
+}
+
+.route_pda_app_btn_primary {
+    background: #7a536f !important;
+    color: #ffffff !important;
+    border-color: #7a536f !important;
+}
+
+.route_pda_app_btn_primary:hover {
+    background: #6a465f !important;
+}
+
+.route_pda_app_icon {
+    font-size: 1.55rem;
     line-height: 1;
-    color: #1f2a3d;
+}
+
+.route_pda_app_label {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+.route_pda_metric_value,
+.route_pda_metric_value .o_field_widget,
+.route_pda_info_value,
+.route_pda_info_value .o_field_widget {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.route_pda_metric_value .o_input,
+.route_pda_info_value .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    text-align: center;
+}
+
+.route_pda_metric_value .o_input {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #111827;
 }
 
 .route_pda_metric_label {
-    font-size: 16px;
+    font-size: 0.92rem;
     font-weight: 700;
-    margin-top: 8px;
-    color: #4b5568;
+    color: #6b7280;
+    text-align: center;
 }
 
-.route_pda_info_label {
-    font-size: 14px;
-    font-weight: 700;
-    color: #6a7280;
-    margin-bottom: 8px;
-}
-
-.route_pda_info_value {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1f2a3d;
-    line-height: 1.25;
-    word-break: break-word;
-}
-
-.route_pda_money_value {
-    font-size: 18px;
+.route_pda_info_card {
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
 }
 
 .route_pda_info_card_emphasis {
-    background: #f8f4ff;
-    border-color: #dfd4ff;
+    background: #faf5ff;
+    border-color: #ddd6fe;
+}
+
+.route_pda_info_label {
+    font-size: 0.92rem;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.route_pda_info_value .o_input {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #111827;
+    text-align: left;
+}
+
+.route_pda_info_value {
+    justify-content: flex-start;
+}
+
+.route_pda_money_value .o_input {
+    font-size: 1.35rem;
+}
+
+@media (max-width: 992px) {
+    .route_pda_apps_grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .route_pda_metric_grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .route_pda_card_grid_3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 768px) {
     .route_pda_home_sheet {
         max-width: 100%;
-        padding: 10px 10px 20px 10px;
     }
 
     .route_pda_home_title {
-        font-size: 28px;
-        margin-bottom: 6px;
-    }
-
-    .route_pda_home_subtitle_compact {
-        font-size: 15px;
-    }
-
-    .route_pda_group {
-        padding: 10px;
-        margin-bottom: 14px;
-    }
-
-    .route_pda_group_title {
-        font-size: 15px;
-        margin-bottom: 10px;
+        font-size: 2rem;
     }
 
     .route_pda_apps_grid,
     .route_pda_metric_grid,
-    .route_pda_card_grid {
-        gap: 10px;
+    .route_pda_card_grid_3,
+    .route_pda_card_grid_2,
+    .route_pda_finance_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .route_pda_app_btn,
-    .route_pda_metric_btn,
-    .route_pda_info_card {
-        min-height: 112px;
-        border-radius: 18px !important;
+    .route_pda_metric_btn {
+        min-height: 104px;
         padding: 12px 8px !important;
     }
 
-    .route_pda_app_icon {
-        font-size: 28px;
-    }
-
     .route_pda_app_label {
-        font-size: 15px;
+        font-size: 0.95rem;
     }
 
-    .route_pda_metric_value {
-        font-size: 34px;
+    .route_pda_info_card {
+        min-height: 88px;
+        padding: 12px 14px;
     }
 
-    .route_pda_metric_label {
-        font-size: 14px;
-    }
-
-    .route_pda_info_label {
-        font-size: 13px;
-    }
-
-    .route_pda_info_value,
-    .route_pda_money_value {
-        font-size: 17px;
-    }
-
-    .route_pda_detail_title {
-        font-size: 24px;
+    .route_pda_info_value .o_input,
+    .route_pda_money_value .o_input {
+        font-size: 1.2rem;
     }
 }
+
