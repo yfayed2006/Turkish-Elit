@@ -52,6 +52,27 @@ class RouteDirectReturn(models.Model):
         store=False,
     )
 
+
+    route_enable_direct_sale = fields.Boolean(
+        string="Enable Direct Sale",
+        related="company_id.route_enable_direct_sale",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_return = fields.Boolean(
+        string="Enable Direct Return",
+        related="company_id.route_enable_direct_return",
+        readonly=True,
+        store=False,
+    )
+
+    def _ensure_direct_return_enabled(self):
+        for rec in self:
+            if not rec.company_id.route_enable_direct_sale:
+                raise UserError(_("Direct Sale is disabled in Route Settings."))
+            if not rec.company_id.route_enable_direct_return:
+                raise UserError(_("Direct Return is disabled in Route Settings."))
+
     @api.depends("picking_ids")
     def _compute_picking_count(self):
         for rec in self:
@@ -61,6 +82,11 @@ class RouteDirectReturn(models.Model):
     def create(self, vals_list):
         seq = self.env["ir.sequence"]
         for vals in vals_list:
+            company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
+            if not company.route_enable_direct_sale:
+                raise UserError(_("Direct Sale is disabled in Route Settings."))
+            if not company.route_enable_direct_return:
+                raise UserError(_("Direct Return is disabled in Route Settings."))
             if vals.get("name", "New") == "New":
                 vals["name"] = seq.next_by_code("route.direct.return") or "New"
             vals.setdefault("user_id", self.env.user.id)
@@ -103,6 +129,10 @@ class RouteDirectReturn(models.Model):
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
+        if not self.env.company.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        if not self.env.company.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
         if "vehicle_id" in self._fields and not vals.get("vehicle_id"):
             vehicle = self._default_vehicle()
             if vehicle:
@@ -218,6 +248,7 @@ class RouteDirectReturn(models.Model):
 
     def action_create_pickings(self):
         self.ensure_one()
+        self._ensure_direct_return_enabled()
         if self.state != "draft":
             raise UserError(_("Only draft direct returns can generate return pickings."))
         if not self.outlet_id:
