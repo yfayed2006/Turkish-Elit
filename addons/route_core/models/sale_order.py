@@ -1,9 +1,43 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
+
+    route_order_mode = fields.Selection(
+        [("standard", "Standard"), ("direct_sale", "Direct Sale")],
+        string="Route Order Mode",
+        default="standard",
+        tracking=True,
+    )
+    route_outlet_id = fields.Many2one(
+        "route.outlet",
+        string="Route Outlet",
+        domain=[("outlet_operation_mode", "=", "direct_sale")],
+        ondelete="restrict",
+        help="Direct-sale outlet linked to this sales order.",
+    )
+    route_source_location_id = fields.Many2one(
+        "stock.location",
+        string="Source Location",
+        domain=[("usage", "=", "internal")],
+        ondelete="restrict",
+        help="Internal source stock location used for direct sale fulfillment.",
+    )
+    route_payment_mode = fields.Selection(
+        [("cash", "Cash"), ("bank", "Bank Transfer"), ("pos", "POS"), ("deferred", "Deferred")],
+        string="Route Payment Mode",
+        default="cash",
+    )
+    route_payment_due_date = fields.Date(string="Deferred Due Date")
+
+    @api.onchange("route_outlet_id")
+    def _onchange_route_outlet_id(self):
+        for order in self:
+            if order.route_outlet_id and order.route_outlet_id.partner_id:
+                order.partner_id = order.route_outlet_id.partner_id
+
 
     def _get_linked_route_visit(self):
         self.ensure_one()
