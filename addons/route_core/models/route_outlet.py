@@ -1413,6 +1413,13 @@ class RouteOutlet(models.Model):
             ]
             record.display_address = ", ".join([part for part in parts if part])
 
+
+    @api.constrains("outlet_operation_mode", "partner_id")
+    def _check_direct_sale_partner_required(self):
+        for record in self:
+            if record.outlet_operation_mode == "direct_sale" and not record.partner_id:
+                raise ValidationError(_("Related Contact is required when Outlet Operation Mode is Direct Sale."))
+
     @api.constrains("partner_id")
     def _check_partner_company_type(self):
         for record in self:
