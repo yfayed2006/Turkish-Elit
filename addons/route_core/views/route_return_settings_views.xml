@@ -5,27 +5,21 @@
 <field name="inherit_id" ref="base.view_company_form"/>
 <field name="arch" type="xml">
 <xpath expr="//sheet" position="inside">
-<group string="Route Return Settings">
+<group string="Route Settings">
 <group>
 <field name="return_damaged_location_id"/>
 <field name="return_near_expiry_location_id"/>
-</group>
-</group>
-<group string="Route Productization Settings">
-<group>
-<field name="route_enable_lot_serial_tracking"/>
-<field name="route_enable_expiry_tracking" invisible="route_enable_lot_serial_tracking == False"/>
 </group>
 </group>
 </xpath>
 </field>
 </record>
 <record id="action_route_return_settings" model="ir.actions.act_window">
-<field name="name">Return Settings</field>
+<field name="name">Route Settings</field>
 <field name="res_model">res.company</field>
 <field name="view_mode">list,form</field>
 <field name="domain">[]</field>
 <field name="context">{}</field>
 </record>
-<menuitem id="menu_route_return_settings" name="Return Settings" parent="menu_route_configuration" action="action_route_return_settings" sequence="30"/>
+<menuitem id="menu_route_return_settings" name="Route Settings" parent="menu_route_configuration" action="action_route_return_settings" sequence="30"/>
 </odoo>
