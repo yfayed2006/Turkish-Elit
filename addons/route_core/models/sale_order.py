@@ -36,7 +36,10 @@ class SaleOrder(models.Model):
     def _onchange_route_outlet_id(self):
         for order in self:
             if order.route_outlet_id and order.route_outlet_id.partner_id:
-                order.partner_id = order.route_outlet_id.partner_id
+                partner = order.route_outlet_id.partner_id.commercial_partner_id or order.route_outlet_id.partner_id
+                order.partner_id = partner
+                if hasattr(order, "onchange_partner_id"):
+                    order.onchange_partner_id()
             if order.route_order_mode == "direct_sale" and not order.route_source_location_id:
                 order.route_source_location_id = order._get_default_route_source_location()
 
