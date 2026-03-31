@@ -62,7 +62,7 @@
 <field name="route_city_id" required="1" domain="[('country_id', '=', route_country_id)]" context="{'default_country_id': route_country_id}" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
 <field name="area_id" string="Route Area" required="1" domain="[('city_id', '=', route_city_id)]" context="{'default_city_id': route_city_id}" options="{'no_quick_create': True, 'no_create_edit': False, 'no_open': False}"/>
 <field name="route_area_name" invisible="1"/>
-<field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}"/>
+<field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}" required="outlet_operation_mode == 'direct_sale'"/>
 <field name="outlet_operation_mode" widget="radio"/>
 <field name="active"/>
 </group>
