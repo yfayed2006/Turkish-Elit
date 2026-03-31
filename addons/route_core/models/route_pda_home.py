@@ -24,6 +24,8 @@ class RoutePdaHome(models.TransientModel):
     outlet_count = fields.Integer(string="Outlets", compute="_compute_dashboard")
     outlet_balance_count = fields.Integer(string="Outlet Stock", compute="_compute_dashboard")
     payment_count = fields.Integer(string="Payments Today", compute="_compute_dashboard")
+    visit_collection_count = fields.Integer(string="Visit Collections Today", compute="_compute_dashboard")
+    direct_sale_payment_count = fields.Integer(string="Direct Sale Payments Today", compute="_compute_dashboard")
     product_count = fields.Integer(string="Products", compute="_compute_dashboard")
     vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
     warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
@@ -222,7 +224,6 @@ class RoutePdaHome(models.TransientModel):
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
         Quant = self.env["stock.quant"]
-        SaleOrder = self.env["sale.order"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -262,11 +263,6 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", user.id),
                 ("state", "=", "confirmed"),
             ])
-            direct_sale_orders = SaleOrder.search([
-                ("route_order_mode", "=", "direct_sale"),
-                ("user_id", "=", user.id),
-                ("state", "in", ["sale", "done"]),
-            ])
 
             vehicle = rec._get_current_vehicle()
             warehouse_loc = rec._get_main_warehouse_location()
@@ -283,6 +279,8 @@ class RoutePdaHome(models.TransientModel):
             rec.outlet_count = Outlet.search_count([])
             rec.outlet_balance_count = OutletBalance.search_count([])
             rec.payment_count = len(today_payments)
+            rec.visit_collection_count = len(today_payments.filtered(lambda p: p.source_type == "visit"))
+            rec.direct_sale_payment_count = len(today_payments.filtered(lambda p: p.source_type == "direct_sale"))
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
@@ -302,14 +300,7 @@ class RoutePdaHome(models.TransientModel):
             rec.open_promise_amount = sum(
                 all_confirmed_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0 and p.promise_status in ("open", "due_today", "overdue")).mapped("promise_amount")
             )
-            visit_remaining_due = sum(
-                Visit.search([
-                    ("user_id", "=", user.id),
-                    ("state", "!=", "cancel"),
-                ]).filtered(lambda v: (v.remaining_due_amount or 0.0) > 0.0).mapped("remaining_due_amount")
-            )
-            direct_sale_remaining_due = sum(order._get_route_payment_remaining_due() for order in direct_sale_orders)
-            rec.remaining_due_amount = visit_remaining_due + direct_sale_remaining_due
+            rec.remaining_due_amount = sum(today_visits.filtered(lambda v: v.state != "done").mapped("remaining_due_amount"))
 
     def action_open_today_plans(self):
         self.ensure_one()
@@ -515,11 +506,27 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         return self._prepare_action("route_core.action_outlet_stock_balance", name="Outlet Stock Balances")
 
+    def action_open_visit_collections(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_visit_collection",
+            name="My Visit Collections",
+            domain=[("salesperson_id", "=", self.env.user.id), ("source_type", "=", "visit")],
+        )
+
+    def action_open_direct_sale_payments(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_direct_sale_payment",
+            name="My Direct Sale Payments",
+            domain=[("salesperson_id", "=", self.env.user.id), ("source_type", "=", "direct_sale")],
+        )
+
     def action_open_payments(self):
         self.ensure_one()
         return self._prepare_action(
             "route_core.action_route_visit_payment",
-            name="Visit Payments",
+            name="All Payments",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
 
