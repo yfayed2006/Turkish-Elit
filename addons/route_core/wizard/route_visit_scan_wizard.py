@@ -28,7 +28,7 @@ class RouteVisitScanWizard(models.TransientModel):
             ("product", "Product"),
         ],
         string="Focus Target",
-        default="lot",
+        default=lambda self: self._default_focus_target(),
         readonly=True,
     )
 
@@ -91,13 +91,46 @@ class RouteVisitScanWizard(models.TransientModel):
         readonly=True,
     )
 
+    route_enable_lot_serial_tracking = fields.Boolean(
+        string="Enable Lot/Serial Workflow",
+        compute="_compute_route_feature_flags",
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        string="Enable Expiry Workflow",
+        compute="_compute_route_feature_flags",
+        store=False,
+    )
+
+    def _default_focus_target(self):
+        if self.env.context.get("default_focus_target"):
+            return self.env.context["default_focus_target"]
+        visit_id = self.env.context.get("default_visit_id")
+        if visit_id:
+            visit = self.env["route.visit"].browse(visit_id)
+            if visit.exists() and hasattr(visit, "_is_route_lot_workflow_enabled"):
+                return "lot" if visit._is_route_lot_workflow_enabled() else "product"
+        return "lot"
+
+    @api.depends("visit_id.company_id")
+    def _compute_route_feature_flags(self):
+        for rec in self:
+            visit = rec.visit_id
+            if visit and hasattr(visit, "_is_route_lot_workflow_enabled"):
+                rec.route_enable_lot_serial_tracking = visit._is_route_lot_workflow_enabled()
+                rec.route_enable_expiry_tracking = visit._is_route_expiry_workflow_enabled()
+            else:
+                rec.route_enable_lot_serial_tracking = True
+                rec.route_enable_expiry_tracking = True
+
+
     @api.depends("active_lot_id", "visit_id.date", "visit_id.near_expiry_threshold_days")
     def _compute_active_lot_state(self):
         for rec in self:
             rec.active_lot_expiry_date = False
             rec.active_lot_days_left = 0
             rec.active_lot_status = False
-            if not rec.active_lot_id:
+            if not rec.route_enable_lot_serial_tracking or not rec.active_lot_id:
                 continue
             expiry_date = rec.visit_id._get_lot_expiry_date(rec.active_lot_id)
             rec.active_lot_expiry_date = expiry_date
@@ -119,7 +152,7 @@ class RouteVisitScanWizard(models.TransientModel):
         for rec in self:
             rec.expiry_days_left = 0
             rec.is_near_expiry = False
-            if not rec.expiry_date:
+            if not rec.route_enable_expiry_tracking or not rec.expiry_date:
                 continue
             reference_date = rec.visit_id.date or fields.Date.context_today(rec)
             delta_days = (rec.expiry_date - reference_date).days
@@ -266,12 +299,13 @@ class RouteVisitScanWizard(models.TransientModel):
                 else:
                     rec.counted_increase = 0.0
 
+            active_lot = rec.active_lot_id if rec.route_enable_lot_serial_tracking else False
             try:
-                resolved_lot = rec.visit_id._resolve_product_active_lot(product, active_lot=rec.active_lot_id)
+                resolved_lot = rec.visit_id._resolve_product_active_lot(product, active_lot=active_lot)
             except UserError:
                 resolved_lot = False
 
-            rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if resolved_lot else False
+            rec.expiry_date = rec.visit_id._get_lot_expiry_date(resolved_lot) if (resolved_lot and rec.route_enable_expiry_tracking) else False
             rec.add_to_near_expiry_return = False
 
             # Reset decisions when the scan context changes.
@@ -312,6 +346,9 @@ class RouteVisitScanWizard(models.TransientModel):
         self.ensure_one()
         if not self.visit_id:
             raise UserError(_("Visit is required."))
+        if not self.route_enable_lot_serial_tracking:
+            self.write({"active_lot_id": False, "lot_barcode": False, "focus_target": "product"})
+            return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
         self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
         return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
@@ -332,7 +369,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "add_to_near_expiry_return": False,
             "return_from_scan": False,
             "return_qty": 0.0,
-            "focus_target": "lot",
+            "focus_target": self._default_focus_target(),
             "near_expiry_decision": False,
             "expired_decision": False,
             "return_route": "vehicle",
@@ -347,7 +384,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "context": {
                 "default_visit_id": self.visit_id.id,
                 "default_scan_mode": self.scan_mode,
-                "default_focus_target": "lot",
+                "default_focus_target": self._default_focus_target(),
                 "default_lot_barcode": False,
                 "default_barcode": False,
                 "default_quantity": 1.0,
@@ -428,12 +465,12 @@ class RouteVisitScanWizard(models.TransientModel):
                 self.barcode,
                 scan_qty=effective_qty,
                 scanned_uom=effective_uom,
-                active_lot=self.active_lot_id,
+                active_lot=self.active_lot_id if self.route_enable_lot_serial_tracking else False,
             )
             line = result["line"]
             product = result["product"]
             resolved_lot = result.get("resolved_lot")
-            effective_expiry_date = result.get("resolved_expiry_date") or self.expiry_date
+            effective_expiry_date = (result.get("resolved_expiry_date") or self.expiry_date) if self.route_enable_expiry_tracking else False
 
             line_vals = {}
             if effective_expiry_date:
@@ -485,8 +522,8 @@ class RouteVisitScanWizard(models.TransientModel):
                 "context": {
                     "default_visit_id": self.visit_id.id,
                     "default_scan_mode": self.scan_mode,
-                    "default_active_lot_id": self.active_lot_id.id,
-                    "default_focus_target": "product" if self.active_lot_id else "lot",
+                    "default_active_lot_id": self.active_lot_id.id if self.route_enable_lot_serial_tracking else False,
+                    "default_focus_target": "product" if (self.active_lot_id and self.route_enable_lot_serial_tracking) else self._default_focus_target(),
                     "default_last_product_id": product.id,
                     "default_last_counted_qty": result["counted_increase"],
                     "default_last_return_qty": forced_return_qty,
@@ -503,3 +540,4 @@ class RouteVisitScanWizard(models.TransientModel):
     def action_done(self):
         self.ensure_one()
         return {"type": "ir.actions.act_window_close"}
+
