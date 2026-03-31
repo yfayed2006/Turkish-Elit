@@ -28,11 +28,16 @@ class SaleOrderLine(models.Model):
         "product_uom_qty",
         "order_id.route_order_mode",
         "order_id.route_source_location_id",
+        "order_id.route_enable_lot_serial_tracking",
     )
     def _compute_route_available_lot_ids(self):
         Quant = self.env["stock.quant"]
         for line in self:
             lots = self.env["stock.lot"]
+            if not line.order_id.route_enable_lot_serial_tracking:
+                line.route_available_lot_ids = lots
+                line.route_lot_id = False
+                continue
             if (
                 line.order_id.route_order_mode == "direct_sale"
                 and line.product_id
@@ -53,9 +58,12 @@ class SaleOrderLine(models.Model):
             if line.route_lot_id and line.route_lot_id not in lots:
                 line.route_lot_id = False
 
-    @api.onchange("product_id", "order_id.route_source_location_id")
+    @api.onchange("product_id", "order_id.route_source_location_id", "order_id.route_enable_lot_serial_tracking")
     def _onchange_route_product_or_source(self):
         for line in self:
+            if not line.order_id.route_enable_lot_serial_tracking:
+                line.route_lot_id = False
+                continue
             if not line.product_id or line.product_id.tracking == "none":
                 line.route_lot_id = False
                 continue
@@ -84,6 +92,24 @@ class SaleOrderLine(models.Model):
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
+    route_enable_lot_serial_tracking = fields.Boolean(
+        string="Route Lot/Serial Workflow",
+        compute="_compute_route_feature_flags",
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        string="Route Expiry Workflow",
+        compute="_compute_route_feature_flags",
+        store=False,
+    )
+
+    @api.depends("company_id")
+    def _compute_route_feature_flags(self):
+        for order in self:
+            company = order.company_id or self.env.company
+            order.route_enable_lot_serial_tracking = bool(company.route_enable_lot_serial_tracking)
+            order.route_enable_expiry_tracking = bool(company.route_enable_expiry_tracking)
+
     def _prepare_route_delivery_move_vals(
         self,
         picking,
@@ -97,13 +123,19 @@ class SaleOrder(models.Model):
             source_location=source_location,
             dest_location=dest_location,
         )
-        if getattr(order_line, "route_lot_id", False) and "restrict_lot_id" in self.env["stock.move"]._fields:
+        if (
+            getattr(order_line, "route_lot_id", False)
+            and getattr(order_line.order_id, "route_enable_lot_serial_tracking", False)
+            and "restrict_lot_id" in self.env["stock.move"]._fields
+        ):
             vals["restrict_lot_id"] = order_line.route_lot_id.id
         return vals
 
     def _check_direct_sale_tracked_lines(self):
         Quant = self.env["stock.quant"]
         for order in self.filtered(lambda o: o.route_order_mode == "direct_sale"):
+            if not order.route_enable_lot_serial_tracking:
+                continue
             for line in order.order_line.filtered(
                 lambda l: l.product_id and not l.display_type and (l.product_uom_qty or 0.0) > 0
             ):
@@ -167,7 +199,11 @@ class SaleOrder(models.Model):
 
             tracking = getattr(move.product_id, "tracking", "none") or "none"
             lot = False
-            if line and tracking in ("lot", "serial"):
+            if (
+                line
+                and getattr(line.order_id, "route_enable_lot_serial_tracking", True)
+                and tracking in ("lot", "serial")
+            ):
                 lot = getattr(line, "route_lot_id", False) or getattr(line, "lot_id", False)
 
             if lot:
@@ -217,4 +253,3 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
-
