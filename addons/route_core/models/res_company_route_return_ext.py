@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ResCompany(models.Model):
@@ -17,3 +17,43 @@ class ResCompany(models.Model):
         domain="[('usage', '=', 'internal')]",
         help="Internal stock location used for near expiry returned products from route visits.",
     )
+
+    route_enable_lot_serial_tracking = fields.Boolean(
+        string="Enable Lot/Serial Workflow",
+        compute="_compute_route_feature_flags",
+        inverse="_inverse_route_feature_flags",
+        readonly=False,
+        help="Show and enforce Route Sales Lot/Serial workflow where supported.",
+    )
+
+    route_enable_expiry_tracking = fields.Boolean(
+        string="Enable Expiry Workflow",
+        compute="_compute_route_feature_flags",
+        inverse="_inverse_route_feature_flags",
+        readonly=False,
+        help="Show expiry information in Route Sales where lot workflow is enabled.",
+    )
+
+    def _route_feature_param_key(self, feature_name):
+        self.ensure_one()
+        return f"route_core.{feature_name}.{self.id}"
+
+    @api.depends("id")
+    def _compute_route_feature_flags(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            lot_enabled = icp.get_param(company._route_feature_param_key("enable_lot_serial_tracking"), default="1")
+            expiry_enabled = icp.get_param(company._route_feature_param_key("enable_expiry_tracking"), default="1")
+            company.route_enable_lot_serial_tracking = str(lot_enabled).lower() in ("1", "true", "yes")
+            company.route_enable_expiry_tracking = (
+                company.route_enable_lot_serial_tracking
+                and str(expiry_enabled).lower() in ("1", "true", "yes")
+            )
+
+    def _inverse_route_feature_flags(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            lot_enabled = bool(company.route_enable_lot_serial_tracking)
+            expiry_enabled = bool(company.route_enable_expiry_tracking) and lot_enabled
+            icp.set_param(company._route_feature_param_key("enable_lot_serial_tracking"), "1" if lot_enabled else "0")
+            icp.set_param(company._route_feature_param_key("enable_expiry_tracking"), "1" if expiry_enabled else "0")
