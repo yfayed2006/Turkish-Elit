@@ -30,7 +30,6 @@ class RouteDirectReturn(models.Model):
     reference_picking_id = fields.Many2one(
         "stock.picking",
         string="Reference Delivery",
-        domain="[('origin', '=', sale_order_id.name), ('state', '=', 'done')]",
         ondelete="set null",
     )
     return_date = fields.Date(string="Return Date", default=fields.Date.context_today, required=True)
@@ -114,14 +113,31 @@ class RouteDirectReturn(models.Model):
             if rec.sale_order_id and rec.sale_order_id.route_outlet_id != rec.outlet_id:
                 rec.sale_order_id = False
                 rec.reference_picking_id = False
+        if self:
+            return {"domain": {"reference_picking_id": self._get_reference_picking_domain()}}
+
+    def _get_reference_picking_domain(self):
+        self.ensure_one()
+        domain = [("state", "=", "done")]
+        if "picking_type_code" in self.env["stock.picking"]._fields:
+            domain.append(("picking_type_code", "=", "outgoing"))
+        if self.sale_order_id:
+            domain.append(("origin", "=", self.sale_order_id.name))
+        elif self.partner_id:
+            domain.append(("partner_id", "=", self.partner_id.id))
+        return domain
 
     @api.onchange("sale_order_id")
     def _onchange_sale_order_id(self):
         for rec in self:
             if rec.sale_order_id and rec.sale_order_id.route_outlet_id:
                 rec.outlet_id = rec.sale_order_id.route_outlet_id
-            if rec.reference_picking_id and rec.reference_picking_id.origin != rec.sale_order_id.name:
+            if rec.reference_picking_id and rec.sale_order_id and rec.reference_picking_id.origin != rec.sale_order_id.name:
                 rec.reference_picking_id = False
+            if rec.reference_picking_id and not rec.sale_order_id and rec.partner_id and rec.reference_picking_id.partner_id != rec.partner_id:
+                rec.reference_picking_id = False
+        if self:
+            return {"domain": {"reference_picking_id": self._get_reference_picking_domain()}}
 
     def _get_customer_location(self):
         self.ensure_one()
