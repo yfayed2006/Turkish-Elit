@@ -81,8 +81,6 @@ class RouteDirectReturn(models.Model):
         seq = self.env["ir.sequence"]
         for vals in vals_list:
             company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
-            if not company.route_enable_direct_sale:
-                raise UserError(_("Direct Sale is disabled in Route Settings."))
             if not company.route_enable_direct_return:
                 raise UserError(_("Direct Return is disabled in Route Settings."))
             if vals.get("name", "New") == "New":
