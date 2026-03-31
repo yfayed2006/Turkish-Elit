@@ -68,10 +68,7 @@ class ResCompany(models.Model):
                 and str(expiry_enabled).lower() in ("1", "true", "yes")
             )
             company.route_enable_direct_sale = str(direct_sale_enabled).lower() in ("1", "true", "yes")
-            company.route_enable_direct_return = (
-                company.route_enable_direct_sale
-                and str(direct_return_enabled).lower() in ("1", "true", "yes")
-            )
+            company.route_enable_direct_return = str(direct_return_enabled).lower() in ("1", "true", "yes")
 
     def _inverse_route_feature_flags(self):
         icp = self.env["ir.config_parameter"].sudo()
@@ -79,7 +76,7 @@ class ResCompany(models.Model):
             lot_enabled = bool(company.route_enable_lot_serial_tracking)
             expiry_enabled = bool(company.route_enable_expiry_tracking) and lot_enabled
             direct_sale_enabled = bool(company.route_enable_direct_sale)
-            direct_return_enabled = bool(company.route_enable_direct_return) and direct_sale_enabled
+            direct_return_enabled = bool(company.route_enable_direct_return)
             icp.set_param(company._route_feature_param_key("enable_lot_serial_tracking"), "1" if lot_enabled else "0")
             icp.set_param(company._route_feature_param_key("enable_expiry_tracking"), "1" if expiry_enabled else "0")
             icp.set_param(company._route_feature_param_key("enable_direct_sale"), "1" if direct_sale_enabled else "0")
