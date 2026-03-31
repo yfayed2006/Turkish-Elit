@@ -670,7 +670,7 @@ class RouteVisit(models.Model):
             )
 
         resolved_lot = self._resolve_product_active_lot(product, active_lot=active_lot)
-        resolved_expiry_date = self._get_lot_expiry_date(resolved_lot) if resolved_lot else False
+        resolved_expiry_date = self._get_lot_expiry_date(resolved_lot) if (resolved_lot and self._is_route_expiry_workflow_enabled()) else False
 
         line = self._get_or_create_visit_line_for_product_and_lot(
             product,
