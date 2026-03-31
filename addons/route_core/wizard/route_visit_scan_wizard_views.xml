@@ -4,9 +4,11 @@
 <field name="model">route.visit.scan.wizard</field>
 <field name="arch" type="xml">
 <form string="Scan Barcode / Returns">
-<group string="Active Lot" invisible="scan_mode != 'count'">
+<group string="Active Lot" invisible="scan_mode != 'count' or route_enable_lot_serial_tracking == False">
 <group>
 <field name="focus_target" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="lot_barcode" placeholder="Scan or type lot code here" invisible="active_lot_id"/>
 <field name="active_lot_id" readonly="1"/>
 <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
@@ -28,7 +30,7 @@
 <field name="barcode" placeholder="Scan product or box barcode here"/>
 <field name="quantity" readonly="auto_quantity_locked"/>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
-<field name="expiry_date" invisible="scan_mode != 'count'"/>
+<field name="expiry_date" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False"/>
 <field name="expired_decision" invisible="scan_mode != 'count' or active_lot_status != 'expired'"/>
 <field name="near_expiry_decision" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'"/>
 <field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
@@ -44,7 +46,7 @@
 <field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
 <field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
 <field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
-<field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or not expiry_date"/>
+<field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False or not expiry_date"/>
 <field name="is_near_expiry" readonly="1" invisible="1"/>
 <field name="scan_guidance" readonly="1" widget="text" invisible="not scan_guidance"/>
 </group>
