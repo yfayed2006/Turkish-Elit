@@ -68,8 +68,6 @@ class RouteDirectReturn(models.Model):
 
     def _ensure_direct_return_enabled(self):
         for rec in self:
-            if not rec.company_id.route_enable_direct_sale:
-                raise UserError(_("Direct Sale is disabled in Route Settings."))
             if not rec.company_id.route_enable_direct_return:
                 raise UserError(_("Direct Return is disabled in Route Settings."))
 
@@ -129,8 +127,6 @@ class RouteDirectReturn(models.Model):
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
-        if not self.env.company.route_enable_direct_sale:
-            raise UserError(_("Direct Sale is disabled in Route Settings."))
         if not self.env.company.route_enable_direct_return:
             raise UserError(_("Direct Return is disabled in Route Settings."))
         if "vehicle_id" in self._fields and not vals.get("vehicle_id"):
