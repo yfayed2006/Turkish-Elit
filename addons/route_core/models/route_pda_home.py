@@ -222,6 +222,7 @@ class RoutePdaHome(models.TransientModel):
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
         Quant = self.env["stock.quant"]
+        SaleOrder = self.env["sale.order"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -261,6 +262,11 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", user.id),
                 ("state", "=", "confirmed"),
             ])
+            direct_sale_orders = SaleOrder.search([
+                ("route_order_mode", "=", "direct_sale"),
+                ("user_id", "=", user.id),
+                ("state", "in", ["sale", "done"]),
+            ])
 
             vehicle = rec._get_current_vehicle()
             warehouse_loc = rec._get_main_warehouse_location()
@@ -296,7 +302,14 @@ class RoutePdaHome(models.TransientModel):
             rec.open_promise_amount = sum(
                 all_confirmed_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0 and p.promise_status in ("open", "due_today", "overdue")).mapped("promise_amount")
             )
-            rec.remaining_due_amount = sum(today_visits.filtered(lambda v: v.state != "done").mapped("remaining_due_amount"))
+            visit_remaining_due = sum(
+                Visit.search([
+                    ("user_id", "=", user.id),
+                    ("state", "!=", "cancel"),
+                ]).filtered(lambda v: (v.remaining_due_amount or 0.0) > 0.0).mapped("remaining_due_amount")
+            )
+            direct_sale_remaining_due = sum(order._get_route_payment_remaining_due() for order in direct_sale_orders)
+            rec.remaining_due_amount = visit_remaining_due + direct_sale_remaining_due
 
     def action_open_today_plans(self):
         self.ensure_one()
