@@ -31,6 +31,16 @@ class SaleOrder(models.Model):
         default="cash",
     )
     route_payment_due_date = fields.Date(string="Deferred Due Date")
+    route_use_lot_serial_tracking = fields.Boolean(
+        string="Use Lot/Serial Workflow",
+        related="company_id.route_enable_lot_serial_tracking",
+        readonly=True,
+    )
+    route_use_expiry_tracking = fields.Boolean(
+        string="Use Expiry Workflow",
+        related="company_id.route_enable_expiry_tracking",
+        readonly=True,
+    )
     direct_sale_payment_ids = fields.One2many(
         "route.visit.payment",
         "sale_order_id",
@@ -172,7 +182,7 @@ class SaleOrder(models.Model):
 
     def action_open_direct_sale_payments(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_payment").read()[0]
+        action = self.env.ref("route_core.action_route_direct_sale_payment").read()[0]
         action["name"] = _("Direct Sale Payments")
         action["domain"] = [("sale_order_id", "=", self.id)]
         action["context"] = {
@@ -645,3 +655,4 @@ class SaleOrder(models.Model):
                 order._ensure_direct_sale_payment_record()
 
         return action_result
+
