@@ -36,6 +36,22 @@ class RouteVisit(models.Model):
 
         return locations
 
+    def _is_route_lot_workflow_enabled(self):
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        if "route_enable_lot_serial_tracking" not in company._fields:
+            return True
+        return bool(company.route_enable_lot_serial_tracking)
+
+    def _is_route_expiry_workflow_enabled(self):
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        if not self._is_route_lot_workflow_enabled():
+            return False
+        if "route_enable_expiry_tracking" not in company._fields:
+            return True
+        return bool(company.route_enable_expiry_tracking)
+
     def _get_lot_expiry_date(self, lot):
         self.ensure_one()
         if not lot:
@@ -50,6 +66,8 @@ class RouteVisit(models.Model):
 
     def _find_available_lot_from_code(self, lot_code):
         self.ensure_one()
+        if not self._is_route_lot_workflow_enabled():
+            return False
         lot_code = (lot_code or "").strip()
         if not lot_code:
             raise UserError(_("Please scan or enter a lot/serial code first."))
@@ -85,6 +103,8 @@ class RouteVisit(models.Model):
 
     def _find_available_lots_for_product(self, product):
         self.ensure_one()
+        if not self._is_route_lot_workflow_enabled():
+            return self.env["stock.lot"]
         allowed_locations = self._get_scan_allowed_locations()
         if not allowed_locations or not product:
             return self.env["stock.lot"]
@@ -412,6 +432,9 @@ class RouteVisit(models.Model):
         if not product:
             return False
 
+        if not self._is_route_lot_workflow_enabled():
+            return False
+
         if not self._is_product_tracked_by_lot(product):
             return False
 
@@ -713,6 +736,8 @@ class RouteVisit(models.Model):
                 "default_visit_id": self.id,
                 "default_quantity": 1.0,
                 "default_scan_mode": "count",
+                "default_focus_target": "lot" if self._is_route_lot_workflow_enabled() else "product",
             },
         }
+
 
