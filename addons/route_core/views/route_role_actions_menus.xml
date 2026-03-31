@@ -65,8 +65,9 @@
 <field name="sequence">20</field>
 </record>
 <record id="menu_route_return_settings" model="ir.ui.menu">
+<field name="parent_id" ref="route_core.menu_route_management_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-<field name="sequence">30</field>
+<field name="sequence">15</field>
 </record>
 <record id="menu_route_city" model="ir.ui.menu">
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
