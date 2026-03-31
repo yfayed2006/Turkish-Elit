@@ -397,6 +397,86 @@ class SaleOrder(models.Model):
             return self._get_route_delivery_form_action(picking)
         return picking
 
+
+    def _get_direct_sale_deliveries(self):
+        self.ensure_one()
+        return self.env["stock.picking"].search([
+            ("origin", "=", self.name),
+            ("state", "!=", "cancel"),
+            ("location_id", "=", self.route_source_location_id.id),
+        ], order="id desc")
+
+    def _get_direct_sale_return_pickings(self):
+        self.ensure_one()
+        deliveries = self._get_direct_sale_deliveries()
+        if not deliveries:
+            return self.env["stock.picking"]
+        return_moves = self.env["stock.move"].search([
+            ("origin_returned_move_id", "in", deliveries.move_ids.ids),
+            ("picking_id", "!=", False),
+            ("state", "!=", "cancel"),
+        ])
+        return return_moves.mapped("picking_id").sorted(lambda p: p.id, reverse=True)
+
+    def _get_stock_picking_action(self, name):
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = name
+        action.setdefault("context", {})
+        return action
+
+    def action_open_direct_sale_deliveries(self):
+        self.ensure_one()
+        pickings = self._get_direct_sale_deliveries()
+        action = self._get_stock_picking_action(_("Direct Sale Deliveries"))
+        action["domain"] = [("id", "in", pickings.ids)]
+        if len(pickings) == 1:
+            form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+            action["res_id"] = pickings.id
+            action["view_mode"] = "form"
+        return action
+
+    def action_open_direct_sale_returns(self):
+        self.ensure_one()
+        pickings = self._get_direct_sale_return_pickings()
+        action = self._get_stock_picking_action(_("Direct Sale Returns"))
+        action["domain"] = [("id", "in", pickings.ids)]
+        if len(pickings) == 1:
+            form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+            action["res_id"] = pickings.id
+            action["view_mode"] = "form"
+        return action
+
+    def action_create_direct_return(self):
+        self.ensure_one()
+        if self.route_order_mode != "direct_sale":
+            raise UserError(_("Create Return is available only for Direct Sale orders."))
+
+        delivery = self._get_direct_sale_deliveries().filtered(lambda p: p.state == "done")[:1]
+        if not delivery:
+            raise UserError(_("There is no completed delivery available to return for this order."))
+
+        view = self.env.ref("stock.view_stock_return_picking_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Create Direct Return"),
+            "res_model": "stock.return.picking",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "active_id": delivery.id,
+                "active_ids": [delivery.id],
+                "active_model": "stock.picking",
+                "default_picking_id": delivery.id,
+            },
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
     def _route_confirm_without_procurement(self):
         for order in self:
             if order.state not in ("draft", "sent"):
