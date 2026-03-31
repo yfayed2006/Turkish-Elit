@@ -79,6 +79,9 @@ class RoutePdaHome(models.TransientModel):
     def action_open_product_center_screen(self):
         return self._open_self_view("route_core.view_route_pda_product_center_form", "Product Center")
 
+    def action_open_sales_center_screen(self):
+        return self._open_self_view("route_core.view_route_pda_sales_center_form", "Sales Center")
+
     def action_open_outlet_center_screen(self):
         return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Outlet Center")
 
@@ -367,6 +370,36 @@ class RoutePdaHome(models.TransientModel):
             name="My Salesperson Shortages",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
+
+    def action_open_direct_sale_outlets(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_outlet",
+            name="Direct Sale Outlets",
+            domain=[("outlet_operation_mode", "=", "direct_sale")],
+        )
+
+    def action_create_direct_sale(self):
+        self.ensure_one()
+        vehicle = self._get_current_vehicle()
+        source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        action = {
+            "type": "ir.actions.act_window",
+            "name": "Create Direct Sale",
+            "res_model": "sale.order",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_route_order_mode": "direct_sale",
+                "default_user_id": self.env.user.id,
+                "default_route_source_location_id": source_location.id if source_location else False,
+                "default_route_payment_mode": "cash",
+            },
+        }
+        view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     def action_open_outlets(self):
         self.ensure_one()
