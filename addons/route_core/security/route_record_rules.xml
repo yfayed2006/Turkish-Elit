@@ -77,4 +77,16 @@
 <field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
 <field name="domain_force">[('salesperson_id', '=', user.id)]</field>
 </record>
+<record id="rule_route_direct_return_salesperson_own" model="ir.rule">
+<field name="name">Route Direct Return - salesperson own only</field>
+<field name="model_id" ref="model_route_direct_return"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_direct_return_line_salesperson_own" model="ir.rule">
+<field name="name">Route Direct Return Line - salesperson own only</field>
+<field name="model_id" ref="model_route_direct_return_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('return_id.user_id', '=', user.id)]</field>
+</record>
 </odoo>
