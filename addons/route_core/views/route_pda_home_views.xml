@@ -51,7 +51,7 @@
 <i class="fa fa-warning route_pda_app_icon"/>
 <span class="route_pda_app_label">Alerts and Review</span>
 </button>
-<button type="object" name="action_open_sales_center_screen" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_enable_direct_sale == False">
+<button type="object" name="action_open_sales_center_screen" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_enable_direct_sale == False and route_enable_direct_return == False">
 <i class="fa fa-shopping-cart route_pda_app_icon"/>
 <span class="route_pda_app_label">Sales Center</span>
 </button>
@@ -200,7 +200,7 @@
 </button>
 <button type="object" name="action_open_direct_sale_returns" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_enable_direct_return == False">
 <i class="fa fa-undo route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Returns</span>
+<span class="route_pda_app_label">Direct Returns</span>
 </button>
 <button type="object" name="action_open_direct_sale_payments" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_enable_direct_sale == False">
 <i class="fa fa-credit-card route_pda_app_icon"/>
