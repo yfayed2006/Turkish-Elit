@@ -574,7 +574,8 @@ class RouteVisitReturnScanWizard(models.TransientModel):
                 "context": {
                     "default_visit_id": self.visit_id.id,
                     "default_scan_mode": "return",
-                    "default_focus_target": "product",
+                    "default_active_lot_id": self.active_lot_id.id if self.route_enable_lot_serial_tracking else False,
+                    "default_focus_target": "product" if (self.active_lot_id and self.route_enable_lot_serial_tracking) else self._default_focus_target(),
                     "default_quantity": 1.0,
                     "default_scanned_uom_id": False,
                     "default_return_route": self.return_route or "vehicle",
