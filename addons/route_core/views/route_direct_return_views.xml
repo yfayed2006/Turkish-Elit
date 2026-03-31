@@ -41,6 +41,8 @@
 </group>
 <group>
 <field name="note" placeholder="Notes" readonly="state != 'draft'"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 </group>
 <group string="Return Lines">
 <field name="line_ids" nolabel="1" readonly="state != 'draft'">
@@ -48,8 +50,8 @@
 <field name="product_id"/>
 <field name="quantity"/>
 <field name="uom_id"/>
-<field name="lot_name"/>
-<field name="expiry_date"/>
+<field name="lot_name" column_invisible="parent.route_enable_lot_serial_tracking == False"/>
+<field name="expiry_date" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="return_reason"/>
 <field name="destination_location_id"/>
 <field name="note"/>
