@@ -70,8 +70,6 @@ class SaleOrder(models.Model):
 
     def _ensure_route_direct_return_enabled(self):
         for order in self:
-            if not order.company_id.route_enable_direct_sale:
-                raise UserError(_("Direct Sale is disabled in Route Settings."))
             if not order.company_id.route_enable_direct_return:
                 raise UserError(_("Direct Return is disabled in Route Settings."))
 
@@ -597,7 +595,7 @@ class SaleOrder(models.Model):
         self.ensure_one()
         self._ensure_route_direct_return_enabled()
         pickings = self._get_direct_sale_return_pickings()
-        action = self._get_stock_picking_action(_("Direct Sale Returns"))
+        action = self._get_stock_picking_action(_("Direct Returns"))
         action["domain"] = [("id", "in", pickings.ids)]
         if len(pickings) == 1:
             form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
