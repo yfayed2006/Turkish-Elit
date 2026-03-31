@@ -50,10 +50,13 @@ class RoutePdaHome(models.TransientModel):
 
     def _ensure_direct_return_enabled(self):
         self.ensure_one()
-        if not self.company_id.route_enable_direct_sale:
-            raise UserError(_("Direct Sale is disabled in Route Settings."))
         if not self.company_id.route_enable_direct_return:
             raise UserError(_("Direct Return is disabled in Route Settings."))
+
+    def _ensure_sales_center_enabled(self):
+        self.ensure_one()
+        if not (self.company_id.route_enable_direct_sale or self.company_id.route_enable_direct_return):
+            raise UserError(_("Sales Center is disabled in Route Settings."))
 
     @api.model
     def action_open_dashboard(self):
@@ -97,7 +100,7 @@ class RoutePdaHome(models.TransientModel):
         return self._open_self_view("route_core.view_route_pda_product_center_form", "Product Center")
 
     def action_open_sales_center_screen(self):
-        self._ensure_direct_sale_enabled()
+        self._ensure_sales_center_enabled()
         return self._open_self_view("route_core.view_route_pda_sales_center_form", "Sales Center")
 
     def action_open_outlet_center_screen(self):
@@ -456,7 +459,7 @@ class RoutePdaHome(models.TransientModel):
         ])
         returns |= manual_returns
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
-        action["name"] = "Direct Sale Returns"
+        action["name"] = "Direct Returns"
         action["domain"] = [("id", "in", returns.ids)]
         return action
 
