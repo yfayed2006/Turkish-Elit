@@ -37,7 +37,140 @@ class SaleOrder(models.Model):
         for order in self:
             if order.route_outlet_id and order.route_outlet_id.partner_id:
                 order.partner_id = order.route_outlet_id.partner_id
+            if order.route_order_mode == "direct_sale" and not order.route_source_location_id:
+                order.route_source_location_id = order._get_default_route_source_location()
 
+    @api.onchange("route_order_mode")
+    def _onchange_route_order_mode(self):
+        for order in self:
+            if order.route_order_mode == "direct_sale" and not order.route_source_location_id:
+                order.route_source_location_id = order._get_default_route_source_location()
+
+    @api.onchange("route_payment_mode")
+    def _onchange_route_payment_mode(self):
+        for order in self:
+            if order.route_payment_mode != "deferred":
+                order.route_payment_due_date = False
+
+    def _get_default_route_source_location(self):
+        self.ensure_one()
+        current_visit = self.env["route.visit"].search(
+            [
+                ("user_id", "=", self.env.user.id),
+                ("state", "=", "in_progress"),
+                ("vehicle_id", "!=", False),
+            ],
+            order="start_datetime desc, id desc",
+            limit=1,
+        )
+        if current_visit and current_visit.vehicle_id and getattr(current_visit.vehicle_id, "stock_location_id", False):
+            return current_visit.vehicle_id.stock_location_id
+
+        today = fields.Date.context_today(self)
+        plan = self.env["route.plan"].search(
+            [
+                ("user_id", "=", self.env.user.id),
+                ("date", "=", today),
+                ("vehicle_id", "!=", False),
+            ],
+            order="id desc",
+            limit=1,
+        )
+        if plan and plan.vehicle_id and getattr(plan.vehicle_id, "stock_location_id", False):
+            return plan.vehicle_id.stock_location_id
+        return False
+
+
+    def _get_direct_sale_destination_location(self):
+        self.ensure_one()
+        partner = self.partner_shipping_id or self.partner_id
+        if partner and "property_stock_customer" in partner._fields and partner.property_stock_customer:
+            return partner.property_stock_customer
+
+        customer_location = self.env.ref("stock.stock_location_customers", raise_if_not_found=False)
+        if customer_location:
+            return customer_location
+
+        raise UserError(_("Customer Location could not be determined for this direct sale."))
+
+    def _get_direct_sale_source_location(self):
+        self.ensure_one()
+        source_location = self.route_source_location_id or self._get_default_route_source_location()
+        if not source_location:
+            raise UserError(_("Could not determine the vehicle/source stock location for this direct sale."))
+        return source_location
+
+    def _get_existing_direct_sale_delivery(self):
+        self.ensure_one()
+        source_location = self.route_source_location_id or self._get_default_route_source_location()
+        domain = [
+            ("origin", "=", self.name),
+            ("state", "!=", "cancel"),
+        ]
+        if source_location:
+            domain.append(("location_id", "=", source_location.id))
+        if "sale_id" in self.env["stock.picking"]._fields:
+            domain.append(("sale_id", "=", self.id))
+        return self.env["stock.picking"].search(domain, order="id desc", limit=1)
+
+    def _prepare_direct_sale_delivery_vals(self, picking_type, source_location, dest_location):
+        self.ensure_one()
+        vals = {
+            "picking_type_id": picking_type.id,
+            "location_id": source_location.id,
+            "location_dest_id": dest_location.id,
+            "origin": self.name,
+            "partner_id": (self.partner_shipping_id or self.partner_id).id,
+            "move_type": "direct",
+            "company_id": self.company_id.id,
+        }
+        if "sale_id" in self.env["stock.picking"]._fields:
+            vals["sale_id"] = self.id
+        return vals
+
+    def _create_and_validate_direct_sale_delivery(self):
+        self.ensure_one()
+        source_location = self._get_direct_sale_source_location()
+        dest_location = self._get_direct_sale_destination_location()
+        picking_type = self._get_route_outgoing_picking_type()
+
+        sale_lines = self.order_line.filtered(
+            lambda line: line.product_id and not line.display_type and (line.product_uom_qty or 0.0) > 0
+        )
+        if not sale_lines:
+            raise UserError(_("There are no sale lines with quantities to deliver."))
+
+        picking = self._get_existing_direct_sale_delivery()
+        if not picking:
+            picking = self.env["stock.picking"].create(
+                self._prepare_direct_sale_delivery_vals(
+                    picking_type=picking_type,
+                    source_location=source_location,
+                    dest_location=dest_location,
+                )
+            )
+            for line in sale_lines:
+                self.env["stock.move"].create(
+                    self._prepare_route_delivery_move_vals(
+                        picking=picking,
+                        order_line=line,
+                        source_location=source_location,
+                        dest_location=dest_location,
+                    )
+                )
+
+        if picking.state == "draft":
+            picking.action_confirm()
+        if picking.state in ("confirmed", "waiting"):
+            picking.action_assign()
+        self._fill_move_line_qty_done(picking)
+        if picking.state not in ("done", "cancel"):
+            result = picking.button_validate()
+            if isinstance(result, dict):
+                return result
+        if picking.state != "done":
+            return self._get_route_delivery_form_action(picking)
+        return picking
 
     def _get_linked_route_visit(self):
         self.ensure_one()
@@ -292,6 +425,21 @@ class SaleOrder(models.Model):
 
         return picking
 
+    def _validate_direct_sale_ready(self):
+        self.ensure_one()
+        if self.route_order_mode != "direct_sale":
+            return
+        if not self.route_outlet_id:
+            raise UserError(_("Please choose a direct-sale outlet before confirming this order."))
+        if self.route_outlet_id.outlet_operation_mode != "direct_sale":
+            raise UserError(_("The selected outlet is not configured as a Direct Sale outlet."))
+        if not self.partner_id:
+            raise UserError(_("Please choose the customer/contact for this direct sale."))
+        if not self.route_source_location_id:
+            raise UserError(_("Please set the vehicle/source stock location for this direct sale."))
+        if self.route_payment_mode == "deferred" and not self.route_payment_due_date:
+            raise UserError(_("Please set the deferred due date for deferred direct sale payment."))
+
     def _route_confirm_without_procurement(self):
         for order in self:
             if order.state not in ("draft", "sent"):
@@ -304,12 +452,15 @@ class SaleOrder(models.Model):
 
     def action_confirm(self):
         normal_orders = self.env["sale.order"]
-        route_orders = self.env["sale.order"]
+        route_visit_orders = self.env["sale.order"]
+        direct_sale_orders = self.env["sale.order"]
 
         for order in self:
             visit = order._get_linked_route_visit()
             if visit:
-                route_orders |= order
+                route_visit_orders |= order
+            elif order.route_order_mode == "direct_sale":
+                direct_sale_orders |= order
             else:
                 normal_orders |= order
 
@@ -317,13 +468,19 @@ class SaleOrder(models.Model):
         if normal_orders:
             action_result = super(SaleOrder, normal_orders).action_confirm()
 
-        for order in route_orders:
+        for order in route_visit_orders:
             visit = order._get_linked_route_visit()
             if not visit:
                 continue
-
             order._route_confirm_without_procurement()
             delivery_result = order._create_and_validate_route_delivery(visit)
+            if isinstance(delivery_result, dict):
+                action_result = delivery_result
+
+        for order in direct_sale_orders:
+            order._validate_direct_sale_ready()
+            order._route_confirm_without_procurement()
+            delivery_result = order._create_and_validate_direct_sale_delivery()
             if isinstance(delivery_result, dict):
                 action_result = delivery_result
 
