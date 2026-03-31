@@ -77,6 +77,12 @@ class RouteVisit(models.Model):
     def _find_or_create_visit_line_for_product(self, product, lot=False, expiry_date=False):
         self.ensure_one()
 
+        if hasattr(self, "_is_route_lot_workflow_enabled") and not self._is_route_lot_workflow_enabled():
+            lot = False
+            expiry_date = False
+        elif hasattr(self, "_is_route_expiry_workflow_enabled") and not self._is_route_expiry_workflow_enabled():
+            expiry_date = False
+
         if lot and hasattr(self, "_get_or_create_visit_line_for_product_and_lot"):
             return self._get_or_create_visit_line_for_product_and_lot(
                 product,
