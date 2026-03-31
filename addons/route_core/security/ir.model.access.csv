@@ -92,3 +92,9 @@ access_route_pda_home_supervisor,access.route.pda.home.supervisor,model_route_pd
 access_route_pda_home_management,access.route.pda.home.management,model_route_pda_home,route_core.group_route_management,1,1,1,1
 access_sale_order_route_salesperson,access.sale.order.route.salesperson,sale.model_sale_order,route_core.group_route_salesperson,1,1,1,0
 access_sale_order_line_route_salesperson,access.sale.order.line.route.salesperson,sale.model_sale_order_line,route_core.group_route_salesperson,1,1,1,0
+access_route_direct_return_salesperson,access.route.direct.return.salesperson,model_route_direct_return,route_core.group_route_salesperson,1,1,1,0
+access_route_direct_return_supervisor,access.route.direct.return.supervisor,model_route_direct_return,route_core.group_route_supervisor,1,1,1,1
+access_route_direct_return_management,access.route.direct.return.management,model_route_direct_return,route_core.group_route_management,1,1,1,1
+access_route_direct_return_line_salesperson,access.route.direct.return.line.salesperson,model_route_direct_return_line,route_core.group_route_salesperson,1,1,1,0
+access_route_direct_return_line_supervisor,access.route.direct.return.line.supervisor,model_route_direct_return_line,route_core.group_route_supervisor,1,1,1,1
+access_route_direct_return_line_management,access.route.direct.return.line.management,model_route_direct_return_line,route_core.group_route_management,1,1,1,1
