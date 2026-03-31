@@ -1,6 +1,6 @@
 {
     "name": "Route Core",
-    "version": "19.0.1.0.30",
+    "version": "19.0.1.0.31",
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
@@ -22,6 +22,7 @@
         "data/route_vehicle_closing_sequence.xml",
         "data/route_salesperson_shortage_sequence.xml",
         "data/route_salesperson_deduction_sequence.xml",
+        "data/route_direct_return_sequence.xml",
         "views/route_city_views.xml",
         "views/route_area_views.xml",
         "views/route_outlet_views.xml",
@@ -43,6 +44,7 @@
         "reports/route_salesperson_shortage_report.xml",
         "views/route_salesperson_shortage_views.xml",
         "views/route_visit_document_links_views.xml",
+        "views/route_direct_return_views.xml",
         "views/route_pda_home_views.xml",
         "views/sale_order_direct_sale_views.xml",
         "views/route_role_actions_menus.xml",
