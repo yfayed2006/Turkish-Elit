@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import fields, models
 
 
 class ResCompany(models.Model):
@@ -38,7 +38,6 @@ class ResCompany(models.Model):
         self.ensure_one()
         return f"route_core.{feature_name}.{self.id}"
 
-    @api.depends("id")
     def _compute_route_feature_flags(self):
         icp = self.env["ir.config_parameter"].sudo()
         for company in self:
