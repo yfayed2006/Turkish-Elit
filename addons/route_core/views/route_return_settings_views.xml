@@ -1,14 +1,18 @@
-<odoo>
 <record id="view_res_company_form_route_return_settings" model="ir.ui.view">
 <field name="name">res.company.form.route.return.settings</field>
 <field name="model">res.company</field>
 <field name="inherit_id" ref="base.view_company_form"/>
 <field name="arch" type="xml">
 <xpath expr="//sheet" position="inside">
-<group string="Route Product Settings">
+<group string="Route Scenario Settings">
 <group>
+<field name="route_operation_mode"/>
 <field name="route_enable_direct_sale"/>
 <field name="route_enable_direct_return"/>
+</group>
+</group>
+<group string="Route Product Settings">
+<group>
 <field name="route_enable_lot_serial_tracking"/>
 <field name="route_enable_expiry_tracking" invisible="route_enable_lot_serial_tracking == False"/>
 </group>
