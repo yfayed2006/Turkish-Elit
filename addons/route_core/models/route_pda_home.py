@@ -371,59 +371,63 @@ class RoutePdaHome(models.TransientModel):
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
 
+    def action_open_direct_sale_orders(self):
+        self.ensure_one()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": "Direct Sale Orders",
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id)],
+            "context": {"search_default_my_quotations": 0, "create": 0},
+            "target": "current",
+        }
+        tree_view = self.env.ref("sale.view_quotation_tree_with_onboarding", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+        search_view = self.env.ref("sale.view_sales_order_filter", raise_if_not_found=False)
+        views = []
+        if tree_view:
+            views.append((tree_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
+
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
         return self._prepare_action(
             "route_core.action_route_outlet",
             name="Direct Sale Outlets",
             domain=[("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)],
-            context={"search_default_filter_direct_sale_outlets": 1},
         )
 
     def action_create_direct_sale(self):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
-        direct_sale_outlet = self.env["route.outlet"].search(
-            [("outlet_operation_mode", "=", "direct_sale"), ("partner_id", "!=", False), ("active", "=", True)],
-            order="id desc",
-            limit=1,
-        )
-        ctx = {
-            "default_route_order_mode": "direct_sale",
-            "default_user_id": self.env.user.id,
-            "default_route_source_location_id": source_location.id if source_location else False,
-            "default_route_payment_mode": "cash",
-        }
-        if direct_sale_outlet:
-            ctx.update({
-                "default_route_outlet_id": direct_sale_outlet.id,
-                "default_partner_id": direct_sale_outlet.partner_id.id if direct_sale_outlet.partner_id else False,
-            })
+        default_outlet = self.env["route.outlet"].search([("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)], order="id desc", limit=1)
         action = {
             "type": "ir.actions.act_window",
             "name": "Create Direct Sale",
             "res_model": "sale.order",
             "view_mode": "form",
             "target": "current",
-            "context": ctx,
+            "context": {
+                "default_route_order_mode": "direct_sale",
+                "default_user_id": self.env.user.id,
+                "default_route_source_location_id": source_location.id if source_location else False,
+                "default_route_payment_mode": "cash",
+                "default_route_outlet_id": default_outlet.id if default_outlet else False,
+                "default_partner_id": default_outlet.partner_id.id if default_outlet and default_outlet.partner_id else False,
+            },
         }
-        view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
         if view:
             action["views"] = [(view.id, "form")]
         return action
-
-    def action_open_direct_sale_orders(self):
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": "Direct Sale Orders",
-            "res_model": "sale.order",
-            "view_mode": "list,form",
-            "target": "current",
-            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id)],
-            "context": {"create": 0, "delete": 0},
-        }
 
     def action_open_outlets(self):
         self.ensure_one()
