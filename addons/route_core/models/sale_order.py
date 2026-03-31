@@ -57,6 +57,11 @@ class SaleOrder(models.Model):
         readonly=True,
         store=False,
     )
+    route_operation_mode = fields.Selection(
+        related="company_id.route_operation_mode",
+        readonly=True,
+        store=False,
+    )
     route_enable_direct_return = fields.Boolean(
         related="company_id.route_enable_direct_return",
         readonly=True,
@@ -65,6 +70,8 @@ class SaleOrder(models.Model):
 
     def _ensure_route_direct_sale_enabled(self):
         for order in self:
+            if not order.company_id.route_operation_allows_direct_sale():
+                raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
             if not order.company_id.route_enable_direct_sale:
                 raise UserError(_("Direct Sale is disabled in Route Settings."))
 
@@ -99,6 +106,8 @@ class SaleOrder(models.Model):
         for vals in vals_list:
             if vals.get("route_order_mode") == "direct_sale":
                 company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
+                if not company.route_operation_allows_direct_sale():
+                    raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
                 if not company.route_enable_direct_sale:
                     raise UserError(_("Direct Sale is disabled in Route Settings."))
         return super().create(vals_list)
@@ -107,6 +116,8 @@ class SaleOrder(models.Model):
         if vals.get("route_order_mode") == "direct_sale":
             for order in self:
                 company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else order.company_id
+                if not company.route_operation_allows_direct_sale():
+                    raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
                 if not company.route_enable_direct_sale:
                     raise UserError(_("Direct Sale is disabled in Route Settings."))
         return super().write(vals)
@@ -115,6 +126,8 @@ class SaleOrder(models.Model):
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
         if vals.get("route_order_mode") == "direct_sale":
+            if not self.env.company.route_operation_allows_direct_sale():
+                raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
             if not self.env.company.route_enable_direct_sale:
                 raise UserError(_("Direct Sale is disabled in Route Settings."))
             outlet_id = vals.get("route_outlet_id")
