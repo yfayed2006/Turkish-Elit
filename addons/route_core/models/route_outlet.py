@@ -878,7 +878,8 @@ class RouteOutlet(models.Model):
             record.deferred_payment_count = len(
                 confirmed_payments.filtered(
                     lambda p: p.collection_type in ("defer_date", "next_visit")
-                    and (p._get_target_remaining_due(exclude_self=(p.state == "confirmed")) or 0.0) > 0.0
+                    and p.visit_id
+                    and (p.visit_id.remaining_due_amount or 0.0) > 0
                 )
             )
 
@@ -1413,10 +1414,15 @@ class RouteOutlet(models.Model):
             record.display_address = ", ".join([part for part in parts if part])
 
 
-    @api.constrains("outlet_operation_mode", "partner_id")
+    @api.constrains("outlet_operation_mode", "partner_id", "company_id")
     def _check_direct_sale_partner_required(self):
         for record in self:
-            if record.outlet_operation_mode == "direct_sale" and not record.partner_id:
+            company = record.company_id or self.env.company
+            if (
+                company.route_require_related_contact_for_direct_sale
+                and record.outlet_operation_mode == "direct_sale"
+                and not record.partner_id
+            ):
                 raise ValidationError(_("Related Contact is required when Outlet Operation Mode is Direct Sale."))
 
     @api.constrains("partner_id")
@@ -1744,3 +1750,4 @@ class RouteOutlet(models.Model):
             create=0,
         )
         return action
+
