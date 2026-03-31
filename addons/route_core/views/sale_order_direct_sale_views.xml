@@ -1,9 +1,13 @@
-<odoo>
 <record id="view_sale_order_form_route_direct_sale" model="ir.ui.view">
 <field name="name">sale.order.form.route.direct.sale</field>
 <field name="model">sale.order</field>
 <field name="inherit_id" ref="sale.view_order_form"/>
 <field name="arch" type="xml">
+<xpath expr="//header" position="inside">
+<button name="action_open_direct_sale_deliveries" type="object" string="Deliveries" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done')"/>
+<button name="action_open_direct_sale_returns" type="object" string="Returns" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done')"/>
+<button name="action_create_direct_return" type="object" string="Create Return" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done')"/>
+</xpath>
 <xpath expr="//field[@name='partner_id']" position="attributes">
 <attribute name="readonly">route_order_mode == 'direct_sale' and route_outlet_id</attribute>
 </xpath>
