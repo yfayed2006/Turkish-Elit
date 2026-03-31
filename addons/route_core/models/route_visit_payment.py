@@ -254,7 +254,7 @@ class RouteVisitPayment(models.Model):
     )
     def _compute_visit_remaining_due(self):
         for rec in self:
-            rec.visit_remaining_due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
+            rec.visit_remaining_due = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
 
     @api.depends(
         "source_type",
@@ -267,7 +267,7 @@ class RouteVisitPayment(models.Model):
     )
     def _compute_remaining_due_amount(self):
         for rec in self:
-            rec.remaining_due_amount = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed")) if rec._get_target_model() else 0.0
+            rec.remaining_due_amount = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
 
     @api.depends(
         "promise_amount",
@@ -288,7 +288,7 @@ class RouteVisitPayment(models.Model):
                 rec.promise_status = False
                 continue
 
-            remaining_due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed"))
+            remaining_due = rec._get_target_remaining_due()
             if remaining_due <= 0:
                 rec.promise_status = "closed"
             elif rec.promise_date and rec.promise_date < today:
@@ -483,5 +483,6 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
+
 
 
