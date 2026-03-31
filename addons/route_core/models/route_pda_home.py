@@ -396,6 +396,42 @@ class RoutePdaHome(models.TransientModel):
             action["search_view_id"] = search_view.id
         return action
 
+    def _get_direct_sale_order_recordset(self):
+        return self.env["sale.order"].search([
+            ("route_order_mode", "=", "direct_sale"),
+            ("user_id", "=", self.env.user.id),
+        ])
+
+    def action_open_direct_sale_deliveries(self):
+        self.ensure_one()
+        orders = self._get_direct_sale_order_recordset()
+        pickings = self.env["stock.picking"].search([
+            ("origin", "in", orders.mapped("name")),
+            ("state", "!=", "cancel"),
+        ], order="id desc")
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = "Direct Sale Deliveries"
+        action["domain"] = [("id", "in", pickings.ids)]
+        return action
+
+    def action_open_direct_sale_returns(self):
+        self.ensure_one()
+        orders = self._get_direct_sale_order_recordset()
+        deliveries = self.env["stock.picking"].search([
+            ("origin", "in", orders.mapped("name")),
+            ("state", "!=", "cancel"),
+        ])
+        return_moves = self.env["stock.move"].search([
+            ("origin_returned_move_id", "in", deliveries.move_ids.ids),
+            ("picking_id", "!=", False),
+            ("state", "!=", "cancel"),
+        ])
+        returns = return_moves.mapped("picking_id")
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = "Direct Sale Returns"
+        action["domain"] = [("id", "in", returns.ids)]
+        return action
+
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
         return self._prepare_action(
@@ -462,3 +498,4 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
