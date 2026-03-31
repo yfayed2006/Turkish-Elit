@@ -4,7 +4,7 @@
 <field name="model">route.visit.return.scan.wizard</field>
 <field name="arch" type="xml">
 <form string="Scan Additional Returns">
-<group string="Active Lot" invisible="scan_mode != 'count' or route_enable_lot_serial_tracking == False">
+<group string="Active Lot" invisible="route_enable_lot_serial_tracking == False">
 <group>
 <field name="focus_target" invisible="1"/>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
