@@ -427,6 +427,11 @@ class RoutePdaHome(models.TransientModel):
             ("state", "!=", "cancel"),
         ])
         returns = return_moves.mapped("picking_id")
+        manual_returns = self.env["stock.picking"].search([
+            ("route_direct_return_id.user_id", "=", self.env.user.id),
+            ("state", "!=", "cancel"),
+        ])
+        returns |= manual_returns
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = "Direct Sale Returns"
         action["domain"] = [("id", "in", returns.ids)]
@@ -465,6 +470,30 @@ class RoutePdaHome(models.TransientModel):
             action["views"] = [(view.id, "form")]
         return action
 
+    def action_create_direct_return(self):
+        self.ensure_one()
+        default_outlet = self.env["route.outlet"].search([
+            ("outlet_operation_mode", "=", "direct_sale"),
+            ("active", "=", True),
+        ], order="id desc", limit=1)
+        vehicle = self._get_current_vehicle()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": "Create Direct Return",
+            "res_model": "route.direct.return",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_user_id": self.env.user.id,
+                "default_vehicle_id": vehicle.id if vehicle else False,
+                "default_outlet_id": default_outlet.id if default_outlet else False,
+            },
+        }
+        view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
     def action_open_outlets(self):
         self.ensure_one()
         return self._prepare_action("route_core.action_route_outlet", name="Outlets")
@@ -498,4 +527,3 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products - {location.display_name}"
         return self._open_quants_by_location(location, title)
-
