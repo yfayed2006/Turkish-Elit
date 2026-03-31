@@ -377,29 +377,53 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_outlet",
             name="Direct Sale Outlets",
             domain=[("outlet_operation_mode", "=", "direct_sale")],
+            context={"search_default_filter_direct_sale_outlets": 1},
         )
 
     def action_create_direct_sale(self):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        direct_sale_outlet = self.env["route.outlet"].search(
+            [("outlet_operation_mode", "=", "direct_sale"), ("partner_id", "!=", False), ("active", "=", True)],
+            order="id desc",
+            limit=1,
+        )
+        ctx = {
+            "default_route_order_mode": "direct_sale",
+            "default_user_id": self.env.user.id,
+            "default_route_source_location_id": source_location.id if source_location else False,
+            "default_route_payment_mode": "cash",
+        }
+        if direct_sale_outlet:
+            ctx.update({
+                "default_route_outlet_id": direct_sale_outlet.id,
+                "default_partner_id": direct_sale_outlet.partner_id.id if direct_sale_outlet.partner_id else False,
+            })
         action = {
             "type": "ir.actions.act_window",
             "name": "Create Direct Sale",
             "res_model": "sale.order",
             "view_mode": "form",
             "target": "current",
-            "context": {
-                "default_route_order_mode": "direct_sale",
-                "default_user_id": self.env.user.id,
-                "default_route_source_location_id": source_location.id if source_location else False,
-                "default_route_payment_mode": "cash",
-            },
+            "context": ctx,
         }
         view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
+    def action_open_direct_sale_orders(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Direct Sale Orders",
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("route_order_mode", "=", "direct_sale")],
+            "context": {"create": 0, "delete": 0},
+        }
 
     def action_open_outlets(self):
         self.ensure_one()
