@@ -878,8 +878,7 @@ class RouteOutlet(models.Model):
             record.deferred_payment_count = len(
                 confirmed_payments.filtered(
                     lambda p: p.collection_type in ("defer_date", "next_visit")
-                    and p.visit_id
-                    and (p.visit_id.remaining_due_amount or 0.0) > 0
+                    and (p._get_target_remaining_due(exclude_self=(p.state == "confirmed")) or 0.0) > 0.0
                 )
             )
 
