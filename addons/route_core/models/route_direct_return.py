@@ -249,7 +249,6 @@ class RouteDirectReturn(models.Model):
             moves = self.env["stock.move"]
             for line in lines:
                 move = self.env["stock.move"].create({
-                    "name": line.product_id.display_name,
                     "product_id": line.product_id.id,
                     "product_uom_qty": line.quantity,
                     "product_uom": (line.uom_id or line.product_id.uom_id).id,
