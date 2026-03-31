@@ -232,6 +232,25 @@ class RouteVisitLine(models.Model):
         help="Enable this when the near-expiry item is intentionally kept at the outlet instead of being returned.",
     )
 
+    route_enable_lot_serial_tracking = fields.Boolean(
+        related="visit_id.company_id.route_enable_lot_serial_tracking",
+        readonly=True,
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        related="visit_id.company_id.route_enable_expiry_tracking",
+        readonly=True,
+        store=False,
+    )
+
+    def _is_route_lot_workflow_enabled(self):
+        self.ensure_one()
+        return bool(self.route_enable_lot_serial_tracking)
+
+    def _is_route_expiry_workflow_enabled(self):
+        self.ensure_one()
+        return bool(self.route_enable_expiry_tracking and self.route_enable_lot_serial_tracking)
+
     @api.depends("previous_qty", "counted_qty", "return_qty", "supplied_qty")
     def _compute_quantities(self):
         for line in self:
@@ -257,13 +276,13 @@ class RouteVisitLine(models.Model):
             line.supply_value = (line.supplied_qty or 0.0) * price
             line.new_balance_value = (line.new_balance_qty or 0.0) * price
 
-    @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days")
+    @api.depends("expiry_date", "visit_id.date", "visit_id.near_expiry_threshold_days", "visit_id.company_id.route_enable_expiry_tracking", "visit_id.company_id.route_enable_lot_serial_tracking")
     def _compute_expiry_info(self):
         for line in self:
             line.expiry_days_left = 0
             line.is_near_expiry = False
 
-            if not line.expiry_date:
+            if not line._is_route_expiry_workflow_enabled() or not line.expiry_date:
                 continue
 
             ref_date = line.visit_id.date or fields.Date.context_today(line)
@@ -280,7 +299,7 @@ class RouteVisitLine(models.Model):
     )
     def _compute_near_expiry_action_state(self):
         for line in self:
-            if not line.expiry_date or not line.is_near_expiry:
+            if not line._is_route_expiry_workflow_enabled() or not line.expiry_date or not line.is_near_expiry:
                 line.near_expiry_action_state = "none"
             elif line.return_qty > 0:
                 line.near_expiry_action_state = "returned"
@@ -292,6 +311,11 @@ class RouteVisitLine(models.Model):
     @api.onchange("expiry_date")
     def _onchange_expiry_date(self):
         for line in self:
+            if not line._is_route_expiry_workflow_enabled():
+                line.expiry_date = False
+                line.suggest_near_expiry_return = False
+                line.keep_near_expiry = False
+                continue
             if not line.expiry_date:
                 line.suggest_near_expiry_return = False
                 if not line.is_near_expiry:
@@ -432,7 +456,7 @@ class RouteVisitLine(models.Model):
 
     def _sync_near_expiry_flags_after_write(self):
         for line in self:
-            if not line.expiry_date or not line.is_near_expiry:
+            if not line._is_route_expiry_workflow_enabled() or not line.expiry_date or not line.is_near_expiry:
                 if line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": False})
                 continue
