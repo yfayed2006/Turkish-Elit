@@ -101,10 +101,10 @@
 <button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
 </div>
 </xpath>
-<xpath expr="//page[@string='Count']" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
-<xpath expr="//page[@string='Payments']" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
 </field>
@@ -211,10 +211,10 @@
 <button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
 </div>
 </xpath>
-<xpath expr="//page[@string='Count']" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
-<xpath expr="//page[@string='Payments']" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
 </field>
