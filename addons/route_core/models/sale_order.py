@@ -31,6 +31,13 @@ class SaleOrder(models.Model):
         default="cash",
     )
     route_payment_due_date = fields.Date(string="Deferred Due Date")
+    route_visit_id = fields.Many2one(
+        "route.visit",
+        string="Route Visit",
+        ondelete="set null",
+        index=True,
+        help="Direct sales stop linked to this order when the order is created from a direct sales route stop.",
+    )
     direct_sale_payment_ids = fields.One2many(
         "route.visit.payment",
         "sale_order_id",
@@ -103,6 +110,7 @@ class SaleOrder(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        default_route_visit_id = self.env.context.get("default_route_visit_id") or self.env.context.get("route_visit_id")
         for vals in vals_list:
             if vals.get("route_order_mode") == "direct_sale":
                 company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
@@ -110,6 +118,8 @@ class SaleOrder(models.Model):
                     raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
                 if not company.route_enable_direct_sale:
                     raise UserError(_("Direct Sale is disabled in Route Settings."))
+                if default_route_visit_id and not vals.get("route_visit_id") and "route_visit_id" in self._fields:
+                    vals["route_visit_id"] = default_route_visit_id
         return super().create(vals_list)
 
     def write(self, vals):
@@ -130,6 +140,9 @@ class SaleOrder(models.Model):
                 raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
             if not self.env.company.route_enable_direct_sale:
                 raise UserError(_("Direct Sale is disabled in Route Settings."))
+            route_visit_id = self.env.context.get("default_route_visit_id") or self.env.context.get("route_visit_id")
+            if route_visit_id and "route_visit_id" in self._fields:
+                vals.setdefault("route_visit_id", route_visit_id)
             outlet_id = vals.get("route_outlet_id")
             if outlet_id:
                 outlet = self.env["route.outlet"].browse(outlet_id)
@@ -214,6 +227,8 @@ class SaleOrder(models.Model):
         Payment = self.env["route.visit.payment"]
         for order in self:
             if order.route_order_mode != "direct_sale":
+                continue
+            if order.route_visit_id and getattr(order.route_visit_id, "visit_execution_mode", False) == "direct_sales":
                 continue
             existing = order.direct_sale_payment_ids.filtered(lambda p: p.state != "cancelled")
             if existing:
