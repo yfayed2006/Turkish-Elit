@@ -38,6 +38,48 @@ class RouteVisit(models.Model):
         readonly=True,
     )
 
+    route_operation_mode = fields.Selection(
+        related="company_id.route_operation_mode",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_sale = fields.Boolean(
+        related="company_id.route_enable_direct_sale",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_return = fields.Boolean(
+        related="company_id.route_enable_direct_return",
+        readonly=True,
+        store=False,
+    )
+    outlet_operation_mode = fields.Selection(
+        related="outlet_id.outlet_operation_mode",
+        readonly=True,
+        store=False,
+    )
+    visit_execution_mode = fields.Selection(
+        [("consignment", "Consignment Visit"), ("direct_sales", "Direct Sales Stop")],
+        string="Visit Execution Mode",
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
+    visit_execution_mode_label = fields.Char(
+        string="Execution Mode",
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
+    route_show_consignment_workflow = fields.Boolean(
+        string="Show Consignment Workflow",
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
+    route_show_direct_sales_workflow = fields.Boolean(
+        string="Show Direct Sales Workflow",
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
+
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
@@ -1445,6 +1487,140 @@ class RouteVisit(models.Model):
             sticky=True,
         )
 
+    @api.depends("company_id.route_operation_mode", "company_id.route_enable_direct_sale", "company_id.route_enable_direct_return", "outlet_id.outlet_operation_mode")
+    def _compute_visit_execution_mode(self):
+        labels = {
+            "consignment": _("Consignment Visit"),
+            "direct_sales": _("Direct Sales Stop"),
+        }
+        for rec in self:
+            company_mode = rec.company_id.route_operation_mode or "hybrid"
+            outlet_mode = rec.outlet_id.outlet_operation_mode or "consignment"
+            if company_mode == "consignment":
+                execution_mode = "consignment"
+            elif company_mode == "direct_sales":
+                execution_mode = "direct_sales"
+            else:
+                execution_mode = "direct_sales" if outlet_mode == "direct_sale" else "consignment"
+            rec.visit_execution_mode = execution_mode
+            rec.visit_execution_mode_label = labels.get(execution_mode, labels["consignment"])
+            rec.route_show_consignment_workflow = execution_mode == "consignment"
+            rec.route_show_direct_sales_workflow = execution_mode == "direct_sales"
+
+    def _is_direct_sales_stop(self):
+        self.ensure_one()
+        return self.visit_execution_mode == "direct_sales"
+
+    def _is_consignment_visit(self):
+        self.ensure_one()
+        return not self._is_direct_sales_stop()
+
+    def _ensure_direct_sales_stop_allowed(self):
+        self.ensure_one()
+        if not self.company_id.route_operation_allows_direct_sale():
+            raise UserError(_("Direct Sales workflow is disabled because Route Operation Mode is Consignment Route."))
+        if not self.company_id.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        if not self._is_direct_sales_stop():
+            raise UserError(_("This stop is running under the consignment workflow, not the Direct Sales workflow."))
+        if self.outlet_id and self.outlet_id.outlet_operation_mode != "direct_sale":
+            raise UserError(_("This outlet is not configured for Direct Sale."))
+
+    def _ensure_direct_return_stop_allowed(self):
+        self.ensure_one()
+        if not self.company_id.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
+        if not self._is_direct_sales_stop():
+            raise UserError(_("Direct Return from stop is only available on Direct Sales stops."))
+
+    def _open_direct_sale_order_action(self, outlet=None, create=False):
+        self.ensure_one()
+        outlet = outlet or self.outlet_id
+        vehicle = self.vehicle_id
+        source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        if create:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Create Direct Sale"),
+                "res_model": "sale.order",
+                "view_mode": "form",
+                "target": "current",
+                "context": {
+                    "default_route_order_mode": "direct_sale",
+                    "default_user_id": self.env.user.id,
+                    "default_route_source_location_id": source_location.id if source_location else False,
+                    "default_route_payment_mode": "cash",
+                    "default_route_outlet_id": outlet.id if outlet else False,
+                    "default_partner_id": outlet.partner_id.id if outlet and outlet.partner_id else False,
+                },
+            }
+            view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+            if view:
+                action["views"] = [(view.id, "form")]
+            return action
+
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Sale Orders"),
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id), ("route_outlet_id", "=", outlet.id if outlet else False)],
+            "context": {"search_default_my_quotations": 0, "create": 0},
+            "target": "current",
+        }
+        tree_view = self.env.ref("sale.view_quotation_tree_with_onboarding", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+        search_view = self.env.ref("sale.view_sales_order_filter", raise_if_not_found=False)
+        views = []
+        if tree_view:
+            views.append((tree_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
+
+    def action_ux_create_direct_sale(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop_allowed()
+        return self._open_direct_sale_order_action(create=True)
+
+    def action_ux_open_direct_sale_orders(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop_allowed()
+        return self._open_direct_sale_order_action(create=False)
+
+    def action_ux_open_direct_sale_payments(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop_allowed()
+        action = self.env.ref("route_core.action_route_direct_sale_payment").read()[0]
+        action["name"] = _("Direct Sale Payments")
+        action["domain"] = [("salesperson_id", "=", self.env.user.id), ("source_type", "=", "direct_sale"), ("outlet_id", "=", self.outlet_id.id)]
+        action["context"] = {"create": 0, "delete": 0, "search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1}
+        return action
+
+    def action_ux_create_direct_return(self):
+        self.ensure_one()
+        self._ensure_direct_return_stop_allowed()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Create Direct Return"),
+            "res_model": "route.direct.return",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_user_id": self.env.user.id,
+                "default_vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+                "default_outlet_id": self.outlet_id.id if self.outlet_id else False,
+            },
+        }
+        view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
     def action_start_visit(self):
         for rec in self:
             if rec.state != "draft":
@@ -1557,6 +1733,9 @@ class RouteVisit(models.Model):
     def action_create_sale_order(self):
         self.ensure_one()
 
+        if self._is_direct_sales_stop():
+            raise UserError(_("Visit-based sale order creation is not available for Direct Sales stops. Use the Direct Sale workflow instead."))
+
         if self.state != "in_progress":
             raise UserError(_("You can only create a sale order when the visit is in progress."))
 
@@ -1624,6 +1803,14 @@ class RouteVisit(models.Model):
 
         if self.state != "in_progress":
             raise UserError(_("Only visits in progress can be ended."))
+
+        if self._is_direct_sales_stop():
+            self.with_context(route_visit_force_write=True).write({
+                "state": "done",
+                "visit_process_state": "done",
+                "end_datetime": fields.Datetime.now(),
+            })
+            return True
 
         self._raise_pending_near_expiry_error()
 
