@@ -93,7 +93,12 @@ class RouteVisit(models.Model):
         compute="_compute_direct_stop_summary",
         store=False,
     )
-    direct_stop_order_ids = fields.One2many("sale.order", "route_visit_id", string="Direct Sale Orders")
+    direct_stop_order_ids = fields.Many2many(
+        "sale.order",
+        string="Direct Sale Orders",
+        compute="_compute_direct_stop_order_ids",
+        store=False,
+    )
     direct_stop_return_ids = fields.One2many("route.direct.return", "visit_id", string="Direct Returns")
     direct_stop_order_count = fields.Integer(string="Direct Sale Orders", compute="_compute_direct_stop_summary", store=False)
     direct_stop_return_count = fields.Integer(string="Direct Returns", compute="_compute_direct_stop_summary", store=False)
@@ -1787,7 +1792,7 @@ class RouteVisit(models.Model):
         action = self.env.ref("sale.action_orders").read()[0]
         action["res_id"] = sale_order.id
         action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, route_visit_id=self.id)
+        action["context"] = dict(self.env.context, default_origin=self.name, route_visit_name=self.name)
         return action
 
     def _get_linked_route_sale_delivery(self):
@@ -1796,7 +1801,6 @@ class RouteVisit(models.Model):
             return self.env["stock.picking"]
 
         domain = [
-            ("route_visit_id", "=", self.id),
             ("origin", "=", self.sale_order_id.name),
             ("state", "!=", "cancel"),
         ]
@@ -1811,7 +1815,7 @@ class RouteVisit(models.Model):
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["res_id"] = picking.id
         action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
-        action["context"] = dict(self.env.context, default_route_visit_id=self.id)
+        action["context"] = dict(self.env.context, default_origin=self.name, route_visit_name=self.name)
         return action
 
     def action_create_sale_order(self):
