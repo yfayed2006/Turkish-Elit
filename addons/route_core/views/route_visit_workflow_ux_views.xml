@@ -16,43 +16,21 @@
 <field name="ux_can_open_direct_sale_payments" invisible="1"/>
 <field name="ux_can_create_direct_return" invisible="1"/>
 <field name="ux_can_open_direct_returns" invisible="1"/>
-<field name="ux_can_skip_direct_sale" invisible="1"/>
-<field name="ux_can_skip_direct_return" invisible="1"/>
-<field name="ux_can_open_direct_stop_settlement" invisible="1"/>
-<field name="direct_stop_sale_status" invisible="1"/>
-<field name="direct_stop_return_status" invisible="1"/>
-<field name="direct_stop_settlement_ready" invisible="1"/>
-<div class="alert alert-info mb-3" role="alert" invisible="visit_execution_mode != 'direct_sales'">
-<strong>Direct Sales Stop</strong>
-<div class="mt-2" invisible="direct_stop_sale_status != 'pending'">Do you want to create a direct sale order for this stop?</div>
-<div class="mt-2" invisible="direct_stop_sale_status == 'pending' or direct_stop_return_status != 'pending'">Is there a direct return for this stop?</div>
-<div class="mt-2" invisible="direct_stop_sale_status == 'pending' or direct_stop_return_status == 'pending' or direct_stop_settlement_ready">Review sales, returns, net due, then settle payment or choose a credit policy.</div>
-<div class="mt-2" invisible="not direct_stop_settlement_ready">Stop is financially settled and ready to finish.</div>
-</div>
-<group string="Direct Sales Stop Flow" invisible="visit_execution_mode != 'direct_sales'">
-<group>
-<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="net_due_amount" string="Net Due After Returns" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-<field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
-<field name="direct_stop_credit_policy" invisible="direct_stop_credit_amount <= 0"/>
-<field name="direct_stop_credit_note" placeholder="Optional note for return credit settlement..." invisible="direct_stop_credit_amount <= 0"/>
-</group>
-<group>
+<field name="direct_sale_skip" invisible="1"/>
+<field name="direct_return_skip" invisible="1"/>
+<field name="ux_can_no_sale" invisible="1"/>
+<field name="ux_can_no_return" invisible="1"/>
+</xpath>
+<xpath expr="//div[field[@name='ux_stage_title']]" position="after">
+<div class="d-flex flex-wrap gap-2 mb-3" invisible="visit_execution_mode != 'direct_sales'">
 <button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
-<button name="action_ux_skip_direct_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_direct_sale"/>
+<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_sale"/>
 <button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_return"/>
-<button name="action_ux_skip_direct_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_direct_return"/>
+<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_return"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_returns"/>
-<button name="action_ux_collect_payment" string="Settle Payment" type="object" class="btn-primary btn-sm" invisible="not ux_can_open_direct_stop_settlement or remaining_due_amount <= 0"/>
-<button name="action_ux_open_direct_sale_payments" string="Open Settlement" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_stop_settlement"/>
-<button name="action_ux_confirm_payments" string="Confirm Draft Settlement" type="object" class="btn-secondary btn-sm" invisible="not payment_ids or remaining_due_amount < 0"/>
-</group>
-</group>
+</div>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
@@ -82,43 +60,21 @@
 <field name="ux_can_open_direct_sale_payments" invisible="1"/>
 <field name="ux_can_create_direct_return" invisible="1"/>
 <field name="ux_can_open_direct_returns" invisible="1"/>
-<field name="ux_can_skip_direct_sale" invisible="1"/>
-<field name="ux_can_skip_direct_return" invisible="1"/>
-<field name="ux_can_open_direct_stop_settlement" invisible="1"/>
-<field name="direct_stop_sale_status" invisible="1"/>
-<field name="direct_stop_return_status" invisible="1"/>
-<field name="direct_stop_settlement_ready" invisible="1"/>
-<div class="alert alert-info mb-3" role="alert" invisible="visit_execution_mode != 'direct_sales'">
-<strong>Direct Sales Stop</strong>
-<div class="mt-2" invisible="direct_stop_sale_status != 'pending'">Do you want to create a direct sale order for this stop?</div>
-<div class="mt-2" invisible="direct_stop_sale_status == 'pending' or direct_stop_return_status != 'pending'">Is there a direct return for this stop?</div>
-<div class="mt-2" invisible="direct_stop_sale_status == 'pending' or direct_stop_return_status == 'pending' or direct_stop_settlement_ready">Review sales, returns, net due, then settle payment or choose a credit policy.</div>
-<div class="mt-2" invisible="not direct_stop_settlement_ready">Stop is financially settled and ready to finish.</div>
-</div>
-<group string="Direct Sales Stop Flow" invisible="visit_execution_mode != 'direct_sales'">
-<group>
-<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="net_due_amount" string="Net Due After Returns" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-<field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
-<field name="direct_stop_credit_policy" invisible="direct_stop_credit_amount <= 0"/>
-<field name="direct_stop_credit_note" placeholder="Optional note for return credit settlement..." invisible="direct_stop_credit_amount <= 0"/>
-</group>
-<group>
+<field name="direct_sale_skip" invisible="1"/>
+<field name="direct_return_skip" invisible="1"/>
+<field name="ux_can_no_sale" invisible="1"/>
+<field name="ux_can_no_return" invisible="1"/>
+</xpath>
+<xpath expr="//div[field[@name='ux_stage_title']]" position="after">
+<div class="d-flex flex-wrap gap-2 mb-3" invisible="visit_execution_mode != 'direct_sales'">
 <button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
-<button name="action_ux_skip_direct_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_direct_sale"/>
+<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_sale"/>
 <button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_return"/>
-<button name="action_ux_skip_direct_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_direct_return"/>
+<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_return"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_returns"/>
-<button name="action_ux_collect_payment" string="Settle Payment" type="object" class="btn-primary btn-sm" invisible="not ux_can_open_direct_stop_settlement or remaining_due_amount <= 0"/>
-<button name="action_ux_open_direct_sale_payments" string="Open Settlement" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_stop_settlement"/>
-<button name="action_ux_confirm_payments" string="Confirm Draft Settlement" type="object" class="btn-secondary btn-sm" invisible="not payment_ids or remaining_due_amount < 0"/>
-</group>
-</group>
+</div>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
