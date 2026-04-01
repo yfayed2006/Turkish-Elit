@@ -108,6 +108,9 @@ class RouteVisit(models.Model):
         route_visit_line = self.env["route.visit.line"]
 
         for rec in self:
+            if hasattr(rec, "_is_direct_sales_stop") and rec._is_direct_sales_stop():
+                raise UserError(_("Load Previous Balance is not available for Direct Sales stops."))
+
             if rec.state != "in_progress":
                 raise UserError(
                     _("Previous balance can only be loaded while the visit is in progress.")
@@ -177,6 +180,9 @@ class RouteVisit(models.Model):
 
     def action_generate_refill_proposal(self):
         for rec in self:
+            if hasattr(rec, "_is_direct_sales_stop") and rec._is_direct_sales_stop():
+                raise UserError(_("Refill Proposal is not available for Direct Sales stops."))
+
             if rec.visit_process_state != "reconciled":
                 raise UserError(
                     _("Refill proposal can only be generated when the visit is in Reconciled state.")
