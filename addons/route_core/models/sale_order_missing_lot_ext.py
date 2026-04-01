@@ -131,134 +131,17 @@ class SaleOrder(models.Model):
             vals["restrict_lot_id"] = order_line.route_lot_id.id
         return vals
 
-    def _get_route_auto_lot_candidates(self, location, product):
-        Quant = self.env["stock.quant"]
-        quants = Quant.search(
-            [
-                ("location_id", "child_of", location.id),
-                ("product_id", "=", product.id),
-                ("quantity", ">", 0),
-                ("lot_id", "!=", False),
-            ],
-            order="in_date, lot_id, id",
-        )
-        lot_totals = []
-        lot_map = {}
-        for quant in quants:
-            lot = quant.lot_id
-            if not lot:
-                continue
-            available_qty = max((quant.quantity or 0.0) - (getattr(quant, "reserved_quantity", 0.0) or 0.0), 0.0)
-            if available_qty <= 0:
-                continue
-            if lot.id not in lot_map:
-                lot_map[lot.id] = [lot, 0.0]
-                lot_totals.append(lot_map[lot.id])
-            lot_map[lot.id][1] += available_qty
-        lot_totals.sort(
-            key=lambda item: (
-                item[0].expiration_date or fields.Datetime.to_datetime("2099-12-31 00:00:00"),
-                item[0].id,
-            )
-        )
-        return [(lot, qty) for lot, qty in lot_totals if qty > 0]
-
-    def _get_route_auto_lot_allocations(self, move, qty):
-        tracking = getattr(move.product_id, "tracking", "none") or "none"
-        if tracking not in ("lot", "serial"):
-            return []
-        candidates = self._get_route_auto_lot_candidates(move.location_id, move.product_id)
-        if not candidates:
-            raise UserError(
-                _(
-                    "Product %s requires Lot/Serial tracking, but no available lots were found in source location %s."
-                )
-                % (move.product_id.display_name, move.location_id.display_name)
-            )
-        remaining = qty or 0.0
-        allocations = []
-        if tracking == "serial":
-            rounded_qty = int(round(remaining))
-            if abs(remaining - rounded_qty) > 1e-6:
-                raise UserError(
-                    _(
-                        "Serial-tracked product %s must be sold in whole units so the system can auto-assign serial numbers."
-                    )
-                    % move.product_id.display_name
-                )
-            remaining_units = rounded_qty
-            for lot, available_qty in candidates:
-                available_units = int(available_qty)
-                while available_units > 0 and remaining_units > 0:
-                    allocations.append((lot, 1.0))
-                    available_units -= 1
-                    remaining_units -= 1
-                if remaining_units <= 0:
-                    break
-            if remaining_units > 0:
-                raise UserError(
-                    _(
-                        "Not enough available serial numbers in source location %s for product %s. Required: %s."
-                    )
-                    % (move.location_id.display_name, move.product_id.display_name, rounded_qty)
-                )
-            return allocations
-
-        for lot, available_qty in candidates:
-            if remaining <= 0:
-                break
-            take_qty = min(available_qty, remaining)
-            if take_qty > 0:
-                allocations.append((lot, take_qty))
-                remaining -= take_qty
-        if remaining > 1e-6:
-            raise UserError(
-                _(
-                    "Not enough lot quantity in source location %s for tracked product %s. Required: %s."
-                )
-                % (move.location_id.display_name, move.product_id.display_name, qty)
-            )
-        return allocations
-
     def _check_direct_sale_tracked_lines(self):
         Quant = self.env["stock.quant"]
         for order in self.filtered(lambda o: o.route_order_mode == "direct_sale"):
+            if not order.route_enable_lot_serial_tracking:
+                continue
             for line in order.order_line.filtered(
                 lambda l: l.product_id and not l.display_type and (l.product_uom_qty or 0.0) > 0
             ):
                 tracking = line.product_id.tracking or "none"
                 if tracking == "none":
                     continue
-                if not order.route_source_location_id:
-                    raise UserError(_("Source Location is required for Direct Sale orders."))
-
-                if not order.route_enable_lot_serial_tracking:
-                    quants = Quant.search(
-                        [
-                            ("location_id", "child_of", order.route_source_location_id.id),
-                            ("product_id", "=", line.product_id.id),
-                            ("quantity", ">", 0),
-                            ("lot_id", "!=", False),
-                        ]
-                    )
-                    available_qty = sum(
-                        max((q.quantity or 0.0) - (getattr(q, "reserved_quantity", 0.0) or 0.0), 0.0)
-                        for q in quants
-                    )
-                    if available_qty < (line.product_uom_qty or 0.0):
-                        raise UserError(
-                            _(
-                                "Tracked product %s does not have enough available lot/serial quantity in source location %s. Available: %s, Required: %s."
-                            )
-                            % (
-                                line.product_id.display_name,
-                                order.route_source_location_id.display_name,
-                                available_qty,
-                                line.product_uom_qty or 0.0,
-                            )
-                        )
-                    continue
-
                 if not line.route_lot_id:
                     raise UserError(
                         _(
@@ -278,27 +161,146 @@ class SaleOrder(models.Model):
                         )
                         % line.product_id.display_name
                     )
-                quants = Quant.search(
-                    [
-                        ("location_id", "child_of", order.route_source_location_id.id),
-                        ("product_id", "=", line.product_id.id),
-                        ("lot_id", "=", line.route_lot_id.id),
-                    ]
-                )
-                available_qty = sum(quants.mapped("quantity"))
-                if available_qty < (line.product_uom_qty or 0.0):
-                    raise UserError(
-                        _(
-                            "Selected lot %s does not have enough quantity in source location %s for product %s. Available: %s, Required: %s."
-                        )
-                        % (
-                            line.route_lot_id.display_name,
-                            order.route_source_location_id.display_name,
-                            line.product_id.display_name,
-                            available_qty,
-                            line.product_uom_qty or 0.0,
-                        )
+                if order.route_source_location_id:
+                    quants = Quant.search(
+                        [
+                            ("location_id", "child_of", order.route_source_location_id.id),
+                            ("product_id", "=", line.product_id.id),
+                            ("lot_id", "=", line.route_lot_id.id),
+                        ]
                     )
+                    available_qty = sum(quants.mapped("quantity"))
+                    if available_qty < (line.product_uom_qty or 0.0):
+                        raise UserError(
+                            _(
+                                "Selected lot %s does not have enough quantity in source location %s for product %s. Available: %s, Required: %s."
+                            )
+                            % (
+                                line.route_lot_id.display_name,
+                                order.route_source_location_id.display_name,
+                                line.product_id.display_name,
+                                available_qty,
+                                line.product_uom_qty or 0.0,
+                            )
+                        )
+
+    def _route_get_tracked_quant_buckets(self, move):
+        Quant = self.env["stock.quant"]
+        quants = Quant.search(
+            [
+                ("location_id", "child_of", move.location_id.id),
+                ("product_id", "=", move.product_id.id),
+                ("quantity", ">", 0),
+                ("lot_id", "!=", False),
+            ],
+            order="in_date, lot_id, id",
+        )
+        buckets = {}
+        for quant in quants:
+            lot = quant.lot_id
+            if not lot:
+                continue
+            bucket = buckets.setdefault(
+                lot.id,
+                {
+                    "lot": lot,
+                    "qty": 0.0,
+                    "expiry": lot.expiration_date or fields.Datetime.to_datetime("2099-12-31 00:00:00"),
+                    "in_date": quant.in_date or fields.Datetime.to_datetime("2099-12-31 00:00:00"),
+                },
+            )
+            bucket["qty"] += quant.quantity
+        return sorted(buckets.values(), key=lambda b: (b["expiry"], b["in_date"], b["lot"].id))
+
+    def _route_prepare_auto_tracked_move_line_vals(self, move, picking, qty):
+        tracking = getattr(move.product_id, "tracking", "none") or "none"
+        if tracking not in ("lot", "serial"):
+            return []
+
+        buckets = self._route_get_tracked_quant_buckets(move)
+        available_qty = sum(bucket["qty"] for bucket in buckets)
+        if available_qty < qty:
+            raise UserError(
+                _(
+                    "Not enough tracked stock is available in source location %s for product %s. Available: %s, Required: %s."
+                )
+                % (
+                    move.location_id.display_name,
+                    move.product_id.display_name,
+                    available_qty,
+                    qty,
+                )
+            )
+
+        vals_list = []
+        remaining = qty
+        if tracking == "serial":
+            if int(qty) != qty:
+                raise UserError(
+                    _(
+                        "Serial-tracked product %s must be delivered in whole units."
+                    )
+                    % move.product_id.display_name
+                )
+            unit_count = int(qty)
+            serial_lots = []
+            for bucket in buckets:
+                for _i in range(int(bucket["qty"])):
+                    serial_lots.append(bucket["lot"])
+                    if len(serial_lots) >= unit_count:
+                        break
+                if len(serial_lots) >= unit_count:
+                    break
+            if len(serial_lots) < unit_count:
+                raise UserError(
+                    _(
+                        "Not enough serial numbers are available in source location %s for product %s. Required: %s."
+                    )
+                    % (move.location_id.display_name, move.product_id.display_name, qty)
+                )
+            for lot in serial_lots:
+                vals_list.append(
+                    {
+                        "move_id": move.id,
+                        "picking_id": picking.id,
+                        "product_id": move.product_id.id,
+                        "product_uom_id": move.product_uom.id,
+                        "quantity": 1.0,
+                        "location_id": move.location_id.id,
+                        "location_dest_id": move.location_dest_id.id,
+                        "lot_id": lot.id,
+                    }
+                )
+            return vals_list
+
+        for bucket in buckets:
+            if remaining <= 0:
+                break
+            take_qty = min(bucket["qty"], remaining)
+            if take_qty <= 0:
+                continue
+            vals_list.append(
+                {
+                    "move_id": move.id,
+                    "picking_id": picking.id,
+                    "product_id": move.product_id.id,
+                    "product_uom_id": move.product_uom.id,
+                    "quantity": take_qty,
+                    "location_id": move.location_id.id,
+                    "location_dest_id": move.location_dest_id.id,
+                    "lot_id": bucket["lot"].id,
+                }
+            )
+            remaining -= take_qty
+
+        if remaining > 0:
+            raise UserError(
+                _(
+                    "Not enough lot quantity is available in source location %s for product %s. Remaining required: %s."
+                )
+                % (move.location_id.display_name, move.product_id.display_name, remaining)
+            )
+        return vals_list
 
     def _fill_move_line_qty_done(self, picking):
         visit = getattr(picking, "route_visit_id", False)
@@ -314,12 +316,14 @@ class SaleOrder(models.Model):
                 line = move.route_visit_line_id or visit.line_ids.filtered(lambda l: l.product_id == move.product_id)[:1]
 
             tracking = getattr(move.product_id, "tracking", "none") or "none"
-            explicit_lot = False
-            route_lot_enabled = bool(line and getattr(line.order_id, "route_enable_lot_serial_tracking", True))
-            if line and route_lot_enabled and tracking in ("lot", "serial"):
-                explicit_lot = getattr(line, "route_lot_id", False) or getattr(line, "lot_id", False)
+            lot = False
+            manual_route_lot_workflow = bool(
+                line and getattr(line.order_id, "route_enable_lot_serial_tracking", True)
+            )
+            if line and manual_route_lot_workflow and tracking in ("lot", "serial"):
+                lot = getattr(line, "route_lot_id", False) or getattr(line, "lot_id", False)
 
-            if explicit_lot:
+            if lot:
                 if tracking == "serial" and qty != 1.0:
                     raise UserError(
                         _(
@@ -338,28 +342,17 @@ class SaleOrder(models.Model):
                         "quantity": qty,
                         "location_id": move.location_id.id,
                         "location_dest_id": move.location_dest_id.id,
-                        "lot_id": explicit_lot.id,
+                        "lot_id": lot.id,
                     }
                 )
                 continue
 
-            if tracking in ("lot", "serial"):
-                allocations = self._get_route_auto_lot_allocations(move, qty)
+            if line and not manual_route_lot_workflow and tracking in ("lot", "serial"):
                 if move.move_line_ids:
                     move.move_line_ids.unlink()
-                for lot, alloc_qty in allocations:
-                    self.env["stock.move.line"].create(
-                        {
-                            "move_id": move.id,
-                            "picking_id": picking.id,
-                            "product_id": move.product_id.id,
-                            "product_uom_id": move.product_uom.id,
-                            "quantity": alloc_qty,
-                            "location_id": move.location_id.id,
-                            "location_dest_id": move.location_dest_id.id,
-                            "lot_id": lot.id,
-                        }
-                    )
+                auto_vals_list = self._route_prepare_auto_tracked_move_line_vals(move, picking, qty)
+                for vals in auto_vals_list:
+                    self.env["stock.move.line"].create(vals)
                 continue
 
             if move.move_line_ids:
@@ -385,4 +378,3 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
-
