@@ -34,8 +34,10 @@ class SaleOrder(models.Model):
     route_visit_id = fields.Many2one(
         "route.visit",
         string="Route Visit",
-        ondelete="set null",
-        index=True,
+        compute="_compute_route_visit_id",
+        search="_search_route_visit_id",
+        store=False,
+        readonly=True,
         help="Direct sales stop linked to this order when the order is created from a direct sales route stop.",
     )
     direct_sale_payment_ids = fields.One2many(
@@ -74,6 +76,34 @@ class SaleOrder(models.Model):
         readonly=True,
         store=False,
     )
+
+
+    @api.depends("origin")
+    def _compute_route_visit_id(self):
+        Visit = self.env["route.visit"]
+        names = {order.origin for order in self if order.origin and order.route_order_mode == "direct_sale"}
+        visit_map = {}
+        if names:
+            visits = Visit.search([("name", "in", list(names))])
+            visit_map = {visit.name: visit for visit in visits}
+        for order in self:
+            order.route_visit_id = visit_map.get(order.origin) if order.route_order_mode == "direct_sale" and order.origin else False
+
+    def _search_route_visit_id(self, operator, value):
+        if operator not in ("=", "in"):
+            return [("id", "=", 0)]
+        visit_ids = []
+        if operator == "=":
+            visit_ids = [value] if value else []
+        elif isinstance(value, (list, tuple, set)):
+            visit_ids = list(value)
+        if not visit_ids:
+            return [("id", "=", 0)]
+        visits = self.env["route.visit"].browse(visit_ids).exists()
+        names = [name for name in visits.mapped("name") if name]
+        if not names:
+            return [("id", "=", 0)]
+        return [("origin", "in", names)]
 
     def _ensure_route_direct_sale_enabled(self):
         for order in self:
@@ -118,8 +148,10 @@ class SaleOrder(models.Model):
                     raise UserError(_("Direct Sale is hidden because Route Operation Mode is Consignment Route."))
                 if not company.route_enable_direct_sale:
                     raise UserError(_("Direct Sale is disabled in Route Settings."))
-                if default_route_visit_id and not vals.get("route_visit_id") and "route_visit_id" in self._fields:
-                    vals["route_visit_id"] = default_route_visit_id
+                if default_route_visit_id and not vals.get("origin"):
+                    visit = self.env["route.visit"].browse(default_route_visit_id).exists()
+                    if visit:
+                        vals["origin"] = visit.name
         return super().create(vals_list)
 
     def write(self, vals):
@@ -141,8 +173,10 @@ class SaleOrder(models.Model):
             if not self.env.company.route_enable_direct_sale:
                 raise UserError(_("Direct Sale is disabled in Route Settings."))
             route_visit_id = self.env.context.get("default_route_visit_id") or self.env.context.get("route_visit_id")
-            if route_visit_id and "route_visit_id" in self._fields:
-                vals.setdefault("route_visit_id", route_visit_id)
+            if route_visit_id and not vals.get("origin"):
+                visit = self.env["route.visit"].browse(route_visit_id).exists()
+                if visit:
+                    vals.setdefault("origin", visit.name)
             outlet_id = vals.get("route_outlet_id")
             if outlet_id:
                 outlet = self.env["route.outlet"].browse(outlet_id)
