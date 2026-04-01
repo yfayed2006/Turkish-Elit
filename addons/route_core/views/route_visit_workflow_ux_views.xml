@@ -4,6 +4,15 @@
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="arch" type="xml">
+<xpath expr="//header/field[@name='visit_process_state']" position="before">
+<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_create_direct_sale"/>
+<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_no_sale"/>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_create_direct_return"/>
+<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_no_return"/>
+<button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_returns"/>
+</xpath>
 <xpath expr="//sheet" position="inside">
 <field name="route_operation_mode" invisible="1"/>
 <field name="route_enable_direct_sale" invisible="1"/>
@@ -20,17 +29,6 @@
 <field name="direct_return_skip" invisible="1"/>
 <field name="ux_can_no_sale" invisible="1"/>
 <field name="ux_can_no_return" invisible="1"/>
-</xpath>
-<xpath expr="//div[field[@name='ux_stage_title']]" position="after">
-<div class="d-flex flex-wrap gap-2 mb-3" invisible="visit_execution_mode != 'direct_sales'">
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
-<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_sale"/>
-<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
-<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
-<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_return"/>
-<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_return"/>
-<button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_returns"/>
-</div>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
@@ -48,6 +46,15 @@
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
+<xpath expr="//header/field[@name='visit_process_state']" position="before">
+<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_create_direct_sale"/>
+<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_no_sale"/>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_create_direct_return"/>
+<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_no_return"/>
+<button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_returns"/>
+</xpath>
 <xpath expr="//sheet" position="inside">
 <field name="route_operation_mode" invisible="1"/>
 <field name="route_enable_direct_sale" invisible="1"/>
@@ -64,17 +71,6 @@
 <field name="direct_return_skip" invisible="1"/>
 <field name="ux_can_no_sale" invisible="1"/>
 <field name="ux_can_no_return" invisible="1"/>
-</xpath>
-<xpath expr="//div[field[@name='ux_stage_title']]" position="after">
-<div class="d-flex flex-wrap gap-2 mb-3" invisible="visit_execution_mode != 'direct_sales'">
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
-<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_sale"/>
-<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
-<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
-<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_return"/>
-<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_no_return"/>
-<button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_returns"/>
-</div>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
