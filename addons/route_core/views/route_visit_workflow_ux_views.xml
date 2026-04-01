@@ -5,7 +5,7 @@
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="arch" type="xml">
 <xpath expr="//header/field[@name='visit_process_state']" position="before">
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision' or not route_enable_direct_sale"/>
+<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision'"/>
 <button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_sale_decision'"/>
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision' or not route_enable_direct_return"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
@@ -71,7 +71,7 @@
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
 <xpath expr="//header/field[@name='visit_process_state']" position="before">
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision' or not route_enable_direct_sale"/>
+<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision'"/>
 <button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_sale_decision'"/>
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision' or not route_enable_direct_return"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
