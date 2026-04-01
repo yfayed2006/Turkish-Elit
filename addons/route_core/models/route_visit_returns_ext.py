@@ -33,8 +33,8 @@ class RouteVisit(models.Model):
     def _action_open_returns_scan_wizard(self):
         self.ensure_one()
 
-        if hasattr(self, "_is_direct_sales_stop") and self._is_direct_sales_stop():
-            raise UserError(_("Return scanning is not available for Direct Sales stops. Use Direct Return instead."))
+        if getattr(self, "_is_direct_sales_stop", False) and self._is_direct_sales_stop():
+            raise UserError(_("Return scan is not used for Direct Sales stops. Use Direct Return instead."))
 
         if self.visit_process_state != "counting":
             raise UserError(
@@ -280,9 +280,6 @@ class RouteVisit(models.Model):
 
     def action_confirm_return_transfers(self):
         self.ensure_one()
-
-        if hasattr(self, "_is_direct_sales_stop") and self._is_direct_sales_stop():
-            raise UserError(_("Return transfer confirmation is not available for Direct Sales stops. Use Direct Return instead."))
 
         pickings = self._create_return_pickings()
 
