@@ -79,6 +79,34 @@ class RouteVisit(models.Model):
         compute="_compute_visit_execution_mode",
         store=False,
     )
+    direct_stop_skip_sale = fields.Boolean(string="Skip Sale", default=False, copy=False)
+    direct_stop_skip_return = fields.Boolean(string="Skip Return", default=False, copy=False)
+    direct_stop_sale_status = fields.Selection(
+        [("pending", "Pending"), ("yes", "Sale Created"), ("no", "No Sale")],
+        string="Sale Decision",
+        compute="_compute_direct_stop_summary",
+        store=False,
+    )
+    direct_stop_return_status = fields.Selection(
+        [("pending", "Pending"), ("yes", "Return Created"), ("no", "No Return")],
+        string="Return Decision",
+        compute="_compute_direct_stop_summary",
+        store=False,
+    )
+    direct_stop_order_ids = fields.One2many("sale.order", "route_visit_id", string="Direct Sale Orders")
+    direct_stop_return_ids = fields.One2many("route.direct.return", "visit_id", string="Direct Returns")
+    direct_stop_order_count = fields.Integer(string="Direct Sale Orders", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_return_count = fields.Integer(string="Direct Returns", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_sales_total = fields.Monetary(string="Direct Sales Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_returns_total = fields.Monetary(string="Direct Returns Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_credit_amount = fields.Monetary(string="Return Credit", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_credit_policy = fields.Selection(
+        [("customer_credit", "Customer Credit"), ("cash_refund", "Cash Refund"), ("next_stop", "Carry to Next Stop")],
+        string="Return Credit Settlement",
+        copy=False,
+    )
+    direct_stop_credit_note = fields.Text(string="Credit Settlement Note", copy=False)
+    direct_stop_settlement_ready = fields.Boolean(string="Direct Stop Settlement Ready", compute="_compute_direct_stop_summary", store=False)
 
     outlet_id = fields.Many2one(
         "route.outlet",
@@ -1148,7 +1176,59 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
-    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state")
+    @api.depends(
+        "visit_execution_mode",
+        "direct_stop_skip_sale",
+        "direct_stop_skip_return",
+        "direct_stop_credit_policy",
+        "direct_stop_order_ids.state",
+        "direct_stop_order_ids.amount_total",
+        "direct_stop_return_ids.state",
+        "direct_stop_return_ids.amount_total",
+        "payment_ids.state",
+        "payment_ids.amount",
+    )
+    def _compute_direct_stop_summary(self):
+        for rec in self:
+            orders = rec.direct_stop_order_ids.filtered(lambda o: o.state not in ("cancel",)) if rec.direct_stop_order_ids else rec.direct_stop_order_ids
+            active_returns = rec.direct_stop_return_ids.filtered(lambda r: r.state != "cancel") if rec.direct_stop_return_ids else rec.direct_stop_return_ids
+            rec.direct_stop_order_count = len(orders)
+            rec.direct_stop_return_count = len(active_returns)
+            rec.direct_stop_sales_total = sum(orders.filtered(lambda o: o.state in ("sale", "done")).mapped("amount_total"))
+            rec.direct_stop_returns_total = sum(active_returns.mapped("amount_total"))
+            rec.direct_stop_credit_amount = max((rec.direct_stop_returns_total or 0.0) - (rec.direct_stop_sales_total or 0.0), 0.0)
+
+            if rec.direct_stop_order_count:
+                rec.direct_stop_sale_status = "yes"
+            elif rec.direct_stop_skip_sale:
+                rec.direct_stop_sale_status = "no"
+            else:
+                rec.direct_stop_sale_status = "pending"
+
+            if rec.direct_stop_return_count:
+                rec.direct_stop_return_status = "yes"
+            elif rec.direct_stop_skip_return:
+                rec.direct_stop_return_status = "no"
+            else:
+                rec.direct_stop_return_status = "pending"
+
+            draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft") if rec.payment_ids else rec.payment_ids
+            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
+            due_after_returns = max((rec.direct_stop_sales_total or 0.0) - (rec.direct_stop_returns_total or 0.0), 0.0)
+            remaining_after_confirmed = max(due_after_returns - sum(confirmed_payments.mapped("amount")), 0.0)
+            credit_ready = (rec.direct_stop_credit_amount or 0.0) <= 0.0 or bool(rec.direct_stop_credit_policy)
+            rec.direct_stop_settlement_ready = (
+                rec.visit_execution_mode != "direct_sales"
+                or (
+                    rec.direct_stop_sale_status != "pending"
+                    and rec.direct_stop_return_status != "pending"
+                    and not draft_payments
+                    and remaining_after_confirmed <= 0.0
+                    and credit_ready
+                )
+            )
+
+    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state", "visit_execution_mode", "direct_stop_order_ids.state", "direct_stop_order_ids.amount_total", "direct_stop_return_ids.state", "direct_stop_return_ids.amount_total")
     def _compute_payment_totals(self):
         for rec in self:
             total_sales = 0.0
@@ -1644,8 +1724,12 @@ class RouteVisit(models.Model):
                 "has_refill": False,
                 "has_pending_refill": False,
                 "no_refill": False,
+                "direct_stop_skip_sale": False,
+                "direct_stop_skip_return": False,
+                "direct_stop_credit_policy": False,
+                "direct_stop_credit_note": False,
                 "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and getattr(rec.vehicle_id, "stock_location_id", False) else False,
-                "destination_location_id": rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False,
+                "destination_location_id": False if rec._is_direct_sales_stop() else (rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False),
             })
 
     def _prepare_sale_order_line_vals(self):
@@ -1878,4 +1962,5 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
 
