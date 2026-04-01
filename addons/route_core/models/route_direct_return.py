@@ -32,12 +32,25 @@ class RouteDirectReturn(models.Model):
         string="Reference Delivery",
         ondelete="set null",
     )
+    visit_id = fields.Many2one(
+        "route.visit",
+        string="Route Visit",
+        ondelete="set null",
+        index=True,
+    )
     return_date = fields.Date(string="Return Date", default=fields.Date.context_today, required=True)
     note = fields.Text(string="Notes")
     state = fields.Selection([("draft", "Draft"), ("done", "Done"), ("cancel", "Cancelled")], default="draft", tracking=True)
     line_ids = fields.One2many("route.direct.return.line", "return_id", string="Return Lines", copy=True)
     picking_ids = fields.One2many("stock.picking", "route_direct_return_id", string="Generated Returns")
     picking_count = fields.Integer(string="Return Pickings", compute="_compute_picking_count")
+    amount_total = fields.Monetary(
+        string="Estimated Return Value",
+        currency_field="currency_id",
+        compute="_compute_amount_total",
+        store=False,
+        readonly=True,
+    )
 
     route_enable_lot_serial_tracking = fields.Boolean(
         string="Enable Lot/Serial Workflow",
@@ -66,6 +79,11 @@ class RouteDirectReturn(models.Model):
         store=False,
     )
 
+    @api.depends("line_ids.estimated_amount")
+    def _compute_amount_total(self):
+        for rec in self:
+            rec.amount_total = sum(rec.line_ids.mapped("estimated_amount"))
+
     def _ensure_direct_return_enabled(self):
         for rec in self:
             if not rec.company_id.route_enable_direct_return:
@@ -79,6 +97,7 @@ class RouteDirectReturn(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         seq = self.env["ir.sequence"]
+        default_visit_id = self.env.context.get("default_visit_id") or self.env.context.get("route_visit_id")
         for vals in vals_list:
             company = self.env["res.company"].browse(vals.get("company_id")) if vals.get("company_id") else self.env.company
             if not company.route_enable_direct_return:
@@ -87,6 +106,8 @@ class RouteDirectReturn(models.Model):
                 vals["name"] = seq.next_by_code("route.direct.return") or "New"
             vals.setdefault("user_id", self.env.user.id)
             vals.setdefault("company_id", self.env.company.id)
+            if default_visit_id and not vals.get("visit_id") and "visit_id" in self._fields:
+                vals["visit_id"] = default_visit_id
         return super().create(vals_list)
 
     @api.model
@@ -131,6 +152,9 @@ class RouteDirectReturn(models.Model):
             vehicle = self._default_vehicle()
             if vehicle:
                 vals["vehicle_id"] = vehicle.id
+        visit_id = self.env.context.get("default_visit_id") or self.env.context.get("route_visit_id")
+        if visit_id and "visit_id" in self._fields:
+            vals.setdefault("visit_id", visit_id)
         if not vals.get("outlet_id"):
             outlet = self.env["route.outlet"].search([
                 ("outlet_operation_mode", "=", "direct_sale"),
@@ -373,6 +397,14 @@ class RouteDirectReturnLine(models.Model):
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
     lot_name = fields.Char(string="Lot/Serial")
     expiry_date = fields.Date(string="Expiry")
+    currency_id = fields.Many2one(related="return_id.company_id.currency_id", store=False, readonly=True)
+    estimated_amount = fields.Monetary(
+        string="Estimated Amount",
+        currency_field="currency_id",
+        compute="_compute_estimated_amount",
+        store=False,
+        readonly=True,
+    )
     route_enable_lot_serial_tracking = fields.Boolean(related="return_id.route_enable_lot_serial_tracking", readonly=True, store=False)
     route_enable_expiry_tracking = fields.Boolean(related="return_id.route_enable_expiry_tracking", readonly=True, store=False)
     return_reason = fields.Selection(
@@ -403,6 +435,17 @@ class RouteDirectReturnLine(models.Model):
         mapping = dict(self._fields["return_reason"].selection)
         for line in self:
             line.return_reason_label = mapping.get(line.return_reason, False)
+
+    @api.depends("product_id", "quantity", "return_id.sale_order_id", "return_id.sale_order_id.order_line.price_unit")
+    def _compute_estimated_amount(self):
+        for line in self:
+            unit_price = 0.0
+            if line.return_id and line.return_id.sale_order_id and line.product_id:
+                sale_line = line.return_id.sale_order_id.order_line.filtered(lambda l: l.product_id == line.product_id)[:1]
+                unit_price = sale_line.price_unit if sale_line else (line.product_id.lst_price or 0.0)
+            elif line.product_id:
+                unit_price = line.product_id.lst_price or 0.0
+            line.estimated_amount = (line.quantity or 0.0) * unit_price
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
