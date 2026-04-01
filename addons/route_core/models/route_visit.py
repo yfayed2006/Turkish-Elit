@@ -93,12 +93,7 @@ class RouteVisit(models.Model):
         compute="_compute_direct_stop_summary",
         store=False,
     )
-    direct_stop_order_ids = fields.Many2many(
-        "sale.order",
-        string="Direct Sale Orders",
-        compute="_compute_direct_stop_order_ids",
-        store=False,
-    )
+    direct_stop_order_ids = fields.One2many("sale.order", "route_visit_id", string="Direct Sale Orders")
     direct_stop_return_ids = fields.One2many("route.direct.return", "visit_id", string="Direct Returns")
     direct_stop_order_count = fields.Integer(string="Direct Sale Orders", compute="_compute_direct_stop_summary", store=False)
     direct_stop_return_count = fields.Integer(string="Direct Returns", compute="_compute_direct_stop_summary", store=False)
@@ -1181,22 +1176,13 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
-
-    @api.depends("name")
-    def _compute_direct_stop_order_ids(self):
-        SaleOrder = self.env["sale.order"]
-        for rec in self:
-            if not rec.name:
-                rec.direct_stop_order_ids = SaleOrder
-                continue
-            rec.direct_stop_order_ids = SaleOrder.search([("route_order_mode", "=", "direct_sale"), ("origin", "=", rec.name)])
-
     @api.depends(
         "visit_execution_mode",
         "direct_stop_skip_sale",
         "direct_stop_skip_return",
         "direct_stop_credit_policy",
-        "name",
+        "direct_stop_order_ids.state",
+        "direct_stop_order_ids.amount_total",
         "direct_stop_return_ids.state",
         "direct_stop_return_ids.amount_total",
         "payment_ids.state",
@@ -1242,7 +1228,7 @@ class RouteVisit(models.Model):
                 )
             )
 
-    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state", "visit_execution_mode", "name", "direct_stop_return_ids.state", "direct_stop_return_ids.amount_total")
+    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state", "visit_execution_mode", "direct_stop_order_ids.state", "direct_stop_order_ids.amount_total", "direct_stop_return_ids.state", "direct_stop_return_ids.amount_total")
     def _compute_payment_totals(self):
         for rec in self:
             total_sales = 0.0
