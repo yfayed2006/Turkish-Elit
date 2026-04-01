@@ -726,6 +726,8 @@ class RouteVisit(models.Model):
 
     def action_open_scan_wizard(self):
         self.ensure_one()
+        if hasattr(self, "_is_direct_sales_stop") and self._is_direct_sales_stop():
+            raise UserError(_("Shelf scanning is not available for Direct Sales stops."))
         return {
             "type": "ir.actions.act_window",
             "name": _("Scan Barcode"),
