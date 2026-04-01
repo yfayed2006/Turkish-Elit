@@ -102,8 +102,6 @@ class RouteVisit(models.Model):
     ux_can_create_direct_return = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_direct_returns = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
-    direct_sale_skip = fields.Boolean(string="No Direct Sale", copy=False, default=False)
-    direct_return_skip = fields.Boolean(string="No Direct Return", copy=False, default=False)
     ux_can_no_sale = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_no_return = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
@@ -310,8 +308,8 @@ class RouteVisit(models.Model):
             if direct_sales_stop:
                 sale_orders = rec._get_direct_stop_sale_orders() if rec.id else self.env["sale.order"]
                 direct_returns = rec._get_direct_stop_returns() if rec.id else self.env["route.direct.return"]
-                sales_answered = bool(sale_orders or rec.direct_sale_skip)
-                returns_answered = bool((not rec.route_enable_direct_return) or direct_returns or rec.direct_return_skip)
+                sales_answered = bool(sale_orders or rec.direct_stop_skip_sale)
+                returns_answered = bool((not rec.route_enable_direct_return) or direct_returns or rec.direct_stop_skip_return)
 
                 if rec.state == "draft":
                     rec.ux_stage = "arrival"
@@ -574,13 +572,13 @@ class RouteVisit(models.Model):
     def action_ux_no_sale(self):
         self.ensure_one()
         self._ensure_direct_sales_stop()
-        self.write({"direct_sale_skip": True})
+        self.write({"direct_stop_skip_sale": True})
         return self._get_pda_form_action()
 
     def action_ux_no_return(self):
         self.ensure_one()
         self._ensure_direct_sales_stop()
-        self.write({"direct_return_skip": True})
+        self.write({"direct_stop_skip_return": True})
         return self._get_pda_form_action()
 
     def action_ux_create_direct_sale(self):
@@ -588,7 +586,7 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_sale:
             raise UserError(_("Direct Sale is disabled in Route Settings."))
-        self.write({"direct_sale_skip": False})
+        self.write({"direct_stop_skip_sale": False})
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Sale"),
@@ -645,7 +643,7 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_return:
             raise UserError(_("Direct Return is disabled in Route Settings."))
-        self.write({"direct_return_skip": False})
+        self.write({"direct_stop_skip_return": False})
         sale_orders = self._get_direct_stop_sale_orders()
         action = {
             "type": "ir.actions.act_window",
@@ -830,13 +828,13 @@ class RouteVisit(models.Model):
             sale_orders = self._get_direct_stop_sale_orders()
             direct_returns = self._get_direct_stop_returns()
 
-            if not sale_orders and not self.direct_sale_skip:
+            if not sale_orders and not self.direct_stop_skip_sale:
                 raise UserError(_("Please choose Create Direct Sale or No Sale first."))
 
             if sale_orders.filtered(lambda o: o.state in ("draft", "sent")):
                 raise UserError(_("Please confirm the Direct Sale Order before finishing the stop."))
 
-            if self.route_enable_direct_return and not direct_returns and not self.direct_return_skip:
+            if self.route_enable_direct_return and not direct_returns and not self.direct_stop_skip_return:
                 raise UserError(_("Please choose Create Direct Return or No Return first."))
 
             self.with_context(route_visit_force_write=True).write({
