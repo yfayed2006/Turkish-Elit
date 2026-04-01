@@ -1193,6 +1193,19 @@ class RouteVisit(models.Model):
         "payment_ids.state",
         "payment_ids.amount",
     )
+
+    @api.depends("name")
+    def _compute_direct_stop_order_ids(self):
+        SaleOrder = self.env["sale.order"]
+        empty_orders = SaleOrder.browse()
+        names = [name for name in self.mapped("name") if name]
+        orders_by_origin = {}
+        if names:
+            for order in SaleOrder.search([("route_order_mode", "=", "direct_sale"), ("origin", "in", names)]):
+                orders_by_origin.setdefault(order.origin, empty_orders)
+                orders_by_origin[order.origin] |= order
+        for rec in self:
+            rec.direct_stop_order_ids = orders_by_origin.get(rec.name, empty_orders)
     def _compute_direct_stop_summary(self):
         for rec in self:
             orders = rec.direct_stop_order_ids.filtered(lambda o: o.state not in ("cancel",)) if rec.direct_stop_order_ids else rec.direct_stop_order_ids
