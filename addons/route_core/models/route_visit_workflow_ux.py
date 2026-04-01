@@ -5,6 +5,36 @@ from odoo.exceptions import UserError
 class RouteVisit(models.Model):
     _inherit = "route.visit"
 
+
+    route_operation_mode = fields.Selection(
+        related="company_id.route_operation_mode",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_sale = fields.Boolean(
+        related="company_id.route_enable_direct_sale",
+        readonly=True,
+        store=False,
+    )
+    route_enable_direct_return = fields.Boolean(
+        related="company_id.route_enable_direct_return",
+        readonly=True,
+        store=False,
+    )
+    outlet_operation_mode = fields.Selection(
+        related="outlet_id.outlet_operation_mode",
+        readonly=True,
+        store=False,
+    )
+    visit_execution_mode = fields.Selection(
+        [("consignment", "Consignment Visit"), ("direct_sales", "Direct Sales Stop")],
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
+    visit_execution_mode_label = fields.Char(
+        compute="_compute_visit_execution_mode",
+        store=False,
+    )
     ux_stage = fields.Selection(
         [
             ("arrival", "Arrival"),
@@ -65,6 +95,12 @@ class RouteVisit(models.Model):
     ux_can_confirm_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_skip_collection = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
+
+    ux_can_create_direct_sale = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_open_direct_sale_orders = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_open_direct_sale_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_create_direct_return = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_open_direct_returns = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     ux_can_finish_visit = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
@@ -163,9 +199,33 @@ class RouteVisit(models.Model):
                     "over": max(current_shelf_value - limit_amount, 0.0),
                 }
 
+    @api.depends("route_operation_mode", "outlet_operation_mode")
+    def _compute_visit_execution_mode(self):
+        labels = {
+            "consignment": _("Consignment Visit"),
+            "direct_sales": _("Direct Sales Stop"),
+        }
+        for rec in self:
+            mode = rec.route_operation_mode or "hybrid"
+            execution_mode = "consignment"
+            if mode == "direct_sales":
+                execution_mode = "direct_sales"
+            elif mode == "hybrid" and rec.outlet_operation_mode == "direct_sale":
+                execution_mode = "direct_sales"
+            rec.visit_execution_mode = execution_mode
+            rec.visit_execution_mode_label = labels.get(execution_mode, labels["consignment"])
+
+    def _is_direct_sales_stop(self):
+        self.ensure_one()
+        return self.visit_execution_mode == "direct_sales"
+
     @api.depends(
         "state",
         "visit_process_state",
+        "route_operation_mode",
+        "route_enable_direct_sale",
+        "route_enable_direct_return",
+        "outlet_operation_mode",
         "sale_order_id",
         "sale_order_count",
         "payment_ids.state",
@@ -191,6 +251,7 @@ class RouteVisit(models.Model):
     )
     def _compute_ux_workflow(self):
         for rec in self:
+            direct_sales_stop = rec.visit_execution_mode == "direct_sales"
             has_lines = bool(rec.line_ids)
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
             has_return_qty = any((line.return_qty or 0.0) > 0 for line in rec.line_ids)
@@ -216,6 +277,49 @@ class RouteVisit(models.Model):
             has_confirmed_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "confirmed"))
             no_due_to_collect = (rec.remaining_due_amount or 0.0) <= 0.0
 
+            # defaults
+            rec.ux_can_scan_barcode = False
+            rec.ux_can_scan_returns = False
+            rec.ux_can_no_returns = False
+            rec.ux_can_create_sale_order = False
+            rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
+            rec.ux_can_confirm_return_transfers = False
+            rec.ux_can_view_return_transfers = has_return_transfers
+            rec.ux_can_generate_refill = False
+            rec.ux_can_confirm_refill = False
+            rec.ux_can_view_refill_transfer = bool(rec.refill_picking_id or rec.refill_picking_count)
+            rec.ux_can_open_pending_refill = bool(rec.has_pending_refill or rec.refill_backorder_id)
+            rec.ux_can_collect_payment = False
+            rec.ux_can_confirm_payments = False
+            rec.ux_can_skip_collection = False
+            rec.ux_can_open_payments = False
+            rec.ux_can_create_direct_sale = bool(direct_sales_stop and rec.route_enable_direct_sale)
+            rec.ux_can_open_direct_sale_orders = bool(direct_sales_stop and rec.route_enable_direct_sale)
+            rec.ux_can_open_direct_sale_payments = bool(direct_sales_stop and rec.route_enable_direct_sale)
+            rec.ux_can_create_direct_return = bool(direct_sales_stop and rec.route_enable_direct_return)
+            rec.ux_can_open_direct_returns = bool(direct_sales_stop and rec.route_enable_direct_return)
+            rec.ux_can_finish_visit = False
+
+            if direct_sales_stop:
+                rec.ux_can_finish_visit = rec.state == "in_progress"
+
+                if rec.state == "draft":
+                    rec.ux_stage = "arrival"
+                    rec.ux_primary_action = "start_visit"
+                    rec.ux_stage_title = _("Start direct sales stop")
+                    rec.ux_stage_help = _("Begin the direct sales stop.")
+                elif rec.state == "in_progress":
+                    rec.ux_stage = "ready_to_close"
+                    rec.ux_primary_action = "finish_visit"
+                    rec.ux_stage_title = _("Direct sales stop")
+                    rec.ux_stage_help = _("Create direct sale orders, review direct sale payments, optionally create direct returns, then finish the stop.")
+                else:
+                    rec.ux_stage = "done"
+                    rec.ux_primary_action = "none"
+                    rec.ux_stage_title = _("Stop completed")
+                    rec.ux_stage_help = _("No action required.")
+                continue
+
             rec.ux_can_scan_barcode = (
                 rec.state == "in_progress"
                 and rec.visit_process_state in ("checked_in", "counting")
@@ -229,17 +333,12 @@ class RouteVisit(models.Model):
             )
             rec.ux_can_no_returns = rec.ux_can_scan_returns
 
-            rec.ux_can_create_sale_order = False
-            rec.ux_can_view_sale_order = bool(rec.sale_order_id or rec.sale_order_count)
-
             rec.ux_can_confirm_return_transfers = (
                 rec.state == "in_progress"
                 and rec.visit_process_state == "reconciled"
                 and has_return_qty
                 and not has_return_transfers
             )
-
-            rec.ux_can_view_return_transfers = has_return_transfers
 
             rec.ux_can_generate_refill = (
                 rec.state == "in_progress"
@@ -255,14 +354,6 @@ class RouteVisit(models.Model):
                 and bool(rec.refill_datetime)
                 and has_supplied_qty
                 and not rec.refill_picking_id
-            )
-
-            rec.ux_can_view_refill_transfer = bool(
-                rec.refill_picking_id or rec.refill_picking_count
-            )
-
-            rec.ux_can_open_pending_refill = bool(
-                rec.has_pending_refill or rec.refill_backorder_id
             )
 
             rec.ux_can_collect_payment = (
@@ -306,117 +397,92 @@ class RouteVisit(models.Model):
             if rec.state == "draft":
                 rec.ux_stage = "arrival"
                 rec.ux_primary_action = "start_visit"
-                rec.ux_stage_title = "Start the visit"
-                rec.ux_stage_help = "Begin the visit."
+                rec.ux_stage_title = _("Start the visit")
+                rec.ux_stage_help = _("Begin the visit.")
 
             elif rec.state == "in_progress" and rec.visit_process_state == "pending":
                 rec.ux_stage = "load_balance"
                 rec.ux_primary_action = "load_previous_balance"
-                rec.ux_stage_title = "Load previous balance"
-                rec.ux_stage_help = "Load previous shelf quantities."
+                rec.ux_stage_title = _("Load previous balance")
+                rec.ux_stage_help = _("Load previous shelf quantities.")
 
             elif load_balance_required:
                 rec.ux_stage = "load_balance"
                 rec.ux_primary_action = "load_previous_balance"
-                rec.ux_stage_title = "Load previous balance"
-                rec.ux_stage_help = "Load previous shelf quantities before counting."
+                rec.ux_stage_title = _("Load previous balance")
+                rec.ux_stage_help = _("Load previous shelf quantities before counting.")
 
             elif rec.visit_process_state == "checked_in":
                 rec.ux_stage = "count"
                 rec.ux_primary_action = "scan_shelf"
-                rec.ux_stage_title = "Scan shelf stock"
-                rec.ux_stage_help = "Scan the current shelf quantities."
+                rec.ux_stage_title = _("Scan shelf stock")
+                rec.ux_stage_help = _("Scan the current shelf quantities.")
 
             elif rec.visit_process_state == "counting" and not rec.returns_step_done:
                 rec.ux_stage = "returns"
                 rec.ux_primary_action = "returns_step"
-                rec.ux_stage_title = "Check Return"
-                rec.ux_stage_help = "Use the main button to scan additional returns, or use Skip Additional Returns below if there are no more returns."
+                rec.ux_stage_title = _("Check Return")
+                rec.ux_stage_help = _("Use the main button to scan additional returns, or use Skip Additional Returns below if there are no more returns.")
 
             elif rec.visit_process_state == "counting" and rec.returns_step_done:
                 rec.ux_stage = "reconcile"
                 rec.ux_primary_action = "reconcile_count"
-                rec.ux_stage_title = "Reconcile counted stock"
-                rec.ux_stage_help = "Confirm reconciliation."
+                rec.ux_stage_title = _("Reconcile counted stock")
+                rec.ux_stage_help = _("Confirm reconciliation.")
 
-            elif (
-                rec.visit_process_state == "reconciled"
-                and has_return_qty
-                and not has_return_transfers
-            ):
+            elif rec.visit_process_state == "reconciled" and has_return_qty and not has_return_transfers:
                 rec.ux_stage = "return_transfer"
                 rec.ux_primary_action = "confirm_return_transfers"
-                rec.ux_stage_title = "Confirm return transfers"
-                rec.ux_stage_help = "Create the internal transfers for returned products."
+                rec.ux_stage_title = _("Confirm return transfers")
+                rec.ux_stage_help = _("Create the internal transfers for returned products.")
 
-            elif (
-                rec.visit_process_state == "reconciled"
-                and not rec.refill_datetime
-                and (not has_return_qty or has_return_transfers)
-            ):
+            elif rec.visit_process_state == "reconciled" and not rec.refill_datetime and (not has_return_qty or has_return_transfers):
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "generate_refill"
-                rec.ux_stage_title = "Generate refill proposal"
-                rec.ux_stage_help = "Generate the suggested refill."
+                rec.ux_stage_title = _("Generate refill proposal")
+                rec.ux_stage_help = _("Generate the suggested refill.")
 
-            elif (
-                rec.visit_process_state == "reconciled"
-                and (not has_return_qty or has_return_transfers)
-                and bool(rec.refill_datetime)
-                and has_supplied_qty
-                and not rec.refill_picking_id
-            ):
+            elif rec.visit_process_state == "reconciled" and (not has_return_qty or has_return_transfers) and bool(rec.refill_datetime) and has_supplied_qty and not rec.refill_picking_id:
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "confirm_refill"
-                rec.ux_stage_title = "Confirm refill transfer"
-                rec.ux_stage_help = "Create the internal transfer from van to outlet."
+                rec.ux_stage_title = _("Confirm refill transfer")
+                rec.ux_stage_help = _("Create the internal transfer from van to outlet.")
 
             elif rec.ux_can_open_pending_refill:
                 rec.ux_stage = "refill"
                 rec.ux_primary_action = "open_pending_refill"
-                rec.ux_stage_title = "Open pending refill"
-                rec.ux_stage_help = "There is a pending refill/backorder that must be reviewed first."
+                rec.ux_stage_title = _("Open pending refill")
+                rec.ux_stage_help = _("There is a pending refill/backorder that must be reviewed first.")
 
             elif can_enter_collection and has_draft_payments:
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "confirm_payments"
-                rec.ux_stage_title = "Confirm payments"
-                rec.ux_stage_help = "Review and confirm the drafted payment decisions."
+                rec.ux_stage_title = _("Confirm payments")
+                rec.ux_stage_help = _("Review and confirm the drafted payment decisions.")
 
-            elif (
-                can_enter_collection
-                and not has_confirmed_payments
-                and not rec.collection_skip_reason
-                and not rec.ux_can_open_pending_refill
-                and no_due_to_collect
-            ):
+            elif can_enter_collection and not has_confirmed_payments and not rec.collection_skip_reason and not rec.ux_can_open_pending_refill and no_due_to_collect:
                 rec.ux_stage = "ready_to_close"
                 rec.ux_primary_action = "finish_visit"
-                rec.ux_stage_title = "Finish visit"
-                rec.ux_stage_help = "No payment is due on this visit. Close the visit."
+                rec.ux_stage_title = _("Finish visit")
+                rec.ux_stage_help = _("No payment is due on this visit. Close the visit.")
 
-            elif (
-                can_enter_collection
-                and not has_confirmed_payments
-                and not rec.collection_skip_reason
-                and not rec.ux_can_open_pending_refill
-            ):
+            elif can_enter_collection and not has_confirmed_payments and not rec.collection_skip_reason and not rec.ux_can_open_pending_refill:
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "collect_payment"
-                rec.ux_stage_title = "Collect payment"
-                rec.ux_stage_help = "Add a full payment, partial payment, deferment, or carry forward. Use Skip Collection below only when collection is not possible."
+                rec.ux_stage_title = _("Collect payment")
+                rec.ux_stage_help = _("Add a full payment, partial payment, deferment, or carry forward. Use Skip Collection below only when collection is not possible.")
 
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
                 rec.ux_primary_action = "finish_visit"
-                rec.ux_stage_title = "Finish visit"
-                rec.ux_stage_help = "Close the visit."
+                rec.ux_stage_title = _("Finish visit")
+                rec.ux_stage_help = _("Close the visit.")
 
             else:
                 rec.ux_stage = "done"
                 rec.ux_primary_action = "none"
-                rec.ux_stage_title = "Visit completed"
-                rec.ux_stage_help = "No action required."
+                rec.ux_stage_title = _("Visit completed")
+                rec.ux_stage_help = _("No action required.")
 
     def _get_pda_form_action(self):
         self.ensure_one()
@@ -436,6 +502,101 @@ class RouteVisit(models.Model):
             },
         }
 
+    def _ensure_direct_sales_stop(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            raise UserError(_("This action is only available for Direct Sales stops."))
+
+    def action_ux_create_direct_sale(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Create Direct Sale"),
+            "res_model": "sale.order",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_route_order_mode": "direct_sale",
+                "default_user_id": self.user_id.id or self.env.user.id,
+                "default_route_source_location_id": self.vehicle_id.stock_location_id.id if self.vehicle_id and self.vehicle_id.stock_location_id else False,
+                "default_route_payment_mode": "cash",
+                "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
+                "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
+            },
+        }
+        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def action_ux_open_direct_sale_orders(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Sale Orders"),
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("route_order_mode", "=", "direct_sale"), ("route_outlet_id", "=", self.outlet_id.id)],
+            "context": {"search_default_route_order_mode": "direct_sale"},
+        }
+
+    def action_ux_open_direct_sale_payments(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_sale:
+            raise UserError(_("Direct Sale is disabled in Route Settings."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Sale Payments"),
+            "res_model": "route.visit.payment",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("source_type", "=", "direct_sale"), ("outlet_id", "=", self.outlet_id.id), ("salesperson_id", "=", self.user_id.id)],
+        }
+
+    def action_ux_create_direct_return(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Create Direct Return"),
+            "res_model": "route.direct.return",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_user_id": self.user_id.id or self.env.user.id,
+                "default_vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
+                "default_outlet_id": self.outlet_id.id if self.outlet_id else False,
+            },
+        }
+        view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def action_ux_open_direct_returns(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Returns"),
+            "res_model": "route.direct.return",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("outlet_id", "=", self.outlet_id.id), ("user_id", "=", self.user_id.id)],
+        }
+
     def action_ux_refresh_visit(self):
         self.ensure_one()
         self.action_recompute_visit_health()
@@ -448,15 +609,21 @@ class RouteVisit(models.Model):
 
     def action_ux_load_previous_balance(self):
         self.ensure_one()
+        if self._is_direct_sales_stop():
+            raise UserError(_("Previous balance is not used for Direct Sales stops."))
         self.action_load_previous_balance()
         return self._get_pda_form_action()
 
     def action_ux_scan_shelf(self):
         self.ensure_one()
+        if self._is_direct_sales_stop():
+            raise UserError(_("Shelf counting is not used for Direct Sales stops."))
         return self.action_open_scan_wizard()
 
     def action_ux_returns_step(self):
         self.ensure_one()
+        if self._is_direct_sales_stop():
+            raise UserError(_("Return scan is not used for Direct Sales stops. Use Direct Return instead."))
         return self._action_open_returns_scan_wizard()
 
     def action_ux_no_returns(self):
@@ -465,6 +632,9 @@ class RouteVisit(models.Model):
 
     def action_ux_reconcile_count(self):
         self.ensure_one()
+
+        if self._is_direct_sales_stop():
+            raise UserError(_("Reconciliation is not used for Direct Sales stops."))
 
         if self.visit_process_state != "counting":
             return self._get_pda_form_action()
@@ -487,6 +657,8 @@ class RouteVisit(models.Model):
 
     def action_ux_generate_refill(self):
         self.ensure_one()
+        if self._is_direct_sales_stop():
+            raise UserError(_("Refill proposal is not used for Direct Sales stops."))
         self.action_generate_refill_proposal()
 
         if not self.refill_datetime:
@@ -496,6 +668,8 @@ class RouteVisit(models.Model):
 
     def action_ux_confirm_refill(self):
         self.ensure_one()
+        if self._is_direct_sales_stop():
+            raise UserError(_("Refill transfer is not used for Direct Sales stops."))
         self.action_confirm_refill_transfer()
         return self._get_pda_form_action()
 
@@ -568,6 +742,14 @@ class RouteVisit(models.Model):
     def _action_finish_visit_core(self):
         self.ensure_one()
 
+        if self._is_direct_sales_stop():
+            self.with_context(route_visit_force_write=True).write({
+                "state": "done",
+                "visit_process_state": "done",
+                "end_datetime": fields.Datetime.now(),
+            })
+            return self._get_pda_form_action()
+
         if self.visit_process_state not in ("collection_done", "ready_to_close"):
             if (
                 self.visit_process_state == "reconciled"
@@ -598,3 +780,4 @@ class RouteVisit(models.Model):
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
+
