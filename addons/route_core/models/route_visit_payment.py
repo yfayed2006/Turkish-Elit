@@ -211,6 +211,9 @@ class RouteVisitPayment(models.Model):
         if self.source_type == "direct_sale":
             return self.sale_order_id.amount_total or 0.0
 
+        if self.visit_id and getattr(self.visit_id, "visit_execution_mode", False) == "direct_sales":
+            return self.visit_id.net_due_amount or 0.0
+
         total_sales = 0.0
         for line in self.visit_id.line_ids:
             sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
@@ -483,5 +486,4 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
-
 
