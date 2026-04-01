@@ -42,6 +42,14 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="ux_can_create_direct_sale" invisible="1"/>
+<field name="ux_can_open_direct_sale_orders" invisible="1"/>
+<field name="ux_can_open_direct_sale_payments" invisible="1"/>
+<field name="ux_can_create_direct_return" invisible="1"/>
+<field name="visit_execution_mode" invisible="1"/>
+<field name="visit_execution_mode_label" invisible="1"/>
+<field name="route_show_consignment_workflow" invisible="1"/>
+<field name="route_show_direct_sales_workflow" invisible="1"/>
 <field name="refill_credit_warning_visible" invisible="1"/>
 <field name="refill_credit_warning_level" invisible="1"/>
 <field name="refill_credit_warning_text" invisible="1"/>
@@ -49,6 +57,10 @@
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
 </strong>
+<div class="mt-1">
+<span class="text-muted">Mode:</span>
+<field name="visit_execution_mode_label" readonly="1" nolabel="1" class="oe_inline"/>
+</div>
 <div class="mt-1">
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
@@ -68,6 +80,10 @@
 <div class="d-flex flex-wrap gap-2 mb-3">
 <button name="action_ux_no_returns" string="Skip Additional Returns" type="object" class="btn-secondary btn-sm" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_skip_collection" string="Skip Collection" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_collection"/>
+<button name="action_ux_create_direct_sale" string="Create Direct Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Create Direct Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_create_direct_return"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary btn-sm" invisible="visit_process_state in ('done', 'cancel')"/>
 </div>
 </xpath>
@@ -76,11 +92,20 @@
 <button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
 <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
 </button>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Create Direct Return" type="object" class="oe_stat_button" icon="fa-reply" invisible="not ux_can_create_direct_return"/>
 <button name="action_ux_view_return_transfers" string="Return Transfers" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_return_transfers"/>
 <button name="action_ux_view_refill_transfer" string="Refill Transfer" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_refill_transfer"/>
 <button name="action_ux_open_pending_refill" string="Pending Refill" type="object" class="oe_stat_button" icon="fa-exchange" invisible="not ux_can_open_pending_refill"/>
 <button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
 </div>
+</xpath>
+<xpath expr="//page[@string='Count']" position="attributes">
+<attribute name="invisible">route_show_consignment_workflow == False</attribute>
+</xpath>
+<xpath expr="//page[@string='Payments']" position="attributes">
+<attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
 </field>
 </record>
@@ -127,6 +152,14 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="ux_can_create_direct_sale" invisible="1"/>
+<field name="ux_can_open_direct_sale_orders" invisible="1"/>
+<field name="ux_can_open_direct_sale_payments" invisible="1"/>
+<field name="ux_can_create_direct_return" invisible="1"/>
+<field name="visit_execution_mode" invisible="1"/>
+<field name="visit_execution_mode_label" invisible="1"/>
+<field name="route_show_consignment_workflow" invisible="1"/>
+<field name="route_show_direct_sales_workflow" invisible="1"/>
 <field name="refill_credit_warning_visible" invisible="1"/>
 <field name="refill_credit_warning_level" invisible="1"/>
 <field name="refill_credit_warning_text" invisible="1"/>
@@ -134,6 +167,10 @@
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
 </strong>
+<div class="mt-1">
+<span class="text-muted">Mode:</span>
+<field name="visit_execution_mode_label" readonly="1" nolabel="1" class="oe_inline"/>
+</div>
 <div class="mt-1">
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
@@ -153,6 +190,10 @@
 <div class="d-flex flex-wrap gap-2 mb-3">
 <button name="action_ux_no_returns" string="Skip Additional Returns" type="object" class="btn-secondary btn-sm" invisible="ux_primary_action != 'returns_step'"/>
 <button name="action_ux_skip_collection" string="Skip Collection" type="object" class="btn-secondary btn-sm" invisible="not ux_can_skip_collection"/>
+<button name="action_ux_create_direct_sale" string="Create Direct Sale" type="object" class="btn-primary btn-sm" invisible="not ux_can_create_direct_sale"/>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary btn-sm" invisible="not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Create Direct Return" type="object" class="btn-secondary btn-sm" invisible="not ux_can_create_direct_return"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary btn-sm" invisible="visit_process_state in ('done', 'cancel')"/>
 </div>
 </xpath>
@@ -161,11 +202,20 @@
 <button name="action_ux_view_sale_order" type="object" class="oe_stat_button" icon="fa-external-link" invisible="not ux_can_view_sale_order">
 <field name="sale_order_count" string="Sale Order" widget="statinfo"/>
 </button>
+<button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="oe_stat_button" icon="fa-shopping-cart" invisible="not ux_can_open_direct_sale_orders"/>
+<button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_direct_sale_payments"/>
+<button name="action_ux_create_direct_return" string="Create Direct Return" type="object" class="oe_stat_button" icon="fa-reply" invisible="not ux_can_create_direct_return"/>
 <button name="action_ux_view_return_transfers" string="Return Transfers" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_return_transfers"/>
 <button name="action_ux_view_refill_transfer" string="Refill Transfer" type="object" class="oe_stat_button" icon="fa-external-link-square" invisible="not ux_can_view_refill_transfer"/>
 <button name="action_ux_open_pending_refill" string="Pending Refill" type="object" class="oe_stat_button" icon="fa-exchange" invisible="not ux_can_open_pending_refill"/>
 <button name="action_ux_open_payments" string="Review Payments" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not ux_can_open_payments"/>
 </div>
+</xpath>
+<xpath expr="//page[@string='Count']" position="attributes">
+<attribute name="invisible">route_show_consignment_workflow == False</attribute>
+</xpath>
+<xpath expr="//page[@string='Payments']" position="attributes">
+<attribute name="invisible">route_show_consignment_workflow == False</attribute>
 </xpath>
 </field>
 </record>
