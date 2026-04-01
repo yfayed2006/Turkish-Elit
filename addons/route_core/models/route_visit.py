@@ -1235,11 +1235,13 @@ class RouteVisit(models.Model):
             due_after_returns = max((rec.direct_stop_sales_total or 0.0) - (rec.direct_stop_returns_total or 0.0), 0.0)
             remaining_after_confirmed = max(due_after_returns - sum(confirmed_payments.mapped("amount")), 0.0)
             credit_ready = (rec.direct_stop_credit_amount or 0.0) <= 0.0 or bool(rec.direct_stop_credit_policy)
+            sale_answer_complete = rec.direct_stop_sale_status != "pending"
+            return_answer_complete = (not rec.route_enable_direct_return) or rec.direct_stop_return_status != "pending"
             rec.direct_stop_settlement_ready = (
                 rec.visit_execution_mode != "direct_sales"
                 or (
-                    rec.direct_stop_sale_status != "pending"
-                    and rec.direct_stop_return_status != "pending"
+                    sale_answer_complete
+                    and return_answer_complete
                     and not draft_payments
                     and remaining_after_confirmed <= 0.0
                     and credit_ready
@@ -1249,18 +1251,24 @@ class RouteVisit(models.Model):
     @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state", "visit_execution_mode", "direct_stop_order_ids.state", "direct_stop_order_ids.amount_total", "direct_stop_return_ids.state", "direct_stop_return_ids.amount_total")
     def _compute_payment_totals(self):
         for rec in self:
-            total_sales = 0.0
-            for line in rec.line_ids:
-                sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
-                unit_price = getattr(line, "unit_price", 0.0) or 0.0
-                total_sales += sold_qty * unit_price
+            if rec.visit_execution_mode == "direct_sales":
+                total_sales = rec.direct_stop_sales_total or 0.0
+                total_returns = rec.direct_stop_returns_total or 0.0
+                net_due = max(total_sales - total_returns, 0.0)
+            else:
+                total_sales = 0.0
+                for line in rec.line_ids:
+                    sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
+                    unit_price = getattr(line, "unit_price", 0.0) or 0.0
+                    total_sales += sold_qty * unit_price
+                net_due = total_sales
 
             confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
             total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
 
-            rec.net_due_amount = total_sales
+            rec.net_due_amount = net_due
             rec.collected_amount = total_collected
-            rec.remaining_due_amount = max((total_sales or 0.0) - (total_collected or 0.0), 0.0)
+            rec.remaining_due_amount = max((net_due or 0.0) - (total_collected or 0.0), 0.0)
 
 
     @api.depends(
