@@ -101,6 +101,9 @@ class RouteVisit(models.Model):
     ux_can_open_direct_sale_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_create_direct_return = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_direct_returns = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_skip_direct_sale = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_skip_direct_return = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_open_direct_stop_settlement = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     ux_can_finish_visit = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
@@ -228,6 +231,17 @@ class RouteVisit(models.Model):
         "outlet_operation_mode",
         "sale_order_id",
         "sale_order_count",
+        "direct_stop_order_ids.state",
+        "direct_stop_order_ids.amount_total",
+        "direct_stop_return_ids.state",
+        "direct_stop_return_ids.amount_total",
+        "direct_stop_skip_sale",
+        "direct_stop_skip_return",
+        "direct_stop_sale_status",
+        "direct_stop_return_status",
+        "direct_stop_credit_amount",
+        "direct_stop_credit_policy",
+        "direct_stop_settlement_ready",
         "payment_ids.state",
         "payment_ids.amount",
         "collection_skip_reason",
@@ -293,26 +307,50 @@ class RouteVisit(models.Model):
             rec.ux_can_confirm_payments = False
             rec.ux_can_skip_collection = False
             rec.ux_can_open_payments = False
-            rec.ux_can_create_direct_sale = bool(direct_sales_stop and rec.route_enable_direct_sale)
-            rec.ux_can_open_direct_sale_orders = bool(direct_sales_stop and rec.route_enable_direct_sale)
-            rec.ux_can_open_direct_sale_payments = bool(direct_sales_stop and rec.route_enable_direct_sale)
-            rec.ux_can_create_direct_return = bool(direct_sales_stop and rec.route_enable_direct_return)
-            rec.ux_can_open_direct_returns = bool(direct_sales_stop and rec.route_enable_direct_return)
+            rec.ux_can_create_direct_sale = bool(direct_sales_stop and rec.route_enable_direct_sale and rec.direct_stop_sale_status == "pending")
+            rec.ux_can_open_direct_sale_orders = bool(direct_sales_stop and rec.route_enable_direct_sale and rec.direct_stop_order_count)
+            rec.ux_can_open_direct_sale_payments = bool(direct_sales_stop and (rec.payment_ids or rec.remaining_due_amount > 0))
+            rec.ux_can_create_direct_return = bool(direct_sales_stop and rec.route_enable_direct_return and rec.direct_stop_sale_status != "pending" and rec.direct_stop_return_status == "pending")
+            rec.ux_can_open_direct_returns = bool(direct_sales_stop and rec.route_enable_direct_return and rec.direct_stop_return_count)
+            rec.ux_can_skip_direct_sale = bool(direct_sales_stop and rec.state == "in_progress" and rec.direct_stop_sale_status == "pending")
+            rec.ux_can_skip_direct_return = bool(direct_sales_stop and rec.state == "in_progress" and rec.direct_stop_sale_status != "pending" and rec.direct_stop_return_status == "pending")
+            rec.ux_can_open_direct_stop_settlement = bool(direct_sales_stop and rec.state == "in_progress" and rec.direct_stop_sale_status != "pending" and rec.direct_stop_return_status != "pending")
             rec.ux_can_finish_visit = False
 
             if direct_sales_stop:
-                rec.ux_can_finish_visit = rec.state == "in_progress"
-
+                has_draft_direct_stop_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
                 if rec.state == "draft":
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "start_visit"
                     rec.ux_stage_title = _("Start direct sales stop")
                     rec.ux_stage_help = _("Begin the direct sales stop.")
                 elif rec.state == "in_progress":
-                    rec.ux_stage = "ready_to_close"
-                    rec.ux_primary_action = "finish_visit"
-                    rec.ux_stage_title = _("Direct sales stop")
-                    rec.ux_stage_help = _("Create direct sale orders, review direct sale payments, optionally create direct returns, then finish the stop.")
+                    if rec.direct_stop_sale_status == "pending":
+                        rec.ux_stage = "arrival"
+                        rec.ux_primary_action = "none"
+                        rec.ux_stage_title = _("Sales decision")
+                        rec.ux_stage_help = _("Do you want to create a direct sale order for this stop?")
+                    elif rec.direct_stop_return_status == "pending":
+                        rec.ux_stage = "returns"
+                        rec.ux_primary_action = "none"
+                        rec.ux_stage_title = _("Return decision")
+                        rec.ux_stage_help = _("Is there a direct return for this stop?")
+                    elif not rec.direct_stop_settlement_ready:
+                        rec.ux_stage = "collection"
+                        if has_draft_direct_stop_payments:
+                            rec.ux_primary_action = "confirm_payments"
+                        elif (rec.remaining_due_amount or 0.0) > 0.0:
+                            rec.ux_primary_action = "collect_payment"
+                        else:
+                            rec.ux_primary_action = "none"
+                        rec.ux_stage_title = _("Financial settlement")
+                        rec.ux_stage_help = _("Review sales, returns, net due, then settle payment or choose a return credit settlement.")
+                    else:
+                        rec.ux_stage = "ready_to_close"
+                        rec.ux_primary_action = "finish_visit"
+                        rec.ux_stage_title = _("Ready to finish")
+                        rec.ux_stage_help = _("The stop is financially settled and can now be finished.")
+                        rec.ux_can_finish_visit = True
                 else:
                     rec.ux_stage = "done"
                     rec.ux_primary_action = "none"
@@ -512,6 +550,7 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_sale:
             raise UserError(_("Direct Sale is disabled in Route Settings."))
+        self.direct_stop_skip_sale = False
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Sale"),
@@ -525,6 +564,8 @@ class RouteVisit(models.Model):
                 "default_route_payment_mode": "cash",
                 "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
                 "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
+                "default_route_visit_id": self.id,
+                "route_visit_id": self.id,
             },
         }
         view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
@@ -543,22 +584,25 @@ class RouteVisit(models.Model):
             "res_model": "sale.order",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("route_order_mode", "=", "direct_sale"), ("route_outlet_id", "=", self.outlet_id.id)],
-            "context": {"search_default_route_order_mode": "direct_sale"},
+            "domain": [("route_order_mode", "=", "direct_sale"), ("route_visit_id", "=", self.id)],
+            "context": {"search_default_route_order_mode": "direct_sale", "create": 0},
         }
 
     def action_ux_open_direct_sale_payments(self):
         self.ensure_one()
         self._ensure_direct_sales_stop()
-        if not self.route_enable_direct_sale:
-            raise UserError(_("Direct Sale is disabled in Route Settings."))
         return {
             "type": "ir.actions.act_window",
-            "name": _("Direct Sale Payments"),
+            "name": _("Financial Settlement"),
             "res_model": "route.visit.payment",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("source_type", "=", "direct_sale"), ("outlet_id", "=", self.outlet_id.id), ("salesperson_id", "=", self.user_id.id)],
+            "domain": [("visit_id", "=", self.id)],
+            "context": {
+                "default_visit_id": self.id,
+                "search_default_visit_id": self.id,
+                "create": 0,
+            },
         }
 
     def action_ux_create_direct_return(self):
@@ -566,6 +610,7 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_return:
             raise UserError(_("Direct Return is disabled in Route Settings."))
+        self.direct_stop_skip_return = False
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Return"),
@@ -576,6 +621,8 @@ class RouteVisit(models.Model):
                 "default_user_id": self.user_id.id or self.env.user.id,
                 "default_vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
                 "default_outlet_id": self.outlet_id.id if self.outlet_id else False,
+                "default_visit_id": self.id,
+                "route_visit_id": self.id,
             },
         }
         view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
@@ -594,8 +641,25 @@ class RouteVisit(models.Model):
             "res_model": "route.direct.return",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("outlet_id", "=", self.outlet_id.id), ("user_id", "=", self.user_id.id)],
+            "domain": [("visit_id", "=", self.id)],
         }
+
+    def action_ux_skip_direct_sale(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        self.direct_stop_skip_sale = True
+        return self._get_pda_form_action()
+
+    def action_ux_skip_direct_return(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        self.direct_stop_skip_return = True
+        return self._get_pda_form_action()
+
+    def action_ux_open_direct_stop_settlement(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        return self.action_ux_open_payments()
 
     def action_ux_refresh_visit(self):
         self.ensure_one()
@@ -699,6 +763,9 @@ class RouteVisit(models.Model):
     def action_ux_collect_payment(self):
         self.ensure_one()
 
+        if self._is_direct_sales_stop() and self.remaining_due_amount <= 0:
+            return self._get_pda_form_action()
+
         if self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_collection_done()
             return self._get_pda_form_action()
@@ -728,7 +795,10 @@ class RouteVisit(models.Model):
             raise UserError(_("There are no draft payments to confirm."))
 
         draft_payments.action_confirm()
-        self._action_mark_collection_done()
+        if self._is_direct_sales_stop():
+            self.write({"visit_process_state": "collection_done"})
+        else:
+            self._action_mark_collection_done()
         return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
@@ -743,6 +813,16 @@ class RouteVisit(models.Model):
         self.ensure_one()
 
         if self._is_direct_sales_stop():
+            if self.direct_stop_sale_status == "pending":
+                raise UserError(_("Please answer the sales decision first."))
+            if self.direct_stop_return_status == "pending":
+                raise UserError(_("Please answer the return decision first."))
+            if self.payment_ids.filtered(lambda p: p.state == "draft"):
+                raise UserError(_("Please confirm the draft settlement payment before finishing the stop."))
+            if (self.remaining_due_amount or 0.0) > 0.0:
+                raise UserError(_("Please settle the remaining amount before finishing the stop."))
+            if (self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy:
+                raise UserError(_("Please choose how to settle the return credit before finishing the stop."))
             self.with_context(route_visit_force_write=True).write({
                 "state": "done",
                 "visit_process_state": "done",
