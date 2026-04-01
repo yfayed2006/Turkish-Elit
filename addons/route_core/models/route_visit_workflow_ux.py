@@ -317,14 +317,14 @@ class RouteVisit(models.Model):
                     rec.ux_stage_title = _("Start direct sales stop")
                     rec.ux_stage_help = _("Begin the direct sales stop.")
                 elif rec.state == "in_progress" and not sales_answered:
-                    rec.ux_stage = "checked_in"
+                    rec.ux_stage = "arrival"
                     rec.ux_primary_action = "none"
                     rec.ux_stage_title = _("Sales decision")
                     rec.ux_stage_help = _("Do you want to create a direct sale order for this stop?")
                     rec.ux_can_create_direct_sale = bool(rec.route_enable_direct_sale)
                     rec.ux_can_no_sale = True
                 elif rec.state == "in_progress" and not returns_answered:
-                    rec.ux_stage = "checked_in"
+                    rec.ux_stage = "arrival"
                     rec.ux_primary_action = "none"
                     rec.ux_stage_title = _("Return decision")
                     rec.ux_stage_help = _("Is there a direct return for this stop?")
@@ -874,5 +874,4 @@ class RouteVisit(models.Model):
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
-
 
