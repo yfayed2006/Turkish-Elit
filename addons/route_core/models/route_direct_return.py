@@ -44,6 +44,13 @@ class RouteDirectReturn(models.Model):
     line_ids = fields.One2many("route.direct.return.line", "return_id", string="Return Lines", copy=True)
     picking_ids = fields.One2many("stock.picking", "route_direct_return_id", string="Generated Returns")
     picking_count = fields.Integer(string="Return Pickings", compute="_compute_picking_count")
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Currency",
+        related="company_id.currency_id",
+        store=False,
+        readonly=True,
+    )
     amount_total = fields.Monetary(
         string="Estimated Return Value",
         currency_field="currency_id",
