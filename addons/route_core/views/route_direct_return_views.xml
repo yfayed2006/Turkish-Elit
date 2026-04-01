@@ -9,6 +9,7 @@
 <field name="outlet_id"/>
 <field name="vehicle_id"/>
 <field name="sale_order_id"/>
+<field name="visit_id" optional="hide"/>
 <field name="state"/>
 <field name="picking_count"/>
 </list>
@@ -37,6 +38,7 @@
 <field name="vehicle_id" readonly="state != 'draft'"/>
 <field name="sale_order_id" readonly="state != 'draft'" domain="[('route_order_mode', '=', 'direct_sale'), ('route_outlet_id', '=', outlet_id)]"/>
 <field name="reference_picking_id" readonly="state != 'draft'"/>
+<field name="visit_id" readonly="1" invisible="1"/>
 </group>
 </group>
 <group>
@@ -56,6 +58,7 @@
 <field name="expiry_date" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="return_reason"/>
 <field name="destination_location_id"/>
+<field name="estimated_amount" string="Estimated Amount" optional="hide"/>
 <field name="note"/>
 </list>
 </field>
