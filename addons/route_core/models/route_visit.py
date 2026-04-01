@@ -1977,3 +1977,4 @@ class RouteVisit(models.Model):
                 "destination_location_id": False,
             })
 
+
