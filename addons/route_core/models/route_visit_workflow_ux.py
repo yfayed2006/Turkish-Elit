@@ -65,6 +65,8 @@ class RouteVisit(models.Model):
             ("open_pending_refill", "Open Pending Refill"),
             ("collect_payment", "Collect Payment"),
             ("confirm_payments", "Confirm Payments"),
+            ("direct_sale_decision", "Direct Sale Decision"),
+            ("direct_return_decision", "Direct Return Decision"),
             ("finalize_visit", "Finalize Visit"),
             ("finish_visit", "Finish Visit"),
             ("none", "No Action"),
@@ -318,14 +320,14 @@ class RouteVisit(models.Model):
                     rec.ux_stage_help = _("Begin the direct sales stop.")
                 elif rec.state == "in_progress" and not sales_answered:
                     rec.ux_stage = "arrival"
-                    rec.ux_primary_action = "none"
+                    rec.ux_primary_action = "direct_sale_decision"
                     rec.ux_stage_title = _("Sales decision")
                     rec.ux_stage_help = _("Do you want to create a direct sale order for this stop?")
                     rec.ux_can_create_direct_sale = bool(rec.route_enable_direct_sale)
                     rec.ux_can_no_sale = True
                 elif rec.state == "in_progress" and not returns_answered:
                     rec.ux_stage = "arrival"
-                    rec.ux_primary_action = "none"
+                    rec.ux_primary_action = "direct_return_decision"
                     rec.ux_stage_title = _("Return decision")
                     rec.ux_stage_help = _("Is there a direct return for this stop?")
                     rec.ux_can_open_direct_sale_orders = bool(sale_orders)
@@ -874,4 +876,5 @@ class RouteVisit(models.Model):
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
+
 
