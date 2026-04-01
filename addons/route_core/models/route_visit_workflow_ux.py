@@ -566,6 +566,7 @@ class RouteVisit(models.Model):
                 "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
                 "default_route_visit_id": self.id,
                 "route_visit_id": self.id,
+                "default_origin": self.name,
             },
         }
         view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
@@ -584,7 +585,7 @@ class RouteVisit(models.Model):
             "res_model": "sale.order",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("route_order_mode", "=", "direct_sale"), ("route_visit_id", "=", self.id)],
+            "domain": [("route_order_mode", "=", "direct_sale"), ("origin", "=", self.name)],
             "context": {"search_default_route_order_mode": "direct_sale", "create": 0},
         }
 
@@ -860,4 +861,5 @@ class RouteVisit(models.Model):
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
+
 
