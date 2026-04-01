@@ -20,6 +20,10 @@
 <field name="outlet_operation_mode" invisible="1"/>
 <field name="visit_execution_mode" invisible="1"/>
 <field name="visit_execution_mode_label" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
 <field name="ux_can_create_direct_sale" invisible="1"/>
 <field name="ux_can_open_direct_sale_orders" invisible="1"/>
 <field name="ux_can_open_direct_sale_payments" invisible="1"/>
@@ -61,6 +65,10 @@
 <field name="outlet_operation_mode" invisible="1"/>
 <field name="visit_execution_mode" invisible="1"/>
 <field name="visit_execution_mode_label" invisible="1"/>
+<field name="ux_stage" invisible="1"/>
+<field name="ux_primary_action" invisible="1"/>
+<field name="ux_stage_title" invisible="1"/>
+<field name="ux_stage_help" invisible="1"/>
 <field name="ux_can_create_direct_sale" invisible="1"/>
 <field name="ux_can_open_direct_sale_orders" invisible="1"/>
 <field name="ux_can_open_direct_sale_payments" invisible="1"/>
