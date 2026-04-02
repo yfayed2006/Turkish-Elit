@@ -5,14 +5,33 @@
 <field name="arch" type="xml">
 <form string="Collect Payment" create="0" edit="0" delete="0">
 <sheet>
-<group string="Visit Financial Summary" col="4">
+<group string="Visit Financial Summary" col="4" invisible="is_direct_sales_stop">
 <field name="visit_id" readonly="1"/>
 <field name="visit_net_due_amount" readonly="1"/>
 <field name="visit_collected_amount" readonly="1"/>
 <field name="visit_remaining_due" readonly="1"/>
 </group>
-<separator string="Collection Decision"/>
-<group col="2">
+<group string="Direct Sales Settlement Summary" col="4" invisible="not is_direct_sales_stop">
+<field name="visit_id" readonly="1"/>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+</group>
+<group string="Return Credit Handling" col="2" invisible="not is_direct_sales_stop or direct_stop_credit_amount <= 0">
+<group>
+<field name="direct_stop_credit_amount" readonly="1"/>
+<field name="direct_stop_credit_policy"/>
+</group>
+<group>
+<field name="direct_stop_credit_note" placeholder="Add note for customer credit, cash refund, or next stop carry-forward..."/>
+</group>
+</group>
+<separator string="Collection Decision" invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0"/>
+<group col="2" invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0">
 <group>
 <field name="collection_type" widget="radio"/>
 <field name="payment_mode"/>
@@ -28,13 +47,14 @@
 <field name="pos_terminal" invisible="payment_mode != 'pos'"/>
 </group>
 </group>
-<group>
+<group invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0 and direct_stop_credit_amount > 0">
 <field name="note" placeholder="Add note for partial payment, deferment, or next visit collection..."/>
 </group>
-<div class="alert alert-info mt-3" role="alert" invisible="collection_type != 'full'"> Full payment will save the full remaining due amount as a draft payment for confirmation. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'partial'"> Partial payment will save only part of the remaining due amount. Set promise date/amount and add a note for the carried-forward balance. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'defer_date'"> Defer to date will save a zero-amount draft with a required due date, promise amount, and note. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'next_visit'"> Carry to next visit will save a zero-amount draft with a required promise date, promise amount, and note. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="collection_type != 'full' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'partial' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Partial payment will save the collected amount as draft settlement entries and keep the remaining balance as promised unpaid amount. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'defer_date' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'next_visit' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="not is_direct_sales_stop or direct_stop_settlement_remaining_amount > 0 or direct_stop_credit_amount <= 0"> No cash collection is required. Choose how to settle the return credit, then save. </div>
 </sheet>
 <footer>
 <button name="action_save_payment" string="Save Draft" type="object" class="btn-primary"/>
