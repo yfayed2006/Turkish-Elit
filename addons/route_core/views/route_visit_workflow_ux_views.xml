@@ -38,6 +38,40 @@
 <xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
 </xpath>
+<xpath expr="//separator[@string='Decision Flags']" position="before">
+<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
+</group>
+</group>
+</xpath>
+<xpath expr="//separator[@string='Decision Flags']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='debt_policy_reason']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='slow_moving_line_count']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='visit_planning_reason']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
 </field>
 </record>
 <record id="view_route_visit_pda_form_workflow_ux" model="ir.ui.view">
@@ -77,6 +111,40 @@
 <attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
 </xpath>
 <xpath expr="//page[field[@name='payment_ids']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//separator[@string='Decision Flags']" position="before">
+<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
+</group>
+</group>
+</xpath>
+<xpath expr="//separator[@string='Decision Flags']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='debt_policy_reason']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='slow_moving_line_count']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
 </xpath>
 </field>
