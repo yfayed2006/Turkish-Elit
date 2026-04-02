@@ -97,6 +97,7 @@ class RouteVisit(models.Model):
     ux_can_confirm_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_skip_collection = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_review_settlement = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     ux_can_create_direct_sale = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_direct_sale_orders = fields.Boolean(compute="_compute_ux_workflow", store=False)
@@ -298,6 +299,7 @@ class RouteVisit(models.Model):
             rec.ux_can_confirm_payments = False
             rec.ux_can_skip_collection = False
             rec.ux_can_open_payments = False
+            rec.ux_can_review_settlement = False
             rec.ux_can_create_direct_sale = False
             rec.ux_can_open_direct_sale_orders = False
             rec.ux_can_open_direct_sale_payments = False
@@ -340,6 +342,9 @@ class RouteVisit(models.Model):
                     has_confirmed_payments = bool(settlement_payments.filtered(lambda p: p.state == "confirmed"))
                     remaining_due = rec.direct_stop_settlement_remaining_amount or 0.0
                     credit_pending = bool((rec.direct_stop_credit_amount or 0.0) > 0.0 and not rec.direct_stop_credit_policy)
+                    settlement_review_ready = bool(sales_answered and returns_answered)
+
+                    rec.ux_can_review_settlement = settlement_review_ready and not has_draft_payments
 
                     if has_draft_payments:
                         rec.ux_stage = "collection"
@@ -359,8 +364,9 @@ class RouteVisit(models.Model):
                         rec.ux_stage = "ready_to_close"
                         rec.ux_primary_action = "finish_visit"
                         rec.ux_stage_title = _("Settlement and finish")
-                        rec.ux_stage_help = _("Review direct sale orders, returns and settlement records, then finish the stop.")
+                        rec.ux_stage_help = _("No payment is due. Open Collect Payment to review the settlement details, then finish the stop.")
                         rec.ux_can_finish_visit = True
+                        rec.ux_can_open_payments = has_confirmed_payments
 
                     rec.ux_can_open_direct_sale_orders = bool(sale_orders)
                     rec.ux_can_open_direct_sale_payments = bool(sale_orders or has_confirmed_payments or has_draft_payments or (rec.direct_stop_previous_due_amount or 0.0) > 0.0)
@@ -812,12 +818,7 @@ class RouteVisit(models.Model):
     def action_ux_collect_payment(self):
         self.ensure_one()
 
-        if self._is_direct_sales_stop():
-            credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
-            if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending:
-                self._action_mark_post_collection_stage()
-                return self._get_pda_form_action()
-        elif self.remaining_due_amount <= 0 and not self.collection_skip_reason:
+        if (not self._is_direct_sales_stop()) and self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_post_collection_stage()
             return self._get_pda_form_action()
 
