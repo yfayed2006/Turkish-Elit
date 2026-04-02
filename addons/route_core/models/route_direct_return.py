@@ -443,15 +443,55 @@ class RouteDirectReturnLine(models.Model):
         for line in self:
             line.return_reason_label = mapping.get(line.return_reason, False)
 
-    @api.depends("product_id", "quantity", "return_id.sale_order_id", "return_id.sale_order_id.order_line.price_unit")
+    @api.depends(
+        "product_id",
+        "quantity",
+        "return_id.sale_order_id",
+        "return_id.sale_order_id.order_line.price_unit",
+        "return_id.reference_picking_id",
+        "return_id.outlet_id",
+    )
     def _compute_estimated_amount(self):
+        SaleOrder = self.env["sale.order"]
         for line in self:
             unit_price = 0.0
-            if line.return_id and line.return_id.sale_order_id and line.product_id:
-                sale_line = line.return_id.sale_order_id.order_line.filtered(lambda l: l.product_id == line.product_id)[:1]
-                unit_price = sale_line.price_unit if sale_line else (line.product_id.lst_price or 0.0)
-            elif line.product_id:
-                unit_price = line.product_id.lst_price or 0.0
+            product = line.product_id
+            direct_return = line.return_id
+
+            if not product:
+                line.estimated_amount = 0.0
+                continue
+
+            sale_line = False
+            if direct_return and direct_return.sale_order_id:
+                sale_line = direct_return.sale_order_id.order_line.filtered(lambda l: l.product_id == product)[:1]
+
+            if not sale_line and direct_return and direct_return.reference_picking_id:
+                reference_picking = direct_return.reference_picking_id
+                reference_order = getattr(reference_picking, "sale_id", False)
+                if not reference_order and reference_picking.origin:
+                    reference_order = SaleOrder.search([
+                        ("name", "=", reference_picking.origin),
+                        ("route_order_mode", "=", "direct_sale"),
+                    ], limit=1)
+                if reference_order:
+                    sale_line = reference_order.order_line.filtered(lambda l: l.product_id == product)[:1]
+
+            if not sale_line and direct_return and direct_return.outlet_id:
+                latest_order = SaleOrder.search([
+                    ("route_order_mode", "=", "direct_sale"),
+                    ("route_outlet_id", "=", direct_return.outlet_id.id),
+                    ("state", "not in", ["cancel"]),
+                    ("order_line.product_id", "=", product.id),
+                ], order="date_order desc, id desc", limit=1)
+                if latest_order:
+                    sale_line = latest_order.order_line.filtered(lambda l: l.product_id == product)[:1]
+
+            if sale_line:
+                unit_price = sale_line.price_unit or 0.0
+            else:
+                unit_price = product.lst_price or 0.0
+
             line.estimated_amount = (line.quantity or 0.0) * unit_price
 
     @api.onchange("product_id")
