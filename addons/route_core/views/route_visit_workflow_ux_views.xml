@@ -53,7 +53,7 @@
 <group>
 <field name="direct_stop_settlement_paid_amount" readonly="1"/>
 <field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </group>
 </xpath>
@@ -128,7 +128,7 @@
 <group>
 <field name="direct_stop_settlement_paid_amount" readonly="1"/>
 <field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="direct_stop_credit_amount <= 0"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </group>
 </xpath>
