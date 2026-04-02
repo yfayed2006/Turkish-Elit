@@ -149,14 +149,14 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
     direct_stop_settlement_paid_amount = fields.Monetary(
-        string="Settled Amount",
+        string="Saved / Confirmed Settlements",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
         readonly=True,
     )
     direct_stop_settlement_remaining_amount = fields.Monetary(
-        string="Settlement Remaining",
+        string="Remaining After Saved Settlements",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
@@ -507,4 +507,5 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
 
