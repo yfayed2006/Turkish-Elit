@@ -80,7 +80,7 @@
 <field name="model">stock.picking</field>
 <field name="inherit_id" ref="stock.view_picking_form"/>
 <field name="arch" type="xml">
-<xpath expr="//field[@name='move_ids_without_package']//*[self::list or self::tree]/field[@name='quantity']" position="after">
+<xpath expr="//field[@name='move_ids']//field[@name='quantity'] | //field[@name='move_ids_without_package']//field[@name='quantity']" position="after">
 <field name="route_direct_return_unit_price" string="Unit Price" optional="show"/>
 <field name="route_direct_return_estimated_amount" string="Amount" optional="show"/>
 </xpath>
