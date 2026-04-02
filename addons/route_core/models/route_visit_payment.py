@@ -32,6 +32,14 @@ class RouteVisitPayment(models.Model):
         index=True,
     )
 
+    settlement_visit_id = fields.Many2one(
+        "route.visit",
+        string="Settlement Visit",
+        ondelete="set null",
+        index=True,
+        help="Direct-sales stop that grouped this payment allocation.",
+    )
+
     outlet_id = fields.Many2one(
         "route.outlet",
         string="Outlet",
