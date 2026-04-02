@@ -220,6 +220,21 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+    show_no_payment_due_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_close_settlement_button = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_save_draft_button = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
 
 
     @api.depends(
@@ -232,14 +247,19 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         for rec in self:
             has_credit = (rec.direct_stop_credit_amount or 0.0) > 0.0
             has_remaining = (rec.direct_stop_settlement_remaining_amount or 0.0) > 0.0
+            no_payment_due = bool(rec.is_direct_sales_stop and (not has_remaining) and (not has_credit))
+            credit_only = bool(rec.is_direct_sales_stop and (not has_remaining) and has_credit)
             rec.show_return_credit_handling = bool(rec.is_direct_sales_stop and has_credit)
             rec.show_collection_decision = bool((not rec.is_direct_sales_stop) or has_remaining)
-            rec.show_note_field = bool((not rec.is_direct_sales_stop) or has_remaining or not has_credit)
+            rec.show_note_field = bool((not rec.is_direct_sales_stop) or has_remaining)
             rec.show_full_payment_help = bool(rec.show_collection_decision and rec.collection_type == "full")
             rec.show_partial_payment_help = bool(rec.show_collection_decision and rec.collection_type == "partial")
             rec.show_defer_help = bool(rec.show_collection_decision and rec.collection_type == "defer_date")
             rec.show_next_visit_help = bool(rec.show_collection_decision and rec.collection_type == "next_visit")
-            rec.show_credit_only_help = bool(rec.is_direct_sales_stop and (not has_remaining) and has_credit)
+            rec.show_credit_only_help = credit_only
+            rec.show_no_payment_due_help = no_payment_due
+            rec.show_close_settlement_button = no_payment_due
+            rec.show_save_draft_button = not no_payment_due
 
     @api.depends("visit_id")
     def _compute_visit_amounts(self):
@@ -445,6 +465,19 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
         return created
 
+    def action_close_settlement(self):
+        self.ensure_one()
+        if self.is_direct_sales_stop:
+            self.visit_id.write({
+                "direct_stop_credit_policy": self.direct_stop_credit_policy or False,
+                "direct_stop_credit_note": self.direct_stop_credit_note or False,
+            })
+            if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
+                self.visit_id._action_mark_post_collection_stage()
+            if hasattr(self.visit_id, "_get_pda_form_action"):
+                return self.visit_id._get_pda_form_action()
+        return {"type": "ir.actions.act_window_close"}
+
     def action_save_payment(self):
         self.ensure_one()
         self._validate_before_create()
@@ -457,6 +490,11 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
             due = self.direct_stop_settlement_remaining_amount or 0.0
             credit_only = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) > 0.0
+            no_payment_due = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) <= 0.0
+            if no_payment_due:
+                if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
+                    self.visit_id._action_mark_post_collection_stage()
+                return self.visit_id._get_pda_form_action() if hasattr(self.visit_id, "_get_pda_form_action") else {"type": "ir.actions.act_window_close"}
             if credit_only:
                 return self.visit_id._get_pda_form_action() if hasattr(self.visit_id, "_get_pda_form_action") else {"type": "ir.actions.act_window_close"}
 
