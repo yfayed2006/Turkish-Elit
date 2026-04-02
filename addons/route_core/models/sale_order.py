@@ -717,6 +717,22 @@ class SaleOrder(models.Model):
             action["views"] = [(view.id, "form")]
         return action
 
+    def _get_route_visit_return_action(self):
+        self.ensure_one()
+        visit = self.route_visit_id or self._get_linked_route_visit()
+        if not visit or getattr(visit, "visit_execution_mode", False) != "direct_sales":
+            return False
+        if hasattr(visit, "_get_pda_form_action"):
+            return visit._get_pda_form_action()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("PDA Visit"),
+            "res_model": "route.visit",
+            "res_id": visit.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
     def action_no_direct_return(self):
         self.ensure_one()
         self._ensure_route_direct_return_enabled()
@@ -768,6 +784,7 @@ class SaleOrder(models.Model):
             if isinstance(delivery_result, dict):
                 action_result = delivery_result
 
+        direct_sale_return_action = False
         for order in direct_sale_orders:
             order._ensure_route_direct_sale_enabled()
             if not order.route_outlet_id:
@@ -785,16 +802,7 @@ class SaleOrder(models.Model):
                 action_result = delivery_result
             elif order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
                 order._ensure_direct_sale_payment_record()
+                if len(self) == 1:
+                    direct_sale_return_action = order._get_route_visit_return_action() or direct_sale_return_action
 
-        if (
-            len(self) == 1
-            and len(direct_sale_orders) == 1
-            and not normal_orders
-            and not route_orders
-            and not isinstance(action_result, dict)
-        ):
-            visit = direct_sale_orders.route_visit_id or direct_sale_orders._get_linked_route_visit()
-            if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales" and hasattr(visit, "_get_pda_form_action"):
-                return visit._get_pda_form_action()
-
-        return action_result
+        return direct_sale_return_action or action_result
