@@ -5,6 +5,17 @@
 <field name="arch" type="xml">
 <form string="Collect Payment" create="0" edit="0" delete="0">
 <sheet>
+<field name="show_return_credit_handling" invisible="1"/>
+<field name="show_collection_decision" invisible="1"/>
+<field name="show_note_field" invisible="1"/>
+<field name="show_full_payment_help" invisible="1"/>
+<field name="show_partial_payment_help" invisible="1"/>
+<field name="show_defer_help" invisible="1"/>
+<field name="show_next_visit_help" invisible="1"/>
+<field name="show_credit_only_help" invisible="1"/>
+<field name="show_no_payment_due_help" invisible="1"/>
+<field name="show_close_settlement_button" invisible="1"/>
+<field name="show_save_draft_button" invisible="1"/>
 <group string="Visit Financial Summary" col="4" invisible="is_direct_sales_stop">
 <field name="visit_id" readonly="1"/>
 <field name="visit_net_due_amount" readonly="1"/>
@@ -56,9 +67,11 @@
 <div class="alert alert-warning mt-3" role="alert" invisible="not show_defer_help"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
 <div class="alert alert-warning mt-3" role="alert" invisible="not show_next_visit_help"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
 <div class="alert alert-info mt-3" role="alert" invisible="not show_credit_only_help"> No cash collection is required. Choose how to settle the return credit, then save. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="not show_no_payment_due_help"> No payment is due on this visit. Review the settlement summary, then close this window to continue finishing the stop. </div>
 </sheet>
 <footer>
-<button name="action_save_payment" string="Save Draft" type="object" class="btn-primary"/>
+<button name="action_save_payment" string="Save Draft" type="object" class="btn-primary" invisible="not show_save_draft_button"/>
+<button name="action_close_settlement" string="Close Settlement" type="object" class="btn-primary" invisible="not show_close_settlement_button"/>
 <button string="Cancel" special="cancel" class="btn-secondary"/>
 </footer>
 </form>
