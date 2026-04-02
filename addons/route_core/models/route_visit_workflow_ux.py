@@ -335,37 +335,35 @@ class RouteVisit(models.Model):
                     rec.ux_can_create_direct_return = bool(rec.route_enable_direct_return)
                     rec.ux_can_no_return = True
                 elif rec.state == "in_progress":
-                    has_draft_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "draft"))
-                    has_confirmed_payments = bool(rec.payment_ids.filtered(lambda p: p.state == "confirmed"))
-                    remaining_due = rec.remaining_due_amount or 0.0
+                    settlement_payments = rec._get_direct_stop_settlement_payments() if rec.id else self.env["route.visit.payment"]
+                    has_draft_payments = bool(settlement_payments.filtered(lambda p: p.state == "draft"))
+                    has_confirmed_payments = bool(settlement_payments.filtered(lambda p: p.state == "confirmed"))
+                    remaining_due = rec.direct_stop_settlement_remaining_amount or 0.0
                     credit_pending = bool((rec.direct_stop_credit_amount or 0.0) > 0.0 and not rec.direct_stop_credit_policy)
 
                     if has_draft_payments:
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "confirm_payments"
-                        rec.ux_stage_title = _("Confirm direct stop payment")
-                        rec.ux_stage_help = _("Confirm the draft payment before finishing the stop.")
+                        rec.ux_stage_title = _("Confirm direct stop settlement")
+                        rec.ux_stage_help = _("Confirm the draft settlement entries before finishing the stop.")
                         rec.ux_can_confirm_payments = True
                         rec.ux_can_open_payments = True
-                    elif remaining_due > 0.0:
+                    elif remaining_due > 0.0 or credit_pending:
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "collect_payment"
-                        rec.ux_stage_title = _("Collect direct stop payment")
-                        rec.ux_stage_help = _("Collect the order amount after returns before finishing the stop.")
+                        rec.ux_stage_title = _("Direct stop settlement")
+                        rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
                         rec.ux_can_collect_payment = True
                         rec.ux_can_open_payments = has_confirmed_payments
                     else:
                         rec.ux_stage = "ready_to_close"
                         rec.ux_primary_action = "finish_visit"
                         rec.ux_stage_title = _("Settlement and finish")
-                        if credit_pending:
-                            rec.ux_stage_help = _("Select a credit settlement policy for the return difference, then finish the stop.")
-                        else:
-                            rec.ux_stage_help = _("Review direct sale orders, returns and payments, then finish the stop.")
-                        rec.ux_can_finish_visit = not credit_pending
+                        rec.ux_stage_help = _("Review direct sale orders, returns and settlement records, then finish the stop.")
+                        rec.ux_can_finish_visit = True
 
                     rec.ux_can_open_direct_sale_orders = bool(sale_orders)
-                    rec.ux_can_open_direct_sale_payments = bool(sale_orders or has_confirmed_payments or has_draft_payments)
+                    rec.ux_can_open_direct_sale_payments = bool(sale_orders or has_confirmed_payments or has_draft_payments or (rec.direct_stop_previous_due_amount or 0.0) > 0.0)
                     rec.ux_can_open_direct_returns = bool(direct_returns)
                 else:
                     rec.ux_stage = "done"
@@ -591,7 +589,8 @@ class RouteVisit(models.Model):
             returns = returns.filtered(lambda r: r.user_id == self.user_id)
         sale_orders = self._get_direct_stop_sale_orders()
         return returns.filtered(
-            lambda r: (r.sale_order_id and r.sale_order_id in sale_orders)
+            lambda r: (r.visit_id and r.visit_id.id == self.id)
+            or (r.sale_order_id and r.sale_order_id in sale_orders)
             or (self.name and self.name in (r.note or ""))
         )
 
@@ -682,6 +681,8 @@ class RouteVisit(models.Model):
                 "default_vehicle_id": self.vehicle_id.id if self.vehicle_id else False,
                 "default_outlet_id": self.outlet_id.id if self.outlet_id else False,
                 "default_sale_order_id": sale_orders[:1].id if sale_orders else False,
+                "default_visit_id": self.id,
+                "route_visit_id": self.id,
                 "default_note": self.name,
             },
         }
@@ -791,15 +792,19 @@ class RouteVisit(models.Model):
 
     def action_ux_open_payments(self):
         self.ensure_one()
+        domain = [("visit_id", "=", self.id)]
+        if self._is_direct_sales_stop():
+            domain = ["|", ("settlement_visit_id", "=", self.id), ("visit_id", "=", self.id)]
         return {
             "type": "ir.actions.act_window",
             "name": _("Visit Payments"),
             "res_model": "route.visit.payment",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("visit_id", "=", self.id)],
+            "domain": domain,
             "context": {
                 "default_visit_id": self.id,
+                "default_settlement_visit_id": self.id,
                 "search_default_visit_id": self.id,
             },
         }
@@ -807,7 +812,12 @@ class RouteVisit(models.Model):
     def action_ux_collect_payment(self):
         self.ensure_one()
 
-        if self.remaining_due_amount <= 0 and not self.collection_skip_reason:
+        if self._is_direct_sales_stop():
+            credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
+            if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending:
+                self._action_mark_collection_done()
+                return self._get_pda_form_action()
+        elif self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_collection_done()
             return self._get_pda_form_action()
 
@@ -831,7 +841,10 @@ class RouteVisit(models.Model):
 
     def action_ux_confirm_payments(self):
         self.ensure_one()
-        draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+        if self._is_direct_sales_stop():
+            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"])
+        else:
+            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
         if not draft_payments:
             raise UserError(_("There are no draft payments to confirm."))
 
@@ -853,7 +866,7 @@ class RouteVisit(models.Model):
         if self._is_direct_sales_stop():
             sale_orders = self._get_direct_stop_sale_orders()
             direct_returns = self._get_direct_stop_returns()
-            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"])
 
             if not sale_orders and not self.direct_stop_skip_sale:
                 raise UserError(_("Please choose Create Direct Sale or No Sale first."))
@@ -865,10 +878,10 @@ class RouteVisit(models.Model):
                 raise UserError(_("Please choose Create Direct Return or No Return first."))
 
             if draft_payments:
-                raise UserError(_("Please confirm the draft payment before finishing the stop."))
+                raise UserError(_("Please confirm the draft settlement entries before finishing the stop."))
 
-            if (self.remaining_due_amount or 0.0) > 0.0:
-                raise UserError(_("Please collect or defer the remaining due before finishing the stop."))
+            if (self.direct_stop_settlement_remaining_amount or 0.0) > 0.0:
+                raise UserError(_("Please settle the remaining direct-sales balance before finishing the stop."))
 
             if (self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy:
                 raise UserError(_("Please choose a return credit settlement policy before finishing the stop."))
