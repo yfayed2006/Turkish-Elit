@@ -338,7 +338,14 @@ class RouteDirectReturn(models.Model):
                     "location_dest_id": destination.id,
                     "picking_id": picking.id,
                     "company_id": self.company_id.id,
-                    "description_picking": line.return_reason_label,
+                    "description_picking": _("%(reason)s | Unit Price: %(price).2f | Amount: %(amount).2f") % {
+                        "reason": line.return_reason_label or _("Direct Return"),
+                        "price": line.estimated_unit_price or 0.0,
+                        "amount": line.estimated_amount or 0.0,
+                    },
+                    "route_direct_return_line_id": line.id,
+                    "route_direct_return_unit_price": line.estimated_unit_price or 0.0,
+                    "route_direct_return_estimated_amount": line.estimated_amount or 0.0,
                 })
                 line.picking_id = picking
                 moves |= move
@@ -405,6 +412,13 @@ class RouteDirectReturnLine(models.Model):
     lot_name = fields.Char(string="Lot/Serial")
     expiry_date = fields.Date(string="Expiry")
     currency_id = fields.Many2one(related="return_id.company_id.currency_id", store=False, readonly=True)
+    estimated_unit_price = fields.Monetary(
+        string="Estimated Unit Price",
+        currency_field="currency_id",
+        compute="_compute_estimated_amount",
+        store=False,
+        readonly=True,
+    )
     estimated_amount = fields.Monetary(
         string="Estimated Amount",
         currency_field="currency_id",
@@ -459,6 +473,7 @@ class RouteDirectReturnLine(models.Model):
             direct_return = line.return_id
 
             if not product:
+                line.estimated_unit_price = 0.0
                 line.estimated_amount = 0.0
                 continue
 
@@ -492,6 +507,7 @@ class RouteDirectReturnLine(models.Model):
             else:
                 unit_price = product.lst_price or 0.0
 
+            line.estimated_unit_price = unit_price
             line.estimated_amount = (line.quantity or 0.0) * unit_price
 
     @api.onchange("product_id")
