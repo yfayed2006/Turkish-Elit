@@ -407,6 +407,12 @@ class RouteDirectReturnLine(models.Model):
     return_id = fields.Many2one("route.direct.return", required=True, ondelete="cascade")
     company_id = fields.Many2one(related="return_id.company_id", store=True, readonly=True)
     product_id = fields.Many2one("product.product", string="Product", required=True, domain=[("sale_ok", "=", True)])
+    route_product_barcode = fields.Char(
+        string="Barcode",
+        related="product_id.barcode",
+        store=False,
+        readonly=True,
+    )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
     lot_name = fields.Char(string="Lot/Serial")
