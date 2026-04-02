@@ -326,9 +326,20 @@ class RouteVisit(models.Model):
                 sales_answered = bool(sale_orders or rec.direct_stop_skip_sale)
                 returns_answered = bool((not rec.route_enable_direct_return) or direct_returns or rec.direct_stop_skip_return)
                 rec.ux_can_receipt_actions = bool(
-                    rec.state not in ("draft", "cancel")
-                    and sales_answered
-                    and returns_answered
+                    rec.state != "cancel"
+                    and (
+                        sales_answered
+                        or returns_answered
+                        or bool(sale_orders)
+                        or bool(direct_returns)
+                        or bool(rec.direct_stop_settlement_reviewed)
+                        or bool(rec.direct_stop_settlement_paid_amount)
+                        or bool(rec.direct_stop_settlement_remaining_amount)
+                        or bool(rec.direct_stop_sales_total)
+                        or bool(rec.direct_stop_returns_total)
+                        or rec.visit_process_state in ("collection_done", "ready_to_close", "done")
+                        or rec.state == "done"
+                    )
                 )
 
                 if rec.state == "draft":
