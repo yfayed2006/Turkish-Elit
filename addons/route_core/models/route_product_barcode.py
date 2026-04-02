@@ -168,7 +168,7 @@ class ProductProduct(models.Model):
             if barcode_ids:
                 domain = expression.AND([args, [("id", "in", barcode_ids)]])
                 return list(self._search(domain, limit=limit, order=order))
-        return super()._name_search(name=name, args=args, operator=operator, limit=limit, order=order)
+        return super()._name_search(name, args, operator, limit, order)
 
     @api.model
     def name_search(self, name="", args=None, operator="ilike", limit=100):
@@ -180,7 +180,7 @@ class ProductProduct(models.Model):
                 if limit:
                     records = records[:limit]
                 return records.get_formatted_display_name()
-        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+        return super().name_search(name, args, operator, limit)
 
 
 class ProductTemplate(models.Model):
@@ -197,7 +197,7 @@ class ProductTemplate(models.Model):
                 if template_ids:
                     domain = expression.AND([args, [("id", "in", template_ids)]])
                     return list(self._search(domain, limit=limit, order=order))
-        return super()._name_search(name=name, args=args, operator=operator, limit=limit, order=order)
+        return super()._name_search(name, args, operator, limit, order)
 
     @api.model
     def name_search(self, name="", args=None, operator="ilike", limit=100):
@@ -209,4 +209,4 @@ class ProductTemplate(models.Model):
                 if limit:
                     templates = templates[:limit]
                 return templates.get_formatted_display_name()
-        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+        return super().name_search(name, args, operator, limit)
