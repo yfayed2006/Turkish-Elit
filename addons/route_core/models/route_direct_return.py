@@ -409,9 +409,7 @@ class RouteDirectReturnLine(models.Model):
     product_id = fields.Many2one("product.product", string="Product", required=True, domain=[("sale_ok", "=", True)])
     route_product_barcode = fields.Char(
         string="Barcode",
-        related="product_id.barcode",
-        store=False,
-        readonly=True,
+        copy=False,
     )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
@@ -519,8 +517,23 @@ class RouteDirectReturnLine(models.Model):
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for line in self:
+            line.route_product_barcode = line.product_id.barcode if line.product_id else False
             if line.product_id and not line.uom_id:
                 line.uom_id = line.product_id.uom_id
+
+    @api.onchange("route_product_barcode")
+    def _onchange_route_product_barcode_lookup(self):
+        Product = self.env["product.product"]
+        for line in self:
+            barcode = (line.route_product_barcode or "").strip()
+            if not barcode or (line.product_id and barcode == (line.product_id.barcode or "")):
+                continue
+            product = Product._route_find_product_by_barcode(barcode, extra_domain=[("sale_ok", "=", True)])
+            if product:
+                line.product_id = product
+                line.route_product_barcode = product.barcode or barcode
+                if not line.uom_id:
+                    line.uom_id = product.uom_id
 
     @api.onchange("return_reason")
     def _onchange_return_reason(self):
