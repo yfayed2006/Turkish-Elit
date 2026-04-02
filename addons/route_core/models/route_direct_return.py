@@ -374,6 +374,10 @@ class RouteDirectReturn(models.Model):
                 return result
 
         self.state = "done"
+        visit = self.visit_id
+        if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales" and hasattr(visit, "_get_pda_form_action"):
+            return visit._get_pda_form_action()
+
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = _("Direct Return Pickings")
         action["domain"] = [("id", "in", created_pickings.ids)]
