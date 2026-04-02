@@ -1011,7 +1011,11 @@ class RouteVisit(models.Model):
                     "barcode": barcode,
                     "product_name": line.product_id.display_name or line.name or "",
                     "quantity": line.product_uom_qty or 0.0,
-                    "uom_name": line.product_uom.name if line.product_uom else "",
+                    "uom_name": (
+                        line.product_uom_id.name
+                        if hasattr(line, "product_uom_id") and line.product_uom_id
+                        else (line.product_uom.name if hasattr(line, "product_uom") and line.product_uom else "")
+                    ),
                     "unit_price": line.price_unit or 0.0,
                     "subtotal": line.price_subtotal or 0.0,
                 })
@@ -1062,12 +1066,14 @@ class RouteVisit(models.Model):
     def _route_normalize_whatsapp_phone(self, partner):
         if not partner:
             return ""
-        candidates = []
-        for field_name in ("mobile", "phone", "whatsapp", "whatsapp_number", "route_whatsapp"):
-            if field_name in partner._fields:
-                candidates.append(partner[field_name] or "")
-        phone = next((value.strip() for value in candidates if value and value.strip()), "")
-        return re.sub(r"\D", "", phone)
+        phone = ""
+        for field_name in ("mobile", "phone"):
+            if hasattr(partner, field_name):
+                value = getattr(partner, field_name) or ""
+                if value:
+                    phone = value
+                    break
+        return re.sub(r"\D", "", (phone or "").strip())
 
     def _build_direct_stop_whatsapp_message(self):
         self.ensure_one()
@@ -1110,18 +1116,12 @@ class RouteVisit(models.Model):
         return "\n".join(lines)
 
     def _get_route_supervisor_partner(self):
+        self.ensure_one()
         group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
         if not group:
             return self.env["res.partner"]
-
-        users = self.env["res.users"]
-        if "users" in group._fields:
-            users = group.users
-        elif "user_ids" in group._fields:
-            users = group.user_ids
-
-        users = users.filtered(lambda u: getattr(u, "active", True))
-        if self.company_id and "company_ids" in users._fields:
+        users = group.users.filtered(lambda u: u.active)
+        if self.company_id:
             users = users.filtered(lambda u: not u.company_ids or self.company_id in u.company_ids)
         return users[:1].partner_id if users else self.env["res.partner"]
 
