@@ -114,6 +114,12 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+    direct_stop_previous_due_since_date = fields.Date(
+        string="Previous Due Since",
+        compute="_compute_visit_amounts",
+        store=False,
+        readonly=True,
+    )
     direct_stop_sales_total = fields.Monetary(
         string="Current Sale",
         currency_field="currency_id",
@@ -174,69 +180,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     )
     direct_stop_credit_note = fields.Text(string="Credit Settlement Note")
 
-    show_return_credit_handling = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_collection_section = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_note_field = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_full_info = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_partial_info = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_defer_info = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_next_visit_info = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-    show_credit_only_info = fields.Boolean(
-        compute="_compute_ui_flags",
-        store=False,
-        readonly=True,
-    )
-
-
-    @api.depends(
-        "is_direct_sales_stop",
-        "direct_stop_credit_amount",
-        "direct_stop_settlement_remaining_amount",
-        "collection_type",
-    )
-    def _compute_ui_flags(self):
-        for rec in self:
-            credit_amount = rec.direct_stop_credit_amount or 0.0
-            remaining = rec.direct_stop_settlement_remaining_amount or 0.0
-            credit_only = bool(rec.is_direct_sales_stop and remaining <= 0.0 and credit_amount > 0.0)
-
-            rec.show_return_credit_handling = bool(rec.is_direct_sales_stop and credit_amount > 0.0)
-            rec.show_collection_section = not (rec.is_direct_sales_stop and remaining <= 0.0)
-            rec.show_note_field = not (rec.is_direct_sales_stop and remaining <= 0.0 and credit_amount > 0.0)
-            rec.show_full_info = bool(rec.collection_type == "full" and rec.show_collection_section)
-            rec.show_partial_info = bool(rec.collection_type == "partial" and rec.show_collection_section)
-            rec.show_defer_info = bool(rec.collection_type == "defer_date" and rec.show_collection_section)
-            rec.show_next_visit_info = bool(rec.collection_type == "next_visit" and rec.show_collection_section)
-            rec.show_credit_only_info = credit_only
-
     @api.depends("visit_id")
     def _compute_visit_amounts(self):
         for rec in self:
@@ -248,6 +191,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             rec.visit_remaining_due = visit.remaining_due_amount if visit and "remaining_due_amount" in visit._fields else 0.0
 
             rec.direct_stop_previous_due_amount = visit.direct_stop_previous_due_amount if is_direct and "direct_stop_previous_due_amount" in visit._fields else 0.0
+            rec.direct_stop_previous_due_since_date = visit.direct_stop_previous_due_since_date if is_direct and "direct_stop_previous_due_since_date" in visit._fields else False
             rec.direct_stop_sales_total = visit.direct_stop_sales_total if is_direct and "direct_stop_sales_total" in visit._fields else 0.0
             rec.direct_stop_returns_total = visit.direct_stop_returns_total if is_direct and "direct_stop_returns_total" in visit._fields else 0.0
             rec.direct_stop_current_net_amount = visit.direct_stop_current_net_amount if is_direct and "direct_stop_current_net_amount" in visit._fields else 0.0
@@ -502,3 +446,4 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
