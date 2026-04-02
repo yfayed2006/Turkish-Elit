@@ -271,6 +271,22 @@ class RouteDirectReturn(models.Model):
             "company_id": self.company_id.id,
         })
 
+    def _get_route_visit_return_action(self):
+        self.ensure_one()
+        visit = self.visit_id
+        if not visit or getattr(visit, "visit_execution_mode", False) != "direct_sales":
+            return False
+        if hasattr(visit, "_get_pda_form_action"):
+            return visit._get_pda_form_action()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("PDA Visit"),
+            "res_model": "route.visit",
+            "res_id": visit.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
     def action_create_pickings(self):
         self.ensure_one()
         self._ensure_direct_return_enabled()
@@ -374,10 +390,9 @@ class RouteDirectReturn(models.Model):
                 return result
 
         self.state = "done"
-        visit = self.visit_id
-        if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales" and hasattr(visit, "_get_pda_form_action"):
-            return visit._get_pda_form_action()
-
+        visit_action = self._get_route_visit_return_action()
+        if visit_action:
+            return visit_action
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = _("Direct Return Pickings")
         action["domain"] = [("id", "in", created_pickings.ids)]
