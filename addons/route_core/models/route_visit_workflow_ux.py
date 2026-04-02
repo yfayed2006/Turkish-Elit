@@ -99,6 +99,12 @@ class RouteVisit(models.Model):
     ux_can_open_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_review_settlement = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
+    direct_stop_settlement_reviewed = fields.Boolean(
+        string="Direct Stop Settlement Reviewed",
+        default=False,
+        copy=False,
+    )
+
     ux_can_create_direct_sale = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_direct_sale_orders = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_direct_sale_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
@@ -343,6 +349,7 @@ class RouteVisit(models.Model):
                     remaining_due = rec.direct_stop_settlement_remaining_amount or 0.0
                     credit_pending = bool((rec.direct_stop_credit_amount or 0.0) > 0.0 and not rec.direct_stop_credit_policy)
                     settlement_review_ready = bool(sales_answered and returns_answered)
+                    settlement_reviewed = bool(rec.direct_stop_settlement_reviewed)
 
                     rec.ux_can_review_settlement = settlement_review_ready and not has_draft_payments
 
@@ -353,18 +360,22 @@ class RouteVisit(models.Model):
                         rec.ux_stage_help = _("Confirm the draft settlement entries before finishing the stop.")
                         rec.ux_can_confirm_payments = True
                         rec.ux_can_open_payments = True
-                    elif remaining_due > 0.0 or credit_pending:
+                    elif remaining_due > 0.0 or credit_pending or not settlement_reviewed:
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "collect_payment"
-                        rec.ux_stage_title = _("Direct stop settlement")
-                        rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
+                        if remaining_due > 0.0 or credit_pending:
+                            rec.ux_stage_title = _("Direct stop settlement")
+                            rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
+                        else:
+                            rec.ux_stage_title = _("Review settlement")
+                            rec.ux_stage_help = _("No payment is due. Open the settlement screen, review the direct-sales summary, then close it to continue.")
                         rec.ux_can_collect_payment = True
                         rec.ux_can_open_payments = has_confirmed_payments
                     else:
                         rec.ux_stage = "ready_to_close"
                         rec.ux_primary_action = "finish_visit"
                         rec.ux_stage_title = _("Settlement and finish")
-                        rec.ux_stage_help = _("No payment is due. Open Collect Payment to review the settlement details, then finish the stop.")
+                        rec.ux_stage_help = _("Settlement has been reviewed. Finish the stop.")
                         rec.ux_can_finish_visit = True
                         rec.ux_can_open_payments = has_confirmed_payments
 
@@ -846,6 +857,8 @@ class RouteVisit(models.Model):
             credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
             next_state = "ready_to_close" if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending else "collection_done"
             values = {"visit_process_state": next_state}
+            if next_state == "ready_to_close":
+                values["direct_stop_settlement_reviewed"] = True
         else:
             next_state = "ready_to_close" if (self.remaining_due_amount or 0.0) <= 0.0 else "collection_done"
             values = {"visit_process_state": next_state}
@@ -896,6 +909,9 @@ class RouteVisit(models.Model):
 
             if (self.direct_stop_settlement_remaining_amount or 0.0) > 0.0:
                 raise UserError(_("Please settle the remaining direct-sales balance before finishing the stop."))
+
+            if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not self.direct_stop_settlement_reviewed:
+                raise UserError(_("Please open Collect Payment, review the settlement summary, then close it before finishing the stop."))
 
             if (self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy:
                 raise UserError(_("Please choose a return credit settlement policy before finishing the stop."))
