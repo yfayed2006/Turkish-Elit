@@ -14,6 +14,9 @@
 <xpath expr="//field[@name='partner_id']" position="attributes">
 <attribute name="readonly">route_order_mode == 'direct_sale' and route_outlet_id</attribute>
 </xpath>
+<xpath expr="//field[@name='order_line']/tree/field[@name='product_id'] | //field[@name='order_line']/list/field[@name='product_id']" position="after">
+<field name="route_product_barcode" string="Barcode" optional="show"/>
+</xpath>
 <xpath expr="//field[@name='partner_id']" position="after">
 <field name="route_order_mode"/>
 <field name="route_outlet_id" domain="[('outlet_operation_mode', '=', 'direct_sale'), ('active', '=', True)]" invisible="route_order_mode != 'direct_sale'" required="route_order_mode == 'direct_sale'"/>
