@@ -471,6 +471,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             self.visit_id.write({
                 "direct_stop_credit_policy": self.direct_stop_credit_policy or False,
                 "direct_stop_credit_note": self.direct_stop_credit_note or False,
+                "direct_stop_settlement_reviewed": True,
             })
             if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
                 self.visit_id._action_mark_post_collection_stage()
@@ -492,10 +493,14 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             credit_only = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) > 0.0
             no_payment_due = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) <= 0.0
             if no_payment_due:
+                self.visit_id.write({"direct_stop_settlement_reviewed": True})
                 if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
                     self.visit_id._action_mark_post_collection_stage()
                 return self.visit_id._get_pda_form_action() if hasattr(self.visit_id, "_get_pda_form_action") else {"type": "ir.actions.act_window_close"}
             if credit_only:
+                self.visit_id.write({"direct_stop_settlement_reviewed": True})
+                if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
+                    self.visit_id._action_mark_post_collection_stage()
                 return self.visit_id._get_pda_form_action() if hasattr(self.visit_id, "_get_pda_form_action") else {"type": "ir.actions.act_window_close"}
 
             if self.collection_type in ("defer_date", "next_visit"):
