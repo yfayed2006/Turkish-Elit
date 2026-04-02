@@ -33,7 +33,7 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
 <xpath expr="//div[@class='alert alert-info mb-3']" position="after">
-<group string="Direct Stop Actions" col="3" invisible="outlet_operation_mode != 'direct_sale' or not visit_process_state in ('collection_done','ready_to_close','done') or state == 'cancel'">
+<group string="Direct Stop Actions" col="3" invisible="state == 'draft' or state == 'cancel'">
 <button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-primary"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary"/>
@@ -130,7 +130,7 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
 <xpath expr="//div[@class='alert alert-info mb-3']" position="after">
-<group string="Direct Stop Actions" col="3" invisible="outlet_operation_mode != 'direct_sale' or not visit_process_state in ('collection_done','ready_to_close','done') or state == 'cancel'">
+<group string="Direct Stop Actions" col="3" invisible="state == 'draft' or state == 'cancel'">
 <button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-primary"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary"/>
