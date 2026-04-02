@@ -76,6 +76,28 @@ class SaleOrder(models.Model):
         readonly=True,
         store=False,
     )
+    route_show_no_direct_return = fields.Boolean(
+        string="Show No Return",
+        compute="_compute_route_show_no_direct_return",
+        store=False,
+    )
+
+
+    @api.depends("origin", "state", "route_order_mode", "route_enable_direct_return")
+    def _compute_route_show_no_direct_return(self):
+        for order in self:
+            show = False
+            if (
+                order.route_order_mode == "direct_sale"
+                and order.route_enable_direct_return
+                and order.state in ("sale", "done")
+                and order.route_visit_id
+                and getattr(order.route_visit_id, "visit_execution_mode", False) == "direct_sales"
+            ):
+                visit = order.route_visit_id
+                direct_returns = visit._get_direct_stop_returns() if hasattr(visit, "_get_direct_stop_returns") else self.env["route.direct.return"]
+                show = not direct_returns and not visit.direct_stop_skip_return
+            order.route_show_no_direct_return = show
 
 
     @api.depends("origin")
@@ -694,6 +716,18 @@ class SaleOrder(models.Model):
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
+    def action_no_direct_return(self):
+        self.ensure_one()
+        self._ensure_route_direct_return_enabled()
+        if self.route_order_mode != "direct_sale":
+            raise UserError(_("No Return is available only for Direct Sale orders."))
+        visit = self.route_visit_id or self._get_linked_route_visit()
+        if not visit:
+            raise UserError(_("This order is not linked to a direct sales stop."))
+        if getattr(visit, "visit_execution_mode", False) != "direct_sales":
+            raise UserError(_("No Return can be used only for a direct sales stop."))
+        return visit.action_ux_no_return()
 
     def _route_confirm_without_procurement(self):
         for order in self:
