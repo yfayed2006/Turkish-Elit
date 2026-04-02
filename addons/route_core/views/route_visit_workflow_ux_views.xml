@@ -8,6 +8,7 @@
 <button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_orders"/>
 <button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_returns"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_review_settlement or ux_primary_action == 'collect_payment' or ux_primary_action == 'confirm_payments'"/>
 </xpath>
 <xpath expr="//sheet" position="inside">
 <field name="route_operation_mode" invisible="1"/>
@@ -28,6 +29,7 @@
 <field name="ux_can_no_sale" invisible="1"/>
 <field name="ux_can_no_return" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="ux_can_review_settlement" invisible="1"/>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
@@ -83,6 +85,7 @@
 <button name="action_ux_open_direct_sale_orders" string="Direct Sale Orders" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_orders"/>
 <button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_open_direct_returns"/>
+<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_review_settlement or ux_primary_action == 'collect_payment' or ux_primary_action == 'confirm_payments'"/>
 </xpath>
 <xpath expr="//sheet" position="inside">
 <field name="route_operation_mode" invisible="1"/>
@@ -103,6 +106,7 @@
 <field name="ux_can_no_sale" invisible="1"/>
 <field name="ux_can_no_return" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="ux_can_review_settlement" invisible="1"/>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
