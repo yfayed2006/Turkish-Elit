@@ -7,9 +7,7 @@ class SaleOrderLine(models.Model):
 
     route_product_barcode = fields.Char(
         string="Barcode",
-        related="product_id.barcode",
-        store=False,
-        readonly=True,
+        copy=False,
     )
 
     route_available_lot_ids = fields.Many2many(
@@ -29,6 +27,24 @@ class SaleOrderLine(models.Model):
         readonly=True,
         store=False,
     )
+
+
+    @api.onchange("product_id")
+    def _onchange_route_product_barcode_from_product(self):
+        for line in self:
+            line.route_product_barcode = line.product_id.barcode if line.product_id else False
+
+    @api.onchange("route_product_barcode")
+    def _onchange_route_product_barcode_lookup(self):
+        Product = self.env["product.product"]
+        for line in self:
+            barcode = (line.route_product_barcode or "").strip()
+            if not barcode or (line.product_id and barcode == (line.product_id.barcode or "")):
+                continue
+            product = Product._route_find_product_by_barcode(barcode, extra_domain=[("sale_ok", "=", True)])
+            if product:
+                line.product_id = product
+                line.route_product_barcode = product.barcode or barcode
 
     @api.depends(
         "product_id",
