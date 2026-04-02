@@ -786,8 +786,15 @@ class SaleOrder(models.Model):
             elif order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
                 order._ensure_direct_sale_payment_record()
 
+        if (
+            len(self) == 1
+            and len(direct_sale_orders) == 1
+            and not normal_orders
+            and not route_orders
+            and not isinstance(action_result, dict)
+        ):
+            visit = direct_sale_orders.route_visit_id or direct_sale_orders._get_linked_route_visit()
+            if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales" and hasattr(visit, "_get_pda_form_action"):
+                return visit._get_pda_form_action()
+
         return action_result
-
-
-
-
