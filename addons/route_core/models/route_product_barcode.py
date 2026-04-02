@@ -1,6 +1,5 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
-from odoo.osv import expression
 
 
 class RouteProductBarcode(models.Model):
@@ -82,137 +81,132 @@ class RouteProductBarcode(models.Model):
     ]
 
 
+from odoo.osv import expression
+
+
 class ProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
-    def _route_positive_search_operator(self, operator):
-        return operator in ("=", "ilike", "=ilike", "like", "=like")
-
-    @api.model
-    def _route_exact_search_operator(self, operator):
-        return operator in ("=", "=ilike", "=like")
-
-    @api.model
-    def _route_packaging_product_ids(self, term, operator="ilike", limit=100):
-        Packaging = self.env["product.packaging"]
-        products = self.env["product.product"]
-        if "barcode" in Packaging._fields:
-            packagings = Packaging.search([("barcode", operator, term)], limit=limit)
-            if "product_id" in Packaging._fields:
-                products |= packagings.mapped("product_id")
-            if "product_tmpl_id" in Packaging._fields:
-                products |= packagings.mapped("product_tmpl_id.product_variant_ids")
-        return products
-
-    @api.model
-    def _route_extra_barcode_products(self, term, operator="ilike", limit=100):
-        term = (term or "").strip()
+    def _route_collect_barcode_product_ids(self, name, operator="ilike", limit=100):
+        term = (name or "").strip()
         if not term:
-            return self.env["product.product"]
-
-        products = self.env["product.product"]
-        company = self.env.company
-
-        products |= self.search([("barcode", operator, term)], limit=limit)
-        if "default_code" in self._fields:
-            products |= self.search([("default_code", operator, term)], limit=limit)
-
-        barcode_lines = self.env["route.product.barcode"].search(
-            [
-                ("barcode", operator, term),
-                ("company_id", "in", [False, company.id]),
-            ],
-            limit=limit,
-        )
-        products |= barcode_lines.mapped("product_id")
-
-        if "product.packaging" in self.env:
-            products |= self._route_packaging_product_ids(term, operator=operator, limit=limit)
-
-        return products
-
-    @api.model
-    def _route_merge_ids(self, first_ids, extra_ids, limit=100):
-        ordered = []
-        seen = set()
-        for pid in list(first_ids) + list(extra_ids):
-            if not pid or pid in seen:
-                continue
-            seen.add(pid)
-            ordered.append(pid)
-            if limit and len(ordered) >= limit:
-                break
-        return ordered
-
-    @api.model
-    def _route_extra_search_ids(self, name, args=None, operator="ilike", limit=100, **kwargs):
-        args = list(args or [])
-        products = self.env["product.product"]
-
-        if self._route_exact_search_operator(operator):
-            products |= self._route_extra_barcode_products(name, operator="=", limit=limit)
-        products |= self._route_extra_barcode_products(name, operator="ilike", limit=limit)
-
-        if not products:
             return []
 
-        return self._search(
-            expression.AND([args, [("id", "in", products.ids)]]),
-            limit=limit,
-            **kwargs,
-        )
+        product_ids = []
+        seen = set()
+
+        def _add_products(products):
+            for product in products:
+                if product.id not in seen:
+                    seen.add(product.id)
+                    product_ids.append(product.id)
+                    if limit and len(product_ids) >= limit:
+                        return True
+            return False
+
+        barcode_operator = operator if operator in ("=", "ilike", "like", "=ilike", "=like") else "ilike"
+
+        # 1) exact / direct fields on product.product
+        direct_domains = [
+            [("barcode", "=", term)],
+            [("default_code", "=", term)],
+        ]
+        for domain in direct_domains:
+            if _add_products(self.search(domain, limit=limit)):
+                return product_ids
+
+        # 2) route.product.barcode custom barcodes
+        RouteBarcode = self.env["route.product.barcode"]
+        route_barcode_domain = [("barcode", barcode_operator, term), ("active", "=", True)]
+        if "company_id" in RouteBarcode._fields:
+            route_barcode_domain = expression.AND([
+                [("active", "=", True)],
+                ["|", ("company_id", "=", False), ("company_id", "=", self.env.company.id)],
+                [("barcode", barcode_operator, term)],
+            ])
+        route_barcodes = RouteBarcode.search(route_barcode_domain, limit=limit)
+        if _add_products(route_barcodes.mapped("product_id")):
+            return product_ids
+
+        # 3) packaging barcodes
+        if "product.packaging" in self.env:
+            Packaging = self.env["product.packaging"]
+            packaging_domain = [("barcode", barcode_operator, term)] if "barcode" in Packaging._fields else []
+            if packaging_domain:
+                if "company_id" in Packaging._fields:
+                    packaging_domain = expression.AND([
+                        ["|", ("company_id", "=", False), ("company_id", "=", self.env.company.id)],
+                        packaging_domain,
+                    ])
+                packagings = Packaging.search(packaging_domain, limit=limit)
+                packaging_products = self.browse()
+                for field_name in ("product_id", "product_tmpl_id"):
+                    if field_name not in Packaging._fields:
+                        continue
+                    values = packagings.mapped(field_name)
+                    if not values:
+                        continue
+                    if getattr(values, "_name", "") == "product.template":
+                        packaging_products |= values.mapped("product_variant_ids")
+                    else:
+                        packaging_products |= values
+                if _add_products(packaging_products):
+                    return product_ids
+
+        # 4) fallback direct ilike on product barcode / internal reference
+        fallback_domain = ["|", ("barcode", barcode_operator, term), ("default_code", barcode_operator, term)]
+        _add_products(self.search(fallback_domain, limit=limit))
+        return product_ids
 
     @api.model
-    def _name_search(self, name="", args=None, operator="ilike", limit=100, **kwargs):
+    def _name_search(self, name="", args=None, operator="ilike", limit=100, order=None):
         args = list(args or [])
-        base_ids = super()._name_search(name=name, args=args, operator=operator, limit=limit, **kwargs)
-        if not name or not self._route_positive_search_operator(operator):
-            return base_ids
-        extra_ids = self._route_extra_search_ids(name, args=args, operator=operator, limit=limit, **kwargs)
-        return self._route_merge_ids(base_ids, extra_ids, limit=limit)
+        term = (name or "").strip()
+        if term:
+            barcode_ids = self._route_collect_barcode_product_ids(term, operator=operator, limit=limit)
+            if barcode_ids:
+                domain = expression.AND([args, [("id", "in", barcode_ids)]])
+                return list(self._search(domain, limit=limit, order=order))
+        return super()._name_search(name=name, args=args, operator=operator, limit=limit, order=order)
+
+    @api.model
+    def name_search(self, name="", args=None, operator="ilike", limit=100):
+        term = (name or "").strip()
+        if term:
+            barcode_ids = self._route_collect_barcode_product_ids(term, operator=operator, limit=limit)
+            if barcode_ids:
+                records = self.browse(barcode_ids)
+                if limit:
+                    records = records[:limit]
+                return records.get_formatted_display_name()
+        return super().name_search(name=name, args=args, operator=operator, limit=limit)
 
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     @api.model
-    def _route_positive_search_operator(self, operator):
-        return operator in ("=", "ilike", "=ilike", "like", "=like")
+    def _name_search(self, name="", args=None, operator="ilike", limit=100, order=None):
+        args = list(args or [])
+        term = (name or "").strip()
+        if term:
+            product_ids = self.env["product.product"]._route_collect_barcode_product_ids(term, operator=operator, limit=limit)
+            if product_ids:
+                template_ids = self.env["product.product"].browse(product_ids).mapped("product_tmpl_id").ids
+                if template_ids:
+                    domain = expression.AND([args, [("id", "in", template_ids)]])
+                    return list(self._search(domain, limit=limit, order=order))
+        return super()._name_search(name=name, args=args, operator=operator, limit=limit, order=order)
 
     @api.model
-    def _route_extra_template_ids(self, name, args=None, operator="ilike", limit=100, **kwargs):
-        args = list(args or [])
-        product_ids = self.env["product.product"]._route_extra_search_ids(
-            name,
-            args=[],
-            operator=operator,
-            limit=limit,
-            **kwargs,
-        )
-        if not product_ids:
-            return []
-        templates = self.env["product.product"].browse(product_ids).mapped("product_tmpl_id")
-        return self._search(
-            expression.AND([args, [("id", "in", templates.ids)]]),
-            limit=limit,
-            **kwargs,
-        )
-
-    @api.model
-    def _name_search(self, name="", args=None, operator="ilike", limit=100, **kwargs):
-        args = list(args or [])
-        base_ids = super()._name_search(name=name, args=args, operator=operator, limit=limit, **kwargs)
-        if not name or not self._route_positive_search_operator(operator):
-            return base_ids
-        extra_ids = self._route_extra_template_ids(name, args=args, operator=operator, limit=limit, **kwargs)
-        ordered = []
-        seen = set()
-        for tid in list(base_ids) + list(extra_ids):
-            if not tid or tid in seen:
-                continue
-            seen.add(tid)
-            ordered.append(tid)
-            if limit and len(ordered) >= limit:
-                break
-        return ordered
+    def name_search(self, name="", args=None, operator="ilike", limit=100):
+        term = (name or "").strip()
+        if term:
+            product_ids = self.env["product.product"]._route_collect_barcode_product_ids(term, operator=operator, limit=limit)
+            if product_ids:
+                templates = self.env["product.product"].browse(product_ids).mapped("product_tmpl_id")
+                if limit:
+                    templates = templates[:limit]
+                return templates.get_formatted_display_name()
+        return super().name_search(name=name, args=args, operator=operator, limit=limit)
