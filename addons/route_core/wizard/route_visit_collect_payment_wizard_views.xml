@@ -22,7 +22,7 @@
 <field name="direct_stop_settlement_paid_amount" readonly="1"/>
 <field name="direct_stop_settlement_remaining_amount" readonly="1"/>
 </group>
-<group string="Return Credit Handling" col="2" invisible="not is_direct_sales_stop or direct_stop_credit_amount <= 0">
+<group string="Return Credit Handling" col="2" invisible="not show_return_credit_handling">
 <group>
 <field name="direct_stop_credit_amount" readonly="1"/>
 <field name="direct_stop_credit_policy"/>
@@ -31,8 +31,8 @@
 <field name="direct_stop_credit_note" placeholder="Add note for customer credit, cash refund, or next stop carry-forward..."/>
 </group>
 </group>
-<separator string="Collection Decision" invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0"/>
-<group col="2" invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0">
+<separator string="Collection Decision" invisible="not show_collection_decision"/>
+<group col="2" invisible="not show_collection_decision">
 <group>
 <field name="collection_type" widget="radio"/>
 <field name="payment_mode"/>
@@ -48,14 +48,14 @@
 <field name="pos_terminal" invisible="payment_mode != 'pos'"/>
 </group>
 </group>
-<group invisible="is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0 and direct_stop_credit_amount > 0">
+<group invisible="not show_note_field">
 <field name="note" placeholder="Add note for partial payment, deferment, or next visit collection..."/>
 </group>
-<div class="alert alert-info mt-3" role="alert" invisible="collection_type != 'full' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'partial' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Partial payment will save the collected amount as draft settlement entries and keep the remaining balance as promised unpaid amount. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'defer_date' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="collection_type != 'next_visit' or (is_direct_sales_stop and direct_stop_settlement_remaining_amount <= 0)"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
-<div class="alert alert-info mt-3" role="alert" invisible="not is_direct_sales_stop or direct_stop_settlement_remaining_amount > 0 or direct_stop_credit_amount <= 0"> No cash collection is required. Choose how to settle the return credit, then save. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="not show_full_payment_help"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="not show_partial_payment_help"> Partial payment will save the collected amount as draft settlement entries and keep the remaining balance as promised unpaid amount. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="not show_defer_help"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="not show_next_visit_help"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="not show_credit_only_help"> No cash collection is required. Choose how to settle the return credit, then save. </div>
 </sheet>
 <footer>
 <button name="action_save_payment" string="Save Draft" type="object" class="btn-primary"/>
