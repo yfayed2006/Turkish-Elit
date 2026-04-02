@@ -101,6 +101,7 @@ class RouteVisit(models.Model):
     ux_can_skip_collection = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_open_payments = fields.Boolean(compute="_compute_ux_workflow", store=False)
     ux_can_review_settlement = fields.Boolean(compute="_compute_ux_workflow", store=False)
+    ux_can_receipt_actions = fields.Boolean(compute="_compute_ux_workflow", store=False)
 
     direct_stop_settlement_reviewed = fields.Boolean(
         string="Direct Stop Settlement Reviewed",
@@ -309,6 +310,7 @@ class RouteVisit(models.Model):
             rec.ux_can_skip_collection = False
             rec.ux_can_open_payments = False
             rec.ux_can_review_settlement = False
+            rec.ux_can_receipt_actions = False
             rec.ux_can_create_direct_sale = False
             rec.ux_can_open_direct_sale_orders = False
             rec.ux_can_open_direct_sale_payments = False
@@ -323,6 +325,11 @@ class RouteVisit(models.Model):
                 direct_returns = rec._get_direct_stop_returns() if rec.id else self.env["route.direct.return"]
                 sales_answered = bool(sale_orders or rec.direct_stop_skip_sale)
                 returns_answered = bool((not rec.route_enable_direct_return) or direct_returns or rec.direct_stop_skip_return)
+                rec.ux_can_receipt_actions = bool(
+                    rec.state not in ("draft", "cancel")
+                    and sales_answered
+                    and returns_answered
+                )
 
                 if rec.state == "draft":
                     rec.ux_stage = "arrival"
