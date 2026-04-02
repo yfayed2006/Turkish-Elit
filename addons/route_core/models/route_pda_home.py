@@ -39,6 +39,12 @@ class RoutePdaHome(models.TransientModel):
     vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
     warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
 
+    direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
+    direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
+    direct_sale_today_amount = fields.Monetary(string="Direct Sales Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_return_today_amount = fields.Monetary(string="Direct Returns Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sales_outstanding_amount = fields.Monetary(string="Outstanding After Settlement", currency_field="currency_id", compute="_compute_dashboard")
+
     current_visit_name = fields.Char(string="Current Visit", compute="_compute_dashboard")
     current_visit_outlet_name = fields.Char(string="Current Outlet", compute="_compute_dashboard")
     current_vehicle_name = fields.Char(string="Vehicle", compute="_compute_dashboard")
@@ -277,6 +283,8 @@ class RoutePdaHome(models.TransientModel):
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
         Quant = self.env["stock.quant"]
+        SaleOrder = self.env["sale.order"]
+        DirectReturn = self.env["route.direct.return"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -316,6 +324,19 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", user.id),
                 ("state", "=", "confirmed"),
             ])
+            today_direct_orders = SaleOrder.search([
+                ("user_id", "=", user.id),
+                ("route_order_mode", "=", "direct_sale"),
+                ("date_order", ">=", start_dt),
+                ("date_order", "<", end_dt),
+                ("state", "in", ["sale", "done"]),
+            ])
+            today_direct_returns = DirectReturn.search([
+                ("user_id", "=", user.id),
+                ("return_date", "=", today),
+                ("state", "=", "done"),
+            ])
+            open_direct_sales_visits = today_visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == "direct_sales" and v.state != "done")
 
             vehicle = rec._get_current_vehicle()
             warehouse_loc = rec._get_main_warehouse_location()
@@ -337,6 +358,11 @@ class RoutePdaHome(models.TransientModel):
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
+            rec.direct_sale_order_today_count = len(today_direct_orders)
+            rec.direct_return_today_count = len(today_direct_returns)
+            rec.direct_sale_today_amount = sum(today_direct_orders.mapped("amount_total")) if today_direct_orders else 0.0
+            rec.direct_return_today_amount = sum(today_direct_returns.mapped("amount_total")) if today_direct_returns else 0.0
+            rec.direct_sales_outstanding_amount = sum(open_direct_sales_visits.mapped("direct_stop_settlement_remaining_amount")) if open_direct_sales_visits else 0.0
 
             if rec.route_show_consignment_tools:
                 rec.current_visit_name = current_visit.display_name if current_visit else "No active visit"
@@ -615,4 +641,3 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products - {location.display_name}"
         return self._open_quants_by_location(location, title)
-
