@@ -29,6 +29,13 @@ class StockMove(models.Model):
         help="Direct return line that generated this stock move.",
     )
 
+    route_product_barcode = fields.Char(
+        string="Barcode",
+        related="product_id.barcode",
+        store=False,
+        readonly=True,
+    )
+
     route_currency_id = fields.Many2one(
         "res.currency",
         string="Route Currency",
