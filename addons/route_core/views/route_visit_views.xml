@@ -117,6 +117,9 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
@@ -142,6 +145,9 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="visit_execution_mode" invisible="1"/>
+<field name="outlet_operation_mode" invisible="1"/>
+<field name="ux_can_receipt_actions" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -354,6 +360,9 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
@@ -379,6 +388,9 @@
 <field name="ux_can_skip_collection" invisible="1"/>
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
+<field name="visit_execution_mode" invisible="1"/>
+<field name="outlet_operation_mode" invisible="1"/>
+<field name="ux_can_receipt_actions" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
