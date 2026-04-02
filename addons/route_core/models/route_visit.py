@@ -105,6 +105,7 @@ class RouteVisit(models.Model):
     direct_stop_sales_total = fields.Monetary(string="Direct Sales Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_returns_total = fields.Monetary(string="Direct Returns Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_previous_due_amount = fields.Monetary(string="Previous Due", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_previous_due_since_date = fields.Date(string="Previous Due Since", compute="_compute_direct_stop_summary", store=False)
     direct_stop_current_net_amount = fields.Monetary(string="Current Stop Net", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_grand_due_amount = fields.Monetary(string="Grand Total Due", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_settlement_paid_amount = fields.Monetary(string="Settlement Paid", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
@@ -1288,6 +1289,7 @@ class RouteVisit(models.Model):
             rec.direct_stop_sales_total = sum(orders.filtered(lambda o: o.state in ("sale", "done")).mapped("amount_total"))
             rec.direct_stop_returns_total = sum(active_returns.mapped("amount_total"))
             rec.direct_stop_previous_due_amount = sum(previous_due_visits.mapped("remaining_due_amount")) if previous_due_visits else 0.0
+            rec.direct_stop_previous_due_since_date = min(previous_due_visits.mapped("date")) if previous_due_visits else False
             rec.direct_stop_current_net_amount = (rec.direct_stop_sales_total or 0.0) - (rec.direct_stop_returns_total or 0.0)
 
             gross_due = (rec.direct_stop_previous_due_amount or 0.0) + (rec.direct_stop_current_net_amount or 0.0)
