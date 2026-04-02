@@ -1012,9 +1012,9 @@ class RouteVisit(models.Model):
                     "product_name": line.product_id.display_name or line.name or "",
                     "quantity": line.product_uom_qty or 0.0,
                     "uom_name": (
-                        line.product_uom_id.name
-                        if hasattr(line, "product_uom_id") and line.product_uom_id
-                        else (line.product_uom.name if hasattr(line, "product_uom") and line.product_uom else "")
+                        getattr(getattr(line, "product_uom_id", False), "name", False)
+                        or getattr(getattr(line, "product_uom", False), "name", False)
+                        or ""
                     ),
                     "unit_price": line.price_unit or 0.0,
                     "subtotal": line.price_subtotal or 0.0,
@@ -1068,12 +1068,11 @@ class RouteVisit(models.Model):
             return ""
         phone = ""
         for field_name in ("mobile", "phone"):
-            if hasattr(partner, field_name):
-                value = getattr(partner, field_name) or ""
-                if value:
-                    phone = value
-                    break
-        return re.sub(r"\D", "", (phone or "").strip())
+            value = getattr(partner, field_name, False)
+            if value:
+                phone = str(value).strip()
+                break
+        return re.sub(r"\D", "", phone)
 
     def _build_direct_stop_whatsapp_message(self):
         self.ensure_one()
@@ -1116,13 +1115,19 @@ class RouteVisit(models.Model):
         return "\n".join(lines)
 
     def _get_route_supervisor_partner(self):
-        self.ensure_one()
         group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
         if not group:
             return self.env["res.partner"]
-        users = group.users.filtered(lambda u: u.active)
-        if self.company_id:
-            users = users.filtered(lambda u: not u.company_ids or self.company_id in u.company_ids)
+
+        users = getattr(group, "user_ids", False)
+        if users is False:
+            users = getattr(group, "users", self.env["res.users"])
+        users = users.filtered(lambda u: getattr(u, "active", True)) if users else self.env["res.users"]
+
+        if self.company_id and users:
+            users = users.filtered(
+                lambda u: not getattr(u, "company_ids", False) or self.company_id in u.company_ids
+            )
         return users[:1].partner_id if users else self.env["res.partner"]
 
     def action_send_direct_stop_whatsapp_outlet(self):
