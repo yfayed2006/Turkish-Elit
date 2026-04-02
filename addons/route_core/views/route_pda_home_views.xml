@@ -189,6 +189,20 @@
 </button>
 <h2 class="route_pda_detail_title">Sales Center</h2>
 </div>
+<group string="Today Sales Snapshot" col="3">
+<group>
+<field name="direct_sale_order_today_count" readonly="1"/>
+<field name="direct_return_today_count" readonly="1"/>
+</group>
+<group>
+<field name="direct_sale_today_amount" readonly="1"/>
+<field name="direct_return_today_amount" readonly="1"/>
+</group>
+<group>
+<field name="direct_sales_outstanding_amount" readonly="1"/>
+<field name="cash_today_amount" readonly="1"/>
+</group>
+</group>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_direct_sale_outlets" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
 <i class="fa fa-building route_pda_app_icon"/>
