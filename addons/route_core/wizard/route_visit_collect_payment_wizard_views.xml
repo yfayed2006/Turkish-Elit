@@ -51,8 +51,8 @@
 <group invisible="not show_note_field">
 <field name="note" placeholder="Add note for partial payment, deferment, or next visit collection..."/>
 </group>
-<div class="alert alert-info mt-3" role="alert" invisible="not show_full_payment_help"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. </div>
-<div class="alert alert-warning mt-3" role="alert" invisible="not show_partial_payment_help"> Partial payment will save the collected amount as draft settlement entries and keep the remaining balance as promised unpaid amount. </div>
+<div class="alert alert-info mt-3" role="alert" invisible="not show_full_payment_help"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. When you reopen this window later, the summary reflects any saved draft or confirmed settlement entries. </div>
+<div class="alert alert-warning mt-3" role="alert" invisible="not show_partial_payment_help"> Partial payment will save the collected amount as draft settlement entries and keep the remaining balance as promised unpaid amount. Reopening this window later will show the updated summary after those saved draft entries are applied. </div>
 <div class="alert alert-warning mt-3" role="alert" invisible="not show_defer_help"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
 <div class="alert alert-warning mt-3" role="alert" invisible="not show_next_visit_help"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
 <div class="alert alert-info mt-3" role="alert" invisible="not show_credit_only_help"> No cash collection is required. Choose how to settle the return credit, then save. </div>
