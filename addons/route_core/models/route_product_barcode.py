@@ -82,57 +82,53 @@ class RouteProductBarcode(models.Model):
     ]
 
 
-
 class ProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
-    def _route_get_products_from_packaging(self, packaging_records):
+    def _route_positive_search_operator(self, operator):
+        return operator in ("=", "ilike", "=ilike", "like", "=like")
+
+    @api.model
+    def _route_exact_search_operator(self, operator):
+        return operator in ("=", "=ilike", "=like")
+
+    @api.model
+    def _route_packaging_product_ids(self, term, operator="ilike", limit=100):
+        Packaging = self.env["product.packaging"]
         products = self.env["product.product"]
-        for packaging in packaging_records:
-            product = False
-            if "product_id" in packaging._fields and packaging.product_id:
-                product = packaging.product_id
-            elif "product_tmpl_id" in packaging._fields and packaging.product_tmpl_id:
-                product = packaging.product_tmpl_id.product_variant_ids[:1]
-            if product:
-                products |= product
+        if "barcode" in Packaging._fields:
+            packagings = Packaging.search([("barcode", operator, term)], limit=limit)
+            if "product_id" in Packaging._fields:
+                products |= packagings.mapped("product_id")
+            if "product_tmpl_id" in Packaging._fields:
+                products |= packagings.mapped("product_tmpl_id.product_variant_ids")
         return products
 
     @api.model
-    def _route_search_extra_barcode_products(self, term, operator="ilike", limit=100):
+    def _route_extra_barcode_products(self, term, operator="ilike", limit=100):
         term = (term or "").strip()
         if not term:
             return self.env["product.product"]
 
         products = self.env["product.product"]
+        company = self.env.company
 
-        try:
-            barcode_lines = self.env["route.product.barcode"].search([
-                ("barcode", operator, term)
-            ], limit=limit)
-            products |= barcode_lines.mapped("product_id")
-        except Exception:
-            pass
+        products |= self.search([("barcode", operator, term)], limit=limit)
+        if "default_code" in self._fields:
+            products |= self.search([("default_code", operator, term)], limit=limit)
+
+        barcode_lines = self.env["route.product.barcode"].search(
+            [
+                ("barcode", operator, term),
+                ("company_id", "in", [False, company.id]),
+            ],
+            limit=limit,
+        )
+        products |= barcode_lines.mapped("product_id")
 
         if "product.packaging" in self.env:
-            Packaging = self.env["product.packaging"]
-            seen_fields = set()
-            for field_name, field in Packaging._fields.items():
-                try:
-                    if getattr(field, "type", None) != "char":
-                        continue
-                    if "barcode" not in field_name:
-                        continue
-                    if field_name in seen_fields:
-                        continue
-                    seen_fields.add(field_name)
-                    packaging_records = Packaging.search([
-                        (field_name, operator, term)
-                    ], limit=limit)
-                    products |= self._route_get_products_from_packaging(packaging_records)
-                except Exception:
-                    continue
+            products |= self._route_packaging_product_ids(term, operator=operator, limit=limit)
 
         return products
 
@@ -150,29 +146,73 @@ class ProductProduct(models.Model):
         return ordered
 
     @api.model
-    def _name_search(self, name="", args=None, operator="ilike", limit=100, name_get_uid=None):
+    def _route_extra_search_ids(self, name, args=None, operator="ilike", limit=100, **kwargs):
         args = list(args or [])
-        if not name:
-            return super()._name_search(name=name, args=args, operator=operator, limit=limit, name_get_uid=name_get_uid)
+        products = self.env["product.product"]
 
-        positive_ops = ("=", "ilike", "=ilike", "like", "=like")
-        exact_ops = ("=", "=ilike", "=like")
+        if self._route_exact_search_operator(operator):
+            products |= self._route_extra_barcode_products(name, operator="=", limit=limit)
+        products |= self._route_extra_barcode_products(name, operator="ilike", limit=limit)
 
-        if operator in positive_ops:
-            exact_hits = self.env["product.product"]
-            if operator in exact_ops:
-                exact_hits |= self._route_search_extra_barcode_products(name, operator="=", limit=limit)
-                if exact_hits:
-                    exact_ids = super()._name_search(name=name, args=args + [("id", "in", exact_hits.ids)], operator=operator, limit=limit, name_get_uid=name_get_uid)
-                    if exact_ids:
-                        return exact_ids
-                    return self._search(expression.AND([args, [("id", "in", exact_hits.ids)]]), limit=limit, access_rights_uid=name_get_uid)
+        if not products:
+            return []
 
-            base_ids = super()._name_search(name=name, args=args, operator=operator, limit=limit, name_get_uid=name_get_uid)
-            extra_products = self._route_search_extra_barcode_products(name, operator="ilike", limit=limit)
-            if extra_products:
-                extra_ids = self._search(expression.AND([args, [("id", "in", extra_products.ids)]]), limit=limit, access_rights_uid=name_get_uid)
-                return self._route_merge_ids(base_ids, extra_ids, limit=limit)
+        return self._search(
+            expression.AND([args, [("id", "in", products.ids)]]),
+            limit=limit,
+            **kwargs,
+        )
+
+    @api.model
+    def _name_search(self, name="", args=None, operator="ilike", limit=100, **kwargs):
+        args = list(args or [])
+        base_ids = super()._name_search(name=name, args=args, operator=operator, limit=limit, **kwargs)
+        if not name or not self._route_positive_search_operator(operator):
             return base_ids
+        extra_ids = self._route_extra_search_ids(name, args=args, operator=operator, limit=limit, **kwargs)
+        return self._route_merge_ids(base_ids, extra_ids, limit=limit)
 
-        return super()._name_search(name=name, args=args, operator=operator, limit=limit, name_get_uid=name_get_uid)
+
+class ProductTemplate(models.Model):
+    _inherit = "product.template"
+
+    @api.model
+    def _route_positive_search_operator(self, operator):
+        return operator in ("=", "ilike", "=ilike", "like", "=like")
+
+    @api.model
+    def _route_extra_template_ids(self, name, args=None, operator="ilike", limit=100, **kwargs):
+        args = list(args or [])
+        product_ids = self.env["product.product"]._route_extra_search_ids(
+            name,
+            args=[],
+            operator=operator,
+            limit=limit,
+            **kwargs,
+        )
+        if not product_ids:
+            return []
+        templates = self.env["product.product"].browse(product_ids).mapped("product_tmpl_id")
+        return self._search(
+            expression.AND([args, [("id", "in", templates.ids)]]),
+            limit=limit,
+            **kwargs,
+        )
+
+    @api.model
+    def _name_search(self, name="", args=None, operator="ilike", limit=100, **kwargs):
+        args = list(args or [])
+        base_ids = super()._name_search(name=name, args=args, operator=operator, limit=limit, **kwargs)
+        if not name or not self._route_positive_search_operator(operator):
+            return base_ids
+        extra_ids = self._route_extra_template_ids(name, args=args, operator=operator, limit=limit, **kwargs)
+        ordered = []
+        seen = set()
+        for tid in list(base_ids) + list(extra_ids):
+            if not tid or tid in seen:
+                continue
+            seen.add(tid)
+            ordered.append(tid)
+            if limit and len(ordered) >= limit:
+                break
+        return ordered
