@@ -180,6 +180,67 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     )
     direct_stop_credit_note = fields.Text(string="Credit Settlement Note")
 
+    show_return_credit_handling = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_collection_decision = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_note_field = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_full_payment_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_partial_payment_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_defer_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_next_visit_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+    show_credit_only_help = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
+
+
+    @api.depends(
+        "is_direct_sales_stop",
+        "collection_type",
+        "direct_stop_settlement_remaining_amount",
+        "direct_stop_credit_amount",
+    )
+    def _compute_ui_flags(self):
+        for rec in self:
+            has_credit = (rec.direct_stop_credit_amount or 0.0) > 0.0
+            has_remaining = (rec.direct_stop_settlement_remaining_amount or 0.0) > 0.0
+            rec.show_return_credit_handling = bool(rec.is_direct_sales_stop and has_credit)
+            rec.show_collection_decision = bool((not rec.is_direct_sales_stop) or has_remaining)
+            rec.show_note_field = bool((not rec.is_direct_sales_stop) or has_remaining or not has_credit)
+            rec.show_full_payment_help = bool(rec.show_collection_decision and rec.collection_type == "full")
+            rec.show_partial_payment_help = bool(rec.show_collection_decision and rec.collection_type == "partial")
+            rec.show_defer_help = bool(rec.show_collection_decision and rec.collection_type == "defer_date")
+            rec.show_next_visit_help = bool(rec.show_collection_decision and rec.collection_type == "next_visit")
+            rec.show_credit_only_help = bool(rec.is_direct_sales_stop and (not has_remaining) and has_credit)
+
     @api.depends("visit_id")
     def _compute_visit_amounts(self):
         for rec in self:
