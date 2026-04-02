@@ -104,6 +104,11 @@ class RouteVisit(models.Model):
     direct_stop_return_count = fields.Integer(string="Direct Returns", compute="_compute_direct_stop_summary", store=False)
     direct_stop_sales_total = fields.Monetary(string="Direct Sales Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_returns_total = fields.Monetary(string="Direct Returns Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_previous_due_amount = fields.Monetary(string="Previous Due", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_current_net_amount = fields.Monetary(string="Current Stop Net", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_grand_due_amount = fields.Monetary(string="Grand Total Due", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_settlement_paid_amount = fields.Monetary(string="Settlement Paid", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_settlement_remaining_amount = fields.Monetary(string="Settlement Remaining", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_credit_amount = fields.Monetary(string="Return Credit", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_credit_policy = fields.Selection(
         [("customer_credit", "Customer Credit"), ("cash_refund", "Cash Refund"), ("next_stop", "Carry to Next Stop")],
@@ -235,6 +240,11 @@ class RouteVisit(models.Model):
         "route.visit.payment",
         "visit_id",
         string="Payments",
+    )
+    settlement_payment_ids = fields.One2many(
+        "route.visit.payment",
+        "settlement_visit_id",
+        string="Settlement Payments",
     )
 
     net_due_amount = fields.Monetary(
@@ -1181,19 +1191,6 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.sale_order_count = 1 if rec.sale_order_id else 0
 
-    @api.depends(
-        "visit_execution_mode",
-        "direct_stop_skip_sale",
-        "direct_stop_skip_return",
-        "direct_stop_credit_policy",
-        "direct_stop_order_ids.state",
-        "direct_stop_order_ids.amount_total",
-        "direct_stop_return_ids.state",
-        "direct_stop_return_ids.amount_total",
-        "payment_ids.state",
-        "payment_ids.amount",
-    )
-
     @api.depends("name")
     def _compute_direct_stop_order_ids(self):
         SaleOrder = self.env["sale.order"]
@@ -1206,15 +1203,101 @@ class RouteVisit(models.Model):
                 orders_by_origin[order.origin] |= order
         for rec in self:
             rec.direct_stop_order_ids = orders_by_origin.get(rec.name, empty_orders)
+
+    def _get_direct_stop_previous_due_visits(self):
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        if not self.outlet_id:
+            return Visit
+        visits = Visit.search(
+            [
+                ("outlet_id", "=", self.outlet_id.id),
+                ("id", "!=", self.id or 0),
+                ("state", "!=", "cancel"),
+            ],
+            order="date asc, id asc",
+        )
+        return visits.filtered(
+            lambda v: getattr(v, "visit_execution_mode", False) == "direct_sales"
+            and (v.remaining_due_amount or 0.0) > 0.0
+        )
+
+    def _get_direct_stop_settlement_payments(self, states=None):
+        self.ensure_one()
+        Payment = self.env["route.visit.payment"]
+        if not self.id:
+            return Payment
+        domain = [
+            "|",
+            ("settlement_visit_id", "=", self.id),
+            ("visit_id", "=", self.id),
+        ]
+        if states:
+            domain.append(("state", "in", states))
+        payments = Payment.search(domain, order="payment_date asc, id asc")
+        return payments.filtered(
+            lambda p: (p.settlement_visit_id and p.settlement_visit_id.id == self.id)
+            or (p.visit_id and p.visit_id.id == self.id and not p.settlement_visit_id)
+        )
+
+    def _get_direct_stop_active_returns(self):
+        self.ensure_one()
+        DirectReturn = self.env["route.direct.return"]
+        if not self.outlet_id:
+            return DirectReturn
+        returns = DirectReturn.search(
+            [
+                ("outlet_id", "=", self.outlet_id.id),
+                ("state", "!=", "cancel"),
+            ],
+            order="id desc",
+        )
+        if self.user_id:
+            returns = returns.filtered(lambda r: r.user_id == self.user_id)
+        sale_orders = self.direct_stop_order_ids
+        return returns.filtered(
+            lambda r: (r.visit_id and r.visit_id.id == self.id)
+            or (r.sale_order_id and r.sale_order_id in sale_orders)
+            or (self.name and self.name in (r.note or ""))
+        )
+
+    @api.depends(
+        "visit_execution_mode",
+        "direct_stop_skip_sale",
+        "direct_stop_skip_return",
+        "direct_stop_credit_policy",
+        "direct_stop_order_ids.state",
+        "direct_stop_order_ids.amount_total",
+        "direct_stop_return_ids.state",
+        "direct_stop_return_ids.amount_total",
+        "payment_ids.state",
+        "payment_ids.amount",
+        "settlement_payment_ids.state",
+        "settlement_payment_ids.amount",
+        "settlement_payment_ids.promise_amount",
+    )
     def _compute_direct_stop_summary(self):
         for rec in self:
             orders = rec.direct_stop_order_ids.filtered(lambda o: o.state not in ("cancel",)) if rec.direct_stop_order_ids else rec.direct_stop_order_ids
-            active_returns = rec.direct_stop_return_ids.filtered(lambda r: r.state != "cancel") if rec.direct_stop_return_ids else rec.direct_stop_return_ids
+            active_returns = rec._get_direct_stop_active_returns() if rec.id else self.env["route.direct.return"]
+            previous_due_visits = rec._get_direct_stop_previous_due_visits() if rec.id else self.env["route.visit"]
+            settlement_payments = rec._get_direct_stop_settlement_payments() if rec.id else self.env["route.visit.payment"]
+
             rec.direct_stop_order_count = len(orders)
             rec.direct_stop_return_count = len(active_returns)
             rec.direct_stop_sales_total = sum(orders.filtered(lambda o: o.state in ("sale", "done")).mapped("amount_total"))
             rec.direct_stop_returns_total = sum(active_returns.mapped("amount_total"))
-            rec.direct_stop_credit_amount = max((rec.direct_stop_returns_total or 0.0) - (rec.direct_stop_sales_total or 0.0), 0.0)
+            rec.direct_stop_previous_due_amount = sum(previous_due_visits.mapped("remaining_due_amount")) if previous_due_visits else 0.0
+            rec.direct_stop_current_net_amount = (rec.direct_stop_sales_total or 0.0) - (rec.direct_stop_returns_total or 0.0)
+
+            gross_due = (rec.direct_stop_previous_due_amount or 0.0) + (rec.direct_stop_current_net_amount or 0.0)
+            rec.direct_stop_grand_due_amount = max(gross_due, 0.0)
+            rec.direct_stop_credit_amount = max(-gross_due, 0.0)
+
+            confirmed_payments = settlement_payments.filtered(lambda p: p.state == "confirmed") if settlement_payments else settlement_payments
+            draft_payments = settlement_payments.filtered(lambda p: p.state == "draft") if settlement_payments else settlement_payments
+            rec.direct_stop_settlement_paid_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+            rec.direct_stop_settlement_remaining_amount = max((rec.direct_stop_grand_due_amount or 0.0) - (rec.direct_stop_settlement_paid_amount or 0.0), 0.0)
 
             if rec.direct_stop_order_count:
                 rec.direct_stop_sale_status = "yes"
@@ -1230,10 +1313,6 @@ class RouteVisit(models.Model):
             else:
                 rec.direct_stop_return_status = "pending"
 
-            draft_payments = rec.payment_ids.filtered(lambda p: p.state == "draft") if rec.payment_ids else rec.payment_ids
-            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
-            due_after_returns = max((rec.direct_stop_sales_total or 0.0) - (rec.direct_stop_returns_total or 0.0), 0.0)
-            remaining_after_confirmed = max(due_after_returns - sum(confirmed_payments.mapped("amount")), 0.0)
             credit_ready = (rec.direct_stop_credit_amount or 0.0) <= 0.0 or bool(rec.direct_stop_credit_policy)
             sale_answer_complete = rec.direct_stop_sale_status != "pending"
             return_answer_complete = (not rec.route_enable_direct_return) or rec.direct_stop_return_status != "pending"
@@ -1243,12 +1322,11 @@ class RouteVisit(models.Model):
                     sale_answer_complete
                     and return_answer_complete
                     and not draft_payments
-                    and remaining_after_confirmed <= 0.0
+                    and (rec.direct_stop_settlement_remaining_amount or 0.0) <= 0.0
                     and credit_ready
                 )
             )
 
-    @api.depends("line_ids.sold_qty", "line_ids.unit_price", "payment_ids.amount", "payment_ids.state", "visit_execution_mode", "direct_stop_order_ids.state", "direct_stop_order_ids.amount_total", "direct_stop_return_ids.state", "direct_stop_return_ids.amount_total")
     def _compute_payment_totals(self):
         for rec in self:
             if rec.visit_execution_mode == "direct_sales":
