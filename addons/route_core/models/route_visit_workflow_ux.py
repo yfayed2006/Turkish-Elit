@@ -815,10 +815,10 @@ class RouteVisit(models.Model):
         if self._is_direct_sales_stop():
             credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
             if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending:
-                self._action_mark_collection_done()
+                self._action_mark_post_collection_stage()
                 return self._get_pda_form_action()
         elif self.remaining_due_amount <= 0 and not self.collection_skip_reason:
-            self._action_mark_collection_done()
+            self._action_mark_post_collection_stage()
             return self._get_pda_form_action()
 
         return {
@@ -839,6 +839,19 @@ class RouteVisit(models.Model):
             values["collection_datetime"] = fields.Datetime.now()
         self.write(values)
 
+    def _action_mark_post_collection_stage(self):
+        self.ensure_one()
+        if self._is_direct_sales_stop():
+            credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
+            next_state = "ready_to_close" if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending else "collection_done"
+            values = {"visit_process_state": next_state}
+        else:
+            next_state = "ready_to_close" if (self.remaining_due_amount or 0.0) <= 0.0 else "collection_done"
+            values = {"visit_process_state": next_state}
+        if hasattr(self, "collection_datetime"):
+            values["collection_datetime"] = fields.Datetime.now()
+        self.write(values)
+
     def action_ux_confirm_payments(self):
         self.ensure_one()
         if self._is_direct_sales_stop():
@@ -849,7 +862,7 @@ class RouteVisit(models.Model):
             raise UserError(_("There are no draft payments to confirm."))
 
         draft_payments.action_confirm()
-        self._action_mark_collection_done()
+        self._action_mark_post_collection_stage()
         return self._get_pda_form_action()
 
     def action_ux_skip_collection(self):
