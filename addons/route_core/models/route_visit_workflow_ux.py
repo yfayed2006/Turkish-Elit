@@ -1006,12 +1006,13 @@ class RouteVisit(models.Model):
         for order in self._get_direct_stop_receipt_sale_orders():
             for line in order.order_line.filtered(lambda l: not l.display_type):
                 barcode = getattr(line, "route_product_barcode", False) or line.product_id.barcode or line.product_id.default_code or ""
+                sale_uom = getattr(line, "product_uom_id", False) or getattr(line, "product_uom", False)
                 lines.append({
                     "order_ref": order.name or "",
                     "barcode": barcode,
                     "product_name": line.product_id.display_name or line.name or "",
                     "quantity": line.product_uom_qty or 0.0,
-                    "uom_name": line.product_uom.name if line.product_uom else "",
+                    "uom_name": sale_uom.name if sale_uom else "",
                     "unit_price": line.price_unit or 0.0,
                     "subtotal": line.price_subtotal or 0.0,
                 })
