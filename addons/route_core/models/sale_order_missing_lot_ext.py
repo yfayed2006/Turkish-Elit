@@ -5,6 +5,13 @@ from odoo.exceptions import UserError, ValidationError
 class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
+    route_product_barcode = fields.Char(
+        string="Barcode",
+        related="product_id.barcode",
+        store=False,
+        readonly=True,
+    )
+
     route_available_lot_ids = fields.Many2many(
         "stock.lot",
         string="Available Lots",
