@@ -1,3 +1,6 @@
+import re
+from urllib.parse import quote
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -953,4 +956,169 @@ class RouteVisit(models.Model):
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
+
+
+
+    def _get_direct_stop_receipt_sale_orders(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            return self.env["sale.order"]
+        return self._get_direct_stop_sale_orders().filtered(lambda o: o.state in ("sale", "done"))
+
+    def _get_direct_stop_receipt_returns(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            return self.env["route.direct.return"]
+        return self._get_direct_stop_returns().filtered(lambda r: r.state == "done")
+
+    def _get_direct_stop_receipt_previous_due_lines(self):
+        self.ensure_one()
+        return [
+            {
+                "visit_ref": visit.name or "",
+                "date": visit.date,
+                "amount": visit.remaining_due_amount or 0.0,
+            }
+            for visit in self._get_direct_stop_previous_due_visits()
+        ]
+
+    def _get_direct_stop_receipt_sale_lines(self):
+        self.ensure_one()
+        lines = []
+        for order in self._get_direct_stop_receipt_sale_orders():
+            for line in order.order_line.filtered(lambda l: not l.display_type):
+                barcode = getattr(line, "route_product_barcode", False) or line.product_id.barcode or line.product_id.default_code or ""
+                lines.append({
+                    "order_ref": order.name or "",
+                    "barcode": barcode,
+                    "product_name": line.product_id.display_name or line.name or "",
+                    "quantity": line.product_uom_qty or 0.0,
+                    "uom_name": line.product_uom.name if line.product_uom else "",
+                    "unit_price": line.price_unit or 0.0,
+                    "subtotal": line.price_subtotal or 0.0,
+                })
+        return lines
+
+    def _get_direct_stop_receipt_return_lines(self):
+        self.ensure_one()
+        lines = []
+        for direct_return in self._get_direct_stop_receipt_returns():
+            for line in direct_return.line_ids:
+                barcode = line.route_product_barcode or line.product_id.barcode or line.product_id.default_code or ""
+                lines.append({
+                    "return_ref": direct_return.name or "",
+                    "barcode": barcode,
+                    "product_name": line.product_id.display_name or "",
+                    "quantity": line.quantity or 0.0,
+                    "uom_name": line.uom_id.name if line.uom_id else "",
+                    "reason": dict(line._fields["return_reason"].selection).get(line.return_reason) if line.return_reason else "",
+                    "unit_price": line.estimated_unit_price or 0.0,
+                    "subtotal": line.estimated_amount or 0.0,
+                })
+        return lines
+
+    def _get_direct_stop_receipt_payments(self):
+        self.ensure_one()
+        return self._get_direct_stop_settlement_payments(states=["confirmed"])
+
+    def _get_direct_stop_receipt_summary(self):
+        self.ensure_one()
+        return {
+            "previous_due": self.direct_stop_previous_due_amount or 0.0,
+            "previous_due_since": self.direct_stop_previous_due_since_date,
+            "current_sale": self.direct_stop_sales_total or 0.0,
+            "current_return": self.direct_stop_returns_total or 0.0,
+            "net_current_stop": self.direct_stop_current_net_amount or 0.0,
+            "grand_total_due": self.direct_stop_grand_due_amount or 0.0,
+            "credit_amount": self.direct_stop_credit_amount or 0.0,
+            "settled_amount": self.direct_stop_settlement_paid_amount or 0.0,
+            "remaining_amount": self.direct_stop_settlement_remaining_amount or 0.0,
+        }
+
+    def action_print_direct_stop_settlement_receipt(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
+        return self.env.ref("route_core.action_report_route_visit_settlement_receipt").report_action(self)
+
+    def _route_normalize_whatsapp_phone(self, partner):
+        phone = ((partner.mobile or partner.phone or "") if partner else "").strip()
+        return re.sub(r"\D", "", phone)
+
+    def _build_direct_stop_whatsapp_message(self):
+        self.ensure_one()
+        summary = self._get_direct_stop_receipt_summary()
+        sales = self._get_direct_stop_receipt_sale_lines()
+        returns = self._get_direct_stop_receipt_return_lines()
+        payments = self._get_direct_stop_receipt_payments()
+        lines = [
+            _("Settlement Receipt"),
+            _("Visit: %s") % (self.name or "-"),
+            _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
+            _("Date: %s") % (self.date or "-"),
+            _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
+            _("Previous Due: %.2f") % summary["previous_due"],
+        ]
+        if summary["previous_due_since"]:
+            lines.append(_("Previous Due Since: %s") % summary["previous_due_since"])
+        lines += [
+            _("Current Sale: %.2f") % summary["current_sale"],
+            _("Current Return: %.2f") % summary["current_return"],
+            _("Net Current Stop: %.2f") % summary["net_current_stop"],
+            _("Settled: %.2f") % summary["settled_amount"],
+            _("Remaining: %.2f") % summary["remaining_amount"],
+        ]
+        if summary["credit_amount"]:
+            lines.append(_("Customer Credit: %.2f") % summary["credit_amount"])
+        if sales:
+            lines.append(_("Sale Lines:"))
+            for line in sales[:12]:
+                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+        if returns:
+            lines.append(_("Return Lines:"))
+            for line in returns[:12]:
+                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+        if payments:
+            lines.append(_("Payments:"))
+            for payment in payments[:8]:
+                pay_label = dict(payment._fields["payment_mode"].selection).get(payment.payment_mode) or payment.payment_mode
+                lines.append(_("- %s | %.2f | %s") % (payment.payment_date or "-", payment.amount or 0.0, pay_label))
+        return "\n".join(lines)
+
+    def _get_route_supervisor_partner(self):
+        group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
+        if not group:
+            return self.env["res.partner"]
+        users = self.env["res.users"].search([("groups_id", "in", group.id), ("active", "=", True)], order="id asc")
+        if self.company_id:
+            users = users.filtered(lambda u: not u.company_ids or self.company_id in u.company_ids)
+        return users[:1].partner_id if users else self.env["res.partner"]
+
+    def action_send_direct_stop_whatsapp_outlet(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            raise UserError(_("WhatsApp summary is available only for Direct Sales stops."))
+        partner = self.partner_id or self.outlet_id.partner_id
+        phone = self._route_normalize_whatsapp_phone(partner)
+        if not phone:
+            raise UserError(_("Outlet WhatsApp number is missing. Please set mobile or phone on the outlet contact."))
+        return {
+            "type": "ir.actions.act_url",
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message())),
+            "target": "new",
+        }
+
+    def action_send_direct_stop_whatsapp_supervisor(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            raise UserError(_("WhatsApp summary is available only for Direct Sales stops."))
+        partner = self._get_route_supervisor_partner()
+        phone = self._route_normalize_whatsapp_phone(partner)
+        if not phone:
+            raise UserError(_("Supervisor WhatsApp number is missing. Please set mobile or phone on a user in the Route Supervisor group."))
+        return {
+            "type": "ir.actions.act_url",
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message())),
+            "target": "new",
+        }
 
