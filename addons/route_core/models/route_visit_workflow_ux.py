@@ -1202,4 +1202,3 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message())),
             "target": "new",
         }
-
