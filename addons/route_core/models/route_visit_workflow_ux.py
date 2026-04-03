@@ -1099,6 +1099,32 @@ class RouteVisit(models.Model):
             ("next_stop", _("Carry to Next Stop")),
         ])
 
+    def _route_message_amount(self, amount):
+        self.ensure_one()
+        currency = (self.currency_id and (self.currency_id.name or self.currency_id.symbol)) or ""
+        value = "%.2f" % (amount or 0.0)
+        return ("%s %s" % (value, currency)).strip()
+
+    def _route_message_date(self, value):
+        if not value:
+            return "-"
+        if isinstance(value, str):
+            return value
+        try:
+            return fields.Date.to_string(value)
+        except Exception:
+            return str(value)
+
+    def _route_message_datetime(self, value):
+        if not value:
+            return "-"
+        if isinstance(value, str):
+            return value
+        try:
+            return fields.Datetime.to_string(value)
+        except Exception:
+            return str(value)
+
     def _build_direct_stop_whatsapp_message(self):
         self.ensure_one()
         summary = self._get_direct_stop_receipt_summary()
@@ -1106,57 +1132,73 @@ class RouteVisit(models.Model):
         returns = self._get_direct_stop_receipt_return_lines()
         payments = self._get_direct_stop_receipt_payments()
         credit_policy_map = self._get_direct_stop_credit_policy_labels()
+        payment_mode_map = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
 
         lines = [
-            _("Direct sales stop completed successfully"),
+            _("Direct sales stop completed successfully."),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
-            _("Date: %s") % (self.date or "-"),
-            _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
-            "",
-            _("Settlement Summary"),
-            _("Previous Due: %.2f") % summary["previous_due"],
+            _("Customer: %s") % (self.partner_id.display_name if self.partner_id else "-"),
+            _("Date: %s") % self._route_message_date(self.date),
         ]
+        if self.user_id:
+            lines.append(_("Salesperson: %s") % self.user_id.name)
+
+        lines += ["", _("Settlement Summary")]
+        if summary["previous_due"]:
+            lines.append(_("- Previous due: %s") % self._route_message_amount(summary["previous_due"]))
         if summary["previous_due_since"]:
-            lines.append(_("Previous Due Since: %s") % summary["previous_due_since"])
+            lines.append(_("- Previous due since: %s") % self._route_message_date(summary["previous_due_since"]))
         lines += [
-            _("Current Sale: %.2f") % summary["current_sale"],
-            _("Current Return: %.2f") % summary["current_return"],
-            _("Net Current Stop: %.2f") % summary["net_current_stop"],
-            _("Grand Total Due: %.2f") % summary["grand_total_due"],
-            _("Settled: %.2f") % summary["settled_amount"],
-            _("Remaining: %.2f") % summary["remaining_amount"],
+            _("- Sales total: %s") % self._route_message_amount(summary["current_sale"]),
+            _("- Returns total: %s") % self._route_message_amount(summary["current_return"]),
+            _("- Net current stop: %s") % self._route_message_amount(summary["net_current_stop"]),
+            _("- Grand total due: %s") % self._route_message_amount(summary["grand_total_due"]),
+            _("- Collected: %s") % self._route_message_amount(summary["settled_amount"]),
+            _("- Remaining: %s") % self._route_message_amount(summary["remaining_amount"]),
         ]
         if summary["credit_amount"]:
-            lines.append(_("Customer Credit: %.2f") % summary["credit_amount"])
+            lines.append(_("- Customer credit: %s") % self._route_message_amount(summary["credit_amount"]))
             if self.direct_stop_credit_policy:
                 policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
-                lines.append(_("Credit Handling: %s") % policy_label)
+                lines.append(_("- Credit handling: %s") % policy_label)
 
         if sales:
-            lines.append("")
-            lines.append(_("Sale Lines"))
-            for line in sales[:10]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+            lines += ["", _("Items")]
+            for line in sales[:8]:
+                lines.append(
+                    _("- %(product)s | Qty %(qty).2f | Unit %(unit)s | Amount %(amount)s") % {
+                        "product": line["product_name"],
+                        "qty": line["quantity"],
+                        "unit": self._route_message_amount(line["unit_price"]),
+                        "amount": self._route_message_amount(line["subtotal"]),
+                    }
+                )
 
         if returns:
-            lines.append("")
-            lines.append(_("Return Lines"))
-            for line in returns[:10]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+            lines += ["", _("Returns")]
+            for line in returns[:5]:
+                lines.append(
+                    _("- %(product)s | Qty %(qty).2f | Amount %(amount)s") % {
+                        "product": line["product_name"],
+                        "qty": line["quantity"],
+                        "amount": self._route_message_amount(line["subtotal"]),
+                    }
+                )
 
         if payments:
-            lines.append("")
-            lines.append(_("Payments"))
+            lines += ["", _("Payments")]
             for payment in payments[:8]:
-                pay_label = dict(payment._fields["payment_mode"].selection).get(payment.payment_mode) or payment.payment_mode
-                lines.append(_("- %s | %.2f | %s") % (payment.payment_date or "-", payment.amount or 0.0, pay_label))
+                pay_label = payment_mode_map.get(payment.payment_mode) or payment.payment_mode or "-"
+                lines.append(
+                    _("- %(date)s | %(mode)s | %(amount)s") % {
+                        "date": self._route_message_datetime(payment.payment_date),
+                        "mode": pay_label,
+                        "amount": self._route_message_amount(payment.amount),
+                    }
+                )
 
-        lines += [
-            "",
-            _("Thank you."),
-            _("This message was generated automatically by Route Core."),
-        ]
+        lines += ["", _("Thank you."), _("Generated automatically by Route Core.")]
         return "\n".join(lines)
 
     def _get_route_supervisor_partner(self):
