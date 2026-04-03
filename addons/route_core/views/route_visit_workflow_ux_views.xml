@@ -2,6 +2,7 @@
 <record id="view_route_visit_form_workflow_ux" model="ir.ui.view">
 <field name="name">route.visit.form.workflow.ux</field>
 <field name="model">route.visit</field>
+<field name="active" eval="True"/>
 <field name="priority">90</field>
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="arch" type="xml">
@@ -36,17 +37,17 @@
 <field name="ux_can_review_settlement" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
-<xpath expr="//field[@name='visit_mode']/ancestor::group[1]" position="inside">
+<xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
-<xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">False</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]" position="before">
-<group string="Direct Stop Summary" col="3" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
+<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group>
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
@@ -64,43 +65,43 @@
 </group>
 </group>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]/preceding-sibling::separator[1]" position="attributes">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]" position="attributes">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
-<xpath expr="//field[@name='debt_policy_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='debt_policy_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='slow_moving_line_count']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='slow_moving_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='visit_planning_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='collection_priority_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='collection_priority_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_aging_0_30_amount']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='oldest_days_on_shelf']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='recommended_visit_frequency']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='remaining_due_amount']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='pending_near_expiry_line_count']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_health_status']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='start_datetime']/ancestor::group[1]" position="after">
+<xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]" position="after">
 <group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
@@ -112,7 +113,7 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="before">
+<xpath expr="//page[field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group col="2">
 <group>
@@ -148,7 +149,7 @@
 </field>
 </page>
 </xpath>
-<xpath expr="//button[@name='action_visit_diagnostics']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 </field>
@@ -156,6 +157,7 @@
 <record id="view_route_visit_pda_form_workflow_ux" model="ir.ui.view">
 <field name="name">route.visit.pda.form.workflow.ux</field>
 <field name="model">route.visit</field>
+<field name="active" eval="True"/>
 <field name="priority">90</field>
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
@@ -190,17 +192,17 @@
 <field name="ux_can_review_settlement" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
-<xpath expr="//field[@name='visit_mode']/ancestor::group[1]" position="inside">
+<xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
-<xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">False</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]" position="before">
-<group string="Direct Stop Summary" col="3" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
+<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group>
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
@@ -218,43 +220,40 @@
 </group>
 </group>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]/preceding-sibling::separator[1]" position="attributes">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_decision_flags_html']/ancestor::div[1]" position="attributes">
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
-<xpath expr="//field[@name='debt_policy_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='debt_policy_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='slow_moving_line_count']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='slow_moving_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='visit_planning_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='collection_priority_reason']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_aging_0_30_amount']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='oldest_days_on_shelf']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='recommended_visit_frequency']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='remaining_due_amount']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='pending_near_expiry_line_count']/ancestor::group[2]" position="attributes">
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='outlet_health_status']/ancestor::group[2]" position="attributes">
-<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
-</xpath>
-<xpath expr="//field[@name='start_datetime']/ancestor::group[1]" position="after">
+<xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]" position="after">
 <group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
@@ -266,7 +265,7 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="before">
+<xpath expr="//page[field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group col="2">
 <group>
@@ -302,7 +301,7 @@
 </field>
 </page>
 </xpath>
-<xpath expr="//button[@name='action_visit_diagnostics']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 </field>
