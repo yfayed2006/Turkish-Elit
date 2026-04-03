@@ -38,10 +38,10 @@
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
-<xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
@@ -111,7 +111,7 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="before">
+<xpath expr="//page[field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales'">
 <group col="2">
 <group>
@@ -191,10 +191,10 @@
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
 <field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
-<xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
@@ -264,7 +264,7 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//field[@name='payment_ids']/ancestor::page[1]" position="before">
+<xpath expr="//page[field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales'">
 <group col="2">
 <group>
