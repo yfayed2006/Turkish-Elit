@@ -279,7 +279,12 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             rec.direct_stop_grand_due_amount = visit.direct_stop_grand_due_amount if is_direct and "direct_stop_grand_due_amount" in visit._fields else 0.0
             if is_direct and visit and hasattr(visit, "_get_direct_stop_settlement_payments"):
                 settlement_payments = visit._get_direct_stop_settlement_payments(states=["draft", "confirmed"])
-                saved_or_confirmed = sum(settlement_payments.mapped("amount")) if settlement_payments else 0.0
+                saved_or_confirmed = 0.0
+                if settlement_payments:
+                    for payment in settlement_payments:
+                        saved_or_confirmed += payment.amount or 0.0
+                        if (payment.promise_amount or 0.0) > 0.0:
+                            saved_or_confirmed += payment.promise_amount or 0.0
                 gross_due = visit.direct_stop_grand_due_amount if "direct_stop_grand_due_amount" in visit._fields else 0.0
                 rec.direct_stop_settlement_paid_amount = saved_or_confirmed
                 rec.direct_stop_settlement_remaining_amount = max((gross_due or 0.0) - (saved_or_confirmed or 0.0), 0.0)
