@@ -1340,11 +1340,11 @@ class RouteVisit(models.Model):
             )
 
     def _compute_payment_totals(self):
+        Payment = self.env["route.visit.payment"]
         for rec in self:
             if rec.visit_execution_mode == "direct_sales":
-                total_sales = rec.direct_stop_sales_total or 0.0
-                total_returns = rec.direct_stop_returns_total or 0.0
-                net_due = max(total_sales - total_returns, 0.0)
+                net_due = rec.direct_stop_grand_due_amount or 0.0
+                confirmed_payments = rec._get_direct_stop_settlement_payments(states=["confirmed"]) if rec.id else Payment
             else:
                 total_sales = 0.0
                 for line in rec.line_ids:
@@ -1352,8 +1352,8 @@ class RouteVisit(models.Model):
                     unit_price = getattr(line, "unit_price", 0.0) or 0.0
                     total_sales += sold_qty * unit_price
                 net_due = total_sales
+                confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
 
-            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
             total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
 
             rec.net_due_amount = net_due
@@ -1369,7 +1369,68 @@ class RouteVisit(models.Model):
         "payment_ids.payment_date",
     )
     def _compute_promise_to_pay_summary(self):
+        today = fields.Date.context_today(self)
+        Payment = self.env["route.visit.payment"]
         for rec in self:
+            if rec.visit_execution_mode == "direct_sales":
+                promise_payments = rec._get_direct_stop_settlement_payments(states=["draft", "confirmed"]) if rec.id else Payment
+                promise_payments = promise_payments.filtered(
+                    lambda p: p.state != "cancelled" and (p.promise_amount or 0.0) > 0.0
+                )
+
+                if (rec.direct_stop_settlement_remaining_amount or 0.0) <= 0.0:
+                    latest = False
+                    if promise_payments:
+                        latest = promise_payments.sorted(
+                            key=lambda p: (
+                                p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                                p.id or 0,
+                            ),
+                            reverse=True,
+                        )[0]
+                    rec.promise_to_pay_count = 0
+                    rec.next_promise_to_pay_date = False
+                    rec.latest_promise_to_pay_date = latest.promise_date if latest else False
+                    rec.latest_promise_to_pay_amount = 0.0
+                    rec.latest_promise_status = "closed" if latest else False
+                    continue
+
+                def _local_promise_status(payment):
+                    if payment.promise_date and payment.promise_date < today:
+                        return "overdue"
+                    if payment.promise_date and payment.promise_date == today:
+                        return "due_today"
+                    return "open"
+
+                open_promises = promise_payments.filtered(lambda p: _local_promise_status(p) in ("open", "due_today", "overdue"))
+
+                next_promise = False
+                if open_promises:
+                    next_promise = open_promises.sorted(
+                        key=lambda p: (
+                            p.promise_date or fields.Date.to_date("9999-12-31"),
+                            p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                            p.id or 0,
+                        )
+                    )[0]
+
+                latest = False
+                if promise_payments:
+                    latest = promise_payments.sorted(
+                        key=lambda p: (
+                            p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                            p.id or 0,
+                        ),
+                        reverse=True,
+                    )[0]
+
+                rec.promise_to_pay_count = len(open_promises)
+                rec.next_promise_to_pay_date = next_promise.promise_date if next_promise else False
+                rec.latest_promise_to_pay_date = latest.promise_date if latest else False
+                rec.latest_promise_to_pay_amount = latest.promise_amount if latest else 0.0
+                rec.latest_promise_status = _local_promise_status(latest) if latest else False
+                continue
+
             promise_payments = rec.payment_ids.filtered(
                 lambda p: p.state != "cancelled" and (p.promise_amount or 0.0) > 0.0
             )
