@@ -113,7 +113,7 @@ Generated on:
 <div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['previous_due'], currency_label)"/>
 <div style="font-size:10px; color:#6b7280; margin-top:4px;">
 Since:
-<span t-esc="summary['previous_due_since'] or '-'"/>
+<span t-esc="summary['previous_due_since'] or '0'"/>
 </div>
 </td>
 <td style="width:33.33%; border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
@@ -179,7 +179,7 @@ Policy:
 <span t-esc="line['visit_ref']"/>
 </td>
 <td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
-<span t-esc="line['date'] or '-'"/>
+<span t-esc="line['date'] or '0'"/>
 </td>
 <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['amount'], currency_label)"/>
 </tr>
