@@ -154,7 +154,19 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             "yes": _("Yes"),
             "no": _("No"),
         }
-        credit_map = dict(self._fields["direct_stop_credit_policy"].selection)
+
+        credit_map = {}
+        try:
+            credit_map = dict(
+                self.env["route.visit"].fields_get(["direct_stop_credit_policy"])["direct_stop_credit_policy"].get("selection", [])
+            )
+        except Exception:
+            credit_map = {
+                "customer_credit": _("Customer Credit"),
+                "cash_refund": _("Cash Refund"),
+                "next_stop": _("Carry to Next Stop"),
+            }
+
         for rec in self:
             rec.sale_status_label = sale_map.get(rec.direct_stop_sale_status, "")
             rec.return_status_label = return_map.get(rec.direct_stop_return_status, "")
@@ -211,3 +223,4 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
 
     def action_close(self):
         return {"type": "ir.actions.act_window_close"}
+
