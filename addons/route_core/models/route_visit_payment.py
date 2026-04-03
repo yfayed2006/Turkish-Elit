@@ -71,6 +71,25 @@ class RouteVisitPayment(models.Model):
         readonly=True,
     )
 
+    settlement_document_ref = fields.Char(
+        string="Settlement Visit",
+        compute="_compute_source_context",
+        store=True,
+        readonly=True,
+    )
+
+    payment_business_flow = fields.Selection(
+        [
+            ("consignment_visit", "Visit Collection"),
+            ("direct_stop", "Direct Stop Settlement"),
+            ("direct_sale_order", "Direct Sale Order"),
+        ],
+        string="Business Flow",
+        compute="_compute_source_context",
+        store=True,
+        readonly=True,
+    )
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -184,6 +203,9 @@ class RouteVisitPayment(models.Model):
         "sale_order_id.route_outlet_id",
         "sale_order_id.route_outlet_id.area_id",
         "sale_order_id.user_id",
+        "settlement_visit_id",
+        "settlement_visit_id.name",
+        "settlement_visit_id.visit_execution_mode",
     )
     def _compute_source_context(self):
         for rec in self:
@@ -191,22 +213,32 @@ class RouteVisitPayment(models.Model):
             area = False
             salesperson = False
             source_ref = False
+            settlement_ref = False
+            business_flow = "consignment_visit"
 
             if rec.source_type == "direct_sale" and rec.sale_order_id:
                 outlet = rec.sale_order_id.route_outlet_id
                 area = outlet.area_id if outlet else False
                 salesperson = rec.sale_order_id.user_id
                 source_ref = rec.sale_order_id.name
+                business_flow = "direct_sale_order"
             elif rec.visit_id:
                 outlet = rec.visit_id.outlet_id
                 area = rec.visit_id.area_id
                 salesperson = rec.visit_id.user_id
                 source_ref = rec.visit_id.display_name or rec.visit_id.name
 
+            if rec.settlement_visit_id:
+                settlement_ref = rec.settlement_visit_id.display_name or rec.settlement_visit_id.name
+                if getattr(rec.settlement_visit_id, "visit_execution_mode", False) == "direct_sales":
+                    business_flow = "direct_stop"
+
             rec.outlet_id = outlet
             rec.area_id = area
             rec.salesperson_id = salesperson
             rec.source_document_ref = source_ref
+            rec.settlement_document_ref = settlement_ref
+            rec.payment_business_flow = business_flow
 
     def _get_target_model(self):
         self.ensure_one()
@@ -255,6 +287,32 @@ class RouteVisitPayment(models.Model):
         if self.source_type == "direct_sale":
             return _("direct sale order")
         return _("visit")
+
+    def _is_direct_stop_settlement_payment(self):
+        self.ensure_one()
+        return bool(
+            self.settlement_visit_id
+            and getattr(self.settlement_visit_id, "visit_execution_mode", False) == "direct_sales"
+        )
+
+    def _get_snapshot_payment_mode(self):
+        self.ensure_one()
+        if self.collection_type in ("defer_date", "next_visit"):
+            return "deferred"
+        return self.payment_mode or "cash"
+
+    def _get_snapshot_promise_status(self):
+        self.ensure_one()
+        if self.state != "confirmed" or (self.promise_amount or 0.0) <= 0.0:
+            return False
+        if self._is_direct_stop_settlement_payment():
+            today = fields.Date.context_today(self)
+            if self.promise_date and self.promise_date < today:
+                return "overdue"
+            if self.promise_date and self.promise_date == today:
+                return "due_today"
+            return "open"
+        return self.promise_status
 
     @api.depends(
         "source_type",
@@ -385,9 +443,13 @@ class RouteVisitPayment(models.Model):
             if rec.collection_type == "full":
                 rec.amount = due
                 rec.due_date = False
+                if rec.payment_mode == "deferred":
+                    rec.payment_mode = "cash"
 
             elif rec.collection_type == "partial":
                 rec.due_date = False
+                if rec.payment_mode == "deferred":
+                    rec.payment_mode = "cash"
                 if due <= 0:
                     rec.amount = 0.0
                 elif rec.amount <= 0 or rec.amount >= due:
@@ -395,10 +457,12 @@ class RouteVisitPayment(models.Model):
 
             elif rec.collection_type == "defer_date":
                 rec.amount = 0.0
+                rec.payment_mode = "deferred"
 
             elif rec.collection_type == "next_visit":
                 rec.amount = 0.0
                 rec.due_date = False
+                rec.payment_mode = "deferred"
 
             rec._sync_promise_fields()
 
@@ -418,7 +482,7 @@ class RouteVisitPayment(models.Model):
                 if rec.sale_order_id.route_order_mode != "direct_sale":
                     raise ValidationError(_("Only Direct Sale orders can be used here."))
 
-    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id")
+    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id", "payment_mode")
     def _check_payment_rules(self):
         for rec in self:
             if not rec._get_target_model():
@@ -429,6 +493,12 @@ class RouteVisitPayment(models.Model):
 
             if rec.amount < 0:
                 raise ValidationError(_("Payment amount cannot be negative."))
+
+            if rec.collection_type in ("defer_date", "next_visit") and rec.payment_mode != "deferred":
+                raise ValidationError(_("Deferred scenarios must use payment mode Deferred."))
+
+            if rec.collection_type in ("full", "partial") and rec.payment_mode == "deferred":
+                raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
 
             if rec.collection_type == "full":
                 if due <= 0:
