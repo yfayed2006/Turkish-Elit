@@ -189,18 +189,26 @@
 </button>
 <h2 class="route_pda_detail_title">Sales Center</h2>
 </div>
-<group string="Today Sales Snapshot" col="3">
+<group string="Today Sales Snapshot" col="4">
 <group>
 <field name="direct_sale_order_today_count" readonly="1"/>
 <field name="direct_return_today_count" readonly="1"/>
+<field name="direct_sale_payment_count" readonly="1"/>
 </group>
 <group>
 <field name="direct_sale_today_amount" readonly="1"/>
 <field name="direct_return_today_amount" readonly="1"/>
+<field name="deferred_today_amount" readonly="1"/>
+</group>
+<group>
+<field name="cash_today_amount" readonly="1"/>
+<field name="bank_today_amount" readonly="1"/>
+<field name="pos_today_amount" readonly="1"/>
 </group>
 <group>
 <field name="direct_sales_outstanding_amount" readonly="1"/>
-<field name="cash_today_amount" readonly="1"/>
+<field name="open_promise_amount" readonly="1"/>
+<field name="deferred_payment_count" readonly="1"/>
 </group>
 </group>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
@@ -402,6 +410,12 @@
 </div>
 </div>
 <div class="route_pda_info_card">
+<div class="route_pda_info_label">Deferred / Promised Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="deferred_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
 <div class="route_pda_info_label">Open Promises</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
@@ -414,9 +428,27 @@
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sale Payments Today</div>
+<div class="route_pda_info_label">Direct Stop Settlements Today</div>
+<div class="route_pda_info_value">
+<field name="direct_stop_payment_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
+<div class="route_pda_info_label">Direct Sale Order Payments Today</div>
+<div class="route_pda_info_value">
+<field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
+<div class="route_pda_info_label">Direct Sales Settlements Today</div>
 <div class="route_pda_info_value">
 <field name="direct_sale_payment_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Deferred Entries Today</div>
+<div class="route_pda_info_value">
+<field name="deferred_payment_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_info_card_emphasis">
