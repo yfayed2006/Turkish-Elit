@@ -54,7 +54,7 @@
 <field name="promise_amount" invisible="collection_type == 'full'"/>
 </group>
 <group>
-<field name="reference" invisible="payment_mode == 'cash'"/>
+<field name="reference" invisible="payment_mode in ('cash', 'deferred')"/>
 <field name="bank_name" invisible="payment_mode != 'bank'"/>
 <field name="pos_terminal" invisible="payment_mode != 'pos'"/>
 </group>
