@@ -48,6 +48,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     direct_stop_order_count = fields.Integer(related="visit_id.direct_stop_order_count", readonly=True, store=False)
     direct_stop_return_count = fields.Integer(related="visit_id.direct_stop_return_count", readonly=True, store=False)
     direct_stop_previous_due_amount = fields.Monetary(related="visit_id.direct_stop_previous_due_amount", currency_field="currency_id", readonly=True, store=False)
+    direct_stop_previous_due_since_date = fields.Date(related="visit_id.direct_stop_previous_due_since_date", readonly=True, store=False)
+    direct_stop_previous_due_since_display = fields.Char(compute="_compute_previous_due_since_display", store=False)
     direct_stop_sales_total = fields.Monetary(related="visit_id.direct_stop_sales_total", currency_field="currency_id", readonly=True, store=False)
     direct_stop_returns_total = fields.Monetary(related="visit_id.direct_stop_returns_total", currency_field="currency_id", readonly=True, store=False)
     direct_stop_current_net_amount = fields.Monetary(related="visit_id.direct_stop_current_net_amount", currency_field="currency_id", readonly=True, store=False)
@@ -73,6 +75,11 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             visit = rec.visit_id
             rec.is_direct_sales_stop = bool(visit and hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop())
 
+    @api.depends("direct_stop_previous_due_since_date")
+    def _compute_previous_due_since_display(self):
+        for rec in self:
+            rec.direct_stop_previous_due_since_display = str(rec.direct_stop_previous_due_since_date) if rec.direct_stop_previous_due_since_date else "0"
+
     @api.depends("direct_stop_sale_status", "direct_stop_return_status", "direct_stop_credit_policy")
     def _compute_status_labels(self):
         sale_map = {"pending": _("Pending"), "yes": _("Sale Created"), "no": _("No Sale")}
@@ -96,7 +103,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         for rec in self:
             rec.show_credit_section = bool(rec.is_direct_sales_stop and (rec.direct_stop_credit_amount or 0.0) > 0.0)
             rec.show_return_section = bool(rec.is_direct_sales_stop and (rec.direct_stop_returns_total or 0.0) > 0.0)
-            rec.show_previous_due = bool(rec.is_direct_sales_stop and (rec.direct_stop_previous_due_amount or 0.0) > 0.0)
+            rec.show_previous_due = bool(rec.is_direct_sales_stop)
             rec.show_sale_orders = bool(rec.is_direct_sales_stop and (rec.direct_stop_order_count or 0) > 0)
             rec.show_direct_returns = bool(rec.is_direct_sales_stop and (rec.direct_stop_return_count or 0) > 0)
 
@@ -109,6 +116,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         "direct_stop_credit_amount",
         "direct_stop_sales_total",
         "direct_stop_returns_total",
+        "direct_stop_previous_due_amount",
+        "direct_stop_previous_due_since_display",
     )
     def _compute_finish_message(self):
         for rec in self:
@@ -128,6 +137,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 _("Outlet: %s") % (rec.outlet_id.display_name if rec.outlet_id else "-"),
                 _("Date: %s") % (rec.visit_date or "-"),
             ]
+            parts.append(_("Previous due: %s") % rec._format_currency_amount(rec.direct_stop_previous_due_amount))
+            parts.append(_("Previous due since: %s") % (rec.direct_stop_previous_due_since_display or "0"))
             if (rec.direct_stop_sales_total or 0.0) > 0.0:
                 parts.append(_("Sales total: %s") % rec._format_currency_amount(rec.direct_stop_sales_total))
             if (rec.direct_stop_returns_total or 0.0) > 0.0:
