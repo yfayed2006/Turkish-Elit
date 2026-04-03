@@ -45,7 +45,7 @@
 <attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
-<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
+<group string="Direct Stop Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
 <group>
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
@@ -198,7 +198,7 @@
 <attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
-<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
+<group string="Direct Stop Summary" col="3" invisible="visit_execution_mode != 'direct_sales'">
 <group>
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
