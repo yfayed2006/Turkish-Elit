@@ -10,6 +10,8 @@
 <field name="show_credit_section" invisible="1"/>
 <field name="show_return_section" invisible="1"/>
 <field name="show_previous_due" invisible="1"/>
+<field name="show_sale_orders" invisible="1"/>
+<field name="show_direct_returns" invisible="1"/>
 <field name="finish_message" readonly="1" nolabel="1" widget="html"/>
 <group string="Visit Overview" col="2">
 <group>
@@ -30,8 +32,8 @@
 <field name="credit_policy_label" string="Credit Handling" readonly="1" invisible="not show_credit_section"/>
 </group>
 <group>
-<field name="direct_stop_order_count" string="Direct Sale Orders" readonly="1"/>
-<field name="direct_stop_return_count" string="Direct Returns" readonly="1"/>
+<field name="direct_stop_order_count" string="Direct Sale Orders" readonly="1" invisible="not show_sale_orders"/>
+<field name="direct_stop_return_count" string="Direct Returns" readonly="1" invisible="not show_direct_returns"/>
 <field name="direct_stop_credit_amount" string="Customer Credit" readonly="1" invisible="not show_credit_section"/>
 </group>
 </group>
@@ -66,5 +68,6 @@
 <field name="res_model">route.visit.finish.summary.wizard</field>
 <field name="view_mode">form</field>
 <field name="target">new</field>
+<field name="view_id" ref="view_route_visit_finish_summary_wizard_form"/>
 </record>
 </odoo>
