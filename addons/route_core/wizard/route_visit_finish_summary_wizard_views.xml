@@ -22,7 +22,8 @@
 </group>
 </group>
 <group string="Settlement Summary" col="4" invisible="not is_direct_sales_stop">
-<field name="direct_stop_previous_due_amount" readonly="1" invisible="not direct_stop_previous_due_amount"/>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_display" string="Previous Due Since" readonly="1"/>
 <field name="direct_stop_sales_total" readonly="1"/>
 <field name="direct_stop_returns_total" readonly="1" invisible="not direct_stop_returns_total"/>
 <field name="direct_stop_current_net_amount" readonly="1"/>
