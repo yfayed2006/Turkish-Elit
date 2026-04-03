@@ -5,6 +5,18 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     _name = "route.visit.finish.summary.wizard"
     _description = "Route Visit Finish Summary Wizard"
 
+    def _get_credit_policy_selection_map(self):
+        selection = []
+        try:
+            selection = self.env["route.visit"].fields_get(["direct_stop_credit_policy"])["direct_stop_credit_policy"].get("selection", [])
+        except Exception:
+            selection = []
+        return dict(selection or [
+            ("customer_credit", _("Customer Credit")),
+            ("cash_refund", _("Cash Refund")),
+            ("next_stop", _("Carry to Next Stop")),
+        ])
+
     visit_id = fields.Many2one(
         "route.visit",
         string="Visit",
@@ -155,17 +167,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             "no": _("No"),
         }
 
-        credit_map = {}
-        try:
-            credit_map = dict(
-                self.env["route.visit"].fields_get(["direct_stop_credit_policy"])["direct_stop_credit_policy"].get("selection", [])
-            )
-        except Exception:
-            credit_map = {
-                "customer_credit": _("Customer Credit"),
-                "cash_refund": _("Cash Refund"),
-                "next_stop": _("Carry to Next Stop"),
-            }
+        credit_map = self._get_credit_policy_selection_map()
 
         for rec in self:
             rec.sale_status_label = sale_map.get(rec.direct_stop_sale_status, "")
@@ -194,7 +196,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 extra = _("The stop has been closed. Please review the saved settlement records if needed.")
 
             rec.finish_message = _(
-                '<div class="alert alert-success mb-0"><strong>Direct sales stop completed.</strong><br/>Outlet: %(outlet)s<br/>Date: %(date)s<br/>%(extra)s</div>'
+                '<div class="alert alert-success mb-0"><strong>Direct sales stop completed successfully.</strong><br/>Outlet: %(outlet)s<br/>Date: %(date)s<br/>%(extra)s</div>'
             ) % {
                 "outlet": rec.outlet_id.display_name if rec.outlet_id else "-",
                 "date": rec.visit_date or "-",
@@ -223,4 +225,3 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
 
     def action_close(self):
         return {"type": "ir.actions.act_window_close"}
-
