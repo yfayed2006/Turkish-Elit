@@ -220,7 +220,9 @@ class RouteVisitPayment(models.Model):
             return self.sale_order_id.amount_total or 0.0
 
         if self.visit_id and getattr(self.visit_id, "visit_execution_mode", False) == "direct_sales":
-            return self.visit_id.net_due_amount or 0.0
+            confirmed_payments = self.visit_id.payment_ids.filtered(lambda p: p.state == "confirmed") if self.visit_id.payment_ids else self.visit_id.payment_ids
+            confirmed_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+            return (self.visit_id.remaining_due_amount or 0.0) + confirmed_amount
 
         total_sales = 0.0
         for line in self.visit_id.line_ids:
