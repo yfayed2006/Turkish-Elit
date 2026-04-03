@@ -9,3 +9,5 @@ from . import route_loading_source_wizard
 from . import route_vehicle_closing_scan_wizard
 from . import route_vehicle_closing_pending_visit_wizard
 from . import route_plan_pending_visit_review_wizard
+
+from . import route_visit_finish_summary_wizard
