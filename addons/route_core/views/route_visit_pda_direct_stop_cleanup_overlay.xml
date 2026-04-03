@@ -3,6 +3,7 @@
 <field name="name">route.visit.pda.form.direct.stop.cleanup.overlay</field>
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="active" eval="True"/>
 <field name="priority">999</field>
 <field name="arch" type="xml">
 <xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
