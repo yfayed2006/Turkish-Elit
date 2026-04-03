@@ -214,39 +214,15 @@ class RouteVisitPayment(models.Model):
             return self.sale_order_id
         return self.visit_id
 
-    def _is_target_direct_sales_visit(self):
-        self.ensure_one()
-        visit = self.visit_id
-        if not visit:
-            return False
-        if hasattr(visit, "_is_direct_sales_stop"):
-            try:
-                return bool(visit._is_direct_sales_stop())
-            except Exception:
-                pass
-        if getattr(visit, "visit_execution_mode", False) == "direct_sales":
-            return True
-        if getattr(visit, "outlet_id", False) and getattr(visit.outlet_id, "outlet_operation_mode", False) == "direct_sale":
-            return True
-        return bool(
-            getattr(visit, "direct_stop_order_ids", False)
-            or getattr(visit, "direct_stop_return_ids", False)
-            or getattr(visit, "direct_stop_skip_sale", False)
-            or getattr(visit, "direct_stop_skip_return", False)
-        )
-
     def _get_target_total_amount(self):
         self.ensure_one()
         if self.source_type == "direct_sale":
             return self.sale_order_id.amount_total or 0.0
 
-        if self._is_target_direct_sales_visit():
-            direct_total = 0.0
-            if hasattr(self.visit_id, "direct_stop_current_net_amount"):
-                direct_total = self.visit_id.direct_stop_current_net_amount or 0.0
-            if not direct_total and hasattr(self.visit_id, "net_due_amount"):
-                direct_total = self.visit_id.net_due_amount or 0.0
-            return max(direct_total, 0.0)
+        if self.visit_id and getattr(self.visit_id, "visit_execution_mode", False) == "direct_sales":
+            confirmed_payments = self.visit_id.payment_ids.filtered(lambda p: p.state == "confirmed") if self.visit_id.payment_ids else self.visit_id.payment_ids
+            confirmed_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+            return (self.visit_id.remaining_due_amount or 0.0) + confirmed_amount
 
         total_sales = 0.0
         for line in self.visit_id.line_ids:
