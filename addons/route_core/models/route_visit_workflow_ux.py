@@ -973,7 +973,7 @@ class RouteVisit(models.Model):
 
     def _get_direct_stop_finish_summary_action(self):
         self.ensure_one()
-        view = self.env.ref("route_core.view_route_visit_finish_summary_wizard_form_v2", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_route_visit_finish_summary_wizard_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
             "name": _("Visit Finished"),
@@ -982,7 +982,6 @@ class RouteVisit(models.Model):
             "target": "new",
             "context": {
                 "default_visit_id": self.id,
-                "form_view_ref": "route_core.view_route_visit_finish_summary_wizard_form_v2",
             },
         }
         if view:
