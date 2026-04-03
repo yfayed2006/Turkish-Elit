@@ -1171,6 +1171,7 @@ class RouteVisit(models.Model):
         summary = self._get_direct_stop_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
         credit_policy_map = self._get_direct_stop_credit_policy_labels()
+        previous_due_since = summary.get("previous_due_since") or "0"
 
         lines = [
             _("Direct stop settlement receipt"),
@@ -1179,6 +1180,11 @@ class RouteVisit(models.Model):
             _("Date: %s") % (self.date or "-"),
             _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
             "",
+            _("Previous Due: %.2f %s") % (summary["previous_due"], currency_code),
+            _("Previous Due Since: %s") % previous_due_since,
+            _("Current Sale: %.2f %s") % (summary["current_sale"], currency_code),
+            _("Current Return: %.2f %s") % (summary["current_return"], currency_code),
+            _("Net Current Stop: %.2f %s") % (summary["net_current_stop"], currency_code),
             _("Grand Total Due: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Settled: %.2f %s") % (summary["settled_amount"], currency_code),
             _("Remaining: %.2f %s") % (summary["remaining_amount"], currency_code),
@@ -1188,16 +1194,15 @@ class RouteVisit(models.Model):
             if self.direct_stop_credit_policy:
                 policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
                 lines.append(_("Credit Handling: %s") % policy_label)
-        if pdf_url:
-            lines += [
-                "",
-                _("Receipt PDF:"),
-                pdf_url,
-            ]
         lines += [
             "",
-            _("Please open the PDF link to view or download the receipt."),
-            _("This message was generated automatically by Route Core."),
+            _("Official PDF receipt:"),
+        ]
+        if pdf_url:
+            lines.append(pdf_url)
+        lines += [
+            "",
+            _("Generated automatically by Route Core."),
         ]
         return "\n".join(lines)
 
@@ -1246,3 +1251,4 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message(pdf_url=pdf_url))),
             "target": "new",
         }
+
