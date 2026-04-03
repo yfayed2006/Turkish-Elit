@@ -1083,6 +1083,58 @@ class RouteVisit(models.Model):
             raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
         return self.env.ref("route_core.action_report_route_visit_settlement_receipt").report_action(self)
 
+    def _get_direct_stop_receipt_filename(self):
+        self.ensure_one()
+        safe_name = re.sub(r"[^A-Za-z0-9_-]+", "-", self.name or "visit").strip("-") or "visit"
+        return "Direct-Stop-Settlement-Receipt-%s.pdf" % safe_name
+
+    def _generate_direct_stop_receipt_attachment(self):
+        self.ensure_one()
+        if not self._is_direct_sales_stop():
+            raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
+
+        report = self.env.ref("route_core.action_report_route_visit_settlement_receipt")
+        pdf_content, _content_type = report._render_qweb_pdf(self.ids)
+        filename = self._get_direct_stop_receipt_filename()
+        Attachment = self.env["ir.attachment"].sudo()
+        attachment = Attachment.search([
+            ("res_model", "=", self._name),
+            ("res_id", "=", self.id),
+            ("name", "=", filename),
+            ("mimetype", "=", "application/pdf"),
+            ("type", "=", "binary"),
+        ], limit=1)
+
+        values = {
+            "name": filename,
+            "type": "binary",
+            "raw": pdf_content,
+            "mimetype": "application/pdf",
+            "res_model": self._name,
+            "res_id": self.id,
+            "public": True,
+            "company_id": self.company_id.id if self.company_id else False,
+        }
+        if attachment:
+            attachment.write(values)
+        else:
+            attachment = Attachment.create(values)
+
+        token_list = attachment.generate_access_token() or []
+        token = token_list[0] if token_list else attachment.access_token or ""
+        return attachment, token
+
+    def _get_direct_stop_receipt_public_url(self):
+        self.ensure_one()
+        base_url = (self.env["ir.config_parameter"].sudo().get_param("web.base.url") or "").rstrip("/")
+        if not base_url:
+            raise UserError(_("Base URL is not configured. Please configure web.base.url before sending the receipt by WhatsApp."))
+        attachment, token = self._generate_direct_stop_receipt_attachment()
+        url = "%s/web/content/%s?download=true" % (base_url, attachment.id)
+        if token:
+            url = "%s&access_token=%s" % (url, token)
+        return url
+
     def _route_normalize_whatsapp_phone(self, partner):
         if not partner:
             return ""
@@ -1106,62 +1158,37 @@ class RouteVisit(models.Model):
             ("next_stop", _("Carry to Next Stop")),
         ])
 
-    def _build_direct_stop_whatsapp_message(self):
+    def _build_direct_stop_whatsapp_message(self, pdf_url=False):
         self.ensure_one()
         summary = self._get_direct_stop_receipt_summary()
-        sales = self._get_direct_stop_receipt_sale_lines()
-        returns = self._get_direct_stop_receipt_return_lines()
-        payments = self._get_direct_stop_receipt_payments()
+        currency_code = self.currency_id.name if self.currency_id else ""
         credit_policy_map = self._get_direct_stop_credit_policy_labels()
 
         lines = [
-            _("Direct sales stop completed successfully"),
+            _("Direct stop settlement receipt"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Date: %s") % (self.date or "-"),
             _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
             "",
-            _("Settlement Summary"),
-            _("Previous Due: %.2f") % summary["previous_due"],
-        ]
-        if summary["previous_due_since"]:
-            lines.append(_("Previous Due Since: %s") % summary["previous_due_since"])
-        lines += [
-            _("Current Sale: %.2f") % summary["current_sale"],
-            _("Current Return: %.2f") % summary["current_return"],
-            _("Net Current Stop: %.2f") % summary["net_current_stop"],
-            _("Grand Total Due: %.2f") % summary["grand_total_due"],
-            _("Settled: %.2f") % summary["settled_amount"],
-            _("Remaining: %.2f") % summary["remaining_amount"],
+            _("Grand Total Due: %.2f %s") % (summary["grand_total_due"], currency_code),
+            _("Settled: %.2f %s") % (summary["settled_amount"], currency_code),
+            _("Remaining: %.2f %s") % (summary["remaining_amount"], currency_code),
         ]
         if summary["credit_amount"]:
-            lines.append(_("Customer Credit: %.2f") % summary["credit_amount"])
+            lines.append(_("Customer Credit: %.2f %s") % (summary["credit_amount"], currency_code))
             if self.direct_stop_credit_policy:
                 policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
                 lines.append(_("Credit Handling: %s") % policy_label)
-
-        if sales:
-            lines.append("")
-            lines.append(_("Sale Lines"))
-            for line in sales[:10]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
-
-        if returns:
-            lines.append("")
-            lines.append(_("Return Lines"))
-            for line in returns[:10]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
-
-        if payments:
-            lines.append("")
-            lines.append(_("Payments"))
-            for payment in payments[:8]:
-                pay_label = dict(payment._fields["payment_mode"].selection).get(payment.payment_mode) or payment.payment_mode
-                lines.append(_("- %s | %.2f | %s") % (payment.payment_date or "-", payment.amount or 0.0, pay_label))
-
+        if pdf_url:
+            lines += [
+                "",
+                _("Receipt PDF:"),
+                pdf_url,
+            ]
         lines += [
             "",
-            _("Thank you."),
+            _("Please open the PDF link to view or download the receipt."),
             _("This message was generated automatically by Route Core."),
         ]
         return "\n".join(lines)
@@ -1185,27 +1212,29 @@ class RouteVisit(models.Model):
     def action_send_direct_stop_whatsapp_outlet(self):
         self.ensure_one()
         if not self._is_direct_sales_stop():
-            raise UserError(_("WhatsApp summary is available only for Direct Sales stops."))
+            raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
         partner = self.partner_id or self.outlet_id.partner_id
         phone = self._route_normalize_whatsapp_phone(partner)
         if not phone:
             raise UserError(_("Outlet WhatsApp number is missing. Please set mobile or phone on the outlet contact."))
+        pdf_url = self._get_direct_stop_receipt_public_url()
         return {
             "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message())),
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message(pdf_url=pdf_url))),
             "target": "new",
         }
 
     def action_send_direct_stop_whatsapp_supervisor(self):
         self.ensure_one()
         if not self._is_direct_sales_stop():
-            raise UserError(_("WhatsApp summary is available only for Direct Sales stops."))
+            raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
         partner = self._get_route_supervisor_partner()
         phone = self._route_normalize_whatsapp_phone(partner)
         if not phone:
             raise UserError(_("Supervisor WhatsApp number is missing. Please set mobile or phone on a user in the Route Supervisor group."))
+        pdf_url = self._get_direct_stop_receipt_public_url()
         return {
             "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message())),
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message(pdf_url=pdf_url))),
             "target": "new",
         }
