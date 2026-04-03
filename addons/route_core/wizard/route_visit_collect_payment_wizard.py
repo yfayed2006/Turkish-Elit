@@ -277,36 +277,15 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             rec.direct_stop_returns_total = visit.direct_stop_returns_total if is_direct and "direct_stop_returns_total" in visit._fields else 0.0
             rec.direct_stop_current_net_amount = visit.direct_stop_current_net_amount if is_direct and "direct_stop_current_net_amount" in visit._fields else 0.0
             rec.direct_stop_grand_due_amount = visit.direct_stop_grand_due_amount if is_direct and "direct_stop_grand_due_amount" in visit._fields else 0.0
-            if is_direct and visit and hasattr(visit, "_get_direct_stop_settlement_payments"):
-                settlement_payments = visit._get_direct_stop_settlement_payments(states=["draft", "confirmed"])
-                saved_or_confirmed = sum(settlement_payments.mapped("amount")) if settlement_payments else 0.0
-                gross_due = visit.direct_stop_grand_due_amount if "direct_stop_grand_due_amount" in visit._fields else 0.0
-                rec.direct_stop_settlement_paid_amount = saved_or_confirmed
-                rec.direct_stop_settlement_remaining_amount = max((gross_due or 0.0) - (saved_or_confirmed or 0.0), 0.0)
+            if is_direct:
+                saved_payments = visit.settlement_payment_ids.filtered(lambda p: p.state in ("draft", "confirmed"))
+                saved_amount = sum(saved_payments.mapped("amount")) if saved_payments else 0.0
+                rec.direct_stop_settlement_paid_amount = saved_amount
+                rec.direct_stop_settlement_remaining_amount = max((rec.direct_stop_grand_due_amount or 0.0) - saved_amount, 0.0)
             else:
-                rec.direct_stop_settlement_paid_amount = visit.direct_stop_settlement_paid_amount if is_direct and "direct_stop_settlement_paid_amount" in visit._fields else 0.0
-                rec.direct_stop_settlement_remaining_amount = visit.direct_stop_settlement_remaining_amount if is_direct and "direct_stop_settlement_remaining_amount" in visit._fields else 0.0
+                rec.direct_stop_settlement_paid_amount = 0.0
+                rec.direct_stop_settlement_remaining_amount = 0.0
             rec.direct_stop_credit_amount = visit.direct_stop_credit_amount if is_direct and "direct_stop_credit_amount" in visit._fields else 0.0
-
-    def _get_direct_stop_existing_draft_payments(self):
-        self.ensure_one()
-        visit = self.visit_id
-        if not visit or not hasattr(visit, "_get_direct_stop_settlement_payments"):
-            return self.env["route.visit.payment"]
-        return visit._get_direct_stop_settlement_payments(states=["draft"])
-
-    def _get_direct_stop_latest_draft_payment(self):
-        self.ensure_one()
-        drafts = self._get_direct_stop_existing_draft_payments()
-        if not drafts:
-            return self.env["route.visit.payment"]
-        return drafts.sorted(key=lambda p: (p.payment_date or fields.Datetime.now(), p.id or 0))[-1]
-
-    def _clear_direct_stop_existing_drafts(self):
-        self.ensure_one()
-        drafts = self._get_direct_stop_existing_draft_payments()
-        if drafts:
-            drafts.unlink()
 
     @api.model
     def default_get(self, fields_list):
@@ -318,41 +297,65 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             vals.setdefault("company_id", self.env.company.id)
             vals.setdefault("direct_stop_credit_policy", getattr(visit, "direct_stop_credit_policy", False))
             vals.setdefault("direct_stop_credit_note", getattr(visit, "direct_stop_credit_note", False))
-
-            is_direct = hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop()
-            existing_drafts = visit._get_direct_stop_settlement_payments(states=["draft"]) if is_direct and hasattr(visit, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
-            latest_draft = existing_drafts.sorted(key=lambda p: (p.payment_date or fields.Datetime.now(), p.id or 0))[-1] if existing_drafts else self.env["route.visit.payment"]
-            special_draft = existing_drafts.filtered(lambda p: p.collection_type in ("partial", "defer_date", "next_visit"))
-            draft_template = special_draft.sorted(key=lambda p: (p.payment_date or fields.Datetime.now(), p.id or 0))[-1] if special_draft else latest_draft
-
-            if latest_draft and latest_draft.id:
-                vals.setdefault("payment_date", latest_draft.payment_date or fields.Datetime.now())
-                vals.setdefault("payment_mode", latest_draft.payment_mode or "cash")
-                vals.setdefault("reference", latest_draft.reference or False)
-                vals.setdefault("bank_name", latest_draft.bank_name or False)
-                vals.setdefault("pos_terminal", latest_draft.pos_terminal or False)
-                vals.setdefault("note", draft_template.note or latest_draft.note or False)
-                vals.setdefault("collection_type", draft_template.collection_type or "full")
-                vals.setdefault("promise_date", draft_template.promise_date or False)
-                vals.setdefault("promise_amount", draft_template.promise_amount or 0.0)
-                vals.setdefault("due_date", draft_template.due_date or False)
-                vals.setdefault("amount", sum(existing_drafts.mapped("amount")) if existing_drafts else 0.0)
-            else:
-                if "payment_date" in fields_list:
-                    vals.setdefault("payment_date", fields.Datetime.now())
-                if "collection_type" in fields_list:
-                    vals.setdefault("collection_type", "full")
-                if "amount" in fields_list:
-                    if is_direct:
-                        vals["amount"] = max(getattr(visit, "direct_stop_settlement_remaining_amount", 0.0) or 0.0, 0.0)
-                    else:
-                        vals["amount"] = max(visit.remaining_due_amount or 0.0, 0.0)
+            if "payment_date" in fields_list:
+                vals.setdefault("payment_date", fields.Datetime.now())
+            if "collection_type" in fields_list:
+                vals.setdefault("collection_type", "full")
+            if hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop():
+                draft_payments = visit.settlement_payment_ids.filtered(lambda p: p.state == "draft")
+                if draft_payments:
+                    representative = draft_payments.filtered(lambda p: p.collection_type != "full")[:1] or draft_payments[:1]
+                    vals.update({
+                        "payment_mode": representative.payment_mode or "cash",
+                        "payment_date": representative.payment_date or fields.Datetime.now(),
+                        "collection_type": representative.collection_type or "full",
+                        "amount": sum(draft_payments.mapped("amount")),
+                        "promise_date": representative.promise_date or False,
+                        "promise_amount": representative.promise_amount or 0.0,
+                        "due_date": representative.due_date or False,
+                        "reference": representative.reference or False,
+                        "bank_name": representative.bank_name or False,
+                        "pos_terminal": representative.pos_terminal or False,
+                        "note": representative.note or False,
+                    })
+                elif "amount" in fields_list:
+                    confirmed_amount = sum(visit.settlement_payment_ids.filtered(lambda p: p.state == "confirmed").mapped("amount"))
+                    grand_due = getattr(visit, "direct_stop_grand_due_amount", 0.0) or 0.0
+                    vals["amount"] = max(grand_due - confirmed_amount, 0.0)
+            elif "amount" in fields_list:
+                vals["amount"] = max(visit.remaining_due_amount or 0.0, 0.0)
         return vals
+
+    def _is_direct_stop_context(self):
+        self.ensure_one()
+        return bool(
+            self.visit_id
+            and hasattr(self.visit_id, "_is_direct_sales_stop")
+            and self.visit_id._is_direct_sales_stop()
+        )
+
+    def _get_direct_stop_confirmed_amount(self):
+        self.ensure_one()
+        if not self.visit_id:
+            return 0.0
+        payments = self.visit_id.settlement_payment_ids.filtered(lambda p: p.state == "confirmed")
+        return sum(payments.mapped("amount")) if payments else 0.0
+
+    def _get_direct_stop_saved_amount(self):
+        self.ensure_one()
+        if not self.visit_id:
+            return 0.0
+        payments = self.visit_id.settlement_payment_ids.filtered(lambda p: p.state in ("draft", "confirmed"))
+        return sum(payments.mapped("amount")) if payments else 0.0
 
     def _get_effective_due_amount(self):
         self.ensure_one()
-        if self.is_direct_sales_stop:
-            return self.direct_stop_settlement_remaining_amount or 0.0
+        if self._is_direct_stop_context() or self.is_direct_sales_stop:
+            visit = self.visit_id
+            grand_due = getattr(visit, "direct_stop_grand_due_amount", 0.0) or 0.0
+            confirmed_amount = self._get_direct_stop_confirmed_amount()
+            live_due = max(grand_due - confirmed_amount, 0.0)
+            return live_due
         return self.visit_remaining_due or 0.0
 
     def _sync_promise_fields(self):
@@ -403,8 +406,9 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
     def _validate_before_create(self):
         self.ensure_one()
+        is_direct = self._is_direct_stop_context() or self.is_direct_sales_stop
         due = self._get_effective_due_amount()
-        credit_only = self.is_direct_sales_stop and due <= 0.0 and (self.direct_stop_credit_amount or 0.0) > 0.0
+        credit_only = is_direct and due <= 0.0 and (self.direct_stop_credit_amount or 0.0) > 0.0
 
         if self.amount < 0:
             raise ValidationError(_("Payment amount cannot be negative."))
@@ -421,7 +425,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 raise ValidationError(_("Full payment amount must be greater than zero."))
             if self.amount > due:
                 raise ValidationError(_("Full payment cannot be more than the remaining due amount."))
-            if self.is_direct_sales_stop and abs((self.amount or 0.0) - due) > 0.00001:
+            if is_direct and abs((self.amount or 0.0) - due) > 0.00001:
                 raise ValidationError(_("Use Partial Payment when settling less than the full direct-sales balance."))
 
         elif self.collection_type == "partial":
@@ -466,8 +470,9 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
     def _prepare_payment_vals(self, target_visit, amount, collection_type, promise_amount=0.0, promise_date=False, due_date=False):
         return {
+            "source_type": "visit",
             "visit_id": target_visit.id,
-            "settlement_visit_id": self.visit_id.id if self.is_direct_sales_stop else False,
+            "settlement_visit_id": self.visit_id.id if (self._is_direct_stop_context() or self.is_direct_sales_stop) else False,
             "payment_date": self.payment_date,
             "payment_mode": self.payment_mode,
             "collection_type": collection_type,
@@ -512,9 +517,17 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
         return created
 
+    def _clear_direct_stop_draft_payments(self):
+        self.ensure_one()
+        if not self.visit_id:
+            return
+        draft_payments = self.visit_id.settlement_payment_ids.filtered(lambda p: p.state == "draft")
+        if draft_payments:
+            draft_payments.unlink()
+
     def action_close_settlement(self):
         self.ensure_one()
-        if self.is_direct_sales_stop:
+        if self._is_direct_stop_context() or self.is_direct_sales_stop:
             self.visit_id.write({
                 "direct_stop_credit_policy": self.direct_stop_credit_policy or False,
                 "direct_stop_credit_note": self.direct_stop_credit_note or False,
@@ -530,21 +543,16 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         self.ensure_one()
         self._validate_before_create()
 
-        if self.is_direct_sales_stop:
+        is_direct = self._is_direct_stop_context() or self.is_direct_sales_stop
+        if is_direct:
             self.visit_id.write({
                 "direct_stop_credit_policy": self.direct_stop_credit_policy or False,
                 "direct_stop_credit_note": self.direct_stop_credit_note or False,
             })
 
-            due = self.direct_stop_settlement_remaining_amount or 0.0
+            due = self._get_effective_due_amount()
             credit_only = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) > 0.0
             no_payment_due = due <= 0.0 and (self.direct_stop_credit_amount or 0.0) <= 0.0
-
-            # A direct-sales stop must keep only one active draft settlement decision.
-            # When the salesperson changes the scenario and saves again, replace the old draft(s)
-            # instead of creating duplicate/conflicting lines.
-            self._clear_direct_stop_existing_drafts()
-
             if no_payment_due:
                 self.visit_id.write({"direct_stop_settlement_reviewed": True})
                 if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
@@ -555,6 +563,8 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 if hasattr(self.visit_id, "_action_mark_post_collection_stage"):
                     self.visit_id._action_mark_post_collection_stage()
                 return self.visit_id._get_pda_form_action() if hasattr(self.visit_id, "_get_pda_form_action") else {"type": "ir.actions.act_window_close"}
+
+            self._clear_direct_stop_draft_payments()
 
             if self.collection_type in ("defer_date", "next_visit"):
                 self.env["route.visit.payment"].create(
