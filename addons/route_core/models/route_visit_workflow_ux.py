@@ -371,6 +371,7 @@ class RouteVisit(models.Model):
                     credit_pending = bool((rec.direct_stop_credit_amount or 0.0) > 0.0 and not rec.direct_stop_credit_policy)
                     settlement_review_ready = bool(sales_answered and returns_answered)
                     settlement_reviewed = bool(rec.direct_stop_settlement_reviewed)
+                    settlement_ready = bool(rec.direct_stop_settlement_ready)
 
                     rec.ux_can_review_settlement = settlement_review_ready and not has_draft_payments
 
@@ -381,15 +382,18 @@ class RouteVisit(models.Model):
                         rec.ux_stage_help = _("Confirm the draft settlement entries before finishing the stop.")
                         rec.ux_can_confirm_payments = True
                         rec.ux_can_open_payments = True
-                    elif remaining_due > 0.0 or credit_pending or not settlement_reviewed:
+                    elif credit_pending or (not settlement_ready and remaining_due > 0.0):
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "collect_payment"
-                        if remaining_due > 0.0 or credit_pending:
-                            rec.ux_stage_title = _("Direct stop settlement")
-                            rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
-                        else:
-                            rec.ux_stage_title = _("Review settlement")
-                            rec.ux_stage_help = _("No payment is due. Open the settlement screen, review the direct-sales summary, then close it to continue.")
+                        rec.ux_stage_title = _("Direct stop settlement")
+                        rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
+                        rec.ux_can_collect_payment = True
+                        rec.ux_can_open_payments = has_confirmed_payments
+                    elif not settlement_reviewed:
+                        rec.ux_stage = "collection"
+                        rec.ux_primary_action = "collect_payment"
+                        rec.ux_stage_title = _("Review settlement")
+                        rec.ux_stage_help = _("No payment is due. Open the settlement screen, review the direct-sales summary, then close it to continue.")
                         rec.ux_can_collect_payment = True
                         rec.ux_can_open_payments = has_confirmed_payments
                     else:
@@ -876,7 +880,8 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if self._is_direct_sales_stop():
             credit_pending = bool((self.direct_stop_credit_amount or 0.0) > 0.0 and not self.direct_stop_credit_policy)
-            next_state = "ready_to_close" if (self.direct_stop_settlement_remaining_amount or 0.0) <= 0.0 and not credit_pending else "collection_done"
+            settlement_ready = bool(self.direct_stop_settlement_ready)
+            next_state = "ready_to_close" if settlement_ready and not credit_pending else "collection_done"
             values = {"visit_process_state": next_state}
             if next_state == "ready_to_close":
                 values["direct_stop_settlement_reviewed"] = True
