@@ -1,4 +1,17 @@
 <odoo>
+<record id="paperformat_route_visit_settlement_receipt" model="report.paperformat">
+<field name="name">Direct Stop Settlement Receipt</field>
+<field name="default" eval="False"/>
+<field name="format">A4</field>
+<field name="orientation">Portrait</field>
+<field name="margin_top">18</field>
+<field name="margin_bottom">12</field>
+<field name="margin_left">8</field>
+<field name="margin_right">8</field>
+<field name="header_line" eval="False"/>
+<field name="header_spacing">6</field>
+<field name="dpi">90</field>
+</record>
 <record id="action_report_route_visit_settlement_receipt" model="ir.actions.report">
 <field name="name">Direct Stop Settlement Receipt</field>
 <field name="model">route.visit</field>
@@ -6,383 +19,403 @@
 <field name="report_name">route_core.report_route_visit_settlement_receipt</field>
 <field name="report_file">route_core.report_route_visit_settlement_receipt</field>
 <field name="print_report_name">'Settlement Receipt - %s' % (object.name or '')</field>
+<field name="paperformat_id" ref="route_core.paperformat_route_visit_settlement_receipt"/>
 </record>
 <template id="report_route_visit_settlement_receipt">
 <t t-call="web.html_container">
 <t t-foreach="docs" t-as="doc">
 <t t-call="web.external_layout">
-<div class="page">
-<h2>Direct Stop Settlement Receipt</h2>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:16px;">
-<tbody>
+<div class="page" style="font-size:12px; color:#1f2937;">
+<t t-set="summary" t-value="doc._get_direct_stop_receipt_summary()"/>
+<t t-set="previous_due_lines" t-value="doc._get_direct_stop_receipt_previous_due_lines()"/>
+<t t-set="sale_orders" t-value="doc._get_direct_stop_receipt_sale_orders()"/>
+<t t-set="sale_lines" t-value="doc._get_direct_stop_receipt_sale_lines()"/>
+<t t-set="returns" t-value="doc._get_direct_stop_receipt_returns()"/>
+<t t-set="return_lines" t-value="doc._get_direct_stop_receipt_return_lines()"/>
+<t t-set="payments" t-value="doc._get_direct_stop_receipt_payments()"/>
+<t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
+<t t-set="sale_total" t-value="sum(line['subtotal'] for line in sale_lines) if sale_lines else 0.0"/>
+<t t-set="return_total" t-value="sum(line['subtotal'] for line in return_lines) if return_lines else 0.0"/>
+<t t-set="payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
+<div style="border:1px solid #d1d5db; padding:14px 16px; margin-bottom:14px;">
+<table style="width:100%; border-collapse:collapse;">
 <tr>
-<td>
-<strong>Visit</strong>
+<td style="width:68%; vertical-align:top; padding-right:12px;">
+<div style="font-size:22px; font-weight:700; color:#111827; margin-bottom:4px;">Direct Stop Settlement Receipt</div>
+<div style="font-size:12px; color:#4b5563; margin-bottom:6px;"> Official stop summary for direct sale, direct return, and confirmed settlement transactions. </div>
+<div style="font-size:11px; color:#6b7280;">
+Company:
+<strong t-esc="doc.company_id.name or '-'"/>
+</div>
 </td>
-<td>
+<td style="width:32%; vertical-align:top; text-align:right;">
+<div style="display:inline-block; border:1px solid #d1d5db; padding:6px 10px; font-size:11px; font-weight:600; color:#374151;">
+Receipt Ref:
+<span t-esc="doc.name or '-'"/>
+</div>
+<div style="margin-top:8px; font-size:11px; color:#6b7280;">
+Generated on:
+<span t-esc="time.strftime('%Y-%m-%d %H:%M:%S')"/>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<table style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #d1d5db;">
+<tr>
+<td colspan="4" style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Visit Information</td>
+</tr>
+<tr>
+<td style="width:18%; padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Visit</td>
+<td style="width:32%; padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.name"/>
 </td>
-<td>
-<strong>Visit Date</strong>
-</td>
-<td>
+<td style="width:18%; padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Visit Date</td>
+<td style="width:32%; padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.date"/>
 </td>
 </tr>
 <tr>
-<td>
-<strong>Outlet</strong>
-</td>
-<td>
+<td style="padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Outlet</td>
+<td style="padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.outlet_id"/>
 </td>
-<td>
-<strong>Customer</strong>
-</td>
-<td>
+<td style="padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Customer</td>
+<td style="padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.partner_id"/>
 </td>
 </tr>
 <tr>
-<td>
-<strong>Salesperson</strong>
-</td>
-<td>
+<td style="padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Salesperson</td>
+<td style="padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.user_id"/>
 </td>
-<td>
-<strong>Vehicle</strong>
-</td>
-<td>
+<td style="padding:8px 10px; font-weight:600; border-bottom:1px solid #e5e7eb;">Vehicle</td>
+<td style="padding:8px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.vehicle_id"/>
 </td>
 </tr>
 <tr>
-<td>
-<strong>Area</strong>
-</td>
-<td>
+<td style="padding:8px 10px; font-weight:600;">Area</td>
+<td style="padding:8px 10px;">
 <span t-field="doc.area_id"/>
 </td>
-<td>
-<strong>Execution Mode</strong>
-</td>
-<td>
-<span t-esc="doc.visit_execution_mode_label or ''"/>
+<td style="padding:8px 10px; font-weight:600;">Execution Mode</td>
+<td style="padding:8px 10px;">
+<span t-esc="doc.visit_execution_mode_label or '-'"/>
 </td>
 </tr>
-</tbody>
 </table>
-<t t-set="summary" t-value="doc._get_direct_stop_receipt_summary()"/>
-<h3>Financial Summary</h3>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:16px;">
-<tbody>
+<table style="width:100%; border-collapse:separate; border-spacing:8px; margin:0 -8px 8px -8px;">
 <tr>
-<td>
-<strong>Previous Due</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['previous_due']"/>
-</td>
-<td>
-<strong>Previous Due Since</strong>
-</td>
-<td>
+<td style="width:33.33%; border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
+<div style="font-size:11px; color:#6b7280;">Previous Due</div>
+<div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['previous_due'], currency_label)"/>
+<div style="font-size:10px; color:#6b7280; margin-top:4px;">
+Since:
 <span t-esc="summary['previous_due_since'] or '-'"/>
+</div>
+</td>
+<td style="width:33.33%; border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
+<div style="font-size:11px; color:#6b7280;">Current Sale</div>
+<div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['current_sale'], currency_label)"/>
+<div style="font-size:10px; color:#6b7280; margin-top:4px;">Direct sales raised in this stop.</div>
+</td>
+<td style="width:33.33%; border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
+<div style="font-size:11px; color:#6b7280;">Current Return</div>
+<div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['current_return'], currency_label)"/>
+<div style="font-size:10px; color:#6b7280; margin-top:4px;">Approved direct returns for this stop.</div>
 </td>
 </tr>
 <tr>
-<td>
-<strong>Current Sale</strong>
+<td style="border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
+<div style="font-size:11px; color:#6b7280;">Net Current Stop</div>
+<div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['net_current_stop'], currency_label)"/>
+<div style="font-size:10px; color:#6b7280; margin-top:4px;">Current sale minus current return.</div>
 </td>
-<td>
-<span t-esc="'%.2f' % summary['current_sale']"/>
+<td style="border:1px solid #d1d5db; padding:10px 12px; background:#f0fdf4;">
+<div style="font-size:11px; color:#166534;">Settled Amount</div>
+<div style="font-size:18px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary['settled_amount'], currency_label)"/>
+<div style="font-size:10px; color:#166534; margin-top:4px;">Confirmed payments only.</div>
 </td>
-<td>
-<strong>Current Return</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['current_return']"/>
-</td>
-</tr>
-<tr>
-<td>
-<strong>Net Current Stop</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['net_current_stop']"/>
-</td>
-<td>
-<strong>Grand Total Due</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['grand_total_due']"/>
+<td style="border:1px solid #d1d5db; padding:10px 12px; background:#fef2f2;">
+<div style="font-size:11px; color:#991b1b;">Remaining Amount</div>
+<div style="font-size:18px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary['remaining_amount'], currency_label)"/>
+<div style="font-size:10px; color:#991b1b; margin-top:4px;">Open balance after settlement.</div>
 </td>
 </tr>
 <tr>
-<td>
-<strong>Settled Amount</strong>
+<td colspan="2" style="border:1px solid #d1d5db; padding:10px 12px; background:#eff6ff;">
+<div style="font-size:11px; color:#1d4ed8;">Grand Total Due</div>
+<div style="font-size:18px; font-weight:700; color:#1e3a8a;" t-esc="'%.2f %s' % (summary['grand_total_due'], currency_label)"/>
+<div style="font-size:10px; color:#1d4ed8; margin-top:4px;">Previous due plus current net stop.</div>
 </td>
-<td>
-<span t-esc="'%.2f' % summary['settled_amount']"/>
-</td>
-<td>
-<strong>Remaining Amount</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['remaining_amount']"/>
-</td>
-</tr>
-<tr t-if="summary['credit_amount']">
-<td>
-<strong>Customer Credit</strong>
-</td>
-<td>
-<span t-esc="'%.2f' % summary['credit_amount']"/>
-</td>
-<td>
-<strong>Credit Policy</strong>
-</td>
-<td>
-<span t-esc="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else '-'"/>
+<td style="border:1px solid #d1d5db; padding:10px 12px; background:#fafafa;">
+<div style="font-size:11px; color:#6b7280;">Customer Credit</div>
+<div style="font-size:18px; font-weight:700; color:#111827;" t-esc="'%.2f %s' % (summary['credit_amount'], currency_label)"/>
+<div style="font-size:10px; color:#6b7280; margin-top:4px;">
+Policy:
+<span t-esc="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else 'Not required'"/>
+</div>
 </td>
 </tr>
-</tbody>
 </table>
-<h3>Open Previous Due Lines</h3>
-<t t-set="previous_due_lines" t-value="doc._get_direct_stop_receipt_previous_due_lines()"/>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:16px;">
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:14px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Open Previous Due Lines</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Visit Ref</th>
-<th>Date</th>
-<th class="text-end">Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Visit Ref</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Date</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Amount</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not previous_due_lines">
-<td colspan="3">No previous due lines.</td>
+<td colspan="3" style="padding:10px; color:#6b7280;">No previous due lines.</td>
 </tr>
 <tr t-foreach="previous_due_lines" t-as="line">
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['visit_ref']"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['date'] or '-'"/>
 </td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['amount']"/>
-</td>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['amount'], currency_label)"/>
 </tr>
 </tbody>
 </table>
-<h3>Direct Sale Orders</h3>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:12px;">
+</div>
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:12px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Direct Sale Orders</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Order Ref</th>
-<th>Order Date</th>
-<th class="text-end">Total</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Order Ref</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Order Date</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Total</th>
 </tr>
 </thead>
 <tbody>
-<tr t-if="not doc._get_direct_stop_receipt_sale_orders()">
-<td colspan="3">No direct sale orders.</td>
+<tr t-if="not sale_orders">
+<td colspan="3" style="padding:10px; color:#6b7280;">No direct sale orders.</td>
 </tr>
-<tr t-foreach="doc._get_direct_stop_receipt_sale_orders()" t-as="order">
-<td>
+<tr t-foreach="sale_orders" t-as="order">
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="order.name"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="order.date_order"/>
 </td>
-<td class="text-end">
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;">
 <span t-field="order.amount_total"/>
 </td>
 </tr>
 </tbody>
 </table>
-<t t-set="sale_lines" t-value="doc._get_direct_stop_receipt_sale_lines()"/>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:16px;">
+</div>
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:14px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Sold Products</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Order Ref</th>
-<th>Barcode</th>
-<th>Product</th>
-<th class="text-end">Qty</th>
-<th>UoM</th>
-<th class="text-end">Unit Price</th>
-<th class="text-end">Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Order Ref</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Barcode</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Product</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Qty</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">UoM</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Unit Price</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Amount</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not sale_lines">
-<td colspan="7">No sale products.</td>
+<td colspan="7" style="padding:10px; color:#6b7280;">No sale products.</td>
 </tr>
 <tr t-foreach="sale_lines" t-as="line">
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['order_ref']"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['barcode'] or '-'"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['product_name']"/>
 </td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['quantity']"/>
-</td>
-<td>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['unit_price']"/>
-</td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['subtotal']"/>
-</td>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
+<tfoot t-if="sale_lines">
+<tr>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;">Total Sold Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;" t-esc="'%.2f %s' % (sale_total, currency_label)"/>
+</tr>
+</tfoot>
 </table>
-<h3>Direct Returns</h3>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:12px;">
+</div>
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:12px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Direct Returns</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Return Ref</th>
-<th>Date</th>
-<th class="text-end">Total</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Return Ref</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Date</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Total</th>
 </tr>
 </thead>
 <tbody>
-<tr t-if="not doc._get_direct_stop_receipt_returns()">
-<td colspan="3">No direct returns.</td>
+<tr t-if="not returns">
+<td colspan="3" style="padding:10px; color:#6b7280;">No direct returns.</td>
 </tr>
-<tr t-foreach="doc._get_direct_stop_receipt_returns()" t-as="ret">
-<td>
+<tr t-foreach="returns" t-as="ret">
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="ret.name"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="ret.return_date"/>
 </td>
-<td class="text-end">
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;">
 <span t-field="ret.amount_total"/>
 </td>
 </tr>
 </tbody>
 </table>
-<t t-set="return_lines" t-value="doc._get_direct_stop_receipt_return_lines()"/>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:16px;">
+</div>
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:14px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Returned Products</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Return Ref</th>
-<th>Barcode</th>
-<th>Product</th>
-<th class="text-end">Qty</th>
-<th>UoM</th>
-<th>Reason</th>
-<th class="text-end">Unit Price</th>
-<th class="text-end">Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Return Ref</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Barcode</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Product</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Qty</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">UoM</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Reason</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Unit Price</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Amount</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not return_lines">
-<td colspan="8">No return products.</td>
+<td colspan="8" style="padding:10px; color:#6b7280;">No return products.</td>
 </tr>
 <tr t-foreach="return_lines" t-as="line">
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['return_ref']"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['barcode'] or '-'"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['product_name']"/>
 </td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['quantity']"/>
-</td>
-<td>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="line['reason'] or '-'"/>
 </td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['unit_price']"/>
-</td>
-<td class="text-end">
-<span t-esc="'%.2f' % line['subtotal']"/>
-</td>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
+<tfoot t-if="return_lines">
+<tr>
+<td colspan="7" style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;">Total Returned Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
+</tr>
+</tfoot>
 </table>
-<h3>Confirmed Settlement Payments</h3>
-<table class="table table-sm table-bordered" style="width:100%; margin-bottom:18px;">
+</div>
+<div style="margin-top:10px; border:1px solid #d1d5db; margin-bottom:16px;">
+<div style="padding:8px 10px; background:#f3f4f6; font-weight:700; font-size:13px; border-bottom:1px solid #d1d5db;">Confirmed Settlement Payments</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th>Payment Date</th>
-<th>Mode</th>
-<th>Scenario</th>
-<th class="text-end">Amount</th>
-<th>Promise Date</th>
-<th class="text-end">Promise Amount</th>
-<th>Reference</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Payment Date</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Mode</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Scenario</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Promise Date</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Promise Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fafafa;">Reference</th>
 </tr>
 </thead>
 <tbody>
-<tr t-if="not doc._get_direct_stop_receipt_payments()">
-<td colspan="7">No confirmed settlement payments.</td>
+<tr t-if="not payments">
+<td colspan="7" style="padding:10px; color:#6b7280;">No confirmed settlement payments.</td>
 </tr>
-<tr t-foreach="doc._get_direct_stop_receipt_payments()" t-as="payment">
-<td>
+<tr t-foreach="payments" t-as="payment">
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="payment.payment_date"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="dict(payment._fields['payment_mode'].selection).get(payment.payment_mode)"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-esc="dict(payment._fields['collection_type'].selection).get(payment.collection_type)"/>
 </td>
-<td class="text-end">
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;">
 <span t-field="payment.amount"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="payment.promise_date"/>
 </td>
-<td class="text-end">
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f3f4f6;">
 <span t-field="payment.promise_amount"/>
 </td>
-<td>
+<td style="padding:8px 10px; border-bottom:1px solid #f3f4f6;">
 <span t-field="payment.reference"/>
 </td>
 </tr>
 </tbody>
-</table>
-<div style="margin-top:28px;">
-<table style="width:100%; border-collapse:collapse;">
+<tfoot t-if="payments">
 <tr>
-<td style="width:48%; vertical-align:top;">
-<strong>Outlet Signature</strong>
-<div style="height:70px; border-bottom:1px solid #000; margin-top:24px;"/>
-<div>Name:</div>
-<div>Date:</div>
+<td colspan="3" style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;">Total Confirmed Payments</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#fafafa; border-top:1px solid #d1d5db;" t-esc="'%.2f %s' % (payment_total, currency_label)"/>
+<td colspan="3" style="background:#fafafa; border-top:1px solid #d1d5db;"> </td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div style="border:1px solid #d1d5db; padding:12px 14px; margin-bottom:14px; background:#fafafa;">
+<div style="font-weight:700; margin-bottom:6px;">Acknowledgement</div>
+<div style="font-size:11px; color:#4b5563; line-height:1.5;"> This receipt confirms the quantities, returns, and confirmed settlement entries captured during this direct sales stop. Any remaining balance shown above stays open according to the applied payment or credit policy. </div>
+</div>
+<table style="width:100%; border-collapse:collapse; margin-top:18px;">
+<tr>
+<td style="width:48%; vertical-align:top; padding-right:10px;">
+<div style="border:1px solid #d1d5db; padding:12px; min-height:110px;">
+<div style="font-weight:700; margin-bottom:20px;">Outlet Signature</div>
+<div style="height:42px; border-bottom:1px solid #9ca3af; margin-bottom:10px;"/>
+<div style="font-size:11px; color:#4b5563;">Name:</div>
+<div style="font-size:11px; color:#4b5563; margin-top:6px;">Date:</div>
+</div>
 </td>
-<td style="width:4%;"/>
-<td style="width:48%; vertical-align:top;">
-<strong>Salesperson Signature</strong>
-<div style="height:70px; border-bottom:1px solid #000; margin-top:24px;"/>
-<div>
+<td style="width:4%;"> </td>
+<td style="width:48%; vertical-align:top; padding-left:10px;">
+<div style="border:1px solid #d1d5db; padding:12px; min-height:110px;">
+<div style="font-weight:700; margin-bottom:20px;">Salesperson Signature</div>
+<div style="height:42px; border-bottom:1px solid #9ca3af; margin-bottom:10px;"/>
+<div style="font-size:11px; color:#4b5563;">
 Name:
 <span t-field="doc.user_id"/>
 </div>
-<div>
+<div style="font-size:11px; color:#4b5563; margin-top:6px;">
 Date:
 <span t-field="doc.date"/>
+</div>
 </div>
 </td>
 </tr>
 </table>
-</div>
 </div>
 </t>
 </t>
