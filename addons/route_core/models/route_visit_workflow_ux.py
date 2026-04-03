@@ -1083,6 +1083,10 @@ class RouteVisit(models.Model):
             raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
         return self.env.ref("route_core.action_report_route_visit_settlement_receipt").report_action(self)
 
+    def _get_direct_stop_previous_due_since_display(self):
+        self.ensure_one()
+        return str(self.direct_stop_previous_due_since_date) if self.direct_stop_previous_due_since_date else "0"
+
     def _get_direct_stop_receipt_filename(self):
         self.ensure_one()
         safe_name = re.sub(r"[^A-Za-z0-9_-]+", "-", self.name or "visit").strip("-") or "visit"
@@ -1094,7 +1098,8 @@ class RouteVisit(models.Model):
             raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
 
         report = self.env.ref("route_core.action_report_route_visit_settlement_receipt")
-        pdf_content, _content_type = report._render_qweb_pdf(self.ids)
+        report_ref = report.report_name or "route_core.report_route_visit_settlement_receipt"
+        pdf_content, _content_type = report._render_qweb_pdf(report_ref, res_ids=self.ids)
         filename = self._get_direct_stop_receipt_filename()
         Attachment = self.env["ir.attachment"].sudo()
         attachment = Attachment.search([
@@ -1120,8 +1125,11 @@ class RouteVisit(models.Model):
         else:
             attachment = Attachment.create(values)
 
-        token_list = attachment.generate_access_token() or []
-        token = token_list[0] if token_list else attachment.access_token or ""
+        token_value = attachment.generate_access_token()
+        if isinstance(token_value, (list, tuple)):
+            token = token_value[0] if token_value else ""
+        else:
+            token = token_value or attachment.access_token or ""
         return attachment, token
 
     def _get_direct_stop_receipt_public_url(self):
