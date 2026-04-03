@@ -257,6 +257,12 @@ class RouteVisit(models.Model):
         "settlement_visit_id",
         string="Settlement Payments",
     )
+    display_payment_ids = fields.Many2many(
+        "route.visit.payment",
+        string="Displayed Payments",
+        compute="_compute_display_payment_ids",
+        store=False,
+    )
 
     net_due_amount = fields.Monetary(
         string="Net Due Amount",
@@ -1357,6 +1363,24 @@ class RouteVisit(models.Model):
                     and credit_ready
                 )
             )
+
+    @api.depends(
+        "visit_execution_mode",
+        "payment_ids.state",
+        "settlement_payment_ids.state",
+        "settlement_payment_ids.payment_date",
+        "settlement_payment_ids.promise_date",
+        "settlement_payment_ids.promise_amount",
+        "settlement_payment_ids.amount",
+    )
+    def _compute_display_payment_ids(self):
+        Payment = self.env["route.visit.payment"]
+        for rec in self:
+            if rec.visit_execution_mode == "direct_sales":
+                payments = rec._get_direct_stop_settlement_payments() if rec.id else Payment
+                rec.display_payment_ids = payments.filtered(lambda p: p.state != "cancelled")
+            else:
+                rec.display_payment_ids = rec.payment_ids.filtered(lambda p: p.state != "cancelled")
 
     def _compute_payment_totals(self):
         Payment = self.env["route.visit.payment"]
