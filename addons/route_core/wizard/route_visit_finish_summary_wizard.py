@@ -47,6 +47,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     show_credit_section = fields.Boolean(compute="_compute_display_flags", store=False)
     show_return_section = fields.Boolean(compute="_compute_display_flags", store=False)
     show_previous_due = fields.Boolean(compute="_compute_display_flags", store=False)
+    show_sale_orders = fields.Boolean(compute="_compute_display_flags", store=False)
+    show_direct_returns = fields.Boolean(compute="_compute_display_flags", store=False)
     finish_message = fields.Html(compute="_compute_finish_message", sanitize=False, store=False)
 
     @api.depends("visit_id")
@@ -57,8 +59,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
 
     @api.depends("direct_stop_sale_status", "direct_stop_return_status", "direct_stop_credit_policy")
     def _compute_status_labels(self):
-        sale_map = {"pending": _("Pending"), "yes": _("Yes"), "no": _("No")}
-        return_map = {"pending": _("Pending"), "yes": _("Yes"), "no": _("No")}
+        sale_map = {"pending": _("Pending"), "yes": _("Sale Created"), "no": _("No Sale")}
+        return_map = {"pending": _("Pending"), "yes": _("Return Created"), "no": _("No Return")}
         credit_map = self._get_credit_policy_selection_map()
 
         for rec in self:
@@ -66,12 +68,21 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rec.return_status_label = return_map.get(rec.direct_stop_return_status, "")
             rec.credit_policy_label = credit_map.get(rec.direct_stop_credit_policy, "") if rec.direct_stop_credit_policy else _("Not Required")
 
-    @api.depends("is_direct_sales_stop", "direct_stop_credit_amount", "direct_stop_returns_total", "direct_stop_previous_due_amount")
+    @api.depends(
+        "is_direct_sales_stop",
+        "direct_stop_credit_amount",
+        "direct_stop_returns_total",
+        "direct_stop_previous_due_amount",
+        "direct_stop_order_count",
+        "direct_stop_return_count",
+    )
     def _compute_display_flags(self):
         for rec in self:
             rec.show_credit_section = bool(rec.is_direct_sales_stop and (rec.direct_stop_credit_amount or 0.0) > 0.0)
             rec.show_return_section = bool(rec.is_direct_sales_stop and (rec.direct_stop_returns_total or 0.0) > 0.0)
             rec.show_previous_due = bool(rec.is_direct_sales_stop and (rec.direct_stop_previous_due_amount or 0.0) > 0.0)
+            rec.show_sale_orders = bool(rec.is_direct_sales_stop and (rec.direct_stop_order_count or 0) > 0)
+            rec.show_direct_returns = bool(rec.is_direct_sales_stop and (rec.direct_stop_return_count or 0) > 0)
 
     @api.depends(
         "is_direct_sales_stop",
@@ -81,6 +92,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         "direct_stop_settlement_remaining_amount",
         "direct_stop_credit_amount",
         "direct_stop_sales_total",
+        "direct_stop_returns_total",
     )
     def _compute_finish_message(self):
         for rec in self:
@@ -95,12 +107,19 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             else:
                 extra = _("The stop has been closed. Review the saved settlement records if needed.")
 
-            rec.finish_message = _('<div class="alert alert-success mb-0"><strong>Direct sales stop completed successfully.</strong><br/>Outlet: %(outlet)s<br/>Date: %(date)s<br/>Sales total: %(sales)s<br/>%(extra)s</div>') % {
-                "outlet": rec.outlet_id.display_name if rec.outlet_id else "-",
-                "date": rec.visit_date or "-",
-                "sales": "%.2f" % (rec.direct_stop_sales_total or 0.0),
-                "extra": extra,
-            }
+            parts = [
+                _('<div class="alert alert-success mb-0"><strong>Direct sales stop completed successfully.</strong>'),
+                _("Outlet: %s") % (rec.outlet_id.display_name if rec.outlet_id else "-"),
+                _("Date: %s") % (rec.visit_date or "-"),
+            ]
+            if (rec.direct_stop_sales_total or 0.0) > 0.0:
+                sales_value = "%.2f %s" % ((rec.direct_stop_sales_total or 0.0), rec.currency_id.name if rec.currency_id else "")
+                parts.append(_("Sales total: %s") % sales_value.strip())
+            if (rec.direct_stop_returns_total or 0.0) > 0.0:
+                parts.append(_("Returns total: %s") % rec.currency_id.format(rec.direct_stop_returns_total, lang_code=self.env.user.lang or None) if rec.currency_id else _("Returns total: %.2f") % (rec.direct_stop_returns_total or 0.0))
+            parts.append(extra)
+            parts.append("</div>")
+            rec.finish_message = "<br/>".join(parts)
 
     @api.model
     def default_get(self, fields_list):
