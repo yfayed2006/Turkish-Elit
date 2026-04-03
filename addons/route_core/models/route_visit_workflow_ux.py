@@ -942,7 +942,7 @@ class RouteVisit(models.Model):
                 "visit_process_state": "done",
                 "end_datetime": fields.Datetime.now(),
             })
-            return self._get_pda_form_action()
+            return self._get_direct_stop_finish_summary_action()
 
         if self.visit_process_state not in ("collection_done", "ready_to_close"):
             if (
@@ -970,6 +970,19 @@ class RouteVisit(models.Model):
 
     def action_ux_finalize_visit(self):
         return self._action_finish_visit_core()
+
+    def _get_direct_stop_finish_summary_action(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit Finished"),
+            "res_model": "route.visit.finish.summary.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
 
     def action_ux_view_sale_order(self):
         self.ensure_one()
@@ -1080,38 +1093,84 @@ class RouteVisit(models.Model):
         sales = self._get_direct_stop_receipt_sale_lines()
         returns = self._get_direct_stop_receipt_return_lines()
         payments = self._get_direct_stop_receipt_payments()
+        credit_policy_map = dict(self._fields["direct_stop_credit_policy"].selection)
+
         lines = [
-            _("Settlement Receipt"),
+            _("تم إنهاء زيارة البيع المباشر بنجاح"),
+            _("Direct sale stop completed successfully"),
+            "",
+            _("الزيارة: %s") % (self.name or "-"),
             _("Visit: %s") % (self.name or "-"),
+            _("المحل: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
+            _("التاريخ: %s") % (self.date or "-"),
             _("Date: %s") % (self.date or "-"),
+            _("المندوب: %s") % (self.user_id.name if self.user_id else "-"),
             _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
+            "",
+            _("ملخص التسوية | Settlement Summary"),
+            _("المديونية السابقة: %.2f") % summary["previous_due"],
             _("Previous Due: %.2f") % summary["previous_due"],
         ]
         if summary["previous_due_since"]:
+            lines.append(_("من تاريخ: %s") % summary["previous_due_since"])
             lines.append(_("Previous Due Since: %s") % summary["previous_due_since"])
         lines += [
+            _("مبيعات الزيارة الحالية: %.2f") % summary["current_sale"],
             _("Current Sale: %.2f") % summary["current_sale"],
+            _("مرتجعات الزيارة الحالية: %.2f") % summary["current_return"],
             _("Current Return: %.2f") % summary["current_return"],
+            _("صافي الزيارة الحالية: %.2f") % summary["net_current_stop"],
             _("Net Current Stop: %.2f") % summary["net_current_stop"],
+            _("إجمالي المستحق: %.2f") % summary["grand_total_due"],
+            _("Grand Total Due: %.2f") % summary["grand_total_due"],
+            _("المسدد: %.2f") % summary["settled_amount"],
             _("Settled: %.2f") % summary["settled_amount"],
+            _("المتبقي: %.2f") % summary["remaining_amount"],
             _("Remaining: %.2f") % summary["remaining_amount"],
         ]
         if summary["credit_amount"]:
+            lines.append(_("رصيد العميل الدائن: %.2f") % summary["credit_amount"])
             lines.append(_("Customer Credit: %.2f") % summary["credit_amount"])
+            if self.direct_stop_credit_policy:
+                policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
+                lines.append(_("طريقة معالجة الرصيد: %s") % policy_label)
+                lines.append(_("Credit Handling: %s") % policy_label)
+
         if sales:
-            lines.append(_("Sale Lines:"))
-            for line in sales[:12]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+            lines.append("")
+            lines.append(_("بنود المبيعات | Sale Lines"))
+            for line in sales[:10]:
+                lines.append(_("- %s | الكمية Qty %.2f | السعر Unit %.2f | الإجمالي Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+
         if returns:
-            lines.append(_("Return Lines:"))
-            for line in returns[:12]:
-                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+            lines.append("")
+            lines.append(_("بنود المرتجع | Return Lines"))
+            for line in returns[:10]:
+                lines.append(_("- %s | الكمية Qty %.2f | السعر Unit %.2f | الإجمالي Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
+
         if payments:
-            lines.append(_("Payments:"))
+            lines.append("")
+            lines.append(_("المدفوعات | Payments"))
             for payment in payments[:8]:
                 pay_label = dict(payment._fields["payment_mode"].selection).get(payment.payment_mode) or payment.payment_mode
                 lines.append(_("- %s | %.2f | %s") % (payment.payment_date or "-", payment.amount or 0.0, pay_label))
+
+        lines += [
+            "",
+            _("شكراً لتعاونكم"),
+            _("Thank you for your cooperation"),
+            "",
+            _("مع أطيب التحيات،"),
+            _("Best regards,"),
+            "",
+            _("ياسر دمير"),
+            _("Yasser Demir"),
+            _("الاستيراد والتصدير | Import & Export"),
+            _("📍 إسطنبول – تركيا"),
+            _("📧 البريد الإلكتروني: yfayed2006@yahoo.com"),
+            _("📱 واتساب: +90 538 623 2611"),
+        ]
         return "\n".join(lines)
 
     def _get_route_supervisor_partner(self):
