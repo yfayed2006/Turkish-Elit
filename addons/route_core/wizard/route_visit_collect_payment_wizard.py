@@ -47,6 +47,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             ("cash", "Cash"),
             ("bank", "Bank Transfer"),
             ("pos", "POS"),
+            ("deferred", "Deferred"),
         ],
         string="Payment Mode",
         required=True,
@@ -382,29 +383,41 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             if rec.collection_type == "full":
                 rec.amount = due
                 rec.due_date = False
+                if rec.payment_mode == "deferred":
+                    rec.payment_mode = "cash"
             elif rec.collection_type == "partial":
                 rec.due_date = False
+                if rec.payment_mode == "deferred":
+                    rec.payment_mode = "cash"
                 if due <= 0:
                     rec.amount = 0.0
                 elif rec.amount <= 0 or rec.amount >= due:
                     rec.amount = due / 2.0
             elif rec.collection_type == "defer_date":
                 rec.amount = 0.0
+                rec.payment_mode = "deferred"
             elif rec.collection_type == "next_visit":
                 rec.amount = 0.0
                 rec.due_date = False
+                rec.payment_mode = "deferred"
             rec._sync_promise_fields()
 
     @api.onchange("payment_mode")
     def _onchange_payment_mode(self):
         for rec in self:
-            if rec.payment_mode == "cash":
+            if rec.payment_mode in ("cash", "deferred"):
                 rec.bank_name = False
                 rec.pos_terminal = False
             elif rec.payment_mode == "bank":
                 rec.pos_terminal = False
             elif rec.payment_mode == "pos":
                 rec.bank_name = False
+
+            if rec.payment_mode == "deferred" and rec.collection_type in ("full", "partial"):
+                rec.collection_type = "defer_date"
+                rec.amount = 0.0
+            elif rec.payment_mode != "deferred" and rec.collection_type in ("defer_date", "next_visit"):
+                rec.payment_mode = "deferred"
 
     def _validate_before_create(self):
         self.ensure_one()
@@ -413,6 +426,12 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
         if self.amount < 0:
             raise ValidationError(_("Payment amount cannot be negative."))
+
+        if self.collection_type in ("defer_date", "next_visit") and self.payment_mode != "deferred":
+            raise ValidationError(_("Deferred scenarios must use payment mode Deferred."))
+
+        if self.collection_type in ("full", "partial") and self.payment_mode == "deferred":
+            raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
 
         if credit_only:
             if not self.direct_stop_credit_policy:
@@ -474,7 +493,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "visit_id": target_visit.id,
             "settlement_visit_id": self.visit_id.id if self.is_direct_sales_stop else False,
             "payment_date": self.payment_date,
-            "payment_mode": self.payment_mode,
+            "payment_mode": "deferred" if collection_type in ("defer_date", "next_visit") else self.payment_mode,
             "collection_type": collection_type,
             "amount": amount,
             "due_date": due_date,
@@ -598,7 +617,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             {
                 "visit_id": self.visit_id.id,
                 "payment_date": self.payment_date,
-                "payment_mode": self.payment_mode,
+                "payment_mode": "deferred" if self.collection_type in ("defer_date", "next_visit") else self.payment_mode,
                 "collection_type": self.collection_type,
                 "amount": self.amount,
                 "due_date": self.due_date,
