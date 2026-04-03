@@ -1,5 +1,7 @@
 from datetime import datetime, time, timedelta
 
+import pytz
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -116,8 +118,15 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "edit": 0, "delete": 0},
         }
 
+    def _refresh_dashboard_snapshot(self):
+        self.ensure_one()
+        self.invalidate_recordset()
+        self._compute_dashboard()
+        return True
+
     def _open_self_view(self, view_xmlid, title):
         self.ensure_one()
+        self._refresh_dashboard_snapshot()
         view = self.env.ref(view_xmlid)
         return {
             "type": "ir.actions.act_window",
@@ -164,9 +173,13 @@ class RoutePdaHome(models.TransientModel):
 
     def _today_bounds(self):
         today = fields.Date.context_today(self)
-        start = datetime.combine(today, time.min)
-        end = start + timedelta(days=1)
-        return today, fields.Datetime.to_string(start), fields.Datetime.to_string(end)
+        tz_name = self.env.user.tz or self.env.context.get("tz") or "UTC"
+        user_tz = pytz.timezone(tz_name)
+        start_local = user_tz.localize(datetime.combine(today, time.min))
+        end_local = start_local + timedelta(days=1)
+        start_utc = start_local.astimezone(pytz.UTC).replace(tzinfo=None)
+        end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
+        return today, fields.Datetime.to_string(start_utc), fields.Datetime.to_string(end_utc)
 
     def _prepare_action(self, xmlid, name=None, domain=None, context=None):
         action = self.env.ref(xmlid).read()[0]
@@ -393,10 +406,15 @@ class RoutePdaHome(models.TransientModel):
             direct_stop_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_stop")
             direct_sale_order_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_sale_order")
             deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-            rec.visit_collection_count = len(visit_collections)
-            rec.direct_stop_payment_count = len(direct_stop_payments)
-            rec.direct_sale_order_payment_count = len(direct_sale_order_payments)
-            rec.direct_sale_payment_count = len(direct_stop_payments) + len(direct_sale_order_payments)
+
+            visit_collection_targets = set(visit_collections.mapped("visit_id").ids)
+            direct_stop_targets = set((direct_stop_payments.mapped("settlement_visit_id") or direct_stop_payments.mapped("visit_id")).ids)
+            direct_sale_order_targets = set(direct_sale_order_payments.mapped("sale_order_id").ids)
+
+            rec.visit_collection_count = len(visit_collection_targets)
+            rec.direct_stop_payment_count = len(direct_stop_targets)
+            rec.direct_sale_order_payment_count = len(direct_sale_order_targets)
+            rec.direct_sale_payment_count = len(direct_stop_targets) + len(direct_sale_order_targets)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
