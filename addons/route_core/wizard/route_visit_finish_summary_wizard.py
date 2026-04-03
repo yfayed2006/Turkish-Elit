@@ -5,6 +5,22 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     _name = "route.visit.finish.summary.wizard"
     _description = "Route Visit Finish Summary Wizard"
 
+    def _format_currency_amount(self, amount):
+        self.ensure_one()
+        amount = amount or 0.0
+        currency = self.currency_id
+        if not currency:
+            return "%.2f" % amount
+
+        precision = currency.decimal_places or 2
+        formatted = f"{amount:,.{precision}f}"
+        symbol = currency.symbol or currency.name or ""
+        if not symbol:
+            return formatted
+        if currency.position == "before":
+            return "%s %s" % (symbol, formatted)
+        return "%s %s" % (formatted, symbol)
+
     def _get_credit_policy_selection_map(self):
         selection = []
         try:
@@ -113,10 +129,9 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 _("Date: %s") % (rec.visit_date or "-"),
             ]
             if (rec.direct_stop_sales_total or 0.0) > 0.0:
-                sales_value = "%.2f %s" % ((rec.direct_stop_sales_total or 0.0), rec.currency_id.name if rec.currency_id else "")
-                parts.append(_("Sales total: %s") % sales_value.strip())
+                parts.append(_("Sales total: %s") % rec._format_currency_amount(rec.direct_stop_sales_total))
             if (rec.direct_stop_returns_total or 0.0) > 0.0:
-                parts.append(_("Returns total: %s") % rec.currency_id.format(rec.direct_stop_returns_total, lang_code=self.env.user.lang or None) if rec.currency_id else _("Returns total: %.2f") % (rec.direct_stop_returns_total or 0.0))
+                parts.append(_("Returns total: %s") % rec._format_currency_amount(rec.direct_stop_returns_total))
             parts.append(extra)
             parts.append("</div>")
             rec.finish_message = "<br/>".join(parts)
