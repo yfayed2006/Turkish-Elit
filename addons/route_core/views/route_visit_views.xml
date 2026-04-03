@@ -350,7 +350,7 @@
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
-<page string="Internal Tools">
+<page string="Internal Tools" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group col="2">
 <button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
 <button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
@@ -597,7 +597,7 @@
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
-<page string="Internal Tools">
+<page string="Internal Tools" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group col="2">
 <button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
 <button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
