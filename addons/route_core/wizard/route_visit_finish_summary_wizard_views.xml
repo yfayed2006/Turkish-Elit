@@ -7,40 +7,34 @@
 <sheet>
 <field name="is_direct_sales_stop" invisible="1"/>
 <field name="currency_id" invisible="1"/>
-<field name="show_return_section" invisible="1"/>
-<field name="show_credit_section" invisible="1"/>
-<field name="show_previous_due" invisible="1"/>
-<field name="show_sale_orders" invisible="1"/>
 <group col="2">
 <group>
-<field name="visit_id" string="Visit" readonly="1"/>
-<field name="outlet_id" string="Outlet" readonly="1"/>
-<field name="partner_id" string="Customer" readonly="1"/>
-<field name="user_id" string="Salesperson" readonly="1"/>
+<field name="visit_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1"/>
+<field name="user_id" readonly="1"/>
 </group>
 <group>
-<field name="visit_date" string="Visit Date" readonly="1"/>
-<field name="end_datetime" string="End DateTime" readonly="1"/>
+<field name="visit_date" readonly="1"/>
+<field name="end_datetime" readonly="1"/>
 <field name="sale_status_label" string="Sale Decision" readonly="1" invisible="not is_direct_sales_stop"/>
 <field name="return_status_label" string="Return Decision" readonly="1" invisible="not is_direct_sales_stop"/>
 </group>
 </group>
-<group string="Settlement Summary" col="2" invisible="not is_direct_sales_stop">
-<group>
-<field name="direct_stop_sales_total" string="Sales Total" readonly="1"/>
-<field name="direct_stop_returns_total" string="Returns Total" readonly="1" invisible="not show_return_section"/>
-<field name="direct_stop_current_net_amount" string="Net Current Stop" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Grand Total Due" readonly="1"/>
+<group string="Settlement Summary" col="4" invisible="not is_direct_sales_stop">
+<field name="direct_stop_previous_due_amount" readonly="1" invisible="not direct_stop_previous_due_amount"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_returns_total" readonly="1" invisible="not direct_stop_returns_total"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_order_count" readonly="1" invisible="not direct_stop_order_count"/>
+<field name="direct_stop_return_count" readonly="1" invisible="not direct_stop_return_count"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group>
-<field name="direct_stop_settlement_paid_amount" string="Collected" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Remaining" readonly="1"/>
-<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1" invisible="not show_previous_due"/>
-<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not show_credit_section"/>
-</group>
-</group>
-<group>
-<field name="finish_message" string="Finish Message" readonly="1" nolabel="0" widget="html"/>
+<field name="finish_message" readonly="1" nolabel="1" widget="html"/>
 </group>
 </sheet>
 <footer>
@@ -51,5 +45,12 @@
 </footer>
 </form>
 </field>
+</record>
+<record id="action_route_visit_finish_summary_wizard" model="ir.actions.act_window">
+<field name="name">Visit Finished</field>
+<field name="res_model">route.visit.finish.summary.wizard</field>
+<field name="view_mode">form</field>
+<field name="view_id" ref="view_route_visit_finish_summary_wizard_form"/>
+<field name="target">new</field>
 </record>
 </odoo>
