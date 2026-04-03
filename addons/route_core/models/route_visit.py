@@ -53,6 +53,16 @@ class RouteVisit(models.Model):
         readonly=True,
         store=False,
     )
+    route_enable_lot_serial_tracking = fields.Boolean(
+        related="company_id.route_enable_lot_serial_tracking",
+        readonly=True,
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        related="company_id.route_enable_expiry_tracking",
+        readonly=True,
+        store=False,
+    )
     outlet_operation_mode = fields.Selection(
         related="outlet_id.outlet_operation_mode",
         readonly=True,
