@@ -3,7 +3,7 @@
 <field name="name">route.visit.finish.summary.wizard.form</field>
 <field name="model">route.visit.finish.summary.wizard</field>
 <field name="arch" type="xml">
-<form string="Visit Finished" create="0" edit="0" delete="0">
+<form string="Stop Finished" create="0" edit="0" delete="0">
 <sheet>
 <field name="is_direct_sales_stop" invisible="1"/>
 <field name="currency_id" invisible="1"/>
@@ -44,7 +44,7 @@
 </group>
 </sheet>
 <footer>
-<button name="action_print_receipt" string="Print Receipt" type="object" class="btn-primary" invisible="not is_direct_sales_stop"/>
+<button name="action_print_receipt" string="Print Settlement Receipt" type="object" class="btn-primary" invisible="not is_direct_sales_stop"/>
 <button name="action_send_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not is_direct_sales_stop"/>
 <button name="action_send_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not is_direct_sales_stop"/>
 <button name="action_close" string="Done" type="object" class="btn-secondary"/>
@@ -53,7 +53,7 @@
 </field>
 </record>
 <record id="action_route_visit_finish_summary_wizard" model="ir.actions.act_window">
-<field name="name">Visit Finished</field>
+<field name="name">Stop Finished</field>
 <field name="res_model">route.visit.finish.summary.wizard</field>
 <field name="view_mode">form</field>
 <field name="target">new</field>
