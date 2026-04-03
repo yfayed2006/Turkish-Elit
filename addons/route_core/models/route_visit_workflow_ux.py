@@ -973,7 +973,8 @@ class RouteVisit(models.Model):
 
     def _get_direct_stop_finish_summary_action(self):
         self.ensure_one()
-        return {
+        view = self.env.ref("route_core.view_route_visit_finish_summary_wizard_form_v2", raise_if_not_found=False)
+        action = {
             "type": "ir.actions.act_window",
             "name": _("Visit Finished"),
             "res_model": "route.visit.finish.summary.wizard",
@@ -981,8 +982,15 @@ class RouteVisit(models.Model):
             "target": "new",
             "context": {
                 "default_visit_id": self.id,
+                "form_view_ref": "route_core.view_route_visit_finish_summary_wizard_form_v2",
             },
         }
+        if view:
+            action.update({
+                "view_id": view.id,
+                "views": [(view.id, "form")],
+            })
+        return action
 
     def action_ux_view_sale_order(self):
         self.ensure_one()
@@ -1099,13 +1107,6 @@ class RouteVisit(models.Model):
             ("next_stop", _("Carry to Next Stop")),
         ])
 
-    def _format_direct_stop_whatsapp_amount(self, amount):
-        self.ensure_one()
-        amount = amount or 0.0
-        currency = self.company_id.currency_id
-        currency_name = currency.name if currency else ""
-        return ("%.2f %s" % (amount, currency_name)).strip()
-
     def _build_direct_stop_whatsapp_message(self):
         self.ensure_one()
         summary = self._get_direct_stop_receipt_summary()
@@ -1115,81 +1116,54 @@ class RouteVisit(models.Model):
         credit_policy_map = self._get_direct_stop_credit_policy_labels()
 
         lines = [
-            _("Direct sales stop completed successfully."),
+            _("Direct sales stop completed successfully"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
-        ]
-        if self.partner_id:
-            lines.append(_("Customer: %s") % self.partner_id.display_name)
-        lines += [
             _("Date: %s") % (self.date or "-"),
             _("Salesperson: %s") % (self.user_id.name if self.user_id else "-"),
             "",
             _("Settlement Summary"),
+            _("Previous Due: %.2f") % summary["previous_due"],
         ]
-
-        if summary["previous_due"]:
-            lines.append(_("• Previous due: %s") % self._format_direct_stop_whatsapp_amount(summary["previous_due"]))
         if summary["previous_due_since"]:
-            lines.append(_("• Previous due since: %s") % summary["previous_due_since"])
-        if summary["current_sale"]:
-            lines.append(_("• Sales total: %s") % self._format_direct_stop_whatsapp_amount(summary["current_sale"]))
-        if summary["current_return"]:
-            lines.append(_("• Returns total: %s") % self._format_direct_stop_whatsapp_amount(summary["current_return"]))
-        lines.append(_("• Net current stop: %s") % self._format_direct_stop_whatsapp_amount(summary["net_current_stop"]))
-        lines.append(_("• Grand total due: %s") % self._format_direct_stop_whatsapp_amount(summary["grand_total_due"]))
-        if summary["settled_amount"]:
-            lines.append(_("• Collected: %s") % self._format_direct_stop_whatsapp_amount(summary["settled_amount"]))
-        if summary["remaining_amount"]:
-            lines.append(_("• Remaining: %s") % self._format_direct_stop_whatsapp_amount(summary["remaining_amount"]))
-        elif not summary["settled_amount"] and not summary["grand_total_due"]:
-            lines.append(_("• No payment was due for this stop."))
-        else:
-            lines.append(_("• Remaining: %s") % self._format_direct_stop_whatsapp_amount(summary["remaining_amount"]))
-
+            lines.append(_("Previous Due Since: %s") % summary["previous_due_since"])
+        lines += [
+            _("Current Sale: %.2f") % summary["current_sale"],
+            _("Current Return: %.2f") % summary["current_return"],
+            _("Net Current Stop: %.2f") % summary["net_current_stop"],
+            _("Grand Total Due: %.2f") % summary["grand_total_due"],
+            _("Settled: %.2f") % summary["settled_amount"],
+            _("Remaining: %.2f") % summary["remaining_amount"],
+        ]
         if summary["credit_amount"]:
-            lines.append(_("• Customer credit: %s") % self._format_direct_stop_whatsapp_amount(summary["credit_amount"]))
+            lines.append(_("Customer Credit: %.2f") % summary["credit_amount"])
             if self.direct_stop_credit_policy:
                 policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
-                lines.append(_("• Credit handling: %s") % policy_label)
+                lines.append(_("Credit Handling: %s") % policy_label)
 
         if sales:
             lines.append("")
             lines.append(_("Sale Lines"))
             for line in sales[:10]:
-                lines.append(_("• %s | Qty %.2f | Unit %s | Amount %s") % (
-                    line["product_name"],
-                    line["quantity"],
-                    self._format_direct_stop_whatsapp_amount(line["unit_price"]),
-                    self._format_direct_stop_whatsapp_amount(line["subtotal"]),
-                ))
+                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
 
         if returns:
             lines.append("")
             lines.append(_("Return Lines"))
             for line in returns[:10]:
-                lines.append(_("• %s | Qty %.2f | Unit %s | Amount %s") % (
-                    line["product_name"],
-                    line["quantity"],
-                    self._format_direct_stop_whatsapp_amount(line["unit_price"]),
-                    self._format_direct_stop_whatsapp_amount(line["subtotal"]),
-                ))
+                lines.append(_("- %s | Qty %.2f | Unit %.2f | Amount %.2f") % (line["product_name"], line["quantity"], line["unit_price"], line["subtotal"]))
 
         if payments:
             lines.append("")
             lines.append(_("Payments"))
             for payment in payments[:8]:
                 pay_label = dict(payment._fields["payment_mode"].selection).get(payment.payment_mode) or payment.payment_mode
-                lines.append(_("• %s | %s | %s") % (
-                    payment.payment_date or "-",
-                    self._format_direct_stop_whatsapp_amount(payment.amount),
-                    pay_label,
-                ))
+                lines.append(_("- %s | %.2f | %s") % (payment.payment_date or "-", payment.amount or 0.0, pay_label))
 
         lines += [
             "",
             _("Thank you."),
-            _("Generated automatically by Route Core."),
+            _("This message was generated automatically by Route Core."),
         ]
         return "\n".join(lines)
 
