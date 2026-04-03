@@ -1251,6 +1251,21 @@ class RouteVisit(models.Model):
             or (p.visit_id and p.visit_id.id == self.id and not p.settlement_visit_id)
         )
 
+    def _get_direct_stop_settlement_cash_amount(self, states=None):
+        self.ensure_one()
+        payments = self._get_direct_stop_settlement_payments(states=states)
+        return sum(payments.mapped("amount")) if payments else 0.0
+
+    def _get_direct_stop_settlement_resolved_amount(self, states=None):
+        self.ensure_one()
+        payments = self._get_direct_stop_settlement_payments(states=states)
+        resolved_amount = 0.0
+        for payment in payments:
+            resolved_amount += payment.amount or 0.0
+            if (payment.promise_amount or 0.0) > 0.0:
+                resolved_amount += payment.promise_amount or 0.0
+        return resolved_amount
+
     def _get_direct_stop_active_returns(self):
         self.ensure_one()
         DirectReturn = self.env["route.direct.return"]
@@ -1308,8 +1323,12 @@ class RouteVisit(models.Model):
 
             confirmed_payments = settlement_payments.filtered(lambda p: p.state == "confirmed") if settlement_payments else settlement_payments
             draft_payments = settlement_payments.filtered(lambda p: p.state == "draft") if settlement_payments else settlement_payments
-            rec.direct_stop_settlement_paid_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
-            rec.direct_stop_settlement_remaining_amount = max((rec.direct_stop_grand_due_amount or 0.0) - (rec.direct_stop_settlement_paid_amount or 0.0), 0.0)
+            confirmed_cash_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+            confirmed_resolved_amount = 0.0
+            if rec.id:
+                confirmed_resolved_amount = rec._get_direct_stop_settlement_resolved_amount(states=["confirmed"])
+            rec.direct_stop_settlement_paid_amount = confirmed_cash_amount
+            rec.direct_stop_settlement_remaining_amount = max((rec.direct_stop_grand_due_amount or 0.0) - (confirmed_resolved_amount or 0.0), 0.0)
 
             if rec.direct_stop_order_count:
                 rec.direct_stop_sale_status = "yes"
@@ -1345,6 +1364,9 @@ class RouteVisit(models.Model):
             if rec.visit_execution_mode == "direct_sales":
                 net_due = rec.direct_stop_grand_due_amount or 0.0
                 confirmed_payments = rec._get_direct_stop_settlement_payments(states=["confirmed"]) if rec.id else Payment
+                total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+                resolved_amount = rec._get_direct_stop_settlement_resolved_amount(states=["confirmed"]) if rec.id else 0.0
+                remaining_amount = max((net_due or 0.0) - (resolved_amount or 0.0), 0.0)
             else:
                 total_sales = 0.0
                 for line in rec.line_ids:
@@ -1353,12 +1375,12 @@ class RouteVisit(models.Model):
                     total_sales += sold_qty * unit_price
                 net_due = total_sales
                 confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
-
-            total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+                total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
+                remaining_amount = max((net_due or 0.0) - (total_collected or 0.0), 0.0)
 
             rec.net_due_amount = net_due
             rec.collected_amount = total_collected
-            rec.remaining_due_amount = max((net_due or 0.0) - (total_collected or 0.0), 0.0)
+            rec.remaining_due_amount = remaining_amount
 
 
     @api.depends(
@@ -1377,23 +1399,6 @@ class RouteVisit(models.Model):
                 promise_payments = promise_payments.filtered(
                     lambda p: p.state != "cancelled" and (p.promise_amount or 0.0) > 0.0
                 )
-
-                if (rec.direct_stop_settlement_remaining_amount or 0.0) <= 0.0:
-                    latest = False
-                    if promise_payments:
-                        latest = promise_payments.sorted(
-                            key=lambda p: (
-                                p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
-                                p.id or 0,
-                            ),
-                            reverse=True,
-                        )[0]
-                    rec.promise_to_pay_count = 0
-                    rec.next_promise_to_pay_date = False
-                    rec.latest_promise_to_pay_date = latest.promise_date if latest else False
-                    rec.latest_promise_to_pay_amount = 0.0
-                    rec.latest_promise_status = "closed" if latest else False
-                    continue
 
                 def _local_promise_status(payment):
                     if payment.promise_date and payment.promise_date < today:
