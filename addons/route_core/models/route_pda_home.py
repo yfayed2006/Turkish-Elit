@@ -34,7 +34,9 @@ class RoutePdaHome(models.TransientModel):
     outlet_balance_count = fields.Integer(string="Outlet Stock", compute="_compute_dashboard")
     payment_count = fields.Integer(string="Payments Today", compute="_compute_dashboard")
     visit_collection_count = fields.Integer(string="Visit Collections Today", compute="_compute_dashboard")
-    direct_sale_payment_count = fields.Integer(string="Direct Sale Payments Today", compute="_compute_dashboard")
+    direct_stop_payment_count = fields.Integer(string="Direct Stop Settlements Today", compute="_compute_dashboard")
+    direct_sale_order_payment_count = fields.Integer(string="Direct Sale Order Payments Today", compute="_compute_dashboard")
+    direct_sale_payment_count = fields.Integer(string="Direct Sales Settlements Today", compute="_compute_dashboard")
     product_count = fields.Integer(string="Products", compute="_compute_dashboard")
     vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
     warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
@@ -52,8 +54,10 @@ class RoutePdaHome(models.TransientModel):
     cash_today_amount = fields.Monetary(string="Cash In Hand", currency_field="currency_id", compute="_compute_dashboard")
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
     pos_today_amount = fields.Monetary(string="POS", currency_field="currency_id", compute="_compute_dashboard")
+    deferred_today_amount = fields.Monetary(string="Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
+    deferred_payment_count = fields.Integer(string="Deferred / Promise Entries Today", compute="_compute_dashboard")
 
     @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return")
     def _compute_route_ui_mode(self):
@@ -194,6 +198,38 @@ class RoutePdaHome(models.TransientModel):
             ("vehicle_id", "!=", False),
         ], order="id desc", limit=1)
         return plan.vehicle_id
+
+    def _get_payment_snapshot_mode(self, payment):
+        if not payment:
+            return False
+        if hasattr(payment, "_get_snapshot_payment_mode"):
+            return payment._get_snapshot_payment_mode()
+        if payment.collection_type in ("defer_date", "next_visit"):
+            return "deferred"
+        return payment.payment_mode or "cash"
+
+    def _get_payment_snapshot_promise_status(self, payment):
+        if not payment or payment.state != "confirmed" or (payment.promise_amount or 0.0) <= 0.0:
+            return False
+        if hasattr(payment, "_get_snapshot_promise_status"):
+            return payment._get_snapshot_promise_status()
+        today = fields.Date.context_today(self)
+        if payment.promise_date and payment.promise_date < today:
+            return "overdue"
+        if payment.promise_date and payment.promise_date == today:
+            return "due_today"
+        return "open"
+
+    def _get_payment_business_flow(self, payment):
+        if not payment:
+            return False
+        if getattr(payment, "payment_business_flow", False):
+            return payment.payment_business_flow
+        if payment.source_type == "direct_sale":
+            return "direct_sale_order"
+        if payment.settlement_visit_id and getattr(payment.settlement_visit_id, "visit_execution_mode", False) == "direct_sales":
+            return "direct_stop"
+        return "consignment_visit"
 
     def _get_main_warehouse_location(self):
         self.ensure_one()
@@ -353,8 +389,14 @@ class RoutePdaHome(models.TransientModel):
             rec.outlet_count = Outlet.search_count([])
             rec.outlet_balance_count = OutletBalance.search_count([])
             rec.payment_count = len(today_payments)
-            rec.visit_collection_count = len(today_payments.filtered(lambda p: p.source_type == "visit"))
-            rec.direct_sale_payment_count = len(today_payments.filtered(lambda p: p.source_type == "direct_sale"))
+            visit_collections = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "consignment_visit")
+            direct_stop_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_stop")
+            direct_sale_order_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_sale_order")
+            deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+            rec.visit_collection_count = len(visit_collections)
+            rec.direct_stop_payment_count = len(direct_stop_payments)
+            rec.direct_sale_order_payment_count = len(direct_sale_order_payments)
+            rec.direct_sale_payment_count = len(direct_stop_payments) + len(direct_sale_order_payments)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
@@ -377,11 +419,15 @@ class RoutePdaHome(models.TransientModel):
             else:
                 rec.current_vehicle_name = "-"
 
-            rec.cash_today_amount = sum(today_payments.filtered(lambda p: p.payment_mode == "cash").mapped("amount"))
-            rec.bank_today_amount = sum(today_payments.filtered(lambda p: p.payment_mode == "bank").mapped("amount"))
-            rec.pos_today_amount = sum(today_payments.filtered(lambda p: p.payment_mode == "pos").mapped("amount"))
+            rec.cash_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            rec.bank_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
+            rec.pos_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
+            rec.deferred_payment_count = len(deferred_entries)
             rec.open_promise_amount = sum(
-                all_confirmed_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0 and p.promise_status in ("open", "due_today", "overdue")).mapped("promise_amount")
+                (p.promise_amount or 0.0)
+                for p in all_confirmed_payments
+                if rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
             )
             rec.remaining_due_amount = sum(today_visits.filtered(lambda v: v.state != "done").mapped("remaining_due_amount"))
 
@@ -604,7 +650,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_action(
             "route_core.action_route_visit_collection",
             name="My Visit Collections",
-            domain=[("salesperson_id", "=", self.env.user.id), ("source_type", "=", "visit")],
+            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit")],
         )
 
     def action_open_direct_sale_payments(self):
@@ -613,7 +659,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_action(
             "route_core.action_route_direct_sale_payment",
             name="My Direct Sale Payments",
-            domain=[("salesperson_id", "=", self.env.user.id), ("source_type", "=", "direct_sale")],
+            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "in", ["direct_stop", "direct_sale_order"])],
         )
 
     def action_open_payments(self):
