@@ -147,8 +147,6 @@
 <field name="ux_can_finish_visit" invisible="1"/>
 <field name="visit_execution_mode" invisible="1"/>
 <field name="outlet_operation_mode" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
@@ -172,8 +170,8 @@
 </group>
 <group>
 <field name="outlet_open_shortage_count" readonly="1"/>
-<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_expiry_tracking == False"/>
-<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_expiry_tracking == False"/>
+<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
 <group>
 <field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
@@ -320,6 +318,32 @@
 </list>
 </field>
 </page>
+<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<group string="Direct Stop Review" col="3">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_return_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_ready" readonly="1"/>
+</group>
+</group>
+<group string="Direct Stop Documents" col="4">
+<field name="direct_stop_order_count" readonly="1"/>
+<field name="direct_stop_return_count" readonly="1"/>
+</group>
+</page>
 <page string="Notes">
 <field name="notes" placeholder="Internal notes..."/>
 </page>
@@ -392,8 +416,6 @@
 <field name="ux_can_finish_visit" invisible="1"/>
 <field name="visit_execution_mode" invisible="1"/>
 <field name="outlet_operation_mode" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
@@ -417,8 +439,8 @@
 </group>
 <group>
 <field name="outlet_open_shortage_count" readonly="1"/>
-<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_expiry_tracking == False"/>
-<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_expiry_tracking == False"/>
+<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
 <group>
 <field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
@@ -430,11 +452,31 @@
 <field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
 </group>
 </group>
-<separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
-<div class="mb-2" invisible="not outlet_decision_flags_html">
+<group string="Direct Stop Operational Summary" col="3" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_return_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_ready" readonly="1"/>
+</group>
+</group>
+<separator string="Decision Flags" invisible="(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html"/>
+<div class="mb-2" invisible="(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html">
 <field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
 </div>
-<group string="Debt Policy Snapshot" col="4">
+<group string="Debt Policy Snapshot" col="4" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group>
 <field name="outlet_aging_0_30_amount" readonly="1"/>
 <field name="outlet_aging_31_60_amount" readonly="1"/>
@@ -452,7 +494,7 @@
 <field name="debt_policy_reason" readonly="1"/>
 </group>
 </group>
-<group string="Movement Snapshot" col="3">
+<group string="Movement Snapshot" col="3" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group>
 <field name="slow_moving_line_count" readonly="1"/>
 <field name="very_slow_line_count" readonly="1"/>
@@ -465,7 +507,7 @@
 <field name="oldest_days_on_shelf" readonly="1"/>
 </group>
 </group>
-<group string="Visit Planning Snapshot" col="3">
+<group string="Visit Planning Snapshot" col="3" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group>
 <field name="recommended_visit_frequency" readonly="1" widget="badge" decoration-info="recommended_visit_frequency in ('daily','every_2_days','twice_weekly')" decoration-success="recommended_visit_frequency in ('weekly','on_demand')"/>
 <field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
@@ -493,7 +535,7 @@
 </group>
 </group>
 <notebook>
-<page string="Count">
+<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
