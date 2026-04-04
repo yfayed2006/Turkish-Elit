@@ -24,6 +24,21 @@
 <xpath expr="//field[@name='recommended_visit_frequency']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
+<xpath expr="//field[@name='outlet_open_shortage_count']/ancestor::group[1]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='collection_priority']/ancestor::group[1]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='direct_stop_previous_due_amount']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='partner_id']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
 <xpath expr="//field[@name='notes']/ancestor::page[1]" position="before">
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group string="Direct Stop Review" col="3">
