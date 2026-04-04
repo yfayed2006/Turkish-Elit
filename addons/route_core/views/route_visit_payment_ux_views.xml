@@ -24,8 +24,8 @@
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Scenario"/>
 <field name="amount"/>
-<field name="promise_date" string="Promise Date"/>
-<field name="promise_amount" string="Promise Amount"/>
+<field name="promise_date" string="Promise Dt"/>
+<field name="promise_amount" string="Promise Amt"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="state" string="Status"/>
 </list>
@@ -98,8 +98,8 @@
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Scenario"/>
 <field name="amount"/>
-<field name="promise_date" string="Promise Date"/>
-<field name="promise_amount" string="Promise Amount"/>
+<field name="promise_date" string="Promise Dt"/>
+<field name="promise_amount" string="Promise Amt"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="state" string="Status"/>
 </list>
