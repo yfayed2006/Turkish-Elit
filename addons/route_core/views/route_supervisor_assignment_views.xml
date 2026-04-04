@@ -45,7 +45,7 @@
 <field name="notes" placeholder="Optional notes about this assignment rule..."/>
 </group>
 <group>
-<label string="Matching priority:"/>
+<div class="o_form_label">Matching priority:</div>
 <div>
 <p>Salesperson → Vehicle → Area → City → Country → Default fallback.</p>
 <p>Leave fields empty when the rule should apply more broadly.</p>
