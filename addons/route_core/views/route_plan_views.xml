@@ -4,20 +4,14 @@
 <field name="model">route.plan</field>
 <field name="arch" type="xml">
 <list string="Route Plans">
-<field name="name"/>
+<field name="name" string="Plan Ref"/>
 <field name="date"/>
-<field name="user_id"/>
+<field name="user_id" optional="hide"/>
 <field name="vehicle_id"/>
 <field name="area_summary" string="Areas"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="line_count"/>
-<field name="visited_count"/>
-<field name="previous_pending_visit_count" optional="show"/>
-<field name="open_shortage_candidate_count" string="Open Shortages"/>
-<field name="shortage_count" string="Planned Shortages"/>
-<field name="planning_finalized"/>
-<field name="loading_proposal_state" widget="badge" optional="show"/>
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="line_count" string="Visits"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </list>
 </field>
 </record>
