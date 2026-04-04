@@ -158,14 +158,12 @@ class RouteSupervisorAssignment(models.Model):
 
     @api.constrains("supervisor_user_id")
     def _check_supervisor_role(self):
-        supervisor_group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
-        management_group = self.env.ref("route_core.group_route_management", raise_if_not_found=False)
         for rec in self:
             user = rec.supervisor_user_id
             if not user:
                 continue
-            is_supervisor = bool(supervisor_group and user in supervisor_group.users)
-            is_management = bool(management_group and user in management_group.users)
+            is_supervisor = user.has_group("route_core.group_route_supervisor")
+            is_management = user.has_group("route_core.group_route_management")
             if not (is_supervisor or is_management):
                 raise ValidationError(_("Supervisor must belong to Route Supervisor or Route Management."))
 
