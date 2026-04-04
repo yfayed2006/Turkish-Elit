@@ -149,6 +149,33 @@
 </field>
 </page>
 </xpath>
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
 <xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
@@ -300,6 +327,33 @@
 </list>
 </field>
 </page>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 <xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
