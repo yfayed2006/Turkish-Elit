@@ -624,6 +624,7 @@
 <field name="visit_process_state"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
 <filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
+<filter name="filter_active" string="Active" domain="[('state', 'not in', ['done', 'cancel', 'cancelled'])]"/>
 <filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
 <filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
@@ -673,7 +674,7 @@
 <field name="res_model">route.visit</field>
 <field name="view_mode">kanban,form,list</field>
 <field name="search_view_id" ref="view_route_visit_search"/>
-<field name="context">{'create': 0, 'edit': 1, 'delete': 0}</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'search_default_filter_active': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in PDA mode. </p>
 </field>
