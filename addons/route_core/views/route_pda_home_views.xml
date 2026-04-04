@@ -128,10 +128,6 @@
 <i class="fa fa-exclamation-triangle route_pda_app_icon"/>
 <span class="route_pda_app_label">Shortages</span>
 </button>
-<button type="object" name="action_open_my_salesperson_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
-<i class="fa fa-warning route_pda_app_icon"/>
-<span class="route_pda_app_label">Salesperson Shortages</span>
-</button>
 <button type="object" name="action_open_my_history" class="btn route_pda_app_btn route_pda_app_btn_alert" invisible="route_show_consignment_tools == False">
 <i class="fa fa-history route_pda_app_icon"/>
 <span class="route_pda_app_label">Visit History</span>
@@ -220,21 +216,9 @@
 <i class="fa fa-plus-square route_pda_app_icon"/>
 <span class="route_pda_app_label">Create Direct Sale</span>
 </button>
-<button type="object" name="action_open_direct_sale_orders" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-shopping-cart route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Orders</span>
-</button>
 <button type="object" name="action_create_direct_return" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_return_tools == False">
 <i class="fa fa-reply route_pda_app_icon"/>
 <span class="route_pda_app_label">Create Direct Return</span>
-</button>
-<button type="object" name="action_open_direct_sale_deliveries" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-truck route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Deliveries</span>
-</button>
-<button type="object" name="action_open_direct_sale_returns" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_return_tools == False">
-<i class="fa fa-undo route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Returns</span>
 </button>
 <button type="object" name="action_open_direct_sale_payments" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
 <i class="fa fa-credit-card route_pda_app_icon"/>
