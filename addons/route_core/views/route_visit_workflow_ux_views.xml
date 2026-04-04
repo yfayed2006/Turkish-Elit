@@ -307,13 +307,13 @@
 <xpath expr="//group[field[@name='collection_priority'] and field[@name='debt_risk_level'] and field[@name='visit_mode']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//group[@string='Visit Details']" position="attributes">
+<xpath expr="//group[group/field[@name='partner_id'] and group/field[@name='area_id'] and group/field[@name='vehicle_id'] and group/field[@name='user_id'] and group/field[@name='date'] and group/field[@name='sale_order_id'] and group/field[@name='end_datetime']]" position="attributes">
 <attribute name="col">1</attribute>
 </xpath>
-<xpath expr="//group[@string='Visit Details']/group[field[@name='date'] and field[@name='sale_order_id'] and field[@name='end_datetime']]" position="attributes">
+<xpath expr="//group[field[@name='date'] and field[@name='sale_order_id'] and field[@name='end_datetime']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//page[@string='Payments']/group[@string='Collection Summary']/group[field[@name='promise_to_pay_count'] and field[@name='latest_promise_status']]" position="attributes">
+<xpath expr="//page[.//field[@name='display_payment_ids']]/group/group[field[@name='promise_to_pay_count'] and field[@name='latest_promise_status']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 </field>
