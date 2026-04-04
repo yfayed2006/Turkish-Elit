@@ -32,13 +32,13 @@ class RouteSupervisorAssignment(models.Model):
     )
     supervisor_mobile = fields.Char(
         string="Supervisor Mobile",
-        related="supervisor_user_id.partner_id.mobile",
+        compute="_compute_supervisor_contact_numbers",
         store=False,
         readonly=True,
     )
     supervisor_phone = fields.Char(
         string="Supervisor Phone",
-        related="supervisor_user_id.partner_id.phone",
+        compute="_compute_supervisor_contact_numbers",
         store=False,
         readonly=True,
     )
@@ -104,16 +104,32 @@ class RouteSupervisorAssignment(models.Model):
     scope_label = fields.Char(string="Scope", compute="_compute_scope_label", store=False)
     note = fields.Text(string="Notes")
 
-    @api.depends(
-        "supervisor_user_id",
-        "supervisor_user_id.partner_id",
-        "supervisor_user_id.partner_id.mobile",
-        "supervisor_user_id.partner_id.phone",
-    )
+    @api.depends("supervisor_user_id", "supervisor_user_id.partner_id")
+    def _compute_supervisor_contact_numbers(self):
+        for rec in self:
+            partner = rec.supervisor_user_id.partner_id
+            mobile = False
+            phone = False
+            if partner:
+                if "mobile" in partner._fields:
+                    mobile = partner.mobile
+                if "phone" in partner._fields:
+                    phone = partner.phone
+            rec.supervisor_mobile = mobile or False
+            rec.supervisor_phone = phone or False
+
+    @api.depends("supervisor_user_id", "supervisor_user_id.partner_id")
     def _compute_supervisor_whatsapp(self):
         for rec in self:
             partner = rec.supervisor_user_id.partner_id
-            rec.supervisor_whatsapp = partner.mobile or partner.phone or False
+            mobile = False
+            phone = False
+            if partner:
+                if "mobile" in partner._fields:
+                    mobile = partner.mobile
+                if "phone" in partner._fields:
+                    phone = partner.phone
+            rec.supervisor_whatsapp = mobile or phone or False
 
     @api.depends("salesperson_ids", "vehicle_ids", "area_ids", "city_ids", "country_ids")
     def _compute_scope(self):
