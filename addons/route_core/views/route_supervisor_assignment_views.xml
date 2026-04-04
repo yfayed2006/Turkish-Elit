@@ -1,10 +1,9 @@
 <odoo>
-<record id="view_route_supervisor_assignment_tree" model="ir.ui.view">
-<field name="name">route.supervisor.assignment.tree</field>
+<record id="view_route_supervisor_assignment_list" model="ir.ui.view">
+<field name="name">route.supervisor.assignment.list</field>
 <field name="model">route.supervisor.assignment</field>
 <field name="arch" type="xml">
-<list string="Supervisor Assignments">
-<field name="sequence" widget="handle"/>
+<list string="Supervisor Assignments" default_order="sequence asc, id asc">
 <field name="name"/>
 <field name="supervisor_user_id"/>
 <field name="salesperson_ids" widget="many2many_tags" optional="show"/>
@@ -17,70 +16,63 @@
 </list>
 </field>
 </record>
-<record id="view_route_supervisor_assignment_search" model="ir.ui.view">
-<field name="name">route.supervisor.assignment.search</field>
-<field name="model">route.supervisor.assignment</field>
-<field name="arch" type="xml">
-<search string="Supervisor Assignments">
-<field name="name"/>
-<field name="supervisor_user_id"/>
-<field name="salesperson_ids"/>
-<field name="vehicle_ids"/>
-<field name="area_ids"/>
-<field name="city_ids"/>
-<field name="country_ids"/>
-<filter name="active" string="Active" domain="[('active','=',True)]"/>
-<group expand="0" string="Group By">
-<filter string="Supervisor" context="{'group_by': 'supervisor_user_id'}"/>
-<filter string="Company" context="{'group_by': 'company_id'}"/>
-</group>
-</search>
-</field>
-</record>
 <record id="view_route_supervisor_assignment_form" model="ir.ui.view">
 <field name="name">route.supervisor.assignment.form</field>
 <field name="model">route.supervisor.assignment</field>
 <field name="arch" type="xml">
 <form string="Supervisor Assignment">
 <sheet>
-<group col="2">
+<group>
 <group>
 <field name="name"/>
 <field name="active"/>
 <field name="sequence"/>
 <field name="company_id"/>
-<field name="supervisor_user_id" options="{'no_open': False}"/>
+<field name="supervisor_user_id"/>
 <field name="supervisor_mobile" readonly="1"/>
 <field name="supervisor_phone" readonly="1"/>
 </group>
-<group string="Assignment Scope">
-<field name="salesperson_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
-<field name="vehicle_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
-<field name="area_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
-<field name="city_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
-<field name="country_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
-<field name="scope_label" readonly="1" string="Scope"/>
+<group>
+<field name="salesperson_ids" widget="many2many_tags"/>
+<field name="vehicle_ids" widget="many2many_tags"/>
+<field name="area_ids" widget="many2many_tags"/>
+<field name="city_ids" widget="many2many_tags"/>
+<field name="country_ids" widget="many2many_tags"/>
+<field name="scope_label" string="Scope" readonly="1"/>
 </group>
 </group>
 <group>
-<field name="note" placeholder="Example: Seeb and Muscat teams report to this supervisor on WhatsApp."/>
+<group colspan="2">
+<field name="note" placeholder="Optional notes about this assignment rule..."/>
 </group>
-<group string="Matching Priority" col="1">
+</group>
+<group>
+<group colspan="2">
+<div class="o_form_label">Matching priority</div>
 <div>
-<p>Salespersons → Vehicles → Areas → Cities → Countries → Default fallback.</p>
-<p class="text-muted">Leave fields empty when the rule should apply more broadly. Selecting an area automatically covers all outlets inside that area.</p>
+<p>Salesperson → Vehicle → Area → City → Country → Default fallback.</p>
+<p>Leave fields empty when the rule should apply more broadly.</p>
 </div>
+</group>
 </group>
 </sheet>
 </form>
 </field>
 </record>
-<record id="action_route_supervisor_assignment" model="ir.actions.act_window">
-<field name="name">Supervisor Assignments</field>
-<field name="res_model">route.supervisor.assignment</field>
-<field name="view_mode">list,form</field>
-<field name="search_view_id" ref="route_core.view_route_supervisor_assignment_search"/>
-<field name="context">{'search_default_active': 1}</field>
+<record id="view_route_supervisor_assignment_search" model="ir.ui.view">
+<field name="name">route.supervisor.assignment.search</field>
+<field name="model">route.supervisor.assignment</field>
+<field name="arch" type="xml">
+<search>
+<field name="name"/>
+<field name="supervisor_user_id"/>
+<field name="company_id"/>
+<filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="filter_inactive" string="Archived" domain="[('active', '=', False)]"/>
+<separator/>
+<filter name="group_by_company" string="Company" context="{'group_by': 'company_id'}"/>
+<filter name="group_by_supervisor" string="Supervisor" context="{'group_by': 'supervisor_user_id'}"/>
+</search>
+</field>
 </record>
-<menuitem id="menu_route_supervisor_assignment" name="Supervisor Assignments" parent="route_core.menu_route_configuration" action="route_core.action_route_supervisor_assignment" sequence="35" groups="route_core.group_route_management,route_core.group_route_supervisor"/>
 </odoo>
