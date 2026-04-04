@@ -7,11 +7,7 @@ class RouteSupervisorAssignment(models.Model):
     _description = "Route Supervisor Assignment"
     _order = "sequence, id"
 
-    name = fields.Char(
-        string="Rule Name",
-        compute="_compute_name",
-        store=True,
-    )
+    name = fields.Char(string="Rule Name", compute="_compute_name", store=True)
     active = fields.Boolean(default=True)
     sequence = fields.Integer(default=10)
     company_id = fields.Many2one(
@@ -31,20 +27,20 @@ class RouteSupervisorAssignment(models.Model):
     )
     supervisor_partner_id = fields.Many2one(
         "res.partner",
-        related="supervisor_user_id.partner_id",
         string="Supervisor Contact",
+        compute="_compute_supervisor_contact_fields",
         readonly=True,
         store=False,
     )
     supervisor_mobile = fields.Char(
-        related="supervisor_user_id.partner_id.mobile",
         string="Supervisor Mobile",
+        compute="_compute_supervisor_contact_fields",
         readonly=True,
         store=False,
     )
     supervisor_phone = fields.Char(
-        related="supervisor_user_id.partner_id.phone",
         string="Supervisor Phone",
+        compute="_compute_supervisor_contact_fields",
         readonly=True,
         store=False,
     )
@@ -85,11 +81,15 @@ class RouteSupervisorAssignment(models.Model):
         help="Optional. Use when a vehicle should report to a specific supervisor.",
     )
     notes = fields.Text(string="Notes")
-    scope_label = fields.Char(
-        string="Scope",
-        compute="_compute_scope_label",
-        store=False,
-    )
+    scope_label = fields.Char(string="Scope", compute="_compute_scope_label", store=False)
+
+    @api.depends("supervisor_user_id")
+    def _compute_supervisor_contact_fields(self):
+        for rec in self:
+            partner = rec.supervisor_user_id.partner_id
+            rec.supervisor_partner_id = partner
+            rec.supervisor_mobile = (getattr(rec.supervisor_user_id, "mobile", False) or getattr(partner, "mobile", False) or "")
+            rec.supervisor_phone = (getattr(rec.supervisor_user_id, "phone", False) or getattr(partner, "phone", False) or "")
 
     @api.depends(
         "supervisor_user_id",
@@ -137,7 +137,7 @@ class RouteSupervisorAssignment(models.Model):
     @api.onchange("country_id")
     def _onchange_country_id(self):
         for rec in self:
-            if rec.city_id and rec.city_id.country_id != rec.country_id:
+            if rec.city_id and rec.country_id and rec.city_id.country_id != rec.country_id:
                 rec.city_id = False
                 rec.area_id = False
 
@@ -158,21 +158,10 @@ class RouteSupervisorAssignment(models.Model):
 
     @api.constrains("supervisor_user_id")
     def _check_supervisor_user_groups(self):
-        supervisor_group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
-        management_group = self.env.ref("route_core.group_route_management", raise_if_not_found=False)
         for rec in self:
             user = rec.supervisor_user_id
-            if not user:
-                continue
-            allowed = False
-            if supervisor_group and user.has_group("route_core.group_route_supervisor"):
-                allowed = True
-            if management_group and user.has_group("route_core.group_route_management"):
-                allowed = True
-            if not allowed:
-                raise ValidationError(
-                    _("Supervisor must belong to Route Supervisor or Route Management.")
-                )
+            if user and not (user.has_group("route_core.group_route_supervisor") or user.has_group("route_core.group_route_management")):
+                raise ValidationError(_("Supervisor must belong to Route Supervisor or Route Management."))
 
     @api.constrains("country_id", "city_id", "area_id")
     def _check_geo_consistency(self):
@@ -187,9 +176,10 @@ class RouteSupervisorAssignment(models.Model):
     @api.model
     def _match_visit_rules(self, visit):
         visit.ensure_one()
-        country = visit.outlet_id.route_country_id or visit.area_id.country_id or visit.outlet_id.country_id
-        city = visit.outlet_id.route_city_id or visit.area_id.city_id
-        area = visit.area_id or visit.outlet_id.area_id
+        outlet = visit.outlet_id
+        country = outlet.route_country_id or getattr(outlet.area_id, "country_id", False) or outlet.country_id
+        city = outlet.route_city_id or getattr(outlet.area_id, "city_id", False)
+        area = visit.area_id or outlet.area_id
         salesperson = visit.user_id
         vehicle = visit.vehicle_id
 
