@@ -1151,25 +1151,20 @@ class RouteVisit(models.Model):
     def _route_normalize_whatsapp_phone(self, record):
         if not record:
             return ""
-
-        candidates = []
-        if getattr(record, "_name", "") == "res.users":
-            candidates.extend([
-                getattr(record, "mobile", False),
-                getattr(record, "phone", False),
-                getattr(getattr(record, "partner_id", False), "mobile", False),
-                getattr(getattr(record, "partner_id", False), "phone", False),
-            ])
-        else:
-            candidates.extend([
-                getattr(record, "mobile", False),
-                getattr(record, "phone", False),
-            ])
-
-        for value in candidates:
-            if value:
-                return re.sub(r"\D", "", str(value).strip())
-        return ""
+        candidates = [record]
+        partner = getattr(record, "partner_id", False)
+        if partner:
+            candidates.append(partner)
+        phone = ""
+        for item in candidates:
+            for field_name in ("mobile", "phone"):
+                value = getattr(item, field_name, False)
+                if value:
+                    phone = str(value).strip()
+                    break
+            if phone:
+                break
+        return re.sub(r"\D", "", phone)
 
     def _get_direct_stop_credit_policy_labels(self):
         selection = []
