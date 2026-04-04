@@ -32,7 +32,7 @@
 <field name="supervisor_mobile" readonly="1"/>
 <field name="supervisor_phone" readonly="1"/>
 </group>
-<group>
+<group string="Assignment Scope">
 <field name="salesperson_ids" widget="many2many_tags"/>
 <field name="vehicle_ids" widget="many2many_tags"/>
 <field name="area_ids" widget="many2many_tags"/>
@@ -42,18 +42,14 @@
 </group>
 </group>
 <group>
-<group colspan="2">
 <field name="note" placeholder="Optional notes about this assignment rule..."/>
 </group>
-</group>
 <group>
-<group colspan="2">
 <div class="o_form_label">Matching priority</div>
 <div>
 <p>Salesperson → Vehicle → Area → City → Country → Default fallback.</p>
 <p>Leave fields empty when the rule should apply more broadly.</p>
 </div>
-</group>
 </group>
 </sheet>
 </form>
@@ -75,4 +71,12 @@
 </search>
 </field>
 </record>
+<record id="action_route_supervisor_assignment" model="ir.actions.act_window">
+<field name="name">Supervisor Assignments</field>
+<field name="res_model">route.supervisor.assignment</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="view_route_supervisor_assignment_search"/>
+<field name="context">{'search_default_filter_active': 1}</field>
+</record>
+<menuitem id="menu_route_supervisor_assignment" name="Supervisor Assignments" parent="route_core.menu_route_configuration" action="action_route_supervisor_assignment" sequence="35" groups="route_core.group_route_management,route_core.group_route_supervisor"/>
 </odoo>
