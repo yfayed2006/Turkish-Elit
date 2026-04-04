@@ -137,6 +137,45 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+
+    resolved_supervisor_user_id = fields.Many2one(
+        "res.users",
+        string="Resolved Supervisor User",
+        compute="_compute_resolved_supervisor_info",
+        store=False,
+    )
+    resolved_supervisor_partner_id = fields.Many2one(
+        "res.partner",
+        string="Resolved Supervisor",
+        compute="_compute_resolved_supervisor_info",
+        store=False,
+    )
+    resolved_supervisor_phone = fields.Char(
+        string="Supervisor WhatsApp",
+        compute="_compute_resolved_supervisor_info",
+        store=False,
+    )
+    resolved_supervisor_reason = fields.Text(
+        string="Supervisor Match Reason",
+        compute="_compute_resolved_supervisor_info",
+        store=False,
+    )
+    resolved_supervisor_status = fields.Char(
+        string="Supervisor Resolution Status",
+        compute="_compute_resolved_supervisor_info",
+        store=False,
+    )
+
+    @api.depends("company_id", "user_id", "vehicle_id", "outlet_id", "outlet_id.area_id")
+    def _compute_resolved_supervisor_info(self):
+        for rec in self:
+            resolution = rec._get_route_supervisor_resolution()
+            rec.resolved_supervisor_user_id = resolution["user"]
+            rec.resolved_supervisor_partner_id = resolution["partner"]
+            rec.resolved_supervisor_phone = resolution["phone"]
+            rec.resolved_supervisor_reason = resolution["reason"]
+            rec.resolved_supervisor_status = resolution["status"]
+
     @api.depends(
         "visit_process_state",
         "outlet_id",
@@ -1211,27 +1250,90 @@ class RouteVisit(models.Model):
         ]
         return "\n".join(lines)
 
-    def _get_route_supervisor_partner(self):
+    def _get_route_supervisor_resolution(self):
         self.ensure_one()
-        assignment_model = self.env["route.supervisor.assignment"].sudo()
-        assignment = assignment_model._get_best_assignment_for_visit(self.sudo())
-        if assignment and assignment.supervisor_user_id and assignment.supervisor_user_id.partner_id:
-            return assignment.supervisor_user_id.partner_id
+        empty_user = self.env["res.users"]
+        empty_partner = self.env["res.partner"]
+        result = {
+            "user": empty_user,
+            "partner": empty_partner,
+            "phone": False,
+            "reason": False,
+            "status": _("No supervisor resolved"),
+        }
 
         group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
         if not group:
-            return self.env["res.partner"]
+            result["reason"] = _(
+                "Route Supervisor group is not configured, so no supervisor can be selected."
+            )
+            return result
 
         users = getattr(group, "user_ids", False)
         if users is False:
             users = getattr(group, "users", self.env["res.users"])
         users = users.filtered(lambda u: getattr(u, "active", True)) if users else self.env["res.users"]
 
-        if self.company_id and users:
-            users = users.filtered(
+        if not users:
+            result["reason"] = _(
+                "No active users were found in the Route Supervisor group."
+            )
+            return result
+
+        reason_parts = [_('Matched from the Route Supervisor group.')]
+        selected_users = users
+        if self.company_id:
+            company_users = users.filtered(
                 lambda u: not getattr(u, "company_ids", False) or self.company_id in u.company_ids
             )
-        return users[:1].partner_id if users else self.env["res.partner"]
+            if company_users:
+                selected_users = company_users
+                reason_parts.append(
+                    _("Company filter applied: %(company)s.")
+                    % {"company": self.company_id.display_name}
+                )
+            else:
+                reason_parts.append(
+                    _(
+                        "No company-specific supervisor matched %(company)s, so the first active supervisor was used."
+                    )
+                    % {"company": self.company_id.display_name}
+                )
+
+        selected_user = selected_users[:1]
+        partner = selected_user.partner_id if selected_user else empty_partner
+        phone = self._route_normalize_whatsapp_phone(partner)
+
+        if selected_user:
+            reason_parts.append(
+                _("Selected user: %(user)s.") % {"user": selected_user.name}
+            )
+        if partner:
+            reason_parts.append(
+                _("Contact: %(contact)s.") % {"contact": partner.display_name}
+            )
+        if phone:
+            reason_parts.append(
+                _("WhatsApp number found: %(phone)s.") % {"phone": phone}
+            )
+        else:
+            reason_parts.append(
+                _("No WhatsApp number is set on the selected supervisor contact.")
+            )
+
+        result.update(
+            {
+                "user": selected_user,
+                "partner": partner,
+                "phone": phone,
+                "reason": " ".join(reason_parts),
+                "status": _("Supervisor resolved") if selected_user else _("No supervisor resolved"),
+            }
+        )
+        return result
+
+    def _get_route_supervisor_partner(self):
+        return self._get_route_supervisor_resolution()["partner"]
 
     def action_send_direct_stop_whatsapp_outlet(self):
         self.ensure_one()
@@ -1252,10 +1354,15 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
-        partner = self._get_route_supervisor_partner()
-        phone = self._route_normalize_whatsapp_phone(partner)
+        resolution = self._get_route_supervisor_resolution()
+        phone = resolution["phone"]
         if not phone:
-            raise UserError(_("Supervisor WhatsApp number is missing. Please set mobile or phone on a user in the Route Supervisor group."))
+            raise UserError(
+                _(
+                    "Supervisor WhatsApp number is missing. Resolution details: %(details)s"
+                )
+                % {"details": resolution["reason"] or _("No supervisor match details are available.")}
+            )
         pdf_url = self._get_direct_stop_receipt_public_url()
         return {
             "type": "ir.actions.act_url",
