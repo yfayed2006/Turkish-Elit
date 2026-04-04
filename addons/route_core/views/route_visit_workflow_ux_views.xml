@@ -38,7 +38,7 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
-<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
 <xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
@@ -102,19 +102,19 @@
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 <xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]" position="after">
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
 <field name="direct_stop_order_count" readonly="1"/>
 </group>
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_return_count" readonly="1"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
 <xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
-<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group col="2">
 <group>
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
@@ -149,50 +149,8 @@
 </field>
 </page>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
 <xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
-</xpath>
-<xpath expr="//field[@name='outlet_near_expiry_count']" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//field[@name='pending_near_expiry_line_count']" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]/preceding-sibling::separator[1]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//field[@name='direct_stop_credit_amount']" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//field[@name='direct_stop_settlement_ready']" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 </field>
 </record>
@@ -235,7 +193,7 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 </xpath>
 <xpath expr="//group[.//field[@name='visit_mode']]" position="inside">
-<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
 </xpath>
 <xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
@@ -296,19 +254,19 @@
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 <xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]" position="after">
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
 <field name="direct_stop_order_count" readonly="1"/>
 </group>
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <field name="direct_stop_return_count" readonly="1"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
 <xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
-<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group col="2">
 <group>
 <field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
@@ -343,47 +301,19 @@
 </field>
 </page>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='slow_moving_line_count'] and .//field[@name='oldest_days_on_shelf']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
 <xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  PDA cleanup for salesperson: keep the stop summary, hide header/details analytics.  -->
-<xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]/preceding-sibling::separator[1]" position="attributes">
+<xpath expr="//group[field[@name='collection_priority'] and field[@name='debt_risk_level'] and field[@name='visit_mode']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='name'] and .//field[@name='start_datetime']]" position="attributes">
+<xpath expr="//group[@string='Visit Details']" position="attributes">
+<attribute name="col">1</attribute>
+</xpath>
+<xpath expr="//group[@string='Visit Details']/group[field[@name='date'] and field[@name='sale_order_id'] and field[@name='end_datetime']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]/preceding-sibling::separator[1]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]" position="attributes">
+<xpath expr="//page[@string='Payments']/group[@string='Collection Summary']/group[field[@name='promise_to_pay_count'] and field[@name='latest_promise_status']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 </field>
