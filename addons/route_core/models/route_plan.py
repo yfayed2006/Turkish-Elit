@@ -319,7 +319,7 @@ class RoutePlan(models.Model):
                     new_state = "in_progress"
 
             if rec.state != new_state:
-                rec.with_context(route_plan_skip_sync=True).write({"state": new_state})
+                rec.sudo().with_context(route_plan_skip_sync=True).write({"state": new_state})
 
     def _mark_planning_as_unfinalized(self):
         if self.env.context.get("route_plan_skip_loading_dirty"):
