@@ -1,5 +1,4 @@
 <odoo>
-<!--  Base PDA form cleanup for direct-sale stops  -->
 <record id="view_route_visit_pda_form_direct_stop_cleanup_overlay" model="ir.ui.view">
 <field name="name">route.visit.pda.form.direct.stop.cleanup.overlay</field>
 <field name="model">route.visit</field>
@@ -7,11 +6,9 @@
 <field name="active" eval="True"/>
 <field name="priority">999</field>
 <field name="arch" type="xml">
-<!--  Hide count tab in direct-sale stops  -->
 <xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide analytics banners/blocks  -->
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
@@ -27,14 +24,12 @@
 <xpath expr="//field[@name='recommended_visit_frequency']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide right-side command analytics  -->
 <xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
 <xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
-<!--  Hide direct-stop operational summary  -->
 <xpath expr="//field[@name='direct_stop_previous_due_amount']/ancestor::group[2]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
@@ -47,17 +42,14 @@
 <xpath expr="//group[.//field[@name='direct_stop_settlement_paid_amount'] and .//field[@name='direct_stop_settlement_ready']]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
-<!--  Hide promise analytics on payment summary  -->
-<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
+<xpath expr="//field[@name='promise_to_pay_count']/ancestor::group[1]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
-<!--  Hide supervisor routing block if present  -->
 <xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
 </field>
 </record>
-<!--  Workflow PDA view cleanup because workflow UX reintroduces some blocks  -->
 <record id="view_route_visit_pda_direct_stop_cleanup_overlay_workflow" model="ir.ui.view">
 <field name="name">route.visit.pda.direct.stop.cleanup.overlay.workflow</field>
 <field name="model">route.visit</field>
@@ -82,7 +74,7 @@
 <xpath expr="//group[.//field[@name='direct_stop_settlement_paid_amount'] and .//field[@name='direct_stop_settlement_ready']]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
+<xpath expr="//field[@name='promise_to_pay_count']/ancestor::group[1]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
 <xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]" position="attributes">
