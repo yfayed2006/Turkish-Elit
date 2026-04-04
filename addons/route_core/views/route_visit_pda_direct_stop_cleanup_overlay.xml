@@ -4,35 +4,22 @@
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form_workflow_ux"/>
 <field name="active" eval="True"/>
-<field name="priority">999</field>
+<field name="priority">1200</field>
 <field name="arch" type="xml">
-<!--  Hide the right-side operational analytics block in PDA direct-stop screens  -->
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
-<attribute name="invisible">1</attribute>
+<!--  Hide PDA-only analytics blocks by replacing the exact visible groups.  -->
+<xpath expr="//separator[@string='Visit Command Header']/following-sibling::group[1]/group[3]" position="replace">
+<group invisible="1"/>
 </xpath>
-<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
-<attribute name="invisible">1</attribute>
+<xpath expr="//separator[@string='Visit Command Header']/following-sibling::group[1]/group[4]" position="replace">
+<group invisible="1"/>
 </xpath>
-<!--  Hide the Direct Stop Operational Summary block  -->
-<xpath expr="//group[.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_settlement_paid_amount']]" position="attributes">
-<attribute name="invisible">1</attribute>
+<!--  Hide the direct-stop operational summary block that remains visible on PDA direct-sale visits.  -->
+<xpath expr="//group[@string='Visit Details']/preceding-sibling::group[1][.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_settlement_paid_amount']]" position="replace">
+<group invisible="1"/>
 </xpath>
-<!--  Hide supervisor routing section from the PDA visit page  -->
-<xpath expr="//group[.//field[@name='resolved_supervisor_partner_id'] and .//field[@name='resolved_supervisor_phone']]" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-</field>
-</record>
-<record id="view_route_visit_pda_direct_stop_cleanup_overlay_payment" model="ir.ui.view">
-<field name="name">route.visit.pda.direct.stop.cleanup.overlay.payment</field>
-<field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_pda_form_payment_ux"/>
-<field name="active" eval="True"/>
-<field name="priority">1000</field>
-<field name="arch" type="xml">
-<!--  Keep the payment snapshot clean in PDA direct-stop mode  -->
-<xpath expr="//group[.//field[@name='net_due_amount'] and .//field[@name='latest_promise_status']]" position="attributes">
-<attribute name="invisible">0</attribute>
+<!--  Remove supervisor routing details from the PDA visit page; WhatsApp still resolves in backend logic.  -->
+<xpath expr="//page[@string='Payments']/group[@string='Supervisor WhatsApp Routing']" position="replace">
+<group invisible="1"/>
 </xpath>
 </field>
 </record>
