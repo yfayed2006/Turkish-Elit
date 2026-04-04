@@ -1,6 +1,5 @@
 from . import route_city
 from . import route_area
-from . import route_supervisor_assignment
 from . import route_outlet
 from . import route_plan
 from . import route_plan_line
@@ -46,6 +45,8 @@ from . import route_salesperson_shortage
 from . import route_salesperson_deduction
 
 from . import route_pda_home
+
+from . import route_supervisor_assignment
 
 from . import route_direct_return
 from . import stock_picking_direct_return_ext
