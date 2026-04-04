@@ -388,6 +388,31 @@
 <xpath expr="//page[.//button[@name='action_recompute_visit_health'] and .//button[@name='action_visit_diagnostics']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
+<!--  PDA salesperson cleanup: hide heavy review sections and keep the screen operational  -->
+<xpath expr="//group[.//field[@name='outlet_id'] and .//field[@name='start_datetime']]/preceding-sibling::separator[1]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_id'] and .//field[@name='start_datetime']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]/preceding-sibling::separator[1]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='sale_order_id']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//page[.//field[@name='payment_ids']]/group[.//field[@name='net_due_amount'] and .//field[@name='latest_promise_status']]" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
 </field>
 </record>
 </odoo>
