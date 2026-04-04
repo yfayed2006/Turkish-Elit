@@ -1,4 +1,3 @@
-<odoo>
 <record id="view_route_visit_form_workflow_ux" model="ir.ui.view">
 <field name="name">route.visit.form.workflow.ux</field>
 <field name="model">route.visit</field>
