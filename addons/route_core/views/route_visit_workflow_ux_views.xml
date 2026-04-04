@@ -113,6 +113,33 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
+<xpath expr="//separator[@string='Visit Command Header']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Collection Control Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Debt Policy Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Movement Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Visit Planning Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Visit Details']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
 <xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="1">
 <group col="2">
@@ -264,6 +291,33 @@
 <field name="direct_stop_settlement_ready" readonly="1"/>
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
+</xpath>
+<xpath expr="//separator[@string='Visit Command Header']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Collection Control Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Debt Policy Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Movement Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Visit Planning Snapshot']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
+</xpath>
+<xpath expr="//group[@string='Visit Details']" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' and visit_process_state == 'done'</attribute>
 </xpath>
 <xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="1">
