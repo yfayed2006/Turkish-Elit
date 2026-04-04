@@ -2,17 +2,67 @@
 <record id="view_route_visit_pda_form_direct_stop_cleanup_overlay" model="ir.ui.view">
 <field name="name">route.visit.pda.form.direct.stop.cleanup.overlay</field>
 <field name="model">route.visit</field>
-<field name="inherit_id" ref="route_core.view_route_visit_pda_form_workflow_ux"/>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="active" eval="True"/>
 <field name="priority">999</field>
 <field name="arch" type="xml">
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+<xpath expr="//field[@name='line_ids']/ancestor::page[1]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_settlement_paid_amount'] and .//field[@name='direct_stop_grand_due_amount']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+<xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or not outlet_decision_flags_html</attribute>
+</xpath>
+<xpath expr="//field[@name='outlet_aging_0_30_amount']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='slow_moving_line_count']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='recommended_visit_frequency']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
+</xpath>
+<xpath expr="//field[@name='outlet_open_shortage_count']/ancestor::group[1]" position="attributes">
+<attribute name="invisible">1</attribute>
+</xpath>
+<xpath expr="//field[@name='collection_priority']/ancestor::group[1]" position="attributes">
+<attribute name="invisible">1</attribute>
+</xpath>
+<xpath expr="//field[@name='direct_stop_previous_due_amount']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">1</attribute>
+</xpath>
+<xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">1</attribute>
+</xpath>
+<xpath expr="//field[@name='notes']/ancestor::page[1]" position="before">
+<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<group string="Direct Stop Review" col="3">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_return_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_ready" readonly="1"/>
+</group>
+</group>
+<group string="Direct Stop Documents" col="4">
+<field name="direct_stop_order_count" readonly="1"/>
+<field name="direct_stop_return_count" readonly="1"/>
+</group>
+</page>
 </xpath>
 </field>
 </record>
