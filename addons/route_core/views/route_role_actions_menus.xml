@@ -87,8 +87,5 @@
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit" sequence="220" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing" sequence="230" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage" sequence="240" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_personal_shortages" name="My Salesperson Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_salesperson_shortage" sequence="250" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_outlets" name="Outlets" parent="route_core.menu_route_visit_root" action="route_core.action_route_outlet" sequence="260" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_outlet_balances" name="Outlet Stock Balances" parent="route_core.menu_route_visit_root" action="route_core.action_outlet_stock_balance" sequence="270" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
