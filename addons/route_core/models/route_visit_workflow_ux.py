@@ -1262,25 +1262,67 @@ class RouteVisit(models.Model):
             "status": _("No supervisor resolved"),
         }
 
-        group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
-        if not group:
-            result["reason"] = _(
-                "Route Supervisor group is not configured, so no supervisor can be selected."
+        def _group_users(xmlid):
+            group = self.env.ref(xmlid, raise_if_not_found=False)
+            if not group:
+                return self.env["res.users"]
+            users = getattr(group, "user_ids", False)
+            if users is False:
+                users = getattr(group, "users", self.env["res.users"])
+            return users.filtered(lambda u: getattr(u, "active", True)) if users else self.env["res.users"]
+
+        assignment = self.env["route.supervisor.assignment"]
+        if "route.supervisor.assignment" in self.env:
+            assignment = self.env["route.supervisor.assignment"].sudo()._get_best_assignment_for_visit(self)
+
+        if assignment:
+            selected_user = assignment.supervisor_user_id
+            partner = selected_user.partner_id if selected_user else empty_partner
+            phone = self._route_normalize_whatsapp_phone(partner)
+            reason_parts = [_("Matched from Supervisor Assignments.")]
+            reason_parts.append(
+                _("Rule: %(rule)s.") % {"rule": assignment.display_name or assignment.name}
+            )
+            if assignment.scope_label:
+                reason_parts.append(
+                    _("Scope: %(scope)s.") % {"scope": assignment.scope_label}
+                )
+            if selected_user:
+                reason_parts.append(
+                    _("Selected user: %(user)s.") % {"user": selected_user.name}
+                )
+            if partner:
+                reason_parts.append(
+                    _("Contact: %(contact)s.") % {"contact": partner.display_name}
+                )
+            if phone:
+                reason_parts.append(
+                    _("WhatsApp number found: %(phone)s.") % {"phone": phone}
+                )
+            else:
+                reason_parts.append(
+                    _("No WhatsApp number is set on the assigned supervisor contact.")
+                )
+
+            result.update(
+                {
+                    "user": selected_user,
+                    "partner": partner,
+                    "phone": phone,
+                    "reason": " ".join(reason_parts),
+                    "status": _("Supervisor resolved") if selected_user else _("No supervisor resolved"),
+                }
             )
             return result
 
-        users = getattr(group, "user_ids", False)
-        if users is False:
-            users = getattr(group, "users", self.env["res.users"])
-        users = users.filtered(lambda u: getattr(u, "active", True)) if users else self.env["res.users"]
-
+        users = _group_users("route_core.group_route_supervisor") | _group_users("route_core.group_route_management")
         if not users:
             result["reason"] = _(
-                "No active users were found in the Route Supervisor group."
+                "No active users were found in the Route Supervisor or Route Management groups, and no supervisor assignment matched this visit."
             )
             return result
 
-        reason_parts = [_('Matched from the Route Supervisor group.')]
+        reason_parts = [_("Matched from Route Supervisor / Route Management fallback groups.")]
         selected_users = users
         if self.company_id:
             company_users = users.filtered(
@@ -1295,7 +1337,7 @@ class RouteVisit(models.Model):
             else:
                 reason_parts.append(
                     _(
-                        "No company-specific supervisor matched %(company)s, so the first active supervisor was used."
+                        "No company-specific fallback supervisor matched %(company)s, so the first active fallback supervisor was used."
                     )
                     % {"company": self.company_id.display_name}
                 )
@@ -1318,7 +1360,7 @@ class RouteVisit(models.Model):
             )
         else:
             reason_parts.append(
-                _("No WhatsApp number is set on the selected supervisor contact.")
+                _("No WhatsApp number is set on the selected fallback supervisor contact.")
             )
 
         result.update(
