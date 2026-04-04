@@ -6,21 +6,15 @@
 <field name="active" eval="True"/>
 <field name="priority">1200</field>
 <field name="arch" type="xml">
-<!--  Hide PDA-only analytics blocks by replacing the exact visible groups.  -->
-<xpath expr="//separator[@string='Visit Command Header']/following-sibling::group[1]/group[3]" position="replace">
-<group invisible="1"/>
+<xpath expr="//field[@name='outlet_open_shortage_count']/ancestor::group[1]" position="attributes">
+<attribute name="groups">route_core.group_route_management,route_core.group_route_supervisor</attribute>
 </xpath>
-<xpath expr="//separator[@string='Visit Command Header']/following-sibling::group[1]/group[4]" position="replace">
-<group invisible="1"/>
+<xpath expr="//field[@name='collection_priority']/ancestor::group[1]" position="attributes">
+<attribute name="groups">route_core.group_route_management,route_core.group_route_supervisor</attribute>
 </xpath>
-<!--  Hide the direct-stop operational summary block that remains visible on PDA direct-sale visits.  -->
-<xpath expr="//group[@string='Visit Details']/preceding-sibling::group[1][.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_settlement_paid_amount']]" position="replace">
-<group invisible="1"/>
-</xpath>
-<!--  Remove supervisor routing details from the PDA visit page; WhatsApp still resolves in backend logic.  -->
-<xpath expr="//page[@string='Payments']/group[@string='Supervisor WhatsApp Routing']" position="replace">
-<group invisible="1"/>
+<xpath expr="//field[@name='direct_stop_previous_due_amount']/ancestor::group[2]" position="attributes">
+<attribute name="groups">route_core.group_route_management,route_core.group_route_supervisor</attribute>
 </xpath>
 </field>
 </record>
-</odoo
+</odoo>
