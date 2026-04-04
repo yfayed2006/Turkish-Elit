@@ -467,7 +467,7 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_pda",
             name="My PDA Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
-            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
+            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "search_default_filter_active": 1, "edit": 1},
         )
 
     def action_open_current_visit(self):
@@ -705,3 +705,4 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
