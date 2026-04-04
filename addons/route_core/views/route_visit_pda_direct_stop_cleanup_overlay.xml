@@ -1,37 +1,41 @@
 <odoo>
-<record id="view_route_visit_pda_form_direct_stop_cleanup_overlay" model="ir.ui.view">
-<field name="name">route.visit.pda.form.direct.stop.cleanup.overlay</field>
+<record id="view_route_visit_pda_direct_stop_cleanup_overlay_workflow" model="ir.ui.view">
+<field name="name">route.visit.pda.direct.stop.cleanup.overlay.workflow</field>
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form_workflow_ux"/>
-<field name="active" eval="True"/>
 <field name="priority">999</field>
 <field name="arch" type="xml">
-<!--  Hide count page in direct-sale execution  -->
-<xpath expr="//page[field[@name='line_ids']]" position="attributes">
+<xpath expr="//field[@name='outlet_open_shortage_count']/ancestor::group[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide the analytics blocks from the command header  -->
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<xpath expr="//field[@name='collection_priority']/ancestor::group[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
+<xpath expr="//field[@name='direct_stop_previous_due_amount']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide direct-stop KPI summary block  -->
-<xpath expr="//group[.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_settlement_paid_amount'] and .//field[@name='direct_stop_grand_due_amount']]" position="attributes">
+<xpath expr="//field[@name='partner_id']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide visit details block  -->
-<xpath expr="//group[.//field[@name='partner_id'] and .//field[@name='area_id'] and .//field[@name='vehicle_id'] and .//field[@name='end_datetime']]" position="attributes">
+<xpath expr="//field[@name='partner_id']/ancestor::group[2]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<!--  Hide supervisor routing diagnostic block from Payments page  -->
-<xpath expr="//group[.//field[@name='resolved_supervisor_partner_id'] and .//field[@name='resolved_supervisor_reason']]" position="attributes">
+<xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]" position="attributes">
 <attribute name="invisible">1</attribute>
 </xpath>
-<!--  Hide any inserted direct-stop review tab if present  -->
-<xpath expr="//page[.//field[@name='direct_stop_previous_due_amount'] and .//field[@name='direct_stop_order_count'] and .//field[@name='direct_stop_return_count']]" position="attributes">
+<xpath expr="//field[@name='resolved_supervisor_partner_id']/ancestor::group[2]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">1</attribute>
+</xpath>
+</field>
+</record>
+<record id="view_route_visit_pda_direct_stop_cleanup_overlay_payment" model="ir.ui.view">
+<field name="name">route.visit.pda.direct.stop.cleanup.overlay.payment</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form_payment_ux"/>
+<field name="priority">1000</field>
+<field name="arch" type="xml">
+<xpath expr="//field[@name='net_due_amount']/ancestor::group[2]" position="attributes">
+<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 </field>
 </record>
