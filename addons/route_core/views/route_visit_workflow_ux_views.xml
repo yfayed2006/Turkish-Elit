@@ -161,9 +161,6 @@
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
 <xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
@@ -338,9 +335,6 @@
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
-<xpath expr="//group[.//field[@name='outlet_open_promise_count'] and .//field[@name='latest_promise_status']]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
 <xpath expr="//group[.//field[@name='outlet_aging_0_30_amount'] and .//field[@name='debt_policy_reason']]" position="attributes">
