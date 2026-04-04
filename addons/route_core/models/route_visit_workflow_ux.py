@@ -1148,21 +1148,14 @@ class RouteVisit(models.Model):
             url = "%s&access_token=%s" % (url, token)
         return url
 
-    def _route_normalize_whatsapp_phone(self, record):
-        if not record:
+    def _route_normalize_whatsapp_phone(self, partner):
+        if not partner:
             return ""
-        candidates = [record]
-        partner = getattr(record, "partner_id", False)
-        if partner:
-            candidates.append(partner)
         phone = ""
-        for item in candidates:
-            for field_name in ("mobile", "phone"):
-                value = getattr(item, field_name, False)
-                if value:
-                    phone = str(value).strip()
-                    break
-            if phone:
+        for field_name in ("mobile", "phone"):
+            value = getattr(partner, field_name, False)
+            if value:
+                phone = str(value).strip()
                 break
         return re.sub(r"\D", "", phone)
 
@@ -1218,30 +1211,27 @@ class RouteVisit(models.Model):
         ]
         return "\n".join(lines)
 
-    def _get_route_supervisor_user(self):
+    def _get_route_supervisor_partner(self):
         self.ensure_one()
-        assignment_model = self.env["route.supervisor.assignment"]
-        assignment = assignment_model._match_visit_rules(self)
-        if assignment and assignment.supervisor_user_id:
-            return assignment.supervisor_user_id
+        assignment_model = self.env["route.supervisor.assignment"].sudo()
+        assignment = assignment_model._get_best_assignment_for_visit(self.sudo())
+        if assignment and assignment.supervisor_user_id and assignment.supervisor_user_id.partner_id:
+            return assignment.supervisor_user_id.partner_id
 
-        users = self.env["res.users"]
-        for xmlid in ("route_core.group_route_management", "route_core.group_route_supervisor"):
-            group = self.env.ref(xmlid, raise_if_not_found=False)
-            if not group:
-                continue
-            group_users = getattr(group, "user_ids", False)
-            if group_users is False:
-                group_users = getattr(group, "users", self.env["res.users"])
-            if group_users:
-                users |= group_users
+        group = self.env.ref("route_core.group_route_supervisor", raise_if_not_found=False)
+        if not group:
+            return self.env["res.partner"]
 
+        users = getattr(group, "user_ids", False)
+        if users is False:
+            users = getattr(group, "users", self.env["res.users"])
         users = users.filtered(lambda u: getattr(u, "active", True)) if users else self.env["res.users"]
+
         if self.company_id and users:
             users = users.filtered(
                 lambda u: not getattr(u, "company_ids", False) or self.company_id in u.company_ids
             )
-        return users[:1] if users else self.env["res.users"]
+        return users[:1].partner_id if users else self.env["res.partner"]
 
     def action_send_direct_stop_whatsapp_outlet(self):
         self.ensure_one()
@@ -1262,19 +1252,10 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
-        supervisor_user = self._get_route_supervisor_user()
-        if not supervisor_user:
-            raise UserError(
-                _("No supervisor assignment was found for this visit. Please configure Supervisor Assignments in Route Core settings.")
-            )
-        phone = self._route_normalize_whatsapp_phone(supervisor_user)
+        partner = self._get_route_supervisor_partner()
+        phone = self._route_normalize_whatsapp_phone(partner)
         if not phone:
-            raise UserError(
-                _(
-                    "Supervisor WhatsApp number is missing for %s. Please set mobile or phone on the supervisor user or related contact."
-                )
-                % (supervisor_user.display_name,)
-            )
+            raise UserError(_("Supervisor WhatsApp number is missing. Please set mobile or phone on a user in the Route Supervisor group."))
         pdf_url = self._get_direct_stop_receipt_public_url()
         return {
             "type": "ir.actions.act_url",
