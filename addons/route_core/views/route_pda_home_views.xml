@@ -160,7 +160,7 @@
 </button>
 <button type="object" name="action_open_consignment_internal_transfers" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-exchange route_pda_app_icon"/>
-<span class="route_pda_app_label">Returns & Internal Transfers</span>
+<span class="route_pda_app_label">Returns and Internal Transfers</span>
 </button>
 <button type="object" name="action_open_consignment_payments" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-credit-card route_pda_app_icon"/>
