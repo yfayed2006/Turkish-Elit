@@ -515,17 +515,17 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_action(
             "route_core.action_route_visit",
             name="My Visit History",
-            domain=[("user_id", "=", self.env.user.id)],
-            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 0},
+            domain=[("user_id", "=", self.env.user.id), ("state", "in", ["done", "cancel", "cancelled"])],
+            context={"search_default_filter_my_visits": 1, "search_default_filter_done": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_my_vehicle_closing(self):
         self.ensure_one()
-        today = fields.Date.context_today(self)
         return self._prepare_action(
             "route_core.action_route_vehicle_closing",
             name="My Vehicle Closings",
-            domain=[("user_id", "=", self.env.user.id), ("plan_date", "=", today)],
+            domain=[("user_id", "=", self.env.user.id)],
+            context={"create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_my_shortages(self):
@@ -534,6 +534,7 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_shortage",
             name="My Shortages",
             domain=[("user_id", "=", self.env.user.id)],
+            context={"create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_my_salesperson_shortages(self):
@@ -672,7 +673,8 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_action(
             "route_core.action_route_visit_collection",
             name="My Visit Collections",
-            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit")],
+            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
+            context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_direct_sale_payments(self):
