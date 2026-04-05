@@ -589,4 +589,13 @@ class RouteVisitReturnScanWizard(models.TransientModel):
 
     def action_done(self):
         self.ensure_one()
+        if self.visit_id:
+            vals = {
+                "returns_step_done": True,
+            }
+            if hasattr(self.visit_id, "_get_return_transfer_lines"):
+                vals["has_returns_declared"] = bool(self.visit_id._get_return_transfer_lines())
+            self.visit_id.write(vals)
+            if hasattr(self.visit_id, "_action_reopen_visit_form"):
+                return self.visit_id._action_reopen_visit_form()
         return {"type": "ir.actions.act_window_close"}
