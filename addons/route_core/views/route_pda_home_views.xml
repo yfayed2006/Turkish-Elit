@@ -45,7 +45,7 @@
 </div>
 </div>
 <div class="route_pda_group route_pda_group_snapshot">
-<div class="route_pda_group_title">Workspaces</div>
+<div class="route_pda_group_title">Centers</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-th-large route_pda_app_icon"/>
