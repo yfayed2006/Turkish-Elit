@@ -160,10 +160,6 @@
 <span class="route_pda_app_label" invisible="route_show_lot_ui == True">Snapshot Center</span>
 <span class="route_pda_app_label" invisible="route_show_lot_ui == False">Stock and Lot Snapshot</span>
 </button>
-<button type="object" name="action_open_review_center_screen" class="btn route_pda_app_btn route_pda_app_btn_alert">
-<i class="fa fa-warning route_pda_app_icon"/>
-<span class="route_pda_app_label">Alerts and Review</span>
-</button>
 <button type="object" name="action_open_consignment_sale_orders" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-file-text-o route_pda_app_icon"/>
 <span class="route_pda_app_label">Consignment Sales Orders</span>
@@ -176,10 +172,6 @@
 <button type="object" name="action_open_consignment_payments" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-credit-card route_pda_app_icon"/>
 <span class="route_pda_app_label">Consignment Collections</span>
-</button>
-<button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
-<i class="fa fa-exclamation-triangle route_pda_app_icon"/>
-<span class="route_pda_app_label">Consignment Shortages</span>
 </button>
 </div>
 </sheet>
@@ -225,7 +217,7 @@
 <field name="name">route.pda.home.review.center.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Alerts and Review" create="0" edit="0" delete="0">
+<form string="Visit History Shortcut" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_consignment_tools" invisible="1"/>
 <div class="route_pda_detail_header">
@@ -233,12 +225,12 @@
 <i class="fa fa-arrow-left"/>
 <span>Back to Consignment</span>
 </button>
-<h2 class="route_pda_detail_title">Alerts and Review</h2>
+<h2 class="route_pda_detail_title">Visit History Shortcut</h2>
 </div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
-<button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
+<button type="object" name="action_open_my_history" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-exclamation-triangle route_pda_app_icon"/>
-<span class="route_pda_app_label">Shortages</span>
+<span class="route_pda_app_label">Visit History</span>
 </button>
 <button type="object" name="action_open_my_history" class="btn route_pda_app_btn route_pda_app_btn_alert" invisible="route_show_consignment_tools == False">
 <i class="fa fa-history route_pda_app_icon"/>
@@ -424,12 +416,6 @@
 </span>
 <span class="route_pda_metric_label">Closing</span>
 </button>
-<button type="object" name="action_open_my_shortages" class="btn route_pda_metric_btn">
-<span class="route_pda_metric_value">
-<field name="shortage_count" readonly="1" nolabel="1"/>
-</span>
-<span class="route_pda_metric_label">Shortages</span>
-</button>
 <button type="object" name="action_open_visit_collections" class="btn route_pda_metric_btn">
 <span class="route_pda_metric_value">
 <field name="visit_collection_count" readonly="1" nolabel="1"/>
@@ -553,12 +539,6 @@
 <div class="route_pda_info_label">Confirmed Payments</div>
 <div class="route_pda_info_value">
 <field name="current_visit_payment_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card">
-<div class="route_pda_info_label">Open Shortages</div>
-<div class="route_pda_info_value">
-<field name="current_visit_open_shortage_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_lot_ui == False">
