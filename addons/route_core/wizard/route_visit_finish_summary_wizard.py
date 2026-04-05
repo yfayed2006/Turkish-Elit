@@ -254,4 +254,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         return self.visit_id.action_send_direct_stop_whatsapp_supervisor()
 
     def action_close(self):
+        self.ensure_one()
+        if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
+            return self.visit_id._get_pda_form_action()
         return {"type": "ir.actions.act_window_close"}
+
