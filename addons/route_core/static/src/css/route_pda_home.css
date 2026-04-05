@@ -66,6 +66,14 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.route_pda_apps_grid_4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.route_pda_apps_grid_2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .route_pda_metric_grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -122,6 +130,38 @@
     font-weight: 700;
     line-height: 1.25;
     white-space: normal;
+}
+
+.route_pda_app_hint,
+.route_pda_app_hint_value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.route_pda_app_hint {
+    font-size: 0.82rem;
+    font-weight: 700;
+    opacity: 0.78;
+}
+
+.route_pda_app_hint_value .o_field_widget {
+    display: inline-flex;
+}
+
+.route_pda_app_hint_value .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    text-align: center;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+.route_pda_mode_btn {
+    min-height: 132px;
 }
 
 .route_pda_metric_value,
@@ -217,6 +257,8 @@
     }
 
     .route_pda_apps_grid,
+    .route_pda_apps_grid_4,
+    .route_pda_apps_grid_2,
     .route_pda_metric_grid,
     .route_pda_card_grid_3,
     .route_pda_card_grid_2,
@@ -259,6 +301,8 @@
 }
 
 .route_pda_group_operations,
+.route_pda_group_shared_centers,
+.route_pda_group_modes,
 .route_pda_group_snapshot {
     padding-top: 2px;
 }
