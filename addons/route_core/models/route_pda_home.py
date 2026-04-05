@@ -181,7 +181,9 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_review_center_screen(self):
         self._ensure_consignment_tools_enabled()
-        return self._open_self_view("route_core.view_route_pda_review_center_form", "Alerts and Review")
+        # Review Center is no longer part of the simplified salesperson consignment flow.
+        # Keep this method as a safe fallback for any old buttons/actions that may still point here.
+        return self.action_open_consignment_mode_screen()
 
     def action_back_to_consignment_mode(self):
         return self.action_open_consignment_mode_screen()
