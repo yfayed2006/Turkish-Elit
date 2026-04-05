@@ -540,15 +540,46 @@ class RouteVisit(models.Model):
 
     def _get_pda_form_action(self):
         self.ensure_one()
+        form_view = self.env.ref("route_core.view_route_visit_pda_form")
+        action_ref = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not action_ref:
+            action_ref = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+
+        if action_ref:
+            action = action_ref.read()[0]
+            action.update({
+                "name": action.get("name") or _("My Visits"),
+                "res_model": "route.visit",
+                "res_id": self.id,
+                "view_mode": "form",
+                "view_id": form_view.id,
+                "views": [(form_view.id, "form")],
+                "target": "current",
+                "context": {
+                    "search_default_filter_my_visits": 1,
+                    "search_default_filter_today": 1,
+                    "search_default_filter_active": 1,
+                    "pda_mode": True,
+                    "create": 0,
+                    "edit": 1,
+                    "delete": 0,
+                },
+            })
+            return action
+
         return {
             "type": "ir.actions.act_window",
-            "name": _("PDA Visit"),
+            "name": _("My Visits"),
             "res_model": "route.visit",
             "res_id": self.id,
             "view_mode": "form",
-            "view_id": self.env.ref("route_core.view_route_visit_pda_form").id,
+            "view_id": form_view.id,
+            "views": [(form_view.id, "form")],
             "target": "current",
             "context": {
+                "search_default_filter_my_visits": 1,
+                "search_default_filter_today": 1,
+                "search_default_filter_active": 1,
                 "pda_mode": True,
                 "create": 0,
                 "edit": 1,
