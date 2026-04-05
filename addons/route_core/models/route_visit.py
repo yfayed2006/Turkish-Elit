@@ -112,6 +112,8 @@ class RouteVisit(models.Model):
     direct_stop_return_ids = fields.One2many("route.direct.return", "visit_id", string="Direct Returns")
     direct_stop_order_count = fields.Integer(string="Direct Sale Orders", compute="_compute_direct_stop_summary", store=False)
     direct_stop_return_count = fields.Integer(string="Direct Returns", compute="_compute_direct_stop_summary", store=False)
+    direct_stop_order_refs = fields.Char(string="Sale Order No.", compute="_compute_direct_stop_document_refs", store=False)
+    direct_stop_return_refs = fields.Char(string="Return No.", compute="_compute_direct_stop_document_refs", store=False)
     direct_stop_sales_total = fields.Monetary(string="Direct Sales Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_returns_total = fields.Monetary(string="Direct Returns Total", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
     direct_stop_previous_due_amount = fields.Monetary(string="Previous Due", currency_field="currency_id", compute="_compute_direct_stop_summary", store=False)
@@ -1221,6 +1223,16 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.direct_stop_order_ids = orders_by_origin.get(rec.name, empty_orders)
 
+    @api.depends("name", "direct_stop_order_ids.name", "direct_stop_order_ids.state", "direct_stop_return_ids.name", "direct_stop_return_ids.state")
+    def _compute_direct_stop_document_refs(self):
+        for rec in self:
+            orders = rec.direct_stop_order_ids.filtered(lambda o: o.state not in ("cancel",)) if rec.direct_stop_order_ids else rec.direct_stop_order_ids
+            active_returns = rec._get_direct_stop_active_returns() if rec.id else rec.env["route.direct.return"]
+            order_names = [name for name in orders.mapped("name") if name]
+            return_names = [name for name in active_returns.mapped("name") if name]
+            rec.direct_stop_order_refs = ", ".join(dict.fromkeys(order_names)) if order_names else False
+            rec.direct_stop_return_refs = ", ".join(dict.fromkeys(return_names)) if return_names else False
+
     def _get_direct_stop_previous_due_visits(self):
         self.ensure_one()
         Visit = self.env["route.visit"]
@@ -2167,4 +2179,5 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
 
