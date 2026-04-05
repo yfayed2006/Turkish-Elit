@@ -8,9 +8,9 @@ from odoo.exceptions import UserError
 
 class RoutePdaHome(models.TransientModel):
     _name = "route.pda.home"
-    _description = "Route PDA Home"
+    _description = "Route Workspace"
 
-    name = fields.Char(default="PDA Home", readonly=True)
+    name = fields.Char(default="Route Workspace", readonly=True)
     user_id = fields.Many2one("res.users", string="Salesperson", default=lambda self: self.env.user, readonly=True)
     user_display_name = fields.Char(string="Salesperson Name", compute="_compute_dashboard")
     company_id = fields.Many2one("res.company", string="Company", default=lambda self: self.env.company, readonly=True)
@@ -20,6 +20,8 @@ class RoutePdaHome(models.TransientModel):
     route_enable_direct_sale = fields.Boolean(related="company_id.route_enable_direct_sale", readonly=True, store=False)
     route_enable_direct_return = fields.Boolean(related="company_id.route_enable_direct_return", readonly=True, store=False)
     route_operation_mode = fields.Selection(related="company_id.route_operation_mode", readonly=True, store=False)
+    route_enable_lot_serial_tracking = fields.Boolean(related="company_id.route_enable_lot_serial_tracking", readonly=True, store=False)
+    route_enable_expiry_tracking = fields.Boolean(related="company_id.route_enable_expiry_tracking", readonly=True, store=False)
     route_operation_mode_label = fields.Char(string="Route Mode", compute="_compute_route_ui_mode")
     route_show_consignment_tools = fields.Boolean(string="Show Consignment Tools", compute="_compute_route_ui_mode")
     route_show_sales_center = fields.Boolean(string="Show Sales Center", compute="_compute_route_ui_mode")
@@ -116,7 +118,7 @@ class RoutePdaHome(models.TransientModel):
         view = self.env.ref("route_core.view_route_pda_home_form")
         return {
             "type": "ir.actions.act_window",
-            "name": "PDA Home",
+            "name": "Route Workspace",
             "res_model": "route.pda.home",
             "res_id": rec.id,
             "view_mode": "form",
@@ -134,6 +136,8 @@ class RoutePdaHome(models.TransientModel):
     def _open_self_view(self, view_xmlid, title, extra_context=None):
         self.ensure_one()
         self._refresh_dashboard_snapshot()
+        if self.name != title:
+            self.name = title
         view = self.env.ref(view_xmlid)
         context = {"create": 0, "edit": 0, "delete": 0}
         if extra_context:
@@ -150,7 +154,7 @@ class RoutePdaHome(models.TransientModel):
         }
 
     def action_back_home(self):
-        return self._open_self_view("route_core.view_route_pda_home_form", "PDA Home")
+        return self._open_self_view("route_core.view_route_pda_home_form", "Route Workspace")
 
     def action_open_snapshot_center_screen(self):
         self._ensure_consignment_tools_enabled()
@@ -161,7 +165,8 @@ class RoutePdaHome(models.TransientModel):
         return self._open_self_view("route_core.view_route_pda_review_center_form", "Alerts and Review")
 
     def action_open_product_center_screen(self):
-        return self._open_self_view("route_core.view_route_pda_product_center_form", "Product Center")
+        title = "Products and Lots" if self.route_enable_lot_serial_tracking else "Product Center"
+        return self._open_self_view("route_core.view_route_pda_product_center_form", title)
 
     def action_open_sales_center_screen(self):
         self._ensure_sales_center_enabled()
@@ -518,7 +523,7 @@ class RoutePdaHome(models.TransientModel):
         today = fields.Date.context_today(self)
         return self._prepare_action(
             "route_core.action_route_visit_pda",
-            name="My PDA Visits",
+            name="My Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "search_default_filter_active": 1, "edit": 1},
         )
