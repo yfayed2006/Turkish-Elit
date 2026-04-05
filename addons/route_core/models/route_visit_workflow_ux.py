@@ -1109,6 +1109,8 @@ class RouteVisit(models.Model):
 
     def _get_direct_stop_receipt_summary(self):
         self.ensure_one()
+        promise_payments = self._get_direct_stop_receipt_payments().filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        latest_promise = promise_payments[:1]
         return {
             "previous_due": self.direct_stop_previous_due_amount or 0.0,
             "previous_due_since": self.direct_stop_previous_due_since_date,
@@ -1119,6 +1121,46 @@ class RouteVisit(models.Model):
             "credit_amount": self.direct_stop_credit_amount or 0.0,
             "settled_amount": self.direct_stop_settlement_paid_amount or 0.0,
             "remaining_amount": self.direct_stop_settlement_remaining_amount or 0.0,
+            "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
+            "latest_promise_date": latest_promise.promise_date if latest_promise else False,
+            "latest_promise_status": latest_promise.promise_status if latest_promise else False,
+            "sale_order_ref": ", ".join(self._get_direct_stop_receipt_sale_orders().mapped("name")) or "-",
+            "return_ref": ", ".join(self._get_direct_stop_receipt_returns().mapped("name")) or "-",
+        }
+
+    def _get_direct_stop_receipt_payment_breakdown(self):
+        self.ensure_one()
+        payments = self._get_direct_stop_receipt_payments()
+        totals = {
+            "cash": 0.0,
+            "bank": 0.0,
+            "pos": 0.0,
+            "deferred": 0.0,
+            "promise": 0.0,
+        }
+        for payment in payments:
+            mode = payment.payment_mode or "cash"
+            if mode in totals:
+                totals[mode] += payment.amount or 0.0
+            totals["promise"] += payment.promise_amount or 0.0
+
+        selection_map = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
+        promise_status_map = dict(self.env["route.visit.payment"]._fields["promise_status"].selection)
+        promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        latest_promise = promise_payments[:1]
+        return {
+            "totals": totals,
+            "labels": {
+                "cash": selection_map.get("cash", _("Cash")),
+                "bank": selection_map.get("bank", _("Bank Transfer")),
+                "pos": selection_map.get("pos", _("POS")),
+                "deferred": selection_map.get("deferred", _("Deferred")),
+                "promise": _("Promised Amount"),
+            },
+            "latest_promise_date": latest_promise.promise_date if latest_promise else False,
+            "latest_promise_amount": latest_promise.promise_amount if latest_promise else 0.0,
+            "latest_promise_status": promise_status_map.get(latest_promise.promise_status, latest_promise.promise_status) if latest_promise else False,
+            "payment_count": len(payments),
         }
 
     def action_print_direct_stop_settlement_receipt(self):
