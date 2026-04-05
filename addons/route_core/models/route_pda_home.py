@@ -150,9 +150,11 @@ class RoutePdaHome(models.TransientModel):
         return self._open_self_view("route_core.view_route_pda_home_form", "PDA Home")
 
     def action_open_snapshot_center_screen(self):
+        self._ensure_consignment_tools_enabled()
         return self._open_self_view("route_core.view_route_pda_snapshot_center_form", "Snapshot Center")
 
     def action_open_review_center_screen(self):
+        self._ensure_consignment_tools_enabled()
         return self._open_self_view("route_core.view_route_pda_review_center_form", "Alerts and Review")
 
     def action_open_product_center_screen(self):
@@ -164,6 +166,15 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_outlet_center_screen(self):
         return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Outlet Center")
+
+
+    def action_open_direct_sale_mode_screen(self):
+        self._ensure_sales_center_enabled()
+        return self._open_self_view("route_core.view_route_pda_direct_sale_mode_form", "Direct Sale")
+
+    def action_open_consignment_mode_screen(self):
+        self._ensure_consignment_tools_enabled()
+        return self._open_self_view("route_core.view_route_pda_consignment_mode_form", "Consignment")
 
     def action_open_today_overview_screen(self):
         return self._open_self_view("route_core.view_route_pda_today_overview_form", "Today Overview")
@@ -480,7 +491,6 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_my_pda_visits(self):
         self.ensure_one()
-        self._ensure_consignment_tools_enabled()
         today = fields.Date.context_today(self)
         return self._prepare_action(
             "route_core.action_route_visit_pda",
@@ -491,7 +501,6 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_current_visit(self):
         self.ensure_one()
-        self._ensure_consignment_tools_enabled()
         visit = self.env["route.visit"].search([
             ("user_id", "=", self.env.user.id),
             ("state", "=", "in_progress"),
@@ -543,6 +552,71 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_salesperson_shortage",
             name="My Salesperson Shortages",
             domain=[("salesperson_id", "=", self.env.user.id)],
+        )
+
+    def _get_consignment_visits(self):
+        self.ensure_one()
+        visits = self.env["route.visit"].search([("user_id", "=", self.env.user.id)], order="date desc, id desc")
+        return visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) != "direct_sales")
+
+    def _get_consignment_sale_orders(self):
+        self.ensure_one()
+        sale_orders = self._get_consignment_visits().mapped("sale_order_id")
+        return sale_orders.filtered(lambda so: so and getattr(so, "route_order_mode", "standard") != "direct_sale")
+
+    def _get_consignment_internal_transfers(self):
+        self.ensure_one()
+        visits = self._get_consignment_visits()
+        pickings = visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")
+        return pickings.filtered(lambda p: p and p.state != "cancel")
+
+    def action_open_consignment_sale_orders(self):
+        self.ensure_one()
+        self._ensure_consignment_tools_enabled()
+        sale_orders = self._get_consignment_sale_orders()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Consignment Sales Orders"),
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+            "target": "current",
+            "domain": [("id", "in", sale_orders.ids)],
+            "context": {"create": 0, "delete": 0},
+        }
+        tree_view = self.env.ref("sale.view_quotation_tree_with_onboarding", raise_if_not_found=False)
+        form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        search_view = self.env.ref("sale.view_sales_order_filter", raise_if_not_found=False)
+        views = []
+        if tree_view:
+            views.append((tree_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
+
+    def action_open_consignment_internal_transfers(self):
+        self.ensure_one()
+        self._ensure_consignment_tools_enabled()
+        pickings = self._get_consignment_internal_transfers()
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action.update({
+            "name": _("Returns & Internal Transfers"),
+            "domain": [("id", "in", pickings.ids)],
+            "context": {"create": 0, "delete": 0},
+        })
+        return action
+
+    def action_open_consignment_payments(self):
+        self.ensure_one()
+        self._ensure_consignment_tools_enabled()
+        return self._prepare_action(
+            "route_core.action_route_visit_collection_salesperson",
+            name=_("Consignment Payments"),
+            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
+            context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_direct_sale_orders(self):
@@ -669,11 +743,10 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_visit_collections(self):
         self.ensure_one()
-        self._ensure_consignment_tools_enabled()
         return self._prepare_action(
             "route_core.action_route_visit_collection_salesperson",
             name="My Visit Collections",
-            domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
+            domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
