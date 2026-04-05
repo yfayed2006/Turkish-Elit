@@ -43,6 +43,7 @@
         "views/route_salesperson_deduction_views.xml",
         "reports/route_salesperson_shortage_report.xml",
         "reports/route_visit_settlement_receipt_report.xml",
+        "reports/route_visit_consignment_receipt_report.xml",
         "views/route_salesperson_shortage_views.xml",
         "views/route_visit_document_links_views.xml",
         "views/route_direct_return_views.xml",
