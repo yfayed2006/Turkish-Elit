@@ -251,9 +251,6 @@
 <field name="product_id"/>
 <field name="barcode" readonly="1"/>
 <field name="uom_id" readonly="1"/>
-<field name="last_sold_date" readonly="1" optional="show"/>
-<field name="days_on_shelf" readonly="1" optional="show"/>
-<field name="movement_status" readonly="1" widget="badge" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
 <field name="return_qty"/>
@@ -459,8 +456,8 @@
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
 </group>
-<separator string="Decision Flags" invisible="(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html"/>
-<div class="mb-2" invisible="(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html">
+<separator string="Decision Flags" invisible="1"/>
+<div class="mb-2" invisible="1">
 <field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <group string="Debt Policy Snapshot" col="4" invisible="1">
@@ -528,9 +525,6 @@
 <field name="product_id"/>
 <field name="barcode" readonly="1"/>
 <field name="uom_id" readonly="1"/>
-<field name="last_sold_date" readonly="1" optional="show"/>
-<field name="days_on_shelf" readonly="1" optional="show"/>
-<field name="movement_status" readonly="1" widget="badge" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
 <field name="return_qty"/>
