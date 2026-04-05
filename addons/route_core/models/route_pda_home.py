@@ -27,6 +27,7 @@ class RoutePdaHome(models.TransientModel):
     route_show_sales_center = fields.Boolean(string="Show Sales Center", compute="_compute_route_ui_mode")
     route_show_direct_sale_tools = fields.Boolean(string="Show Direct Sale Tools", compute="_compute_route_ui_mode")
     route_show_direct_return_tools = fields.Boolean(string="Show Direct Return Tools", compute="_compute_route_ui_mode")
+    route_show_lot_ui = fields.Boolean(string="Show Lot and Expiry Labels", compute="_compute_route_ui_mode")
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
@@ -70,7 +71,7 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_open_promise_due_today_amount = fields.Monetary(string="Open Promises Due Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_open_promise_due_today_count = fields.Integer(string="Promise Entries Due Today", compute="_compute_dashboard")
 
-    @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return")
+    @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return", "route_enable_lot_serial_tracking", "route_enable_expiry_tracking")
     def _compute_route_ui_mode(self):
         labels = {
             "consignment": _("Consignment Route"),
@@ -84,6 +85,7 @@ class RoutePdaHome(models.TransientModel):
             rec.route_show_direct_sale_tools = bool(rec.route_enable_direct_sale) and mode in ("direct_sales", "hybrid")
             rec.route_show_direct_return_tools = bool(rec.route_enable_direct_return)
             rec.route_show_sales_center = rec.route_show_direct_sale_tools or rec.route_show_direct_return_tools
+            rec.route_show_lot_ui = bool(rec.route_enable_lot_serial_tracking or rec.route_enable_expiry_tracking)
 
     def _ensure_consignment_tools_enabled(self):
         self.ensure_one()
@@ -158,7 +160,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_snapshot_center_screen(self):
         self._ensure_consignment_tools_enabled()
-        title = "Stock and Lot Snapshot" if self.route_enable_lot_serial_tracking else "Snapshot Center"
+        title = "Stock and Lot Snapshot" if self.route_show_lot_ui else "Snapshot Center"
         return self._open_self_view("route_core.view_route_pda_snapshot_center_form", title)
 
     def action_open_review_center_screen(self):
@@ -169,7 +171,7 @@ class RoutePdaHome(models.TransientModel):
         return self.action_open_consignment_mode_screen()
 
     def action_open_product_center_screen(self):
-        title = "Products and Lots" if self.route_enable_lot_serial_tracking else "Product Center"
+        title = "Products and Lots" if self.route_show_lot_ui else "Product Center"
         return self._open_self_view("route_core.view_route_pda_product_center_form", title)
 
     def action_open_sales_center_screen(self):
@@ -481,12 +483,8 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_return_today_amount = sum(today_direct_returns.mapped("amount_total")) if today_direct_returns else 0.0
             rec.direct_sales_outstanding_amount = sum(open_direct_sales_visits.mapped("direct_stop_settlement_remaining_amount")) if open_direct_sales_visits else 0.0
 
-            if rec.route_show_consignment_tools:
-                rec.current_visit_name = current_visit.display_name if current_visit else "No active visit"
-                rec.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit and current_visit.outlet_id else "-"
-            else:
-                rec.current_visit_name = _("Consignment visits hidden in Direct Sales Route")
-                rec.current_visit_outlet_name = "-"
+            rec.current_visit_name = current_visit.display_name if current_visit else _("No active visit")
+            rec.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit and current_visit.outlet_id else "-"
             if current_visit and current_visit.vehicle_id:
                 rec.current_vehicle_name = current_visit.vehicle_id.display_name
             elif today_plans[:1].vehicle_id:
@@ -510,7 +508,12 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
             rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
             rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
-            rec.remaining_due_amount = sum(today_visits.filtered(lambda v: v.state != "done").mapped("remaining_due_amount"))
+            rec.remaining_due_amount = sum(
+                (visit.direct_stop_settlement_remaining_amount or 0.0)
+                if getattr(visit, "visit_execution_mode", False) == "direct_sales"
+                else (visit.remaining_due_amount or 0.0)
+                for visit in today_visits.filtered(lambda v: v.state not in ("done", "cancel", "cancelled"))
+            )
 
     def action_open_today_plans(self):
         self.ensure_one()
@@ -553,7 +556,6 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_my_history(self):
         self.ensure_one()
-        self._ensure_consignment_tools_enabled()
         return self._prepare_action(
             "route_core.action_route_visit",
             name="My Visit History",
@@ -636,7 +638,7 @@ class RoutePdaHome(models.TransientModel):
         pickings = self._get_consignment_internal_transfers()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action.update({
-            "name": _("Returns & Internal Transfers"),
+            "name": _("Returns, Transfers and Lots") if self.route_show_lot_ui else _("Returns and Internal Transfers"),
             "domain": [("id", "in", pickings.ids)],
             "context": {"create": 0, "delete": 0},
         })
@@ -644,10 +646,9 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_consignment_payments(self):
         self.ensure_one()
-        self._ensure_consignment_tools_enabled()
         return self._prepare_action(
             "route_core.action_route_visit_collection_salesperson",
-            name=_("Consignment Payments"),
+            name=_("Consignment Collections"),
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
@@ -778,7 +779,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         return self._prepare_action(
             "route_core.action_route_visit_collection_salesperson",
-            name="My Visit Collections",
+            name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
@@ -788,7 +789,7 @@ class RoutePdaHome(models.TransientModel):
         self._ensure_direct_sale_enabled()
         return self._prepare_action(
             "route_core.action_route_direct_sale_payment",
-            name="My Direct Sale Payments",
+            name="Direct Sale Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "in", ["direct_stop", "direct_sale_order"])],
         )
 
@@ -796,26 +797,25 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         return self._prepare_action(
             "route_core.action_route_visit_payment",
-            name="All Payments",
+            name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
 
     def action_open_products(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_route_pda_products", name="All Products")
+        return self._prepare_action("route_core.action_route_pda_products", name="All Products and Lots" if self.route_show_lot_ui else "All Products")
 
     def action_open_vehicle_products(self):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
-        return self._open_quants_by_location(location, "Vehicle Products")
+        return self._open_quants_by_location(location, "Vehicle Products and Lots" if self.route_show_lot_ui else "Vehicle Products")
 
     def action_open_main_warehouse_products(self):
         self.ensure_one()
         location = self._get_main_warehouse_location()
-        title = "Main Warehouse Products"
+        title = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
         if location:
-            title = f"Main Warehouse Products - {location.display_name}"
+            prefix = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
+            title = f"{prefix} - {location.display_name}"
         return self._open_quants_by_location(location, title)
-
-
