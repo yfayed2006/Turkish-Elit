@@ -630,15 +630,46 @@ class RouteVisit(models.Model):
 
     def _get_pda_form_action(self):
         self.ensure_one()
+        form_view = self.env.ref("route_core.view_route_visit_pda_form")
+        action_ref = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not action_ref:
+            action_ref = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+
+        if action_ref:
+            action = action_ref.read()[0]
+            action.update({
+                "name": action.get("name") or _("My Visits"),
+                "res_model": "route.visit",
+                "res_id": self.id,
+                "view_mode": "form",
+                "view_id": form_view.id,
+                "views": [(form_view.id, "form")],
+                "target": "current",
+                "context": {
+                    "search_default_filter_my_visits": 1,
+                    "search_default_filter_today": 1,
+                    "search_default_filter_active": 1,
+                    "pda_mode": True,
+                    "create": 0,
+                    "edit": 1,
+                    "delete": 0,
+                },
+            })
+            return action
+
         return {
             "type": "ir.actions.act_window",
-            "name": _("PDA Visit"),
+            "name": _("My Visits"),
             "res_model": "route.visit",
             "res_id": self.id,
             "view_mode": "form",
-            "view_id": self.env.ref("route_core.view_route_visit_pda_form").id,
+            "view_id": form_view.id,
+            "views": [(form_view.id, "form")],
             "target": "current",
             "context": {
+                "search_default_filter_my_visits": 1,
+                "search_default_filter_today": 1,
+                "search_default_filter_active": 1,
                 "pda_mode": True,
                 "create": 0,
                 "edit": 1,
@@ -1192,31 +1223,49 @@ class RouteVisit(models.Model):
         payments = self._get_consignment_receipt_payments()
         promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
         latest_promise = promise_payments[:1]
+        line_items = self._get_consignment_receipt_line_items()
         return {
             "sale_order_ref": self.sale_order_id.name or "-",
             "refill_ref": self.refill_picking_id.name or "-",
+            "return_refs": ", ".join(self.return_picking_ids.mapped("name")) or "-",
             "current_due": self.outlet_current_due_amount or 0.0,
             "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
             "remaining_amount": self.remaining_due_amount or 0.0,
             "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
+            "visit_sale_amount": sum(item.get("sold_amount", 0.0) for item in line_items),
+            "returned_value": sum(item.get("return_amount", 0.0) for item in line_items),
+            "refill_value": sum(item.get("supply_value", 0.0) for item in line_items),
+            "confirmed_payment_total": sum(payments.mapped("amount")) if payments else 0.0,
         }
 
     def _get_consignment_receipt_line_items(self):
         self.ensure_one()
+        route_map = dict(self.env["route.visit.line"]._fields["return_route"].selection)
         items = []
         for line in self.line_ids.filtered(lambda l: l.product_id):
             if not any([(line.previous_qty or 0.0), (line.counted_qty or 0.0), (line.sold_qty or 0.0), (line.return_qty or 0.0), (line.supplied_qty or 0.0)]):
                 continue
+            display_previous_qty = line.previous_qty or 0.0
+            if display_previous_qty < 0:
+                display_previous_qty = 0.0
             items.append({
                 "barcode": line.barcode or line.product_id.default_code or "",
                 "product_name": line.product_id.display_name or "",
                 "lot_name": line.lot_id.name or "",
+                "expiry_date": line.expiry_date or False,
                 "previous_qty": line.previous_qty or 0.0,
+                "display_previous_qty": display_previous_qty,
                 "counted_qty": line.counted_qty or 0.0,
                 "sold_qty": line.sold_qty or 0.0,
                 "return_qty": line.return_qty or 0.0,
+                "return_route": line.return_route or "vehicle",
+                "return_route_label": route_map.get(line.return_route or "vehicle", line.return_route or "vehicle"),
                 "supplied_qty": line.supplied_qty or 0.0,
+                "unit_price": line.unit_price or 0.0,
+                "sold_amount": line.sold_amount or 0.0,
+                "return_amount": line.return_amount or 0.0,
+                "supply_value": line.supply_value or 0.0,
             })
         return items
 
