@@ -51,46 +51,6 @@
 </xpath>
 </field>
 </record>
-<record id="view_route_plan_form_salesperson_cleanup" model="ir.ui.view">
-<field name="name">route.plan.form.salesperson.cleanup</field>
-<field name="model">route.plan</field>
-<field name="inherit_id" ref="route_core.view_route_plan_form"/>
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
-<field name="arch" type="xml">
-<xpath expr="//page[@string='Planned Visits']/field[@name='line_ids']/list" position="replace">
-<list create="0" delete="0">
-<field name="sequence" widget="handle" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1"/>
-<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0" readonly="1"/>
-<field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'" readonly="1"/>
-<field name="skip_reason" optional="show" readonly="1"/>
-<field name="visit_id" string="Follow-up Visit" readonly="1"/>
-<field name="note" string="Line Note" readonly="1" optional="hide"/>
-<button name="action_view_outlet_shortages" type="object" string="Shortages" icon="fa-exclamation-triangle"/>
-<button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id or state == 'skipped'"/>
-<button name="action_open_or_create_visit" type="object" string="Open Visit" icon="fa-external-link" invisible="not visit_id or state in ('visited', 'skipped') or visit_id.state in ('done', 'cancel')"/>
-<button name="action_open_or_create_visit" type="object" string="View Visit" icon="fa-eye" invisible="not visit_id or (state not in ('visited', 'skipped') and visit_id.state not in ('done', 'cancel'))"/>
-</list>
-</xpath>
-<xpath expr="//page[@string='Notes']" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-<xpath expr="//separator[@string='Planning Readiness']" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-<xpath expr="//separator[@string='Visit Summary']" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-<xpath expr="//group[group/field[@name='planning_finalized'] and group/field[@name='previous_pending_visit_count']]" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-<xpath expr="//group[group/field[@name='line_count'] and group/field[@name='visit_count']]" position="attributes">
-<attribute name="invisible">1</attribute>
-</xpath>
-</field>
-</record>
 <record id="view_route_shortage_form_role_security" model="ir.ui.view">
 <field name="name">route.shortage.form.role.security</field>
 <field name="model">route.shortage</field>
