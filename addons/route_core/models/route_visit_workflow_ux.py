@@ -166,6 +166,44 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    consignment_sale_order_ref_display = fields.Char(
+        string="Consignment Sale Order Ref",
+        compute="_compute_consignment_document_display",
+        store=False,
+    )
+    consignment_refill_ref_display = fields.Char(
+        string="Consignment Refill Ref",
+        compute="_compute_consignment_document_display",
+        store=False,
+    )
+    consignment_return_refs_display = fields.Char(
+        string="Consignment Return Transfer Refs",
+        compute="_compute_consignment_document_display",
+        store=False,
+    )
+
+    @api.depends(
+        "sale_order_id",
+        "sale_order_id.name",
+        "refill_picking_id",
+        "refill_picking_id.name",
+        "return_picking_ids",
+        "return_picking_ids.name",
+        "return_picking_ids.state",
+        "visit_execution_mode",
+    )
+    def _compute_consignment_document_display(self):
+        for rec in self:
+            if rec._is_direct_sales_stop():
+                rec.consignment_sale_order_ref_display = False
+                rec.consignment_refill_ref_display = False
+                rec.consignment_return_refs_display = False
+                continue
+            summary = rec._get_consignment_receipt_summary()
+            rec.consignment_sale_order_ref_display = summary.get("sale_order_ref") or "-"
+            rec.consignment_refill_ref_display = summary.get("refill_ref") or "-"
+            rec.consignment_return_refs_display = summary.get("return_refs") or "-"
+
     @api.depends("company_id", "user_id", "vehicle_id", "outlet_id", "outlet_id.area_id")
     def _compute_resolved_supervisor_info(self):
         for rec in self:
@@ -1218,6 +1256,23 @@ class RouteVisit(models.Model):
             reverse=True,
         )
 
+    def _get_consignment_return_transfer_pickings(self):
+        self.ensure_one()
+        Picking = self.env["stock.picking"]
+        if hasattr(self, "_get_return_transfer_domain"):
+            return Picking.search(self._get_return_transfer_domain(), order="id")
+
+        pickings = self.return_picking_ids.filtered(lambda p: p.state != "cancel")
+        if self.refill_picking_id:
+            pickings -= self.refill_picking_id
+        return pickings.filtered(lambda p: getattr(p.picking_type_id, "code", False) == "internal")
+
+    def _get_consignment_return_transfer_refs(self):
+        self.ensure_one()
+        refs = self._get_consignment_return_transfer_pickings().mapped("name")
+        refs = [ref for ref in refs if ref]
+        return ", ".join(refs) if refs else "-"
+
     def _get_consignment_receipt_summary(self):
         self.ensure_one()
         payments = self._get_consignment_receipt_payments()
@@ -1227,7 +1282,7 @@ class RouteVisit(models.Model):
         return {
             "sale_order_ref": self.sale_order_id.name or "-",
             "refill_ref": self.refill_picking_id.name or "-",
-            "return_refs": ", ".join(self.return_picking_ids.mapped("name")) or "-",
+            "return_refs": self._get_consignment_return_transfer_refs(),
             "current_due": self.outlet_current_due_amount or 0.0,
             "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
             "remaining_amount": self.remaining_due_amount or 0.0,
@@ -1327,22 +1382,35 @@ class RouteVisit(models.Model):
         summary = self._get_consignment_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
         lines = [
-            _("Consignment visit receipt"),
+            _("Consignment visit completed"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
-            _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
-            _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
+        ]
+        sale_order_ref = summary.get("sale_order_ref") or "-"
+        refill_ref = summary.get("refill_ref") or "-"
+        return_refs = summary.get("return_refs") or "-"
+        if sale_order_ref != "-":
+            lines.append(_("Sale Order: %s") % sale_order_ref)
+        if refill_ref != "-":
+            lines.append(_("Refill Transfer: %s") % refill_ref)
+        if return_refs != "-":
+            lines.append(_("Return Transfer: %s") % return_refs)
+        lines += [
             _("Current Due: %.2f %s") % (summary.get("current_due", 0.0), currency_code),
             _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
             _("Remaining: %.2f %s") % (summary.get("remaining_amount", 0.0), currency_code),
         ]
         if summary.get("promise_amount"):
-            lines.append(_("Promise: %.2f %s") % (summary["promise_amount"], currency_code))
+            promise_line = _("Promise: %.2f %s") % (summary["promise_amount"], currency_code)
             if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
+                promise_line = _("Promise: %.2f %s on %s") % (
+                    summary["promise_amount"],
+                    currency_code,
+                    summary["latest_promise_date"],
+                )
+            lines.append(promise_line)
         if pdf_url:
             lines += ["", _("Receipt PDF:"), pdf_url]
-        lines += ["", _("Generated automatically by Route Core.")]
         return "\n".join(lines)
 
     def action_print_direct_stop_settlement_receipt(self):
