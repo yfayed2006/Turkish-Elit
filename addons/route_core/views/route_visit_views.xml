@@ -350,7 +350,7 @@
 <field name="model">route.visit</field>
 <field name="priority" eval="90"/>
 <field name="arch" type="xml">
-<form string="PDA Visit" create="0" delete="0">
+<form string="Route Visit" create="0" delete="0">
 <header>
 <button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
 <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
@@ -657,13 +657,13 @@
 <field name="act_window_id" ref="action_route_visit"/>
 </record>
 <record id="action_route_visit_pda" model="ir.actions.act_window">
-<field name="name">PDA Visits</field>
+<field name="name">My Visits</field>
 <field name="res_model">route.visit</field>
 <field name="view_mode">kanban,form,list</field>
 <field name="search_view_id" ref="view_route_visit_search"/>
 <field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'search_default_filter_active': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 <field name="help" type="html">
-<p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in PDA mode. </p>
+<p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in workspace mode. </p>
 </field>
 </record>
 <record id="action_route_visit_pda_kanban_view" model="ir.actions.act_window.view">
