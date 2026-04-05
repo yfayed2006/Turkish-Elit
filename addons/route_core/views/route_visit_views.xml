@@ -546,9 +546,9 @@
 <field name="remaining_due_amount" readonly="1"/>
 </group>
 <group>
-<field name="summary_sale_order_ref" string="Sale Order" readonly="1"/>
-<field name="summary_refill_transfer_ref" string="Refill Transfer" readonly="1"/>
-<field name="summary_return_transfer_refs" string="Return Transfers" readonly="1"/>
+<field name="sale_order_id" string="Sale Order" readonly="1"/>
+<field name="refill_picking_id" string="Refill Transfer" readonly="1"/>
+<field name="return_transfer_count" string="Return Transfers" readonly="1"/>
 <field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </group>
 </group>
@@ -559,8 +559,8 @@
 <field name="promise_to_pay_count" readonly="1"/>
 </group>
 <group>
-<field name="next_promise_to_pay_date" readonly="1"/>
-<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
+<field name="next_promise_to_pay_date" readonly="1" invisible="promise_to_pay_count == 0"/>
+<field name="latest_promise_status" readonly="1" invisible="promise_to_pay_count == 0" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 <field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
