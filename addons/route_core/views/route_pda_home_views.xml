@@ -216,10 +216,6 @@
 <i class="fa fa-money route_pda_app_icon"/>
 <span class="route_pda_app_label">Collections Snapshot</span>
 </button>
-<button type="object" name="action_open_reference_counts_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
-<i class="fa fa-bar-chart route_pda_app_icon"/>
-<span class="route_pda_app_label">Reference Counts</span>
-</button>
 </div>
 </sheet>
 </form>
@@ -458,12 +454,21 @@
 <form string="Current Visit Snapshot" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_consignment_tools" invisible="1"/>
+<field name="route_show_lot_ui" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
 <span>Back</span>
 </button>
 <h2 class="route_pda_detail_title">Current Visit Snapshot</h2>
+</div>
+<div class="alert alert-info" role="alert">
+<strong>
+<field name="current_visit_stage_title" readonly="1" nolabel="1"/>
+</strong>
+<div class="mt-1">
+<field name="current_visit_stage_help" readonly="1" nolabel="1"/>
+</div>
 </div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
 <div class="route_pda_info_card">
@@ -479,9 +484,93 @@
 </div>
 </div>
 <div class="route_pda_info_card">
+<div class="route_pda_info_label">Customer</div>
+<div class="route_pda_info_value">
+<field name="current_visit_customer_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
 <div class="route_pda_info_label">Vehicle</div>
 <div class="route_pda_info_value">
 <field name="current_vehicle_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="current_visit_area_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Execution Mode</div>
+<div class="route_pda_info_value">
+<field name="current_visit_execution_mode_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Current Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="current_visit_current_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Current Visit Sale</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="current_visit_net_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="current_visit_collected_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_emphasis">
+<div class="route_pda_info_label">Remaining</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="current_visit_remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Sale Order</div>
+<div class="route_pda_info_value">
+<field name="current_visit_sale_order_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Refill Transfer</div>
+<div class="route_pda_info_value">
+<field name="current_visit_refill_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Return Transfers</div>
+<div class="route_pda_info_value">
+<field name="current_visit_return_transfer_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Confirmed Payments</div>
+<div class="route_pda_info_value">
+<field name="current_visit_payment_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Open Shortages</div>
+<div class="route_pda_info_value">
+<field name="current_visit_open_shortage_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_lot_ui == False">
+<div class="route_pda_info_label">Near Expiry</div>
+<div class="route_pda_info_value">
+<field name="current_visit_near_expiry_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_lot_ui == False">
+<div class="route_pda_info_label">Pending Near Expiry</div>
+<div class="route_pda_info_value">
+<field name="current_visit_pending_near_expiry_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
