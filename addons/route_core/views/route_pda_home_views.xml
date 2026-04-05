@@ -13,6 +13,12 @@
 <field name="route_show_sales_center" invisible="1"/>
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_direct_return_tools" invisible="1"/>
+<field name="route_show_shared_centers" invisible="1"/>
+<field name="route_show_operation_modes" invisible="1"/>
+<field name="consignment_collected_today_amount" invisible="1"/>
+<field name="direct_sales_collected_today_amount" invisible="1"/>
+<field name="overdue_promise_amount" invisible="1"/>
+<field name="overdue_promise_count" invisible="1"/>
 <div class="route_pda_home_header route_pda_home_header_compact">
 <h1 class="route_pda_home_title">PDA Home</h1>
 <div class="route_pda_home_subtitle_text route_pda_home_subtitle_compact">
@@ -45,10 +51,14 @@
 <span class="route_pda_app_hint_value route_pda_app_hint_money">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
+<span class="route_pda_app_hint">Open Promises</span>
+<span class="route_pda_app_hint_value route_pda_app_hint_money">
+<field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
+</span>
 </button>
 </div>
 </div>
-<div class="route_pda_group route_pda_group_shared_centers">
+<div class="route_pda_group route_pda_group_shared_centers" invisible="route_show_shared_centers == False">
 <div class="route_pda_group_title">Shared Centers</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2">
 <button type="object" name="action_open_product_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
@@ -61,7 +71,7 @@
 </button>
 </div>
 </div>
-<div class="route_pda_group route_pda_group_modes">
+<div class="route_pda_group route_pda_group_modes" invisible="route_show_operation_modes == False">
 <div class="route_pda_group_title">Operation Modes</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_mode_grid">
 <button type="object" name="action_open_direct_sale_mode_screen" class="btn route_pda_app_btn route_pda_app_btn_sales route_pda_mode_btn" invisible="route_show_sales_center == False">
@@ -515,27 +525,33 @@
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_consignment_tools == False">
-<div class="route_pda_info_label">Visit Collections Today</div>
-<div class="route_pda_info_value">
-<field name="visit_collection_count" readonly="1" nolabel="1"/>
+<div class="route_pda_info_label">Consignment Collected Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="consignment_collected_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_info_hint_inline">
+Visits:
+<field name="visit_collection_count" readonly="1" nolabel="1" class="oe_inline"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Stop Settlements Today</div>
-<div class="route_pda_info_value">
-<field name="direct_stop_payment_count" readonly="1" nolabel="1"/>
+<div class="route_pda_info_label">Direct Sales Collected Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="direct_sales_collected_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_info_hint_inline">
+Entries:
+<field name="direct_sale_payment_count" readonly="1" nolabel="1" class="oe_inline"/>
 </div>
 </div>
-<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sale Order Payments Today</div>
-<div class="route_pda_info_value">
-<field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Overdue Promises</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="overdue_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
-</div>
-<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sales Settlements Today</div>
-<div class="route_pda_info_value">
-<field name="direct_sale_payment_count" readonly="1" nolabel="1"/>
+<div class="route_pda_info_hint_inline">
+Entries:
+<field name="overdue_promise_count" readonly="1" nolabel="1" class="oe_inline"/>
 </div>
 </div>
 <div class="route_pda_info_card">
