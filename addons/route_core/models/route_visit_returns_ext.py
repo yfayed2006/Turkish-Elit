@@ -49,6 +49,7 @@ class RouteVisit(models.Model):
             "target": "new",
             "context": {
                 "default_visit_id": self.id,
+                "default_scan_mode": "return",
                 "default_quantity": 1.0,
                 "default_return_route": "vehicle",
                 "default_focus_target": "lot" if self._is_route_lot_workflow_enabled() else "product",
