@@ -11,7 +11,6 @@
 <field name="area_id"/>
 <field name="vehicle_id"/>
 <field name="user_id"/>
-<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="visit_process_state"/>
 <field name="state"/>
 <field name="sale_order_id"/>
@@ -31,7 +30,6 @@
 <field name="partner_id"/>
 <field name="area_id"/>
 <field name="user_id"/>
-<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="visit_process_state"/>
 <field name="state"/>
 <field name="sale_order_id"/>
@@ -62,12 +60,6 @@
 <field name="visit_process_state"/>
 </span>
 </div>
-<t t-if="record.shortage_count.raw_value and record.shortage_count.raw_value > 0">
-<div class="route_pda_visit_line">
-<span class="route_pda_visit_label">Shortages:</span>
-<span class="route_pda_visit_shortage" t-esc="record.shortage_count.raw_value"/>
-</div>
-</t>
 <div class="route_pda_visit_btn_wrap">
 <a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">Open Visit</a>
 </div>
@@ -154,7 +146,6 @@
 <field name="collected_amount" readonly="1"/>
 </group>
 <group>
-<field name="outlet_open_shortage_count" readonly="1"/>
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 <field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
@@ -438,7 +429,6 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group invisible="1">
-<field name="outlet_open_shortage_count" readonly="1"/>
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 <field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
@@ -530,6 +520,7 @@
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
+<field name="barcode" readonly="1"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
 <field name="expiry_date" readonly="1" optional="hide" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="uom_id" readonly="1"/>
@@ -539,6 +530,8 @@
 <field name="return_qty"/>
 <field name="return_route"/>
 <field name="vehicle_available_qty" readonly="1"/>
+<field name="unit_price"/>
+<field name="sold_amount" readonly="1"/>
 <field name="supplied_qty"/>
 </list>
 </field>
@@ -562,7 +555,6 @@
 <group>
 <field name="ux_stage_title" string="Current Step" readonly="1"/>
 <field name="ux_stage_help" string="Step Help" readonly="1"/>
-<field name="outlet_open_shortage_count" readonly="1"/>
 <field name="promise_to_pay_count" readonly="1"/>
 </group>
 <group>
