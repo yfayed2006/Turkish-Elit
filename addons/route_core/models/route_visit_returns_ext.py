@@ -195,9 +195,11 @@ class RouteVisit(models.Model):
 
     def _prepare_return_move_vals(self, picking, line):
         self.ensure_one()
+        unit_price = line.unit_price or line.product_id.lst_price or 0.0
+        return_qty = line.return_qty or 0.0
         return {
             "product_id": line.product_id.id,
-            "product_uom_qty": line.return_qty,
+            "product_uom_qty": return_qty,
             "product_uom": line.uom_id.id or line.product_id.uom_id.id,
             "location_id": picking.location_id.id,
             "location_dest_id": picking.location_dest_id.id,
@@ -205,6 +207,8 @@ class RouteVisit(models.Model):
             "route_visit_id": self.id,
             "route_visit_line_id": line.id,
             "origin": picking.origin or self.name or self.display_name,
+            "route_direct_return_unit_price": unit_price,
+            "route_direct_return_estimated_amount": return_qty * unit_price,
         }
 
     def _create_return_pickings(self):
