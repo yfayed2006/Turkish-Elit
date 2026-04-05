@@ -388,3 +388,14 @@
     min-height: 40px !important;
     font-weight: 700;
 }
+
+
+.route_pda_info_hint_inline {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.route_pda_app_hint_money {
+    display: block;
+}
