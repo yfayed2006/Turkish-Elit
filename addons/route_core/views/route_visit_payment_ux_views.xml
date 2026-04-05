@@ -79,19 +79,22 @@
 <field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
 </group>
 </group>
-<group string="Direct Stop Settlement Summary" col="2" invisible="visit_execution_mode != 'direct_sales'">
+<group string="Direct Stop Settlement" col="2" invisible="visit_execution_mode != 'direct_sales'">
 <group>
+<field name="direct_stop_order_refs" readonly="1"/>
+<field name="direct_stop_return_refs" readonly="1"/>
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_returns_total" readonly="1"/>
 <field name="direct_stop_current_net_amount" readonly="1"/>
 <field name="direct_stop_grand_due_amount" readonly="1"/>
 <field name="direct_stop_settlement_paid_amount" readonly="1"/>
 <field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </group>
 <field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}" invisible="visit_execution_mode == 'direct_sales'">
