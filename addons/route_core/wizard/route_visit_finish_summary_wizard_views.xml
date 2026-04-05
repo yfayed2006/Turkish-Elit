@@ -6,7 +6,6 @@
 <form string="Visit Finished" create="0" edit="0" delete="0">
 <sheet>
 <field name="is_direct_sales_stop" invisible="1"/>
-<field name="is_consignment_visit" invisible="1"/>
 <field name="currency_id" invisible="1"/>
 <group col="2">
 <group>
@@ -22,19 +21,6 @@
 <field name="return_status_label" string="Return Decision" readonly="1" invisible="not is_direct_sales_stop"/>
 </group>
 </group>
-<group string="Visit Summary" col="4" invisible="not is_consignment_visit">
-<field name="summary_sale_order_ref" string="Sale Order" readonly="1"/>
-<field name="summary_return_ref" string="Return Transfers" readonly="1"/>
-<field name="summary_refill_ref" string="Refill Transfer" readonly="1"/>
-<field name="summary_promise_amount" string="Promise Amount" readonly="1" invisible="not summary_promise_amount"/>
-<field name="summary_previous_due_amount" string="Previous Due" readonly="1"/>
-<field name="summary_current_sale_amount" string="Current Sale" readonly="1"/>
-<field name="summary_current_return_amount" string="Returned Value" readonly="1" invisible="not summary_current_return_amount"/>
-<field name="summary_refill_amount" string="Refill Value" readonly="1" invisible="not summary_refill_amount"/>
-<field name="summary_grand_due_amount" string="Grand Due" readonly="1"/>
-<field name="summary_paid_amount" string="Collected" readonly="1"/>
-<field name="summary_remaining_amount" string="Remaining" readonly="1"/>
-</group>
 <group string="Settlement Summary" col="4" invisible="not is_direct_sales_stop">
 <field name="direct_stop_previous_due_amount" readonly="1"/>
 <field name="direct_stop_previous_due_since_display" string="Previous Due Since" readonly="1"/>
@@ -48,22 +34,15 @@
 <field name="direct_stop_return_count" readonly="1" invisible="not direct_stop_return_count"/>
 <field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
+<group string="Visit Summary" col="2" invisible="is_direct_sales_stop">
+<field name="consignment_sale_order_ref" string="Sale Order" readonly="1"/>
+<field name="consignment_refill_ref" string="Refill Transfer" readonly="1"/>
+</group>
+<group string="Confirmed Payments" invisible="is_direct_sales_stop">
+<field name="consignment_payment_summary_html" readonly="1" nolabel="1" widget="html"/>
+</group>
 <group>
 <field name="finish_message" readonly="1" nolabel="1" widget="html"/>
-</group>
-<group string="Confirmed Payments" invisible="not payment_ids">
-<field name="payment_ids" readonly="1">
-<list create="0" delete="0" edit="0">
-<field name="payment_date"/>
-<field name="payment_mode"/>
-<field name="collection_type"/>
-<field name="amount"/>
-<field name="promise_date"/>
-<field name="promise_amount"/>
-<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="state"/>
-</list>
-</field>
 </group>
 </sheet>
 <footer>
