@@ -1313,10 +1313,13 @@ class RouteVisit(models.Model):
         latest_promise = promise_payments[:1]
         line_items = self._get_consignment_receipt_line_items()
         sale_order = self._get_route_receipt_sale_order()
+        sale_order_ref = self.summary_sale_order_ref or (sale_order.name if sale_order else "-")
+        refill_ref = self.summary_refill_transfer_ref or (self.refill_picking_id.name or "-")
+        return_refs = self.summary_return_transfer_refs or self._get_route_receipt_return_refs()
         return {
-            "sale_order_ref": sale_order.name if sale_order else "-",
-            "refill_ref": self.refill_picking_id.name or "-",
-            "return_refs": self._get_route_receipt_return_refs(),
+            "sale_order_ref": sale_order_ref,
+            "refill_ref": refill_ref,
+            "return_refs": return_refs,
             "current_due": self.outlet_current_due_amount or 0.0,
             "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
             "remaining_amount": self.remaining_due_amount or 0.0,
