@@ -546,9 +546,9 @@
 <field name="remaining_due_amount" readonly="1"/>
 </group>
 <group>
-<field name="sale_order_id" string="Sale Order" readonly="1"/>
-<field name="refill_picking_id" string="Refill Transfer" readonly="1"/>
-<field name="return_transfer_count" string="Return Transfers" readonly="1"/>
+<field name="summary_sale_order_ref" string="Sale Order" readonly="1"/>
+<field name="summary_refill_transfer_ref" string="Refill Transfer" readonly="1"/>
+<field name="summary_return_transfer_refs" string="Return Transfers" readonly="1"/>
 <field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </group>
 </group>
