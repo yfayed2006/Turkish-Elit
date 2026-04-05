@@ -70,7 +70,7 @@ class RoutePdaHome(models.TransientModel):
     current_visit_payment_count = fields.Integer(string="Confirmed Payments", compute="_compute_dashboard")
     current_visit_sale_order_ref = fields.Char(string="Sale Order", compute="_compute_dashboard")
     current_visit_refill_ref = fields.Char(string="Refill Transfer", compute="_compute_dashboard")
-    current_visit_return_transfer_count = fields.Integer(string="Return Transfers", compute="_compute_dashboard")
+    current_visit_return_transfer_refs = fields.Char(string="Return Transfers", compute="_compute_dashboard")
 
     cash_today_amount = fields.Monetary(string="Cash In Hand", currency_field="currency_id", compute="_compute_dashboard")
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
@@ -516,9 +516,9 @@ class RoutePdaHome(models.TransientModel):
             rec.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if current_visit else 0
             rec.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if current_visit else 0
             rec.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if current_visit else 0
-            rec.current_visit_sale_order_ref = current_visit.sale_order_id.name if current_visit and current_visit.sale_order_id else "-"
-            rec.current_visit_refill_ref = current_visit.refill_picking_id.name if current_visit and current_visit.refill_picking_id else "-"
-            rec.current_visit_return_transfer_count = current_visit.return_transfer_count if current_visit else 0
+            rec.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if current_visit and hasattr(current_visit, "summary_sale_order_ref") else "-"
+            rec.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if current_visit and hasattr(current_visit, "summary_refill_transfer_ref") else "-"
+            rec.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if current_visit and hasattr(current_visit, "summary_return_transfer_refs") else "-"
             if current_visit and current_visit.vehicle_id:
                 rec.current_vehicle_name = current_visit.vehicle_id.display_name
             elif today_plans[:1].vehicle_id:
@@ -853,3 +853,4 @@ class RoutePdaHome(models.TransientModel):
             prefix = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
             title = f"{prefix} - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
