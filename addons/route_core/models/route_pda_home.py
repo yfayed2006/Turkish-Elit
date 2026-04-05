@@ -71,6 +71,12 @@ class RoutePdaHome(models.TransientModel):
     current_visit_sale_order_ref = fields.Char(string="Sale Order", compute="_compute_dashboard")
     current_visit_refill_ref = fields.Char(string="Refill Transfer", compute="_compute_dashboard")
     current_visit_return_transfer_refs = fields.Char(string="Return Transfers", compute="_compute_dashboard")
+    snapshot_visit_scope = fields.Selection(
+        [("auto", "Auto"), ("consignment", "Consignment"), ("direct_sales", "Direct Sales")],
+        string="Snapshot Visit Scope",
+        default="auto",
+        readonly=True,
+    )
 
     cash_today_amount = fields.Monetary(string="Cash In Hand", currency_field="currency_id", compute="_compute_dashboard")
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
@@ -151,6 +157,25 @@ class RoutePdaHome(models.TransientModel):
         self._compute_dashboard()
         return True
 
+    def _set_snapshot_visit_scope(self, scope="auto"):
+        self.ensure_one()
+        self.snapshot_visit_scope = scope or "auto"
+        return True
+
+    def _get_dashboard_current_visit(self, user):
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        domain = [
+            ("user_id", "=", user.id),
+            ("state", "=", "in_progress"),
+        ]
+        scope = self.snapshot_visit_scope or "auto"
+        if scope == "consignment":
+            domain.append(("visit_execution_mode", "=", "consignment"))
+        elif scope == "direct_sales":
+            domain.append(("visit_execution_mode", "=", "direct_sales"))
+        return Visit.search(domain, order="start_datetime desc, id desc", limit=1)
+
     def _open_self_view(self, view_xmlid, title, extra_context=None):
         self.ensure_one()
         self._refresh_dashboard_snapshot()
@@ -172,10 +197,12 @@ class RoutePdaHome(models.TransientModel):
         }
 
     def action_back_home(self):
+        self._set_snapshot_visit_scope("auto")
         return self._open_self_view("route_core.view_route_pda_home_form", "Route Workspace")
 
     def action_open_snapshot_center_screen(self):
         self._ensure_consignment_tools_enabled()
+        self._set_snapshot_visit_scope("consignment")
         title = "Stock and Lot Snapshot" if self.route_show_lot_ui else "Snapshot Center"
         return self._open_self_view("route_core.view_route_pda_snapshot_center_form", title)
 
@@ -206,6 +233,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_consignment_mode_screen(self):
         self._ensure_consignment_tools_enabled()
+        self._set_snapshot_visit_scope("consignment")
         return self._open_self_view("route_core.view_route_pda_consignment_mode_form", "Consignment")
 
     def action_open_today_overview_screen(self):
@@ -213,6 +241,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_current_visit_snapshot_screen(self):
         self._ensure_consignment_tools_enabled()
+        self._set_snapshot_visit_scope("consignment")
         return self._open_self_view("route_core.view_route_pda_current_visit_snapshot_form", "Current Visit Snapshot")
 
     def action_open_collections_snapshot_screen(self):
@@ -418,10 +447,7 @@ class RoutePdaHome(models.TransientModel):
                 ("user_id", "=", user.id),
                 ("date", "=", today),
             ])
-            current_visit = Visit.search([
-                ("user_id", "=", user.id),
-                ("state", "=", "in_progress"),
-            ], order="start_datetime desc, id desc", limit=1)
+            current_visit = rec._get_dashboard_current_visit(user)
             today_closings = Closing.search([
                 ("user_id", "=", user.id),
                 ("plan_date", "=", today),
@@ -516,9 +542,9 @@ class RoutePdaHome(models.TransientModel):
             rec.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if current_visit else 0
             rec.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if current_visit else 0
             rec.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if current_visit else 0
-            rec.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if current_visit and hasattr(current_visit, "summary_sale_order_ref") else "-"
-            rec.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if current_visit and hasattr(current_visit, "summary_refill_transfer_ref") else "-"
-            rec.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if current_visit and hasattr(current_visit, "summary_return_transfer_refs") else "-"
+            rec.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if current_visit else "-"
+            rec.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if current_visit else "-"
+            rec.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if current_visit else "-"
             if current_visit and current_visit.vehicle_id:
                 rec.current_vehicle_name = current_visit.vehicle_id.display_name
             elif today_plans[:1].vehicle_id:
