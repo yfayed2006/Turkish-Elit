@@ -203,16 +203,12 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                     _("Date: %s") % (rec.visit_date or "-"),
                     _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
                     _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
-                    _("Return Transfer: %s") % (summary.get("return_refs") or "-"),
+                    _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
                     _("Current Due: %s") % rec._format_currency_amount(summary.get("current_due", 0.0)),
                     _("Collected: %s") % rec._format_currency_amount(summary.get("settled_amount", 0.0)),
                     _("Remaining: %s") % rec._format_currency_amount(summary.get("remaining_amount", 0.0)),
+                    "</div>",
                 ]
-                if summary.get("promise_amount"):
-                    parts.append(_("Promise: %s") % rec._format_currency_amount(summary.get("promise_amount", 0.0)))
-                    if summary.get("latest_promise_date"):
-                        parts.append(_("Promise Date: %s") % summary.get("latest_promise_date"))
-                parts.append("</div>")
                 rec.finish_message = "<br/>".join(parts)
                 continue
 
