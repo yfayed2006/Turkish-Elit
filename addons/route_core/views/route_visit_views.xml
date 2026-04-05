@@ -125,9 +125,6 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
-<field name="consignment_sale_order_ref_display" invisible="1"/>
-<field name="consignment_refill_ref_display" invisible="1"/>
-<field name="consignment_return_refs_display" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -398,9 +395,6 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
-<field name="consignment_sale_order_ref_display" invisible="1"/>
-<field name="consignment_refill_ref_display" invisible="1"/>
-<field name="consignment_return_refs_display" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -522,7 +516,7 @@
 </group>
 </group>
 <notebook>
-<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state not in ('checked_in', 'counting')">
+<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
@@ -543,27 +537,6 @@
 </list>
 </field>
 </page>
-<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state != 'reconciled'">
-<field name="line_ids" readonly="1">
-<list create="0" delete="0">
-<field name="product_id" readonly="1"/>
-<field name="barcode" readonly="1"/>
-<field name="lot_id" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
-<field name="expiry_date" readonly="1" optional="hide" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
-<field name="uom_id" readonly="1"/>
-<field name="previous_qty" readonly="1"/>
-<field name="counted_qty" readonly="1"/>
-<field name="sold_qty" readonly="1"/>
-<field name="return_qty" readonly="1"/>
-<field name="return_route" readonly="1"/>
-<field name="supplied_qty" string="Refill Proposal" readonly="1"/>
-<field name="pending_refill_qty" string="Pending Refill" optional="hide" readonly="1"/>
-<field name="vehicle_available_qty" readonly="1"/>
-<field name="unit_price" readonly="1"/>
-<field name="sold_amount" readonly="1"/>
-</list>
-</field>
-</page>
 <page string="Summary" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group string="Visit Summary" col="2">
 <group>
@@ -573,9 +546,9 @@
 <field name="remaining_due_amount" readonly="1"/>
 </group>
 <group>
-<field name="consignment_sale_order_ref_display" string="Sale Order" readonly="1"/>
-<field name="consignment_refill_ref_display" string="Refill Transfer" readonly="1"/>
-<field name="consignment_return_refs_display" string="Return Transfers" readonly="1"/>
+<field name="summary_sale_order_ref" string="Sale Order" readonly="1"/>
+<field name="summary_refill_transfer_ref" string="Refill Transfer" readonly="1"/>
+<field name="summary_return_transfer_refs" string="Return Transfers" readonly="1"/>
 <field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </group>
 </group>
