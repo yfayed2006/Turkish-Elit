@@ -498,4 +498,168 @@ Date:
 </t>
 </t>
 </template>
+<record id="action_report_route_visit_consignment_receipt" model="ir.actions.report">
+<field name="name">Consignment Visit Receipt</field>
+<field name="model">route.visit</field>
+<field name="report_type">qweb-pdf</field>
+<field name="report_name">route_core.report_route_visit_consignment_receipt</field>
+<field name="report_file">route_core.report_route_visit_consignment_receipt</field>
+<field name="print_report_name">'Consignment Visit Receipt - %s' % (object.name or '')</field>
+<field name="paperformat_id" ref="route_core.paperformat_route_visit_settlement_receipt"/>
+</record>
+<template id="report_route_visit_consignment_receipt">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+<t t-call="web.basic_layout">
+<div class="page" style="font-size:12px; color:#1f2937;">
+<t t-set="summary" t-value="doc._get_consignment_receipt_summary()"/>
+<t t-set="payments" t-value="doc._get_consignment_receipt_payments()"/>
+<t t-set="items" t-value="doc._get_consignment_receipt_line_items()"/>
+<t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
+<h2 style="margin:0 0 12px 0;">Consignment Visit Receipt</h2>
+<table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Visit</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="doc.name or '-'"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Outlet</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-field="doc.outlet_id"/>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Customer</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-field="doc.partner_id"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Salesperson</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-field="doc.user_id"/>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Sale Order</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="summary['sale_order_ref'] or '-'"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Refill Transfer</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="summary['refill_ref'] or '-'"/>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Current Due</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (summary['current_due'], currency_label)"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Collected</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (summary['settled_amount'], currency_label)"/>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Remaining</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (summary['remaining_amount'], currency_label)"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Promise</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (summary['promise_amount'], currency_label)"/>
+</tr>
+</table>
+<h3 style="margin:12px 0 8px 0;">Confirmed Payments</h3>
+<table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+<thead>
+<tr>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Date</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Mode</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Collection</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Amount</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Promise</th>
+</tr>
+</thead>
+<tbody>
+<tr t-if="not payments">
+<td colspan="5" style="padding:6px 8px; border:1px solid #ddd;">No confirmed payments.</td>
+</tr>
+<tr t-foreach="payments" t-as="payment">
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-field="payment.payment_date"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="dict(payment._fields['payment_mode'].selection).get(payment.payment_mode)"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="dict(payment._fields['collection_type'].selection).get(payment.collection_type)"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;" t-esc="'%.2f %s' % (payment.amount or 0.0, currency_label)"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="payment.promise_date or '-'"/>
+<t t-if="payment.promise_amount">
+/
+<span t-esc="'%.2f %s' % (payment.promise_amount or 0.0, currency_label)"/>
+</t>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 style="margin:12px 0 8px 0;">Visit Lines</h3>
+<table style="width:100%; border-collapse:collapse;">
+<thead>
+<tr>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Barcode</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Product</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:left;">Lot</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Prev</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Counted</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Sold</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Returned</th>
+<th style="padding:6px 8px; border:1px solid #ddd; text-align:right;">Supplied</th>
+</tr>
+</thead>
+<tbody>
+<tr t-if="not items">
+<td colspan="8" style="padding:6px 8px; border:1px solid #ddd;">No visit lines.</td>
+</tr>
+<tr t-foreach="items" t-as="item">
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="item['barcode']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="item['product_name']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="item['lot_name'] or '-'"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;">
+<span t-esc="item['previous_qty']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;">
+<span t-esc="item['counted_qty']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;">
+<span t-esc="item['sold_qty']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;">
+<span t-esc="item['return_qty']"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd; text-align:right;">
+<span t-esc="item['supplied_qty']"/>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</t>
+</t>
+</t>
+</template>
 </odoo>
