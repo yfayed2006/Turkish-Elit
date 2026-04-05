@@ -81,11 +81,56 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
+<!--  Salesperson-safe menu actions  -->
+<record id="action_route_plan_salesperson" model="ir.actions.act_window">
+<field name="name">My Route Plans</field>
+<field name="res_model">route.plan</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_plan_search"/>
+<field name="domain">[("user_id", "=", uid)]</field>
+<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_pda_salesperson" model="ir.actions.act_window">
+<field name="name">My PDA Visits</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">kanban,form,list</field>
+<field name="search_view_id" ref="route_core.view_route_visit_search"/>
+<field name="domain">[("user_id", "=", uid), ("date", "=", context_today()), ("state", "not in", ["done", "cancel", "cancelled"])]</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'search_default_filter_active': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_history_salesperson" model="ir.actions.act_window">
+<field name="name">My Visit History</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_visit_search"/>
+<field name="domain">[("user_id", "=", uid), ("state", "in", ["done", "cancel", "cancelled"])]</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_done': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+<field name="help" type="html">
+<p class="o_view_nocontent_smiling_face">Review your completed and closed visits here.</p>
+</field>
+</record>
+<record id="action_route_vehicle_closing_salesperson" model="ir.actions.act_window">
+<field name="name">My Vehicle Closings</field>
+<field name="res_model">route.vehicle.closing</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_vehicle_closing_search"/>
+<field name="domain">[("user_id", "=", uid)]</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_collection_salesperson" model="ir.actions.act_window">
+<field name="name">My Visit Collections</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">list,form</field>
+<field name="view_id" ref="route_core.view_route_visit_collection_list"/>
+<field name="search_view_id" ref="route_core.view_route_visit_collection_search"/>
+<field name="domain">[("salesperson_id", "=", uid), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")] </field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'visit', 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
 <menuitem id="menu_route_salesperson_home" name="PDA Home" parent="route_core.menu_route_visit_root" action="route_core.server_action_open_route_pda_home" sequence="190" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan" sequence="200" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda" sequence="210" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit" sequence="220" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing" sequence="230" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_salesperson_shortage" sequence="240" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection" sequence="280" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan_salesperson" sequence="200" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_my_visits" name="My PDA Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage" sequence="240" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection_salesperson" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
