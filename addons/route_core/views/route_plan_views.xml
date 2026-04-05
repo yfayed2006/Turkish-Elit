@@ -21,7 +21,7 @@
 <field name="arch" type="xml">
 <form string="Route Plan">
 <header>
-<button name="action_open_pda_screen" type="object" string="PDA Screen" class="btn-primary"/>
+<button name="action_open_pda_screen" type="object" string="Workspace Screen" class="btn-primary"/>
 <button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0"/>
 <button name="action_add_open_shortages" type="object" string="Add Open Shortages" class="btn-secondary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
