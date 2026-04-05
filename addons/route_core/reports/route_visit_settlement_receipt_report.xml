@@ -534,13 +534,14 @@ Date:
 <t t-set="returned_value" t-value="sum(line.return_amount or 0.0 for line in doc.line_ids) if doc.line_ids else 0.0"/>
 <t t-set="refill_value" t-value="sum(line.supply_value or 0.0 for line in doc.line_ids) if doc.line_ids else 0.0"/>
 <t t-set="confirmed_payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
-<div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:14px;">
+<div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:10px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
 <tr>
-<td style="width:64%; padding:16px 18px; vertical-align:top; border-right:1px solid #e5e7eb;">
+<td style="width:64%; padding:14px 16px; vertical-align:top; border-right:1px solid #e5e7eb;">
 <div style="font-size:11px; letter-spacing:0.6px; text-transform:uppercase; color:#0f766e; font-weight:700; margin-bottom:6px;">Route Core</div>
-<div style="font-size:25px; font-weight:700; color:#111827; line-height:1.15; margin-bottom:6px;">Consignment Visit Receipt</div>
-<div style="font-size:12px; color:#475569; line-height:1.55; margin-bottom:10px;">Official consignment visit summary for stock movement, sale value, returns, refill activity, and confirmed collection records.</div>
+<div style="font-size:25px; font-weight:700; color:#111827; line-height:1.15; margin-bottom:4px;">Settlement Receipt</div>
+<div style="font-size:11px; font-weight:700; color:#0f766e; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px;">Consignment Visit</div>
+<div style="font-size:12px; color:#475569; line-height:1.45; margin-bottom:8px;">Official consignment visit summary for stock movement, sale value, returns, refill activity, and confirmed collection records.</div>
 <div style="font-size:11px; color:#475569; line-height:1.6;">
 <div>
 <strong t-esc="doc.company_id.name or '-'"/>
@@ -555,11 +556,11 @@ Date:
 </div>
 </div>
 </td>
-<td style="width:36%; padding:16px 18px; vertical-align:top; text-align:right; background:#f8fafc;">
+<td style="width:36%; padding:14px 16px; vertical-align:top; text-align:right; background:#f8fafc;">
 <div t-if="doc.company_id.logo" style="margin-bottom:12px;">
 <img t-att-src="image_data_uri(doc.company_id.logo)" style="max-height:52px; max-width:150px; object-fit:contain;" alt="Company Logo"/>
 </div>
-<div style="display:inline-block; text-align:left; min-width:190px; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px;">
+<div style="display:inline-block; text-align:left; min-width:190px; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:4px;">Receipt Meta</div>
 <div style="font-size:12px; margin-bottom:4px;">
 <strong>Visit No:</strong>
@@ -578,133 +579,133 @@ Date:
 </tr>
 </table>
 </div>
-<table style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #cbd5e1;">
+<table style="width:100%; border-collapse:collapse; margin-bottom:10px; border:1px solid #cbd5e1;">
 <tr>
 <td colspan="4" style="padding:9px 12px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Visit Summary</td>
 </tr>
 <tr>
-<td style="width:18%; padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Outlet</td>
-<td style="width:32%; padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="width:18%; padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Outlet</td>
+<td style="width:32%; padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.outlet_id"/>
 </td>
-<td style="width:18%; padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Customer</td>
-<td style="width:32%; padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="width:18%; padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Customer</td>
+<td style="width:32%; padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.partner_id"/>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Salesperson</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Salesperson</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.user_id"/>
 </td>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Vehicle</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Vehicle</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.vehicle_id"/>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Visit Date</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Visit Date</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.date"/>
 </td>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Area</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Area</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-field="doc.area_id"/>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Start DateTime</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Start DateTime</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-if="doc.start_datetime" t-field="doc.start_datetime" t-options="{'widget': 'datetime'}"/>
 <span t-if="not doc.start_datetime">-</span>
 </td>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">End DateTime</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">End DateTime</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-if="doc.end_datetime" t-field="doc.end_datetime" t-options="{'widget': 'datetime'}"/>
 <span t-if="not doc.end_datetime">-</span>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Sale Order No.</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Sale Order No.</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-esc="summary.get('sale_order_ref') or '-'"/>
 </td>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Refill Transfer</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Refill Transfer</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-esc="summary.get('refill_ref') or '-'"/>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Return No.</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
-<span t-esc="', '.join(doc.return_picking_ids.mapped('name')) or '-'"/>
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Return No.</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
+<span t-esc="summary.get('return_refs') or '-'"/>
 </td>
-<td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Execution Mode</td>
-<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Execution Mode</td>
+<td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-esc="doc.visit_execution_mode_label or '-'"/>
 </td>
 </tr>
 <tr>
-<td style="padding:8px 12px; font-weight:700; color:#334155;">Receipt Currency</td>
-<td colspan="3" style="padding:8px 12px;">
+<td style="padding:6px 10px; font-weight:700; color:#334155;">Receipt Currency</td>
+<td colspan="3" style="padding:6px 10px;">
 <span t-esc="currency_label or '-'"/>
 </td>
 </tr>
 </table>
-<table style="width:100%; border-collapse:separate; border-spacing:8px; margin:0 -8px 10px -8px;">
+<table style="width:100%; border-collapse:separate; border-spacing:6px; margin:0 -6px 8px -6px;">
 <tr>
-<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px; vertical-align:top;">
+<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Current Due</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (previous_due, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Outlet due before confirming new collections.</div>
 </td>
-<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px; vertical-align:top;">
+<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Current Visit Sale</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (current_sale, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Calculated from sold quantities in this visit.</div>
 </td>
-<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px; vertical-align:top;">
+<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Returned Value</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (returned_value, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Recorded return value in this visit.</div>
 </td>
-<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px; vertical-align:top;">
+<td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Refill Value</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (refill_value, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Transferred stock value from vehicle to outlet.</div>
 </td>
 </tr>
 <tr>
-<td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px;">
+<td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#15803d; margin-bottom:6px;">Collected</div>
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary.get('settled_amount', 0.0), currency_label)"/>
 </td>
-<td style="border:1px solid #fecaca; background:#fef2f2; padding:10px 12px;">
+<td style="border:1px solid #fecaca; background:#fef2f2; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#b91c1c; margin-bottom:6px;">Remaining</div>
 <div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('remaining_amount', 0.0), currency_label)"/>
 </td>
-<td style="border:1px solid #e5e7eb; background:#fafafa; padding:10px 12px;">
+<td style="border:1px solid #e5e7eb; background:#fafafa; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Promise Amount</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (summary.get('promise_amount', 0.0), currency_label)"/>
 </td>
-<td style="border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px;">
+<td style="border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Confirmed Payments</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.0f' % (len(payments) if payments else 0)"/>
 </td>
 </tr>
 </table>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Confirmed Payments</div>
+<div style="margin-top:8px; border:1px solid #dbe3ec; margin-bottom:16px;">
+<div style="padding:6px 8px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Confirmed Payments</div>
 <table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Payment Date</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Mode</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Scenario</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Date</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Amount</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reference</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Payment Date</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Mode</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Scenario</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Date</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Amount</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reference</th>
 </tr>
 </thead>
 <tbody>
@@ -712,55 +713,55 @@ Date:
 <td colspan="7" style="padding:10px; color:#64748b;">No confirmed payments.</td>
 </tr>
 <tr t-foreach="payments" t-as="payment">
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.payment_date"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="dict(payment._fields['payment_mode'].selection).get(payment.payment_mode)"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="dict(payment._fields['collection_type'].selection).get(payment.collection_type)"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.amount"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.promise_date"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.promise_amount"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
 </td>
 </tr>
 </tbody>
 <tfoot t-if="payments">
 <tr>
-<td colspan="3" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Confirmed Payments</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (confirmed_payment_total, currency_label)"/>
+<td colspan="3" style="padding:6px 8px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Confirmed Payments</td>
+<td style="padding:6px 8px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (confirmed_payment_total, currency_label)"/>
 <td colspan="3" style="background:#f8fafc; border-top:1px solid #dbe3ec;"> </td>
 </tr>
 </tfoot>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Visit Line Summary</div>
+<div style="margin-top:8px; border:1px solid #dbe3ec; margin-bottom:10px;">
+<div style="padding:6px 8px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Visit Line Summary</div>
 <table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Barcode</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Lot</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Expiry</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Prev.</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Counted</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Sold</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Returned</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return Route</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Supplied</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit Price</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Sold Amount</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Barcode</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Lot</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Expiry</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Prev.</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Counted</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Sold</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Returned</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return Route</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Supplied</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit Price</th>
+<th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Sold Amount</th>
 </tr>
 </thead>
 <tbody>
@@ -768,40 +769,40 @@ Date:
 <td colspan="11" style="padding:10px; color:#64748b;">No visit lines with activity.</td>
 </tr>
 <tr t-foreach="items" t-as="item">
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('barcode') or '-'"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('product_name') or '-'"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('lot_name') or '-'"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('expiry_date') or '-'"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('display_previous_qty', item.get('previous_qty', 0.0)) or 0.0)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('counted_qty', 0.0) or 0.0)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('sold_qty', 0.0) or 0.0)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('return_qty', 0.0) or 0.0)"/>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('display_previous_qty', item.get('previous_qty', 0.0)) or 0.0)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('counted_qty', 0.0) or 0.0)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('sold_qty', 0.0) or 0.0)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('return_qty', 0.0) or 0.0)"/>
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('return_route_label') or '-'"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('supplied_qty', 0.0) or 0.0)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (item.get('unit_price', 0.0) or 0.0, currency_label)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (item.get('sold_amount', 0.0) or 0.0, currency_label)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % (item.get('supplied_qty', 0.0) or 0.0)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (item.get('unit_price', 0.0) or 0.0, currency_label)"/>
+<td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (item.get('sold_amount', 0.0) or 0.0, currency_label)"/>
 </tr>
 </tbody>
 </table>
 </div>
-<div style="border:1px solid #dbe3ec; padding:12px 14px; margin-bottom:14px; background:#f8fafc;">
+<div style="border:1px solid #dbe3ec; padding:12px 14px; margin-bottom:10px; background:#f8fafc;">
 <div style="font-weight:700; margin-bottom:6px; color:#0f172a;">Acknowledgement</div>
 <div style="font-size:11px; color:#475569; line-height:1.6;">This receipt confirms the consignment visit stock movement, sale value, collection, return, and refill entries captured for this visit. Any remaining or promised amount shown above remains open according to the confirmed collection records.</div>
 </div>
 <table style="width:100%; border-collapse:collapse; margin-top:18px;">
 <tr>
 <td style="width:48%; vertical-align:top; padding-right:10px;">
-<div style="border:1px solid #cbd5e1; padding:12px; min-height:112px; background:#ffffff;">
+<div style="border:1px solid #cbd5e1; padding:12px; min-height:96px; background:#ffffff;">
 <div style="font-weight:700; margin-bottom:20px; color:#0f172a;">Outlet Signature</div>
 <div style="height:42px; border-bottom:1px solid #94a3b8; margin-bottom:10px;"/>
 <div style="font-size:11px; color:#475569;">Name:</div>
@@ -810,7 +811,7 @@ Date:
 </td>
 <td style="width:4%;"> </td>
 <td style="width:48%; vertical-align:top; padding-left:10px;">
-<div style="border:1px solid #cbd5e1; padding:12px; min-height:112px; background:#ffffff;">
+<div style="border:1px solid #cbd5e1; padding:12px; min-height:96px; background:#ffffff;">
 <div style="font-weight:700; margin-bottom:20px; color:#0f172a;">Salesperson Signature</div>
 <div style="height:42px; border-bottom:1px solid #94a3b8; margin-bottom:10px;"/>
 <div style="font-size:11px; color:#475569;">
