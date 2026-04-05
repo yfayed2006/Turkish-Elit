@@ -123,7 +123,7 @@ class RoutePdaHome(models.TransientModel):
             "res_id": rec.id,
             "view_mode": "form",
             "views": [(view.id, "form")],
-            "target": "current",
+            "target": "main",
             "context": {"create": 0, "edit": 0, "delete": 0},
         }
 
@@ -149,7 +149,7 @@ class RoutePdaHome(models.TransientModel):
             "res_id": self.id,
             "view_mode": "form",
             "views": [(view.id, "form")],
-            "target": "current",
+            "target": "main",
             "context": context,
         }
 
@@ -158,11 +158,15 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_snapshot_center_screen(self):
         self._ensure_consignment_tools_enabled()
-        return self._open_self_view("route_core.view_route_pda_snapshot_center_form", "Snapshot Center")
+        title = "Stock and Lot Snapshot" if self.route_enable_lot_serial_tracking else "Snapshot Center"
+        return self._open_self_view("route_core.view_route_pda_snapshot_center_form", title)
 
     def action_open_review_center_screen(self):
         self._ensure_consignment_tools_enabled()
         return self._open_self_view("route_core.view_route_pda_review_center_form", "Alerts and Review")
+
+    def action_back_to_consignment_mode(self):
+        return self.action_open_consignment_mode_screen()
 
     def action_open_product_center_screen(self):
         title = "Products and Lots" if self.route_enable_lot_serial_tracking else "Product Center"
