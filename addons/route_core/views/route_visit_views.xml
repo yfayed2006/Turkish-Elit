@@ -431,37 +431,49 @@
 <field name="outlet_id" readonly="1"/>
 <field name="name" readonly="1"/>
 <field name="start_datetime" readonly="1"/>
+<field name="end_datetime" readonly="1"/>
 </group>
-<group>
+<group invisible="visit_execution_mode == 'direct_sales'">
 <field name="outlet_current_due_amount" readonly="1"/>
 <field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
-<field name="visit_execution_mode_label" string="Execution Mode" readonly="1" widget="badge" decoration-info="visit_execution_mode == 'direct_sales'" decoration-success="visit_execution_mode == 'consignment'"/>
-<field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
-<field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
-<field name="direct_stop_settlement_ready" readonly="1"/>
-</group>
-<group invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<group invisible="visit_execution_mode != 'direct_sales'">
+<field name="outlet_current_due_amount" readonly="1"/>
 <field name="direct_stop_grand_due_amount" readonly="1"/>
 <field name="direct_stop_settlement_paid_amount" readonly="1"/>
 <field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+</group>
+<group invisible="visit_execution_mode != 'direct_sales'">
+<field name="direct_stop_order_refs" readonly="1"/>
+<field name="direct_stop_return_refs" readonly="1"/>
 <field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group invisible="1">
 <field name="outlet_open_shortage_count" readonly="1"/>
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 <field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
-<group invisible="1">
-<field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
-<field name="debt_risk_level" readonly="1" widget="badge" decoration-success="debt_risk_level == 'low'" decoration-info="debt_risk_level == 'medium'" decoration-warning="debt_risk_level == 'high'" decoration-danger="debt_risk_level == 'critical'"/>
-<field name="debt_policy_action" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
-<field name="visit_mode" readonly="1"/>
-<field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
-<field name="recommended_visit_frequency" readonly="1" widget="badge" decoration-info="recommended_visit_frequency in ('daily','every_2_days','twice_weekly')" decoration-success="recommended_visit_frequency in ('weekly','on_demand')"/>
-<field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
+</group>
+<group string="Direct Stop Operational Summary" col="3" invisible="1">
+<group>
+<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_since_date" readonly="1"/>
+<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_returns_total" readonly="1"/>
+<field name="direct_stop_current_net_amount" readonly="1"/>
+<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_return_status" readonly="1" widget="badge"/>
+</group>
+<group>
+<field name="direct_stop_settlement_paid_amount" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
 </group>
 <separator string="Decision Flags" invisible="(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html"/>
@@ -555,28 +567,7 @@
 </field>
 </page>
 <page string="Payments">
-<group string="Direct Stop Settlement" col="2" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
-<group>
-<field name="direct_stop_sale_status" readonly="1" widget="badge" decoration-success="direct_stop_sale_status == 'yes'" decoration-warning="direct_stop_sale_status == 'pending'" decoration-info="direct_stop_sale_status == 'no'"/>
-<field name="direct_stop_return_status" readonly="1" widget="badge" decoration-success="direct_stop_return_status == 'yes'" decoration-warning="direct_stop_return_status == 'pending'" decoration-info="direct_stop_return_status == 'no'"/>
-<field name="direct_stop_order_count" readonly="1"/>
-<field name="direct_stop_return_count" readonly="1"/>
-<field name="direct_stop_settlement_ready" readonly="1"/>
-<field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
-</group>
-<group>
-<field name="direct_stop_previous_due_amount" readonly="1"/>
-<field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="direct_stop_current_net_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
-</group>
-</group>
-<group string="Collection Summary" col="2" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<group string="Collection Summary" col="2" invisible="visit_execution_mode == 'direct_sales'">
 <group>
 <field name="net_due_amount" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
