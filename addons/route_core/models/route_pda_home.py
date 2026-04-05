@@ -61,6 +61,13 @@ class RoutePdaHome(models.TransientModel):
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
     deferred_payment_count = fields.Integer(string="Deferred / Promise Entries Today", compute="_compute_dashboard")
 
+    direct_sale_cash_today_amount = fields.Monetary(string="Direct Sale Cash Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_bank_today_amount = fields.Monetary(string="Direct Sale Bank Transfer Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_pos_today_amount = fields.Monetary(string="Direct Sale POS Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_deferred_today_amount = fields.Monetary(string="Direct Sale Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_open_promise_due_today_amount = fields.Monetary(string="Open Promises Due Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_open_promise_due_today_count = fields.Integer(string="Promise Entries Due Today", compute="_compute_dashboard")
+
     @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return")
     def _compute_route_ui_mode(self):
         labels = {
@@ -405,7 +412,13 @@ class RoutePdaHome(models.TransientModel):
             visit_collections = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "consignment_visit")
             direct_stop_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_stop")
             direct_sale_order_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_sale_order")
+            direct_sales_today_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
+            direct_sales_all_confirmed_payments = all_confirmed_payments.filtered(lambda p: rec._get_payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
             deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+            direct_sales_deferred_entries = direct_sales_today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+            direct_sales_due_today_promises = direct_sales_all_confirmed_payments.filtered(
+                lambda p: rec._get_payment_snapshot_promise_status(p) == "due_today"
+            )
 
             visit_collection_targets = set(visit_collections.mapped("visit_id").ids)
             direct_stop_targets = set((direct_stop_payments.mapped("settlement_visit_id") or direct_stop_payments.mapped("visit_id")).ids)
@@ -447,6 +460,12 @@ class RoutePdaHome(models.TransientModel):
                 for p in all_confirmed_payments
                 if rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
             )
+            rec.direct_sale_cash_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            rec.direct_sale_bank_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
+            rec.direct_sale_pos_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
+            rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
+            rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
             rec.remaining_due_amount = sum(today_visits.filtered(lambda v: v.state != "done").mapped("remaining_due_amount"))
 
     def action_open_today_plans(self):
@@ -533,7 +552,7 @@ class RoutePdaHome(models.TransientModel):
             "name": "Direct Sale Orders",
             "res_model": "sale.order",
             "view_mode": "list,form",
-            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id)],
+            "domain": [("route_order_mode", "=", "direct_sale"), ("user_id", "=", self.env.user.id), ("state", "!=", "cancel")],
             "context": {"search_default_my_quotations": 0, "create": 0},
             "target": "current",
         }
@@ -573,26 +592,11 @@ class RoutePdaHome(models.TransientModel):
     def action_open_direct_sale_returns(self):
         self.ensure_one()
         self._ensure_direct_return_enabled()
-        orders = self._get_direct_sale_order_recordset()
-        deliveries = self.env["stock.picking"].search([
-            ("origin", "in", orders.mapped("name")),
-            ("state", "!=", "cancel"),
-        ])
-        return_moves = self.env["stock.move"].search([
-            ("origin_returned_move_id", "in", deliveries.move_ids.ids),
-            ("picking_id", "!=", False),
-            ("state", "!=", "cancel"),
-        ])
-        returns = return_moves.mapped("picking_id")
-        manual_returns = self.env["stock.picking"].search([
-            ("route_direct_return_id.user_id", "=", self.env.user.id),
-            ("state", "!=", "cancel"),
-        ])
-        returns |= manual_returns
-        action = self.env.ref("stock.action_picking_tree_all").read()[0]
-        action["name"] = "Direct Returns"
-        action["domain"] = [("id", "in", returns.ids)]
-        return action
+        return self._prepare_action(
+            "route_core.action_route_direct_return",
+            name="Direct Returns",
+            domain=[("user_id", "=", self.env.user.id), ("state", "!=", "cancel")],
+        )
 
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
