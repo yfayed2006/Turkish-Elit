@@ -51,10 +51,6 @@
 <i class="fa fa-th-large route_pda_app_icon"/>
 <span class="route_pda_app_label">Snapshot Center</span>
 </button>
-<button type="object" name="action_open_product_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
-<i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label">Product Center</span>
-</button>
 <button type="object" name="action_open_review_center_screen" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-warning route_pda_app_icon"/>
 <span class="route_pda_app_label">Alerts and Review</span>
