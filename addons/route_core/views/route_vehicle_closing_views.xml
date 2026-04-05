@@ -210,7 +210,7 @@ review and validate the generated transfers from the Open Reconciliation Transfe
 <field name="plan_date" optional="show"/>
 <field name="vehicle_id"/>
 <field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'closed'" decoration-danger="state == 'cancelled'"/>
-<field name="closed_datetime" string="Closed On" optional="show"/>
+<field name="close_datetime" string="Closed On" optional="show"/>
 </list>
 </field>
 </record>
