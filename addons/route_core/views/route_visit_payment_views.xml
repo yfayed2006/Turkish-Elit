@@ -1,5 +1,5 @@
 <odoo>
-<!--     Admin / all payments     -->
+<!--      Admin / all payments      -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -28,7 +28,7 @@
 </list>
 </field>
 </record>
-<!--     Tailored visit list     -->
+<!--      Tailored visit list      -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -46,7 +46,7 @@
 </list>
 </field>
 </record>
-<!--     Tailored direct sale list     -->
+<!--      Tailored direct sale list      -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -123,7 +123,7 @@
 </form>
 </field>
 </record>
-<!--     Admin / all payments search     -->
+<!--      Admin / all payments search      -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -161,7 +161,7 @@
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
-<filter name="group_by_business_flow" string="Business Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_business_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_source_type" string="Source Type" domain="[]" context="{'group_by': 'source_type'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
@@ -171,7 +171,7 @@
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
 <searchpanel>
-<field name="payment_business_flow" string="Business Flow"/>
+<field name="payment_business_flow" string="Flow"/>
 <field name="source_type" string="Source Type"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
@@ -183,7 +183,7 @@
 </search>
 </field>
 </record>
-<!--     Visit collections search     -->
+<!--      Visit collections search      -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -217,14 +217,14 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
-<filter name="group_by_flow" string="Business Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
-<field name="payment_business_flow" string="Business Flow"/>
+<field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="payment_mode" string="Payment Mode"/>
@@ -234,7 +234,7 @@
 </search>
 </field>
 </record>
-<!--     Direct sale payments search     -->
+<!--      Direct sale payments search      -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -265,14 +265,14 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
-<filter name="group_by_flow" string="Business Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
-<field name="payment_business_flow" string="Business Flow"/>
+<field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="payment_mode" string="Payment Mode"/>
