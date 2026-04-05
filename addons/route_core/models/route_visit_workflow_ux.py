@@ -514,6 +514,17 @@ class RouteVisit(models.Model):
                 or has_confirmed_payments
             )
 
+            rec.ux_can_receipt_actions = bool(
+                rec.state != "cancel"
+                and (
+                    bool(rec.sale_order_id)
+                    or has_confirmed_payments
+                    or bool(rec.collected_amount)
+                    or rec.visit_process_state in ("collection_done", "ready_to_close", "done")
+                    or rec.state == "done"
+                )
+            )
+
             rec.ux_can_finish_visit = (
                 (
                     rec.state == "in_progress"
@@ -1007,8 +1018,8 @@ class RouteVisit(models.Model):
         result = self.action_end_visit()
         if isinstance(result, dict):
             return result
-        if result:
-            return self._get_visit_finish_summary_action()
+        if result is True and self.state == "done":
+            return self._get_route_visit_finish_summary_action()
         return self._get_pda_form_action()
 
     def action_ux_finish_visit(self):
@@ -1017,7 +1028,7 @@ class RouteVisit(models.Model):
     def action_ux_finalize_visit(self):
         return self._action_finish_visit_core()
 
-    def _get_visit_finish_summary_action(self):
+    def _get_route_visit_finish_summary_action(self):
         self.ensure_one()
         view = self.env.ref("route_core.view_route_visit_finish_summary_wizard_form", raise_if_not_found=False)
         action = {
@@ -1039,197 +1050,13 @@ class RouteVisit(models.Model):
 
     def _get_direct_stop_finish_summary_action(self):
         self.ensure_one()
-        return self._get_visit_finish_summary_action()
+        return self._get_route_visit_finish_summary_action()
 
     def action_ux_view_sale_order(self):
         self.ensure_one()
         return self.action_view_sale_order()
 
 
-
-    def _get_consignment_receipt_payments(self):
-        self.ensure_one()
-        return self.payment_ids.filtered(lambda p: p.state == "confirmed").sorted(
-            key=lambda p: (p.payment_date or fields.Datetime.now(), p.id),
-            reverse=True,
-        )
-
-    def _get_consignment_receipt_summary(self):
-        self.ensure_one()
-        payments = self._get_consignment_receipt_payments()
-        promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-        latest_promise = promise_payments[:1]
-        previous_due = max((self.outlet_current_due_amount or 0.0) - (self.net_due_amount or 0.0), 0.0)
-        return {
-            "previous_due": previous_due,
-            "previous_due_since": False,
-            "current_sale": self.net_due_amount or 0.0,
-            "current_return": sum(self.line_ids.mapped("return_amount")) if self.line_ids else 0.0,
-            "current_refill": sum((line.supplied_qty or 0.0) * (line.unit_price or 0.0) for line in self.line_ids),
-            "net_current_stop": self.net_due_amount or 0.0,
-            "grand_total_due": self.outlet_current_due_amount or 0.0,
-            "credit_amount": 0.0,
-            "settled_amount": self.collected_amount or 0.0,
-            "remaining_amount": self.remaining_due_amount or 0.0,
-            "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
-            "latest_promise_date": latest_promise.promise_date if latest_promise else False,
-            "latest_promise_status": latest_promise.promise_status if latest_promise else False,
-            "sale_order_ref": self.sale_order_id.name or "-",
-            "return_ref": ", ".join(self.return_picking_ids.filtered(lambda p: p.state != "cancel").mapped("name")) or "-",
-            "refill_ref": self.refill_picking_id.name or "-",
-        }
-
-    def _get_consignment_receipt_payment_breakdown(self):
-        self.ensure_one()
-        payments = self._get_consignment_receipt_payments()
-        totals = {
-            "cash": 0.0,
-            "bank": 0.0,
-            "pos": 0.0,
-            "deferred": 0.0,
-            "promise": 0.0,
-        }
-        for payment in payments:
-            mode = payment.payment_mode or "cash"
-            if mode in totals:
-                totals[mode] += payment.amount or 0.0
-            totals["promise"] += payment.promise_amount or 0.0
-
-        selection_map = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
-        promise_status_map = dict(self.env["route.visit.payment"]._fields["promise_status"].selection)
-        promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-        latest_promise = promise_payments[:1]
-        return {
-            "totals": totals,
-            "labels": {
-                "cash": selection_map.get("cash", _("Cash")),
-                "bank": selection_map.get("bank", _("Bank Transfer")),
-                "pos": selection_map.get("pos", _("POS")),
-                "deferred": selection_map.get("deferred", _("Deferred")),
-                "promise": _("Promised Amount"),
-            },
-            "latest_promise_date": latest_promise.promise_date if latest_promise else False,
-            "latest_promise_amount": latest_promise.promise_amount if latest_promise else 0.0,
-            "latest_promise_status": promise_status_map.get(latest_promise.promise_status, latest_promise.promise_status) if latest_promise else False,
-            "payment_count": len(payments),
-        }
-
-    def action_print_visit_receipt(self):
-        self.ensure_one()
-        if self._is_direct_sales_stop():
-            return self.action_print_direct_stop_settlement_receipt()
-        return self.env.ref("route_core.action_report_route_visit_consignment_receipt").report_action(self)
-
-    def _get_consignment_receipt_filename(self):
-        self.ensure_one()
-        safe_name = re.sub(r"[^A-Za-z0-9_-]+", "-", self.name or "visit").strip("-") or "visit"
-        return "Consignment-Visit-Receipt-%s.pdf" % safe_name
-
-    def _generate_consignment_receipt_attachment(self):
-        self.ensure_one()
-        report = self.env.ref("route_core.action_report_route_visit_consignment_receipt")
-        report_ref = report.report_name or "route_core.report_route_visit_consignment_receipt"
-        pdf_content, _content_type = report._render_qweb_pdf(report_ref, res_ids=self.ids)
-        filename = self._get_consignment_receipt_filename()
-        Attachment = self.env["ir.attachment"].sudo()
-        attachment = Attachment.search([
-            ("res_model", "=", self._name),
-            ("res_id", "=", self.id),
-            ("name", "=", filename),
-            ("mimetype", "=", "application/pdf"),
-            ("type", "=", "binary"),
-        ], limit=1)
-        values = {
-            "name": filename,
-            "type": "binary",
-            "raw": pdf_content,
-            "mimetype": "application/pdf",
-            "res_model": self._name,
-            "res_id": self.id,
-            "public": True,
-            "company_id": self.company_id.id if self.company_id else False,
-        }
-        if attachment:
-            attachment.write(values)
-        else:
-            attachment = Attachment.create(values)
-        token_value = attachment.generate_access_token()
-        if isinstance(token_value, (list, tuple)):
-            token = token_value[0] if token_value else ""
-        else:
-            token = token_value or attachment.access_token or ""
-        return attachment, token
-
-    def _get_consignment_receipt_public_url(self):
-        self.ensure_one()
-        base_url = (self.env["ir.config_parameter"].sudo().get_param("web.base.url") or "").rstrip("/")
-        if not base_url:
-            raise UserError(_("Base URL is not configured. Please configure web.base.url before sending the receipt by WhatsApp."))
-        attachment, token = self._generate_consignment_receipt_attachment()
-        url = "%s/web/content/%s?download=true" % (base_url, attachment.id)
-        if token:
-            url = "%s&access_token=%s" % (url, token)
-        return url
-
-    def _build_consignment_whatsapp_message(self, pdf_url=False):
-        self.ensure_one()
-        summary = self._get_consignment_receipt_summary()
-        currency_code = self.currency_id.name if self.currency_id else ""
-        lines = [
-            _("Visit receipt"),
-            _("Visit: %s") % (self.name or "-"),
-            _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
-            _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
-            _("Return Transfers: %s") % (summary.get("return_ref") or "-"),
-            _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
-            _("Current Due: %.2f %s") % (summary["grand_total_due"], currency_code),
-            _("Paid: %.2f %s") % (summary["settled_amount"], currency_code),
-            _("Remaining: %.2f %s") % (summary["remaining_amount"], currency_code),
-        ]
-        promise_amount = summary.get("promise_amount") or 0.0
-        if promise_amount:
-            lines.append(_("Promise: %.2f %s") % (promise_amount, currency_code))
-            if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
-        if pdf_url:
-            lines += ["", _("Receipt PDF:"), pdf_url]
-        lines += ["", _("Generated automatically by Route Core.")]
-        return "\n".join(lines)
-
-    def action_send_visit_whatsapp_outlet(self):
-        self.ensure_one()
-        if self._is_direct_sales_stop():
-            return self.action_send_direct_stop_whatsapp_outlet()
-        partner = self.partner_id or self.outlet_id.partner_id
-        phone = self._route_normalize_whatsapp_phone(partner)
-        if not phone:
-            raise UserError(_("Outlet WhatsApp number is missing. Please set mobile or phone on the outlet contact."))
-        pdf_url = self._get_consignment_receipt_public_url()
-        return {
-            "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_consignment_whatsapp_message(pdf_url=pdf_url), safe="")),
-            "target": "new",
-        }
-
-    def action_send_visit_whatsapp_supervisor(self):
-        self.ensure_one()
-        if self._is_direct_sales_stop():
-            return self.action_send_direct_stop_whatsapp_supervisor()
-        resolution = self._get_route_supervisor_resolution()
-        phone = resolution["phone"]
-        if not phone:
-            raise UserError(
-                _(
-                    "Supervisor WhatsApp number is missing. Resolution details: %(details)s"
-                )
-                % {"details": resolution["reason"] or _("No supervisor match details are available.")}
-            )
-        pdf_url = self._get_consignment_receipt_public_url()
-        return {
-            "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_consignment_whatsapp_message(pdf_url=pdf_url), safe="")),
-            "target": "new",
-        }
 
     def _get_direct_stop_receipt_sale_orders(self):
         self.ensure_one()
@@ -1353,10 +1180,126 @@ class RouteVisit(models.Model):
             "payment_count": len(payments),
         }
 
+    def _get_consignment_receipt_payments(self):
+        self.ensure_one()
+        return self.payment_ids.filtered(lambda p: p.state == "confirmed").sorted(
+            key=lambda p: (p.payment_date or fields.Datetime.now(), p.id),
+            reverse=True,
+        )
+
+    def _get_consignment_receipt_summary(self):
+        self.ensure_one()
+        payments = self._get_consignment_receipt_payments()
+        promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        latest_promise = promise_payments[:1]
+        return {
+            "sale_order_ref": self.sale_order_id.name or "-",
+            "refill_ref": self.refill_picking_id.name or "-",
+            "current_due": self.outlet_current_due_amount or 0.0,
+            "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
+            "remaining_amount": self.remaining_due_amount or 0.0,
+            "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
+            "latest_promise_date": latest_promise.promise_date if latest_promise else False,
+        }
+
+    def _get_consignment_receipt_line_items(self):
+        self.ensure_one()
+        items = []
+        for line in self.line_ids.filtered(lambda l: l.product_id):
+            if not any([(line.previous_qty or 0.0), (line.counted_qty or 0.0), (line.sold_qty or 0.0), (line.return_qty or 0.0), (line.supplied_qty or 0.0)]):
+                continue
+            items.append({
+                "barcode": line.barcode or line.product_id.default_code or "",
+                "product_name": line.product_id.display_name or "",
+                "lot_name": line.lot_id.name or "",
+                "previous_qty": line.previous_qty or 0.0,
+                "counted_qty": line.counted_qty or 0.0,
+                "sold_qty": line.sold_qty or 0.0,
+                "return_qty": line.return_qty or 0.0,
+                "supplied_qty": line.supplied_qty or 0.0,
+            })
+        return items
+
+    def action_print_consignment_visit_receipt(self):
+        self.ensure_one()
+        return self.env.ref("route_core.action_report_route_visit_consignment_receipt").report_action(self)
+
+    def _get_consignment_receipt_filename(self):
+        self.ensure_one()
+        safe_name = re.sub(r"[^A-Za-z0-9_-]+", "-", self.name or "visit").strip("-") or "visit"
+        return "Consignment-Visit-Receipt-%s.pdf" % safe_name
+
+    def _generate_consignment_receipt_attachment(self):
+        self.ensure_one()
+        report = self.env.ref("route_core.action_report_route_visit_consignment_receipt")
+        report_ref = report.report_name or "route_core.report_route_visit_consignment_receipt"
+        pdf_content, _content_type = report._render_qweb_pdf(report_ref, res_ids=self.ids)
+        filename = self._get_consignment_receipt_filename()
+        Attachment = self.env["ir.attachment"].sudo()
+        attachment = Attachment.search([
+            ("res_model", "=", self._name),
+            ("res_id", "=", self.id),
+            ("name", "=", filename),
+            ("mimetype", "=", "application/pdf"),
+            ("type", "=", "binary"),
+        ], limit=1)
+        values = {
+            "name": filename,
+            "type": "binary",
+            "raw": pdf_content,
+            "mimetype": "application/pdf",
+            "res_model": self._name,
+            "res_id": self.id,
+            "public": True,
+            "company_id": self.company_id.id if self.company_id else False,
+        }
+        if attachment:
+            attachment.write(values)
+        else:
+            attachment = Attachment.create(values)
+        token = attachment.generate_access_token() or attachment.access_token or ""
+        if isinstance(token, (list, tuple)):
+            token = token[0] if token else ""
+        return attachment, token
+
+    def _get_consignment_receipt_public_url(self):
+        self.ensure_one()
+        base_url = (self.env["ir.config_parameter"].sudo().get_param("web.base.url") or "").rstrip("/")
+        if not base_url:
+            raise UserError(_("Base URL is not configured. Please configure web.base.url before sending the receipt by WhatsApp."))
+        attachment, token = self._generate_consignment_receipt_attachment()
+        url = "%s/web/content/%s?download=true" % (base_url, attachment.id)
+        if token:
+            url = "%s&access_token=%s" % (url, token)
+        return url
+
+    def _build_consignment_whatsapp_message(self, pdf_url=False):
+        self.ensure_one()
+        summary = self._get_consignment_receipt_summary()
+        currency_code = self.currency_id.name if self.currency_id else ""
+        lines = [
+            _("Consignment visit receipt"),
+            _("Visit: %s") % (self.name or "-"),
+            _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
+            _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
+            _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
+            _("Current Due: %.2f %s") % (summary.get("current_due", 0.0), currency_code),
+            _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
+            _("Remaining: %.2f %s") % (summary.get("remaining_amount", 0.0), currency_code),
+        ]
+        if summary.get("promise_amount"):
+            lines.append(_("Promise: %.2f %s") % (summary["promise_amount"], currency_code))
+            if summary.get("latest_promise_date"):
+                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
+        if pdf_url:
+            lines += ["", _("Receipt PDF:"), pdf_url]
+        lines += ["", _("Generated automatically by Route Core.")]
+        return "\n".join(lines)
+
     def action_print_direct_stop_settlement_receipt(self):
         self.ensure_one()
         if not self._is_direct_sales_stop():
-            raise UserError(_("Settlement receipt is available only for Direct Sales stops."))
+            return self.action_print_consignment_visit_receipt()
         return self.env.ref("route_core.action_report_route_visit_settlement_receipt").report_action(self)
 
     def _get_direct_stop_previous_due_since_display(self):
@@ -1614,23 +1557,24 @@ class RouteVisit(models.Model):
 
     def action_send_direct_stop_whatsapp_outlet(self):
         self.ensure_one()
-        if not self._is_direct_sales_stop():
-            raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
         partner = self.partner_id or self.outlet_id.partner_id
         phone = self._route_normalize_whatsapp_phone(partner)
         if not phone:
             raise UserError(_("Outlet WhatsApp number is missing. Please set mobile or phone on the outlet contact."))
-        pdf_url = self._get_direct_stop_receipt_public_url()
+        if self._is_direct_sales_stop():
+            pdf_url = self._get_direct_stop_receipt_public_url()
+            message = self._build_direct_stop_whatsapp_message(pdf_url=pdf_url)
+        else:
+            pdf_url = self._get_consignment_receipt_public_url()
+            message = self._build_consignment_whatsapp_message(pdf_url=pdf_url)
         return {
             "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message(pdf_url=pdf_url), safe="")),
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
 
     def action_send_direct_stop_whatsapp_supervisor(self):
         self.ensure_one()
-        if not self._is_direct_sales_stop():
-            raise UserError(_("WhatsApp receipt is available only for Direct Sales stops."))
         resolution = self._get_route_supervisor_resolution()
         phone = resolution["phone"]
         if not phone:
@@ -1640,10 +1584,15 @@ class RouteVisit(models.Model):
                 )
                 % {"details": resolution["reason"] or _("No supervisor match details are available.")}
             )
-        pdf_url = self._get_direct_stop_receipt_public_url()
+        if self._is_direct_sales_stop():
+            pdf_url = self._get_direct_stop_receipt_public_url()
+            message = self._build_direct_stop_whatsapp_message(pdf_url=pdf_url)
+        else:
+            pdf_url = self._get_consignment_receipt_public_url()
+            message = self._build_consignment_whatsapp_message(pdf_url=pdf_url)
         return {
             "type": "ir.actions.act_url",
-            "url": "https://wa.me/%s?text=%s" % (phone, quote(self._build_direct_stop_whatsapp_message(pdf_url=pdf_url), safe="")),
+            "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
 
