@@ -37,56 +37,39 @@
 <field name="sale_order_id"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record">
-<div class="mb-2">
-<strong class="fs-5">
+<div class="oe_kanban_global_click o_kanban_record route_pda_visit_card">
+<div class="route_pda_visit_title">
 <field name="outlet_id"/>
-</strong>
 </div>
-<div class="mb-1">
-<span class="text-muted">Visit:</span>
-<span class="ms-1">
+<div class="route_pda_visit_meta">
+<span class="route_pda_visit_ref">
 <field name="name"/>
 </span>
-</div>
-<div class="mb-1">
-<span class="text-muted">Customer:</span>
-<span class="ms-1">
-<field name="partner_id"/>
-</span>
-</div>
-<div class="mb-1">
-<span class="text-muted">Area:</span>
-<span class="ms-1">
-<field name="area_id"/>
-</span>
-</div>
-<div class="mb-1">
-<span class="text-muted">Date:</span>
-<span class="ms-1">
+<span class="route_pda_visit_dot">•</span>
+<span>
 <field name="date"/>
 </span>
 </div>
-<div class="mb-1">
-<span class="text-muted">Visit State:</span>
-<span class="ms-1">
-<field name="state"/>
+<div class="route_pda_visit_line">
+<span class="route_pda_visit_label">Area:</span>
+<span class="route_pda_visit_value">
+<field name="area_id"/>
 </span>
 </div>
-<div class="mb-1">
-<span class="text-muted">Shortages:</span>
-<span class="ms-1">
-<field name="shortage_count" widget="badge" decoration-warning="shortage_count > 0"/>
-</span>
-</div>
-<div class="mb-2">
-<span class="text-muted">Process:</span>
-<span class="ms-1">
+<div class="route_pda_visit_line">
+<span class="route_pda_visit_label">Process:</span>
+<span class="route_pda_visit_value">
 <field name="visit_process_state"/>
 </span>
 </div>
-<div class="mt-3">
-<a type="open" role="button" class="btn btn-primary w-100">Open Visit</a>
+<t t-if="record.shortage_count.raw_value and record.shortage_count.raw_value > 0">
+<div class="route_pda_visit_line">
+<span class="route_pda_visit_label">Shortages:</span>
+<span class="route_pda_visit_shortage" t-esc="record.shortage_count.raw_value"/>
+</div>
+</t>
+<div class="route_pda_visit_btn_wrap">
+<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">Open Visit</a>
 </div>
 </div>
 </t>
