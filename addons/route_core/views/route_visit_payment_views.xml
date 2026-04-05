@@ -1,5 +1,5 @@
 <odoo>
-<!--   Admin / all payments   -->
+<!--    Admin / all payments    -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -28,33 +28,24 @@
 </list>
 </field>
 </record>
-<!--   Tailored visit list   -->
+<!--    Tailored visit list    -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
-<list>
-<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
+<list string="My Visit Collections" create="0" edit="0" delete="0">
 <field name="source_document_ref" string="Visit"/>
 <field name="outlet_id"/>
-<field name="area_id" optional="hide"/>
-<field name="salesperson_id" optional="hide"/>
 <field name="payment_date"/>
-<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
-<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Collection"/>
 <field name="amount" string="Collected"/>
 <field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
-<field name="due_date" string="Due Date" optional="hide"/>
-<field name="promise_date" string="Next Promise" optional="hide"/>
-<field name="promise_amount" string="Promise Amount" optional="hide"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="state" string="Status" optional="hide"/>
 </list>
 </field>
 </record>
-<!--   Tailored direct sale list   -->
+<!--    Tailored direct sale list    -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -131,7 +122,7 @@
 </form>
 </field>
 </record>
-<!--   Admin / all payments search   -->
+<!--    Admin / all payments search    -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -191,7 +182,7 @@
 </search>
 </field>
 </record>
-<!--   Visit collections search   -->
+<!--    Visit collections search    -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -236,7 +227,7 @@
 </search>
 </field>
 </record>
-<!--   Direct sale payments search   -->
+<!--    Direct sale payments search    -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
