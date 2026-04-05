@@ -11,7 +11,7 @@
 <button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_open_direct_returns"/>
 <button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_review_settlement or ux_primary_action == 'collect_payment' or ux_primary_action == 'confirm_payments'"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 </xpath>
@@ -95,7 +95,7 @@
 <xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_open_shortage_count'] and .//field[@name='pending_near_expiry_line_count']]" position="attributes">
+<xpath expr="//group[.//field[@name='pending_near_expiry_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
 <xpath expr="//group[.//field[@name='collection_priority'] and .//field[@name='outlet_health_status']]" position="attributes">
@@ -166,7 +166,7 @@
 <button name="action_ux_open_direct_sale_payments" string="Direct Sale Payments" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_open_direct_sale_payments"/>
 <button name="action_ux_open_direct_returns" string="Direct Returns" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_open_direct_returns"/>
 <button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-secondary" invisible="(visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales') or not ux_can_review_settlement or ux_primary_action == 'collect_payment' or ux_primary_action == 'confirm_payments'"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions"/>
 </xpath>
