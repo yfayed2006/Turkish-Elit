@@ -3,18 +3,22 @@
 <field name="name">route.pda.home.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="PDA Home" create="0" edit="0" delete="0">
+<form string="Route Workspace" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet">
 <field name="route_enable_direct_sale" invisible="1"/>
 <field name="route_enable_direct_return" invisible="1"/>
 <field name="route_operation_mode" invisible="1"/>
 <field name="route_operation_mode_label" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="route_show_sales_center" invisible="1"/>
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_direct_return_tools" invisible="1"/>
 <div class="route_pda_home_header route_pda_home_header_compact">
-<h1 class="route_pda_home_title">PDA Home</h1>
+<h1 class="route_pda_home_title">Route Workspace</h1>
 <div class="route_pda_home_subtitle_text route_pda_home_subtitle_compact">
 <field name="user_display_name" readonly="1" nolabel="1" class="oe_inline"/>
 <span class="route_pda_home_sep">•</span>
@@ -28,7 +32,7 @@
 <div class="route_pda_apps_grid route_pda_apps_grid_4">
 <button type="object" name="action_open_my_pda_visits" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-map-marker route_pda_app_icon"/>
-<span class="route_pda_app_label">PDA Visits</span>
+<span class="route_pda_app_label">My Visits</span>
 </button>
 <button type="object" name="action_open_current_visit" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-play-circle route_pda_app_icon"/>
@@ -53,7 +57,8 @@
 <div class="route_pda_apps_grid route_pda_apps_grid_2">
 <button type="object" name="action_open_product_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label">Product Center</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">Product Center</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">Products and Lots</span>
 </button>
 <button type="object" name="action_open_outlet_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-building route_pda_app_icon"/>
@@ -72,7 +77,9 @@
 <button type="object" name="action_open_consignment_mode_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot route_pda_mode_btn" invisible="route_show_consignment_tools == False">
 <i class="fa fa-cubes route_pda_app_icon"/>
 <span class="route_pda_app_label">Consignment</span>
-<span class="route_pda_app_hint">Open consignment tools</span>
+<span class="route_pda_app_hint" invisible="route_enable_lot_serial_tracking == True">Open consignment tools</span>
+<span class="route_pda_app_hint" invisible="route_enable_lot_serial_tracking == False and route_enable_expiry_tracking == False">Open stock, lot and expiry tools</span>
+<span class="route_pda_app_hint" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == True">Open stock and lot tools</span>
 </button>
 </div>
 </div>
@@ -93,7 +100,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
 <h2 class="route_pda_detail_title">Direct Sale</h2>
 </div>
@@ -141,14 +148,15 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
 <h2 class="route_pda_detail_title">Consignment</h2>
 </div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-th-large route_pda_app_icon"/>
-<span class="route_pda_app_label">Snapshot Center</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">Snapshot Center</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">Stock and Lot Snapshot</span>
 </button>
 <button type="object" name="action_open_review_center_screen" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-warning route_pda_app_icon"/>
@@ -160,11 +168,12 @@
 </button>
 <button type="object" name="action_open_consignment_internal_transfers" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-exchange route_pda_app_icon"/>
-<span class="route_pda_app_label">Returns and Internal Transfers</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">Returns and Internal Transfers</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">Returns, Transfers and Lots</span>
 </button>
 <button type="object" name="action_open_consignment_payments" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-credit-card route_pda_app_icon"/>
-<span class="route_pda_app_label">Consignment Payments</span>
+<span class="route_pda_app_label">Consignment Collections</span>
 </button>
 <button type="object" name="action_open_my_shortages" class="btn route_pda_app_btn route_pda_app_btn_alert">
 <i class="fa fa-exclamation-triangle route_pda_app_icon"/>
@@ -182,10 +191,12 @@
 <form string="Snapshot Center" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_consignment_tools" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
 <h2 class="route_pda_detail_title">Snapshot Center</h2>
 </div>
@@ -221,7 +232,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
 <h2 class="route_pda_detail_title">Alerts and Review</h2>
 </div>
@@ -245,25 +256,31 @@
 <field name="arch" type="xml">
 <form string="Product Center" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
-<h2 class="route_pda_detail_title">Product Center</h2>
+<h2 class="route_pda_detail_title" invisible="route_enable_lot_serial_tracking == True">Product Center</h2>
+<h2 class="route_pda_detail_title" invisible="route_enable_lot_serial_tracking == False">Products and Lots</h2>
 </div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_vehicle_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-truck route_pda_app_icon"/>
-<span class="route_pda_app_label">Vehicle Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">Vehicle Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">Vehicle Products and Lots</span>
 </button>
 <button type="object" name="action_open_main_warehouse_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-home route_pda_app_icon"/>
-<span class="route_pda_app_label">Main Warehouse Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">Main Warehouse Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">Warehouse Products and Lots</span>
 </button>
 <button type="object" name="action_open_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label">All Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == True">All Products</span>
+<span class="route_pda_app_label" invisible="route_enable_lot_serial_tracking == False">All Products and Lots</span>
 </button>
 </div>
 </sheet>
@@ -283,7 +300,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Home</span>
+<span>Back to Route Workspace</span>
 </button>
 <h2 class="route_pda_detail_title">Sales Center</h2>
 </div>
@@ -439,7 +456,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Snapshot Center</span>
+<span>Back</span>
 </button>
 <h2 class="route_pda_detail_title">Current Visit Snapshot</h2>
 </div>
@@ -511,7 +528,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Snapshot Center</span>
+<span>Back</span>
 </button>
 <h2 class="route_pda_detail_title">Collections Snapshot</h2>
 </div>
@@ -596,7 +613,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Snapshot Center</span>
+<span>Back</span>
 </button>
 <h2 class="route_pda_detail_title">Reference Counts</h2>
 </div>
@@ -650,7 +667,7 @@
 <field name="context">{"search_default_filter_to_sell": 1, "create": 0}</field>
 </record>
 <record id="server_action_open_route_pda_home" model="ir.actions.server">
-<field name="name">Open PDA Home</field>
+<field name="name">Open Route Workspace</field>
 <field name="model_id" ref="model_route_pda_home"/>
 <field name="state">code</field>
 <field name="code">action = env['route.pda.home'].action_open_dashboard()</field>
