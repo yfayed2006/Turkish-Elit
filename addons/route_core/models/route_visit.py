@@ -1959,16 +1959,21 @@ class RouteVisit(models.Model):
         )
 
         for line in sale_lines:
-            line_dict = {
+            vals = {
                 "product_id": line.product_id.id,
                 "name": line.product_id.display_name,
                 "product_uom_qty": line.sold_qty,
                 "price_unit": line.unit_price or line.product_id.lst_price or 0.0,
-                "route_product_barcode": line.barcode or line.product_id.barcode or False,
             }
-            if line.lot_id:
-                line_dict["route_lot_id"] = line.lot_id.id
-            line_vals.append((0, 0, line_dict))
+            if "route_product_barcode" in self.env["sale.order.line"]._fields:
+                vals["route_product_barcode"] = line.barcode or line.product_id.barcode or False
+            if (
+                "route_lot_id" in self.env["sale.order.line"]._fields
+                and getattr(line.product_id, "tracking", "none") in ("lot", "serial")
+                and line.lot_id
+            ):
+                vals["route_lot_id"] = line.lot_id.id
+            line_vals.append((0, 0, vals))
 
         return line_vals
 
