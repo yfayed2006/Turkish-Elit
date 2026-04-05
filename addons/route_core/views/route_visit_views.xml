@@ -100,7 +100,7 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
@@ -131,6 +131,8 @@
 <field name="visit_execution_mode" invisible="1"/>
 <field name="outlet_operation_mode" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -369,7 +371,7 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
@@ -400,6 +402,8 @@
 <field name="visit_execution_mode" invisible="1"/>
 <field name="outlet_operation_mode" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -522,7 +526,7 @@
 </group>
 </group>
 <notebook>
-<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
@@ -548,6 +552,36 @@
 <field name="note"/>
 </list>
 </field>
+</page>
+<page string="Summary" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<group string="Visit Summary" col="2">
+<group>
+<field name="outlet_current_due_amount" readonly="1"/>
+<field name="net_due_amount" string="Current Visit Sale" readonly="1"/>
+<field name="collected_amount" readonly="1"/>
+<field name="remaining_due_amount" readonly="1"/>
+</group>
+<group>
+<field name="sale_order_id" string="Sale Order" readonly="1"/>
+<field name="refill_picking_id" string="Refill Transfer" readonly="1"/>
+<field name="return_transfer_count" string="Return Transfers" readonly="1"/>
+<field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
+</group>
+</group>
+<group string="Operational Status" col="2">
+<group>
+<field name="ux_stage_title" string="Current Step" readonly="1"/>
+<field name="ux_stage_help" string="Step Help" readonly="1"/>
+<field name="outlet_open_shortage_count" readonly="1"/>
+<field name="promise_to_pay_count" readonly="1"/>
+</group>
+<group>
+<field name="next_promise_to_pay_date" readonly="1"/>
+<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
+<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+</group>
+</group>
 </page>
 <page string="Payments">
 <group string="Collection Summary" col="2" invisible="visit_execution_mode == 'direct_sales'">
