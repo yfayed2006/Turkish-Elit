@@ -522,10 +522,10 @@ class RoutePdaHome(models.TransientModel):
     def action_open_my_vehicle_closing(self):
         self.ensure_one()
         return self._prepare_action(
-            "route_core.action_route_vehicle_closing",
+            "route_core.action_route_vehicle_closing_salesperson",
             name="My Vehicle Closings",
-            domain=[("user_id", "=", self.env.user.id)],
-            context={"create": 0, "edit": 0, "delete": 0},
+            domain=[("user_id", "=", self.env.user.id), ("state", "=", "closed")],
+            context={"search_default_filter_closed": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_my_shortages(self):
@@ -671,7 +671,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         self._ensure_consignment_tools_enabled()
         return self._prepare_action(
-            "route_core.action_route_visit_collection",
+            "route_core.action_route_visit_collection_salesperson",
             name="My Visit Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
@@ -711,4 +711,5 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
 
