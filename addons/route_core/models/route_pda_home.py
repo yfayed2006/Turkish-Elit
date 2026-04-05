@@ -39,6 +39,12 @@ class RoutePdaHome(models.TransientModel):
     direct_stop_payment_count = fields.Integer(string="Direct Stop Settlements Today", compute="_compute_dashboard")
     direct_sale_order_payment_count = fields.Integer(string="Direct Sale Order Payments Today", compute="_compute_dashboard")
     direct_sale_payment_count = fields.Integer(string="Direct Sales Settlements Today", compute="_compute_dashboard")
+    consignment_collected_today_amount = fields.Monetary(string="Consignment Collected Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sales_collected_today_amount = fields.Monetary(string="Direct Sales Collected Today", currency_field="currency_id", compute="_compute_dashboard")
+    overdue_promise_amount = fields.Monetary(string="Overdue Promises", currency_field="currency_id", compute="_compute_dashboard")
+    overdue_promise_count = fields.Integer(string="Overdue Promise Entries", compute="_compute_dashboard")
+    route_show_shared_centers = fields.Boolean(string="Show Shared Centers", compute="_compute_route_ui_mode")
+    route_show_operation_modes = fields.Boolean(string="Show Operation Modes", compute="_compute_route_ui_mode")
     product_count = fields.Integer(string="Products", compute="_compute_dashboard")
     vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
     warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
@@ -82,6 +88,8 @@ class RoutePdaHome(models.TransientModel):
             rec.route_show_direct_sale_tools = bool(rec.route_enable_direct_sale) and mode in ("direct_sales", "hybrid")
             rec.route_show_direct_return_tools = bool(rec.route_enable_direct_return)
             rec.route_show_sales_center = rec.route_show_direct_sale_tools or rec.route_show_direct_return_tools
+            rec.route_show_shared_centers = True
+            rec.route_show_operation_modes = rec.route_show_direct_sale_tools or rec.route_show_consignment_tools
 
     def _ensure_consignment_tools_enabled(self):
         self.ensure_one()
@@ -439,6 +447,11 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_stop_payment_count = len(direct_stop_targets)
             rec.direct_sale_order_payment_count = len(direct_sale_order_targets)
             rec.direct_sale_payment_count = len(direct_stop_targets) + len(direct_sale_order_targets)
+            rec.consignment_collected_today_amount = sum(visit_collections.mapped("amount")) if visit_collections else 0.0
+            rec.direct_sales_collected_today_amount = sum(direct_sales_today_payments.mapped("amount")) if direct_sales_today_payments else 0.0
+            overdue_promises = all_confirmed_payments.filtered(lambda p: rec._get_payment_snapshot_promise_status(p) == "overdue")
+            rec.overdue_promise_amount = sum((p.promise_amount or 0.0) for p in overdue_promises)
+            rec.overdue_promise_count = len(overdue_promises)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
