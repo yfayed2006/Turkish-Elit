@@ -335,7 +335,7 @@
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
-<page string="Internal Tools" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<page string="Internal Tools" invisible="1">
 <group col="2">
 <button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
 <button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
@@ -530,26 +530,16 @@
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
-<field name="barcode" readonly="1"/>
+<field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
+<field name="expiry_date" readonly="1" optional="hide" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="uom_id" readonly="1"/>
-<field name="last_sold_date" readonly="1" optional="show"/>
-<field name="days_on_shelf" readonly="1" optional="show"/>
-<field name="movement_status" readonly="1" widget="badge" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
+<field name="sold_qty" readonly="1"/>
 <field name="return_qty"/>
 <field name="return_route"/>
-<field name="sold_qty" readonly="1"/>
 <field name="vehicle_available_qty" readonly="1"/>
 <field name="supplied_qty"/>
-<field name="pending_refill_qty" readonly="1"/>
-<field name="new_balance_qty" readonly="1"/>
-<field name="unit_price"/>
-<field name="sold_amount" readonly="1"/>
-<field name="return_amount" readonly="1"/>
-<field name="supply_value" readonly="1"/>
-<field name="new_balance_value" readonly="1"/>
-<field name="note"/>
 </list>
 </field>
 </page>
@@ -618,7 +608,7 @@
 <page string="No Sale Reason" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
-<page string="Internal Tools" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<page string="Internal Tools" invisible="1">
 <group col="2">
 <button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
 <button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
