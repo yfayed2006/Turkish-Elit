@@ -139,7 +139,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             summary = rec.visit_id._get_consignment_receipt_summary() if hasattr(rec.visit_id, "_get_consignment_receipt_summary") else {}
             rec.consignment_sale_order_ref = summary.get("sale_order_ref") or "-"
             rec.consignment_refill_ref = summary.get("refill_ref") or "-"
-            rec.consignment_return_refs = ", ".join(rec.visit_id.return_picking_ids.mapped("name")) or "-"
+            rec.consignment_return_refs = summary.get("return_refs") or "-"
             rec.consignment_execution_mode_label = rec.visit_id.visit_execution_mode_label or "-"
             rec.consignment_current_due_amount = summary.get("current_due", 0.0)
             rec.consignment_collected_amount = summary.get("settled_amount", 0.0)
@@ -203,11 +203,16 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                     _("Date: %s") % (rec.visit_date or "-"),
                     _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
                     _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
+                    _("Return Transfer: %s") % (summary.get("return_refs") or "-"),
                     _("Current Due: %s") % rec._format_currency_amount(summary.get("current_due", 0.0)),
                     _("Collected: %s") % rec._format_currency_amount(summary.get("settled_amount", 0.0)),
                     _("Remaining: %s") % rec._format_currency_amount(summary.get("remaining_amount", 0.0)),
-                    "</div>",
                 ]
+                if summary.get("promise_amount"):
+                    parts.append(_("Promise: %s") % rec._format_currency_amount(summary.get("promise_amount", 0.0)))
+                    if summary.get("latest_promise_date"):
+                        parts.append(_("Promise Date: %s") % summary.get("latest_promise_date"))
+                parts.append("</div>")
                 rec.finish_message = "<br/>".join(parts)
                 continue
 
@@ -258,4 +263,3 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
             return self.visit_id._get_pda_form_action()
         return {"type": "ir.actions.act_window_close"}
-
