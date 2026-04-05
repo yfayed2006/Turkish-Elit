@@ -34,11 +34,20 @@
 <field name="direct_stop_return_count" readonly="1" invisible="not direct_stop_return_count"/>
 <field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
-<group string="Visit Summary" col="2" invisible="is_direct_sales_stop">
+<group string="Visit Summary" col="4" invisible="is_direct_sales_stop">
+<field name="consignment_current_due_amount" string="Current Due" readonly="1"/>
+<field name="consignment_collected_amount" string="Collected" readonly="1"/>
+<field name="consignment_remaining_amount" string="Remaining" readonly="1"/>
+<field name="consignment_promise_amount" string="Promise Amount" readonly="1"/>
+</group>
+<group string="Visit Documents" col="4" invisible="is_direct_sales_stop">
 <field name="consignment_sale_order_ref" string="Sale Order" readonly="1"/>
 <field name="consignment_refill_ref" string="Refill Transfer" readonly="1"/>
+<field name="consignment_return_refs" string="Return Transfers" readonly="1"/>
+<field name="consignment_execution_mode_label" string="Execution Mode" readonly="1"/>
 </group>
 <group string="Confirmed Payments" invisible="is_direct_sales_stop">
+<field name="consignment_payment_count" string="Confirmed Payments" readonly="1"/>
 <field name="consignment_payment_summary_html" readonly="1" nolabel="1" widget="html"/>
 </group>
 <group>
