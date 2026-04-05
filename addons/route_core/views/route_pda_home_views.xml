@@ -532,7 +532,7 @@
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Return Transfers</div>
 <div class="route_pda_info_value">
-<field name="current_visit_return_transfer_count" readonly="1" nolabel="1"/>
+<field name="current_visit_return_transfer_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
