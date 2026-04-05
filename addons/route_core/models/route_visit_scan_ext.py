@@ -466,10 +466,12 @@ class RouteVisit(models.Model):
         if len(available_lots) == 1:
             return available_lots[:1]
 
-        raise UserError(
-            _("Product '%s' has more than one available lot in stock. Please scan/select the lot first.")
-            % product.display_name
-        )
+        # Keep the route workflow flexible for field reps: allow the scan to
+        # continue on an unassigned line when multiple lots exist and no lot
+        # was selected yet. The lot will still be enforced later by the
+        # missing-lot wizard before reconciliation, return transfer validation,
+        # refill confirmation, or sale order creation.
+        return False
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
