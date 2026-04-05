@@ -245,3 +245,21 @@
     }
 }
 
+
+
+.route_pda_group {
+    margin-top: 18px;
+}
+
+.route_pda_group_title {
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 12px;
+}
+
+.route_pda_group_operations,
+.route_pda_group_snapshot {
+    padding-top: 2px;
+}
+
