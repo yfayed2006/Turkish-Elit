@@ -55,6 +55,22 @@ class RoutePdaHome(models.TransientModel):
     current_visit_name = fields.Char(string="Current Visit", compute="_compute_dashboard")
     current_visit_outlet_name = fields.Char(string="Current Outlet", compute="_compute_dashboard")
     current_vehicle_name = fields.Char(string="Vehicle", compute="_compute_dashboard")
+    current_visit_customer_name = fields.Char(string="Customer", compute="_compute_dashboard")
+    current_visit_area_name = fields.Char(string="Area", compute="_compute_dashboard")
+    current_visit_execution_mode_label = fields.Char(string="Execution Mode", compute="_compute_dashboard")
+    current_visit_stage_title = fields.Char(string="Current Step", compute="_compute_dashboard")
+    current_visit_stage_help = fields.Text(string="Step Help", compute="_compute_dashboard")
+    current_visit_current_due_amount = fields.Monetary(string="Current Due", currency_field="currency_id", compute="_compute_dashboard")
+    current_visit_net_due_amount = fields.Monetary(string="Current Visit Sale", currency_field="currency_id", compute="_compute_dashboard")
+    current_visit_collected_amount = fields.Monetary(string="Collected", currency_field="currency_id", compute="_compute_dashboard")
+    current_visit_remaining_due_amount = fields.Monetary(string="Remaining", currency_field="currency_id", compute="_compute_dashboard")
+    current_visit_open_shortage_count = fields.Integer(string="Open Shortages", compute="_compute_dashboard")
+    current_visit_near_expiry_count = fields.Integer(string="Near Expiry", compute="_compute_dashboard")
+    current_visit_pending_near_expiry_count = fields.Integer(string="Pending Near Expiry", compute="_compute_dashboard")
+    current_visit_payment_count = fields.Integer(string="Confirmed Payments", compute="_compute_dashboard")
+    current_visit_sale_order_ref = fields.Char(string="Sale Order", compute="_compute_dashboard")
+    current_visit_refill_ref = fields.Char(string="Refill Transfer", compute="_compute_dashboard")
+    current_visit_return_transfer_count = fields.Integer(string="Return Transfers", compute="_compute_dashboard")
 
     cash_today_amount = fields.Monetary(string="Cash In Hand", currency_field="currency_id", compute="_compute_dashboard")
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
@@ -485,6 +501,22 @@ class RoutePdaHome(models.TransientModel):
 
             rec.current_visit_name = current_visit.display_name if current_visit else _("No active visit")
             rec.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit and current_visit.outlet_id else "-"
+            rec.current_visit_customer_name = current_visit.partner_id.display_name if current_visit and current_visit.partner_id else "-"
+            rec.current_visit_area_name = current_visit.area_id.display_name if current_visit and current_visit.area_id else "-"
+            rec.current_visit_execution_mode_label = current_visit.visit_execution_mode_label if current_visit else "-"
+            rec.current_visit_stage_title = current_visit.ux_stage_title if current_visit else _("No active visit in progress")
+            rec.current_visit_stage_help = current_visit.ux_stage_help if current_visit else _("Open My Visits to start or continue a consignment visit.")
+            rec.current_visit_current_due_amount = current_visit.outlet_current_due_amount if current_visit else 0.0
+            rec.current_visit_net_due_amount = current_visit.net_due_amount if current_visit else 0.0
+            rec.current_visit_collected_amount = current_visit.collected_amount if current_visit else 0.0
+            rec.current_visit_remaining_due_amount = current_visit.remaining_due_amount if current_visit else 0.0
+            rec.current_visit_open_shortage_count = current_visit.outlet_open_shortage_count if current_visit else 0
+            rec.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if current_visit else 0
+            rec.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if current_visit else 0
+            rec.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if current_visit else 0
+            rec.current_visit_sale_order_ref = current_visit.sale_order_id.name if current_visit and current_visit.sale_order_id else "-"
+            rec.current_visit_refill_ref = current_visit.refill_picking_id.name if current_visit and current_visit.refill_picking_id else "-"
+            rec.current_visit_return_transfer_count = current_visit.return_transfer_count if current_visit else 0
             if current_visit and current_visit.vehicle_id:
                 rec.current_vehicle_name = current_visit.vehicle_id.display_name
             elif today_plans[:1].vehicle_id:
