@@ -132,14 +132,19 @@ class RouteVisit(models.Model):
 
     def _prepare_refill_move_vals(self, picking, line):
         self.ensure_one()
+        unit_price = line.unit_price or line.product_id.lst_price or 0.0
+        supplied_qty = line.supplied_qty or 0.0
         return {
             "product_id": line.product_id.id,
-            "product_uom_qty": line.supplied_qty,
+            "product_uom_qty": supplied_qty,
             "product_uom": line.uom_id.id or line.product_id.uom_id.id,
             "location_id": picking.location_id.id,
             "location_dest_id": picking.location_dest_id.id,
             "picking_id": picking.id,
             "route_visit_id": self.id,
+            "route_visit_line_id": line.id,
+            "route_direct_return_unit_price": unit_price,
+            "route_direct_return_estimated_amount": supplied_qty * unit_price,
         }
 
     def _fill_move_line_qty_done(self, picking):
