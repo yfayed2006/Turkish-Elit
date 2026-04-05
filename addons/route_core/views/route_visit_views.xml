@@ -254,7 +254,7 @@
 <field name="sold_qty" readonly="1"/>
 <field name="vehicle_available_qty" readonly="1"/>
 <field name="supplied_qty"/>
-<field name="pending_refill_qty" readonly="1"/>
+<field name="pending_refill_qty" string="Refill Proposal"/>
 <field name="new_balance_qty" readonly="1"/>
 <field name="unit_price"/>
 <field name="sold_amount" readonly="1"/>
@@ -529,6 +529,7 @@
 <field name="sold_qty" readonly="1"/>
 <field name="return_qty"/>
 <field name="return_route"/>
+<field name="pending_refill_qty" string="Refill Proposal"/>
 <field name="vehicle_available_qty" readonly="1"/>
 <field name="unit_price"/>
 <field name="sold_amount" readonly="1"/>
