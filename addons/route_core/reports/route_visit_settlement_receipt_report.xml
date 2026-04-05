@@ -120,12 +120,12 @@
 <tr>
 <td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Start DateTime</td>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
-<span t-if="doc.start_datetime" t-field="doc.start_datetime" t-options="{"widget": "datetime"}"/>
+<span t-if="doc.start_datetime" t-field="doc.start_datetime" t-options="{'widget': 'datetime'}"/>
 <span t-if="not doc.start_datetime">-</span>
 </td>
 <td style="padding:8px 12px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">End DateTime</td>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">
-<span t-if="doc.end_datetime" t-field="doc.end_datetime" t-options="{"widget": "datetime"}"/>
+<span t-if="doc.end_datetime" t-field="doc.end_datetime" t-options="{'widget': 'datetime'}"/>
 <span t-if="not doc.end_datetime">-</span>
 </td>
 </tr>
