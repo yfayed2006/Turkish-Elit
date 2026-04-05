@@ -100,9 +100,9 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
@@ -168,8 +168,8 @@
 <field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
 </group>
 </group>
-<separator string="Decision Flags" invisible="not outlet_decision_flags_html"/>
-<div class="mb-2" invisible="not outlet_decision_flags_html">
+<separator string="Decision Flags" invisible="1"/>
+<div class="mb-2" invisible="1">
 <field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <group string="Collection Control Snapshot" col="3">
@@ -251,6 +251,9 @@
 <field name="product_id"/>
 <field name="barcode" readonly="1"/>
 <field name="uom_id" readonly="1"/>
+<field name="last_sold_date" readonly="1" optional="show"/>
+<field name="days_on_shelf" readonly="1" optional="show"/>
+<field name="movement_status" readonly="1" widget="badge" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
 <field name="return_qty"/>
@@ -366,9 +369,9 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="visit_execution_mode != 'direct_sales' or not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_print_direct_stop_settlement_receipt" string="Print Settlement Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
@@ -525,6 +528,9 @@
 <field name="product_id"/>
 <field name="barcode" readonly="1"/>
 <field name="uom_id" readonly="1"/>
+<field name="last_sold_date" readonly="1" optional="show"/>
+<field name="days_on_shelf" readonly="1" optional="show"/>
+<field name="movement_status" readonly="1" widget="badge" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
 <field name="return_qty"/>
