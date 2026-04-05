@@ -1,5 +1,5 @@
 <odoo>
-<!--    Admin / all payments    -->
+<!--     Admin / all payments     -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -28,13 +28,14 @@
 </list>
 </field>
 </record>
-<!--    Tailored visit list    -->
+<!--     Tailored visit list     -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
 <list string="My Visit Collections" create="0" edit="0" delete="0">
-<field name="source_document_ref" string="Visit"/>
+<field name="payment_business_flow" string="Flow" widget="badge"/>
+<field name="source_document_ref" string="Document"/>
 <field name="outlet_id"/>
 <field name="payment_date"/>
 <field name="payment_mode" string="Mode"/>
@@ -45,7 +46,7 @@
 </list>
 </field>
 </record>
-<!--    Tailored direct sale list    -->
+<!--     Tailored direct sale list     -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -122,7 +123,7 @@
 </form>
 </field>
 </record>
-<!--    Admin / all payments search    -->
+<!--     Admin / all payments search     -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -182,13 +183,14 @@
 </search>
 </field>
 </record>
-<!--    Visit collections search    -->
+<!--     Visit collections search     -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
 <search string="Visit Collections">
 <field name="visit_id" string="Visit"/>
+<field name="payment_business_flow"/>
 <field name="outlet_id"/>
 <field name="area_id"/>
 <field name="salesperson_id"/>
@@ -197,6 +199,9 @@
 <field name="state"/>
 <field name="source_document_ref" string="Visit"/>
 <filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_consignment" string="Consignment" domain="[('payment_business_flow', '=', 'consignment_visit')]"/>
+<filter name="filter_direct_stop" string="Direct Stop" domain="[('payment_business_flow', '=', 'direct_stop')]"/>
+<filter name="filter_direct_sale_order" string="Direct Sale Order" domain="[('payment_business_flow', '=', 'direct_sale_order')]"/>
 <separator/>
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
@@ -212,12 +217,14 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
+<filter name="group_by_flow" string="Business Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
+<field name="payment_business_flow" string="Business Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="payment_mode" string="Payment Mode"/>
@@ -227,7 +234,7 @@
 </search>
 </field>
 </record>
-<!--    Direct sale payments search    -->
+<!--     Direct sale payments search     -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -258,12 +265,14 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
+<filter name="group_by_flow" string="Business Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
+<field name="payment_business_flow" string="Business Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="payment_mode" string="Payment Mode"/>
@@ -286,8 +295,8 @@
 <field name="view_mode">list,form</field>
 <field name="view_id" ref="view_route_visit_collection_list"/>
 <field name="search_view_id" ref="view_route_visit_collection_search"/>
-<field name="domain">[('payment_business_flow', '=', 'consignment_visit')]</field>
-<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'visit'}</field>
+<field name="domain">[('salesperson_id', '=', uid), ('state', '=', 'confirmed')]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1}</field>
 </record>
 <record id="action_route_direct_sale_payment" model="ir.actions.act_window">
 <field name="name">My Direct Sale Payments</field>
