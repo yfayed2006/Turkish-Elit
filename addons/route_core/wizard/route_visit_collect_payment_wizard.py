@@ -558,6 +558,26 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             raise ValidationError(_("Visit is required."))
         return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
 
+    def _ensure_collection_is_open(self):
+        self.ensure_one()
+        visit = self.visit_id
+        if not visit:
+            raise ValidationError(_("Visit is required."))
+
+        if visit.state == "done" or getattr(visit, "visit_process_state", False) in ("collection_done", "ready_to_close", "done"):
+            raise ValidationError(_("Collection is already closed for this visit. You cannot save another payment decision."))
+
+        if self.is_direct_sales_stop:
+            draft_payments = visit._get_direct_stop_settlement_payments(states=["draft"]) if hasattr(visit, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
+        else:
+            draft_payments = visit.payment_ids.filtered(lambda p: p.state == "draft")
+
+        if draft_payments:
+            raise ValidationError(_("There are draft payments waiting for confirmation. Please confirm them before saving a new collection decision."))
+
+        if not getattr(visit, "ux_can_collect_payment", False):
+            raise ValidationError(_("Collect Payment is not available for this visit at the current stage."))
+
     def action_close_settlement(self):
         self.ensure_one()
         if self.is_direct_sales_stop:
@@ -574,6 +594,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
     def action_save_payment(self):
         self.ensure_one()
+        self._ensure_collection_is_open()
         self._validate_before_create()
 
         if self.is_direct_sales_stop:
@@ -649,4 +670,5 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
 
