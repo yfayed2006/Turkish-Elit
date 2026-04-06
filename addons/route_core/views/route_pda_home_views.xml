@@ -698,12 +698,6 @@
 </div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Salesperson Shortages</div>
-<div class="route_pda_info_value">
-<field name="salesperson_shortage_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card">
 <div class="route_pda_info_label">Outlets</div>
 <div class="route_pda_info_value">
 <field name="outlet_count" readonly="1" nolabel="1"/>
