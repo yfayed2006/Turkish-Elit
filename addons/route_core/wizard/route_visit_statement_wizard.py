@@ -36,6 +36,7 @@ class RouteVisitStatementWizard(models.TransientModel):
     last_payment_amount = fields.Monetary(string="Last Payment Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    can_continue_to_collection = fields.Boolean(string="Can Continue To Collection", compute="_compute_statement", readonly=True)
 
     def _get_statement_reference_date(self, visit):
         self.ensure_one()
@@ -117,6 +118,7 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.last_payment_amount = 0.0
             rec.next_promise_date = False
             rec.next_promise_amount = 0.0
+            rec.can_continue_to_collection = False
             if not visit:
                 continue
 
@@ -160,6 +162,7 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.last_payment_amount = last_payment.amount if last_payment else 0.0
             rec.next_promise_date = next_promise.promise_date if next_promise else False
             rec.next_promise_amount = next_promise.promise_amount if next_promise else 0.0
+            rec.can_continue_to_collection = bool(getattr(visit, "ux_can_collect_payment", False))
 
     def action_print_statement_pdf(self):
         self.ensure_one()
@@ -170,6 +173,8 @@ class RouteVisitStatementWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise UserError(_("Visit is required."))
+        if not self.can_continue_to_collection:
+            raise UserError(_("Collection is already closed for this visit. This statement is now review-only."))
         if hasattr(visit, "action_ux_collect_payment"):
             return visit.action_ux_collect_payment()
         return {"type": "ir.actions.act_window_close"}
