@@ -249,6 +249,21 @@ class RoutePdaHome(models.TransientModel):
             return self.action_open_visit_collections_center_screen()
         return self.action_open_snapshot_center_screen()
 
+    def action_open_current_visit_statement_of_account(self):
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        snapshot_mode = self.env.context.get("snapshot_mode") or "consignment"
+        visits = Visit.search([
+            ("user_id", "=", self.env.user.id),
+            ("state", "=", "in_progress"),
+        ], order="start_datetime desc, id desc")
+        if snapshot_mode in ("consignment", "direct_sales"):
+            visits = visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode)
+        visit = visits[:1]
+        if not visit:
+            raise UserError(_("There is no active visit available to open Statement of Account."))
+        return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
+
     def action_open_reference_counts_screen(self):
         return self._open_self_view("route_core.view_route_pda_reference_counts_form", "Reference Counts")
 
@@ -870,3 +885,4 @@ class RoutePdaHome(models.TransientModel):
             prefix = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
             title = f"{prefix} - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
