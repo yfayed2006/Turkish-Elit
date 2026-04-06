@@ -58,6 +58,11 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     direct_stop_settlement_remaining_amount = fields.Monetary(related="visit_id.direct_stop_settlement_remaining_amount", currency_field="currency_id", readonly=True, store=False)
     direct_stop_credit_amount = fields.Monetary(related="visit_id.direct_stop_credit_amount", currency_field="currency_id", readonly=True, store=False)
     direct_stop_credit_policy = fields.Selection(related="visit_id.direct_stop_credit_policy", readonly=True, store=False)
+    direct_stop_open_promise_amount = fields.Monetary(currency_field="currency_id", compute="_compute_direct_stop_balance_breakdown", store=False)
+    direct_stop_immediate_remaining_amount = fields.Monetary(currency_field="currency_id", compute="_compute_direct_stop_balance_breakdown", store=False)
+    direct_stop_latest_promise_date = fields.Date(compute="_compute_direct_stop_balance_breakdown", store=False)
+    direct_stop_latest_promise_status = fields.Char(compute="_compute_direct_stop_balance_breakdown", store=False)
+
 
     sale_status_label = fields.Char(compute="_compute_status_labels", store=False)
     return_status_label = fields.Char(compute="_compute_status_labels", store=False)
@@ -90,6 +95,29 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     def _compute_previous_due_since_display(self):
         for rec in self:
             rec.direct_stop_previous_due_since_display = str(rec.direct_stop_previous_due_since_date) if rec.direct_stop_previous_due_since_date else "0"
+
+    @api.depends("visit_id", "direct_stop_grand_due_amount", "direct_stop_settlement_paid_amount")
+    def _compute_direct_stop_balance_breakdown(self):
+        for rec in self:
+            if not rec.is_direct_sales_stop or not rec.visit_id:
+                rec.direct_stop_open_promise_amount = 0.0
+                rec.direct_stop_immediate_remaining_amount = 0.0
+                rec.direct_stop_latest_promise_date = False
+                rec.direct_stop_latest_promise_status = False
+                continue
+            payments = rec.visit_id._get_direct_stop_settlement_payments(states=["confirmed"]) if hasattr(rec.visit_id, "_get_direct_stop_settlement_payments") else rec.env["route.visit.payment"]
+            promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+            latest_promise = promise_payments.sorted(
+                key=lambda p: (p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"), p.id or 0),
+                reverse=True,
+            )[:1] if promise_payments else promise_payments
+            rec.direct_stop_open_promise_amount = sum(promise_payments.mapped("promise_amount")) if promise_payments else 0.0
+            rec.direct_stop_immediate_remaining_amount = max((rec.direct_stop_grand_due_amount or 0.0) - (rec.direct_stop_settlement_paid_amount or 0.0), 0.0)
+            rec.direct_stop_latest_promise_date = latest_promise.promise_date if latest_promise else False
+            if latest_promise:
+                rec.direct_stop_latest_promise_status = latest_promise._get_snapshot_promise_status() if hasattr(latest_promise, "_get_snapshot_promise_status") else latest_promise.promise_status
+            else:
+                rec.direct_stop_latest_promise_status = False
 
     @api.depends("direct_stop_sale_status", "direct_stop_return_status", "direct_stop_credit_policy")
     def _compute_status_labels(self):
@@ -186,6 +214,8 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         "visit_date",
         "direct_stop_settlement_paid_amount",
         "direct_stop_settlement_remaining_amount",
+        "direct_stop_open_promise_amount",
+        "direct_stop_immediate_remaining_amount",
         "direct_stop_credit_amount",
         "direct_stop_sales_total",
         "direct_stop_returns_total",
@@ -214,7 +244,9 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
 
             if (rec.direct_stop_credit_amount or 0.0) > 0.0:
                 extra = _("Customer credit has been recorded for this stop.")
-            elif (rec.direct_stop_settlement_remaining_amount or 0.0) <= 0.0:
+            elif (rec.direct_stop_open_promise_amount or 0.0) > 0.0:
+                extra = _("Immediate cash collection is complete and the remaining balance is covered by an open promise.")
+            elif (rec.direct_stop_immediate_remaining_amount or 0.0) <= 0.0:
                 extra = _("Settlement is complete and no further action is required.")
             else:
                 extra = _("The stop has been closed. Review the saved settlement records if needed.")
@@ -230,6 +262,11 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 parts.append(_("Sales total: %s") % rec._format_currency_amount(rec.direct_stop_sales_total))
             if (rec.direct_stop_returns_total or 0.0) > 0.0:
                 parts.append(_("Returns total: %s") % rec._format_currency_amount(rec.direct_stop_returns_total))
+            parts.append(_("Collected now: %s") % rec._format_currency_amount(rec.direct_stop_settlement_paid_amount))
+            if (rec.direct_stop_open_promise_amount or 0.0) > 0.0:
+                parts.append(_("Open promise: %s") % rec._format_currency_amount(rec.direct_stop_open_promise_amount))
+                if rec.direct_stop_latest_promise_date:
+                    parts.append(_("Next promise date: %s") % rec.direct_stop_latest_promise_date)
             parts.append(extra)
             parts.append("</div>")
             rec.finish_message = "<br/>".join(parts)
