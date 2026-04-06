@@ -23,6 +23,8 @@
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
@@ -39,6 +41,8 @@
 <field name="payment_mode" readonly="1"/>
 <field name="collection_type" readonly="1"/>
 <field name="amount" readonly="1"/>
+<field name="source_document_ref" readonly="1"/>
+<field name="settlement_document_ref" readonly="1"/>
 <field name="due_date" readonly="1"/>
 <field name="promise_date" readonly="1"/>
 <field name="promise_amount" readonly="1"/>
@@ -102,6 +106,8 @@
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
@@ -118,6 +124,8 @@
 <field name="payment_mode" readonly="1"/>
 <field name="collection_type" readonly="1"/>
 <field name="amount" readonly="1"/>
+<field name="source_document_ref" readonly="1"/>
+<field name="settlement_document_ref" readonly="1"/>
 <field name="due_date" readonly="1"/>
 <field name="promise_date" readonly="1"/>
 <field name="promise_amount" readonly="1"/>
@@ -141,6 +149,8 @@
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
@@ -157,6 +167,8 @@
 <field name="payment_mode" readonly="1"/>
 <field name="collection_type" readonly="1"/>
 <field name="amount" readonly="1"/>
+<field name="source_document_ref" readonly="1"/>
+<field name="settlement_document_ref" readonly="1"/>
 <field name="due_date" readonly="1"/>
 <field name="promise_date" readonly="1"/>
 <field name="promise_amount" readonly="1"/>
