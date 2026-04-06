@@ -886,3 +886,4 @@ class RoutePdaHome(models.TransientModel):
             title = f"{prefix} - {location.display_name}"
         return self._open_quants_by_location(location, title)
 
+
