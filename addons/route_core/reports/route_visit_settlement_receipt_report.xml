@@ -183,17 +183,17 @@ Since:
 <div style="font-size:10px; color:#1d4ed8; margin-top:5px;">Previous due plus current stop net.</div>
 </td>
 <td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#15803d; letter-spacing:0.4px; margin-bottom:6px;">Settlement Paid</div>
+<div style="font-size:10px; text-transform:uppercase; color:#15803d; letter-spacing:0.4px; margin-bottom:6px;">Collected Now</div>
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary['settled_amount'], currency_label)"/>
-<div style="font-size:10px; color:#15803d; margin-top:5px;">Confirmed settlement amount.</div>
+<div style="font-size:10px; color:#15803d; margin-top:5px;">Confirmed cash collection in this stop.</div>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; letter-spacing:0.4px; margin-bottom:6px;">Remaining</div>
-<div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary['remaining_amount'], currency_label)"/>
-<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Open balance after settlement.</div>
+<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; letter-spacing:0.4px; margin-bottom:6px;">Immediate Remaining</div>
+<div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('immediate_remaining_amount', summary['remaining_amount']), currency_label)"/>
+<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Grand total due minus collected cash for this stop.</div>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Promise / Credit</div>
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Open Promise / Credit</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % ((summary['promise_amount'] or summary['credit_amount']), currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">
 <span t-if="summary['latest_promise_date']">
@@ -232,7 +232,7 @@ Policy:
 <span t-esc="payment_breakdown['latest_promise_date'] or '-'"/>
 </td>
 <td colspan="2" style="padding:8px 12px;">
-<strong>Latest Promise Status:</strong>
+<strong>Current Promise Status:</strong>
 <span t-esc="payment_breakdown['latest_promise_status'] or '-'"/>
 </td>
 </tr>
@@ -681,7 +681,7 @@ Date:
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary.get('settled_amount', 0.0), currency_label)"/>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:6px 8px;">
-<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; margin-bottom:6px;">Remaining</div>
+<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; margin-bottom:6px;">Immediate Remaining</div>
 <div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('remaining_amount', 0.0), currency_label)"/>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:6px 8px;">
