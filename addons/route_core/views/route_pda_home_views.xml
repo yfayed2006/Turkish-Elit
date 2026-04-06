@@ -606,6 +606,10 @@
 <span>Back</span>
 </button>
 <h2 class="route_pda_detail_title">Collections Snapshot</h2>
+<button type="object" name="action_open_current_visit_statement_of_account" class="btn route_pda_back_btn">
+<i class="fa fa-file-text-o"/>
+<span>Statement of Account</span>
+</button>
 </div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_finance_grid">
 <div class="route_pda_info_card">
