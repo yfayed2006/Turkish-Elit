@@ -1257,20 +1257,30 @@ class RouteVisit(models.Model):
     def _get_direct_stop_receipt_summary(self):
         self.ensure_one()
         promise_payments = self._get_direct_stop_receipt_payments().filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-        latest_promise = promise_payments[:1]
+        latest_promise = promise_payments.sorted(
+            key=lambda p: (p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"), p.id or 0),
+            reverse=True,
+        )[:1] if promise_payments else promise_payments
+        settled_amount = self.direct_stop_settlement_paid_amount or 0.0
+        grand_total_due = self.direct_stop_grand_due_amount or 0.0
+        immediate_remaining = max(grand_total_due - settled_amount, 0.0)
+        latest_promise_status = False
+        if latest_promise:
+            latest_promise_status = latest_promise._get_snapshot_promise_status() if hasattr(latest_promise, "_get_snapshot_promise_status") else latest_promise.promise_status
         return {
             "previous_due": self.direct_stop_previous_due_amount or 0.0,
             "previous_due_since": self.direct_stop_previous_due_since_date,
             "current_sale": self.direct_stop_sales_total or 0.0,
             "current_return": self.direct_stop_returns_total or 0.0,
             "net_current_stop": self.direct_stop_current_net_amount or 0.0,
-            "grand_total_due": self.direct_stop_grand_due_amount or 0.0,
+            "grand_total_due": grand_total_due,
             "credit_amount": self.direct_stop_credit_amount or 0.0,
-            "settled_amount": self.direct_stop_settlement_paid_amount or 0.0,
+            "settled_amount": settled_amount,
             "remaining_amount": self.direct_stop_settlement_remaining_amount or 0.0,
+            "immediate_remaining_amount": immediate_remaining,
             "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
-            "latest_promise_status": latest_promise.promise_status if latest_promise else False,
+            "latest_promise_status": latest_promise_status or False,
             "sale_order_ref": ", ".join(self._get_direct_stop_receipt_sale_orders().mapped("name")) or "-",
             "return_ref": ", ".join(self._get_direct_stop_receipt_returns().mapped("name")) or "-",
         }
@@ -1294,7 +1304,14 @@ class RouteVisit(models.Model):
         selection_map = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
         promise_status_map = dict(self.env["route.visit.payment"]._fields["promise_status"].selection)
         promise_payments = payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-        latest_promise = promise_payments[:1]
+        latest_promise = promise_payments.sorted(
+            key=lambda p: (p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"), p.id or 0),
+            reverse=True,
+        )[:1] if promise_payments else promise_payments
+        latest_promise_status = False
+        if latest_promise:
+            raw_status = latest_promise._get_snapshot_promise_status() if hasattr(latest_promise, "_get_snapshot_promise_status") else latest_promise.promise_status
+            latest_promise_status = promise_status_map.get(raw_status, raw_status)
         return {
             "totals": totals,
             "labels": {
@@ -1306,7 +1323,7 @@ class RouteVisit(models.Model):
             },
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
             "latest_promise_amount": latest_promise.promise_amount if latest_promise else 0.0,
-            "latest_promise_status": promise_status_map.get(latest_promise.promise_status, latest_promise.promise_status) if latest_promise else False,
+            "latest_promise_status": latest_promise_status or False,
             "payment_count": len(payments),
         }
 
@@ -1552,9 +1569,9 @@ class RouteVisit(models.Model):
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
-            _("Grand Total Due: %.2f %s") % (summary["grand_total_due"], currency_code),
-            _("Paid: %.2f %s") % (summary["settled_amount"], currency_code),
-            _("Remaining: %.2f %s") % (summary["remaining_amount"], currency_code),
+            _("Amount Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
+            _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
+            _("Immediate Remaining: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
         ]
 
         promise_amount = summary.get("promise_amount") or 0.0
@@ -1750,5 +1767,6 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
+
 
 
