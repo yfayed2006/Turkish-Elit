@@ -1031,12 +1031,46 @@ class RouteVisit(models.Model):
             "context": {"default_visit_id": self.id},
         }
 
+    def _get_collection_reentry_block_message(self):
+        self.ensure_one()
+        if self.state == "done" or self.visit_process_state == "done":
+            return _("This visit is already finished. You cannot open Collect Payment again.")
+
+        if self._is_direct_sales_stop():
+            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
+            confirmed_payments = self._get_direct_stop_settlement_payments(states=["confirmed"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
+        else:
+            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+            confirmed_payments = self.payment_ids.filtered(lambda p: p.state == "confirmed")
+
+        if draft_payments:
+            return _("There are draft payments waiting for confirmation. Please confirm them instead of starting a new collection.")
+
+        if self.visit_process_state in ("collection_done", "ready_to_close") or confirmed_payments:
+            return _("Collection has already been confirmed for this visit. Review the receipt or payment history instead of collecting again.")
+
+        return _("Collect Payment is not available at the current visit stage.")
+
     def action_ux_collect_payment(self):
         self.ensure_one()
+
+        if self.state == "done" or self.visit_process_state in ("collection_done", "ready_to_close", "done"):
+            raise UserError(self._get_collection_reentry_block_message())
+
+        if self._is_direct_sales_stop():
+            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
+        else:
+            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
+
+        if draft_payments:
+            raise UserError(self._get_collection_reentry_block_message())
 
         if (not self._is_direct_sales_stop()) and self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_post_collection_stage()
             return self._get_pda_form_action()
+
+        if not self.ux_can_collect_payment:
+            raise UserError(self._get_collection_reentry_block_message())
 
         return {
             "type": "ir.actions.act_window",
