@@ -1020,6 +1020,17 @@ class RouteVisit(models.Model):
             },
         }
 
+    def action_open_statement_of_account(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Statement of Account"),
+            "res_model": "route.visit.statement.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {"default_visit_id": self.id},
+        }
+
     def action_ux_collect_payment(self):
         self.ensure_one()
 
@@ -1739,4 +1750,5 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
+
 
