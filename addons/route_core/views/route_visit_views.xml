@@ -142,7 +142,7 @@
 <field name="start_datetime" readonly="1"/>
 </group>
 <group>
-<field name="outlet_current_due_amount" readonly="1"/>
+<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
 <field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
@@ -298,21 +298,21 @@
 <page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
 <group string="Direct Stop Review" col="3">
 <group>
-<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
 <field name="direct_stop_sale_status" readonly="1" widget="badge"/>
 </group>
 <group>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="direct_stop_current_net_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
+<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge"/>
 </group>
 <group>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
+<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
 </group>
@@ -414,21 +414,21 @@
 <field name="end_datetime" readonly="1"/>
 </group>
 <group invisible="visit_execution_mode == 'direct_sales'">
-<field name="outlet_current_due_amount" readonly="1"/>
+<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
 <field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
 <group invisible="visit_execution_mode != 'direct_sales'">
-<field name="outlet_current_due_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
+<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
 </group>
 <group invisible="visit_execution_mode != 'direct_sales'">
-<field name="direct_stop_order_refs" readonly="1"/>
-<field name="direct_stop_return_refs" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
-<field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_order_refs" string="Sale Order" readonly="1"/>
+<field name="direct_stop_return_refs" string="Return" readonly="1"/>
+<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_credit_policy" string="Credit Handling" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group invisible="1">
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
@@ -437,21 +437,21 @@
 </group>
 <group string="Direct Stop Operational Summary" col="3" invisible="1">
 <group>
-<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
 <field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" readonly="1"/>
+<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
 <field name="direct_stop_sale_status" readonly="1" widget="badge"/>
 </group>
 <group>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="direct_stop_current_net_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
+<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
+<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge"/>
 </group>
 <group>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
+<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
 </group>
@@ -542,7 +542,7 @@
 <page string="Summary" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
 <group string="Visit Summary" col="2">
 <group>
-<field name="outlet_current_due_amount" readonly="1"/>
+<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
 <field name="net_due_amount" string="Current Visit Sale" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 <field name="remaining_due_amount" readonly="1"/>
