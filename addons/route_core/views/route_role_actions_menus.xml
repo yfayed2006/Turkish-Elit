@@ -81,7 +81,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--     Salesperson-safe menu actions     -->
+<!--      Salesperson-safe menu actions      -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Route Plans</field>
 <field name="res_model">route.plan</field>
@@ -132,6 +132,6 @@
 <menuitem id="menu_route_salesperson_my_visits" name="My Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_shortages" name="My Shortages" parent="route_core.menu_route_visit_root" action="route_core.action_route_shortage" sequence="240" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_shortages" name="Shortages" parent="route_core.menu_route_control_workspace" action="route_core.action_route_shortage" sequence="20" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection_salesperson" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
