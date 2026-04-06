@@ -152,6 +152,42 @@ class RouteVisit(models.Model):
         compute="_compute_consignment_document_refs",
         store=False,
     )
+    consignment_previous_due_amount = fields.Monetary(
+        string="Previous Due",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
+    consignment_current_visit_return_amount = fields.Monetary(
+        string="Current Visit Returns",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
+    consignment_net_amount_for_visit = fields.Monetary(
+        string="Net Amount For This Visit",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
+    consignment_amount_due_now = fields.Monetary(
+        string="Amount Due Now",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
+    consignment_immediate_remaining_amount = fields.Monetary(
+        string="Immediate Remaining",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
+    consignment_promise_amount = fields.Monetary(
+        string="Promise Amount",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
 
 
     resolved_supervisor_user_id = fields.Many2one(
@@ -669,6 +705,44 @@ class RouteVisit(models.Model):
             rec.summary_refill_transfer_ref = rec.refill_picking_id.name or "-"
             rec.summary_return_transfer_refs = rec._get_route_receipt_return_refs()
 
+    @api.depends(
+        "visit_execution_mode",
+        "outlet_current_due_amount",
+        "net_due_amount",
+        "remaining_due_amount",
+        "collected_amount",
+        "payment_ids.state",
+        "payment_ids.amount",
+        "payment_ids.promise_amount",
+        "line_ids.sold_amount",
+        "line_ids.return_amount",
+    )
+    def _compute_consignment_financial_snapshot(self):
+        for rec in self:
+            rec.consignment_previous_due_amount = 0.0
+            rec.consignment_current_visit_return_amount = 0.0
+            rec.consignment_net_amount_for_visit = 0.0
+            rec.consignment_amount_due_now = 0.0
+            rec.consignment_immediate_remaining_amount = 0.0
+            rec.consignment_promise_amount = 0.0
+
+            if rec._is_direct_sales_stop():
+                continue
+
+            sale_amount = sum((line.sold_amount or 0.0) for line in rec.line_ids) if rec.line_ids else (rec.net_due_amount or 0.0)
+            return_amount = sum((line.return_amount or 0.0) for line in rec.line_ids) if rec.line_ids else 0.0
+            net_amount_for_visit = sale_amount - return_amount
+            amount_due_now = rec.outlet_current_due_amount or 0.0
+            confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
+            promise_amount = sum((payment.promise_amount or 0.0) for payment in confirmed_payments) if confirmed_payments else 0.0
+
+            rec.consignment_current_visit_return_amount = return_amount
+            rec.consignment_net_amount_for_visit = net_amount_for_visit
+            rec.consignment_amount_due_now = amount_due_now
+            rec.consignment_previous_due_amount = max(amount_due_now - max(net_amount_for_visit, 0.0), 0.0)
+            rec.consignment_immediate_remaining_amount = rec.remaining_due_amount or 0.0
+            rec.consignment_promise_amount = promise_amount
+
     def _get_route_receipt_sale_order(self):
         self.ensure_one()
         if self.sale_order_id:
@@ -1031,46 +1105,12 @@ class RouteVisit(models.Model):
             "context": {"default_visit_id": self.id},
         }
 
-    def _get_collection_reentry_block_message(self):
-        self.ensure_one()
-        if self.state == "done" or self.visit_process_state == "done":
-            return _("This visit is already finished. You cannot open Collect Payment again.")
-
-        if self._is_direct_sales_stop():
-            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
-            confirmed_payments = self._get_direct_stop_settlement_payments(states=["confirmed"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
-        else:
-            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
-            confirmed_payments = self.payment_ids.filtered(lambda p: p.state == "confirmed")
-
-        if draft_payments:
-            return _("There are draft payments waiting for confirmation. Please confirm them instead of starting a new collection.")
-
-        if self.visit_process_state in ("collection_done", "ready_to_close") or confirmed_payments:
-            return _("Collection has already been confirmed for this visit. Review the receipt or payment history instead of collecting again.")
-
-        return _("Collect Payment is not available at the current visit stage.")
-
     def action_ux_collect_payment(self):
         self.ensure_one()
-
-        if self.state == "done" or self.visit_process_state in ("collection_done", "ready_to_close", "done"):
-            raise UserError(self._get_collection_reentry_block_message())
-
-        if self._is_direct_sales_stop():
-            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"]) if hasattr(self, "_get_direct_stop_settlement_payments") else self.env["route.visit.payment"]
-        else:
-            draft_payments = self.payment_ids.filtered(lambda p: p.state == "draft")
-
-        if draft_payments:
-            raise UserError(self._get_collection_reentry_block_message())
 
         if (not self._is_direct_sales_stop()) and self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_post_collection_stage()
             return self._get_pda_form_action()
-
-        if not self.ux_can_collect_payment:
-            raise UserError(self._get_collection_reentry_block_message())
 
         return {
             "type": "ir.actions.act_window",
