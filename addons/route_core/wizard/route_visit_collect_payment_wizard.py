@@ -551,6 +551,13 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
 
         return created
 
+    def action_open_statement_of_account(self):
+        self.ensure_one()
+        visit = self.visit_id
+        if not visit:
+            raise ValidationError(_("Visit is required."))
+        return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
+
     def action_close_settlement(self):
         self.ensure_one()
         if self.is_direct_sales_stop:
