@@ -359,6 +359,15 @@ class RouteVisitPayment(models.Model):
                 rec.promise_status = False
                 continue
 
+            if rec._is_direct_stop_settlement_payment():
+                if rec.promise_date and rec.promise_date < today:
+                    rec.promise_status = "overdue"
+                elif rec.promise_date and rec.promise_date == today:
+                    rec.promise_status = "due_today"
+                else:
+                    rec.promise_status = "open"
+                continue
+
             remaining_due = rec._get_target_remaining_due()
             if remaining_due <= 0:
                 rec.promise_status = "closed"
@@ -566,3 +575,4 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
+
