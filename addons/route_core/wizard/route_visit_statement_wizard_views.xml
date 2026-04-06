@@ -1,0 +1,47 @@
+<odoo>
+<record id="view_route_visit_statement_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.statement.wizard.form</field>
+<field name="model">route.visit.statement.wizard</field>
+<field name="arch" type="xml">
+<form string="Statement of Account" create="0" edit="0" delete="0">
+<sheet>
+<group string="Visit Context" col="4">
+<field name="visit_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1"/>
+<field name="visit_date" readonly="1"/>
+<field name="user_id" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+</group>
+<group string="Collection Summary" col="4">
+<field name="previous_due_amount" readonly="1"/>
+<field name="current_visit_sale_amount" readonly="1"/>
+<field name="current_visit_return_amount" readonly="1"/>
+<field name="net_amount_for_visit" readonly="1"/>
+<field name="amount_due_now" readonly="1"/>
+<field name="suggested_collection_now" readonly="1"/>
+<field name="expected_remaining_after_payment" readonly="1"/>
+</group>
+<group string="Payment & Promise Snapshot" col="4">
+<field name="previous_confirmed_payment_count" readonly="1"/>
+<field name="previous_confirmed_payment_amount" readonly="1"/>
+<field name="open_promise_count" readonly="1"/>
+<field name="open_promise_amount" readonly="1"/>
+<field name="overdue_promise_count" readonly="1"/>
+<field name="overdue_promise_amount" readonly="1"/>
+<field name="last_payment_date" readonly="1"/>
+<field name="last_payment_amount" readonly="1"/>
+<field name="next_promise_date" readonly="1"/>
+<field name="next_promise_amount" readonly="1"/>
+</group>
+<div class="alert alert-info mt-3" role="alert"> This is a mini pre-collection statement. The full settlement receipt remains available after the visit is finished. </div>
+</sheet>
+<footer>
+<button name="action_print_statement_pdf" string="Print Statement" type="object" class="btn-primary"/>
+<button name="action_continue_to_collection" string="Continue to Collection" type="object" class="btn-secondary"/>
+<button string="Close" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
