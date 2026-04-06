@@ -18,7 +18,6 @@
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_direct_return_tools" invisible="1"/>
 <field name="route_show_lot_ui" invisible="1"/>
-<field name="snapshot_visit_scope" invisible="1"/>
 <div class="route_pda_home_header route_pda_home_header_compact">
 <h1 class="route_pda_home_title">Route Workspace</h1>
 <div class="route_pda_home_subtitle_text route_pda_home_subtitle_compact">
@@ -388,7 +387,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_from_collections_snapshot" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back</span>
+<span>Back to Snapshot Center</span>
 </button>
 <h2 class="route_pda_detail_title">Today Overview</h2>
 </div>
