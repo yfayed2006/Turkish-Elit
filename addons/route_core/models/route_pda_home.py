@@ -177,7 +177,11 @@ class RoutePdaHome(models.TransientModel):
     def action_open_snapshot_center_screen(self):
         self._ensure_consignment_tools_enabled()
         title = "Stock and Lot Snapshot" if self.route_show_lot_ui else "Snapshot Center"
-        return self._open_self_view("route_core.view_route_pda_snapshot_center_form", title)
+        return self._open_self_view(
+            "route_core.view_route_pda_snapshot_center_form",
+            title,
+            extra_context={"snapshot_mode": "consignment", "snapshot_origin": "consignment"},
+        )
 
     def action_open_review_center_screen(self):
         self._ensure_consignment_tools_enabled()
@@ -213,7 +217,13 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_current_visit_snapshot_screen(self):
         self._ensure_consignment_tools_enabled()
-        return self._open_self_view("route_core.view_route_pda_current_visit_snapshot_form", "Current Visit Snapshot")
+        snapshot_mode = self.env.context.get("snapshot_mode") or "consignment"
+        snapshot_origin = self.env.context.get("snapshot_origin") or "consignment"
+        return self._open_self_view(
+            "route_core.view_route_pda_current_visit_snapshot_form",
+            "Current Visit Snapshot",
+            extra_context={"snapshot_mode": snapshot_mode, "snapshot_origin": snapshot_origin},
+        )
 
     def action_open_collections_snapshot_screen(self):
         return self._open_self_view(
@@ -418,10 +428,17 @@ class RoutePdaHome(models.TransientModel):
                 ("user_id", "=", user.id),
                 ("date", "=", today),
             ])
-            current_visit = Visit.search([
+            active_visits = Visit.search([
                 ("user_id", "=", user.id),
                 ("state", "=", "in_progress"),
-            ], order="start_datetime desc, id desc", limit=1)
+            ], order="start_datetime desc, id desc")
+            snapshot_mode = self.env.context.get("snapshot_mode")
+            if snapshot_mode in ("consignment", "direct_sales"):
+                current_visit = active_visits.filtered(
+                    lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode
+                )[:1]
+            else:
+                current_visit = active_visits[:1]
             today_closings = Closing.search([
                 ("user_id", "=", user.id),
                 ("plan_date", "=", today),
@@ -516,17 +533,9 @@ class RoutePdaHome(models.TransientModel):
             rec.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if current_visit else 0
             rec.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if current_visit else 0
             rec.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if current_visit else 0
-            rec.current_visit_sale_order_ref = current_visit.sale_order_id.name if current_visit and current_visit.sale_order_id else "-"
-            rec.current_visit_refill_ref = current_visit.refill_picking_id.name if current_visit and current_visit.refill_picking_id else "-"
-            if current_visit:
-                return_refs = []
-                if getattr(current_visit, "return_picking_ids", False):
-                    return_refs = [name for name in current_visit.return_picking_ids.mapped("name") if name]
-                elif getattr(current_visit, "return_transfer_refs", False):
-                    return_refs = [name.strip() for name in (current_visit.return_transfer_refs or "").split(",") if name.strip()]
-                rec.current_visit_return_transfer_refs = ", ".join(return_refs) if return_refs else "-"
-            else:
-                rec.current_visit_return_transfer_refs = "-"
+            rec.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if current_visit and hasattr(current_visit, "summary_sale_order_ref") else "-"
+            rec.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if current_visit and hasattr(current_visit, "summary_refill_transfer_ref") else "-"
+            rec.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if current_visit and hasattr(current_visit, "summary_return_transfer_refs") else "-"
             if current_visit and current_visit.vehicle_id:
                 rec.current_vehicle_name = current_visit.vehicle_id.display_name
             elif today_plans[:1].vehicle_id:
