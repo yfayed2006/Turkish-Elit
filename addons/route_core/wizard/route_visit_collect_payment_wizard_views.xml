@@ -70,6 +70,7 @@
 <div class="alert alert-info mt-3" role="alert" invisible="not show_no_payment_due_help"> No payment is due on this visit. Review the settlement summary, then close this window to continue finishing the stop. </div>
 </sheet>
 <footer>
+<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary"/>
 <button name="action_save_payment" string="Save Draft" type="object" class="btn-primary" invisible="not show_save_draft_button"/>
 <button name="action_close_settlement" string="Close Settlement" type="object" class="btn-primary" invisible="not show_close_settlement_button"/>
 <button string="Cancel" special="cancel" class="btn-secondary"/>
