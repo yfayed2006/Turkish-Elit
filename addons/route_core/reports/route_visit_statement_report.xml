@@ -1,0 +1,131 @@
+<odoo>
+<record id="action_report_route_visit_statement_of_account" model="ir.actions.report">
+<field name="name">Statement of Account</field>
+<field name="model">route.visit.statement.wizard</field>
+<field name="report_type">qweb-pdf</field>
+<field name="report_name">route_core.report_route_visit_statement_of_account</field>
+<field name="report_file">route_core.report_route_visit_statement_of_account</field>
+<field name="print_report_name">'Statement of Account - %s' % (object.visit_id.name or 'Visit')</field>
+<field name="binding_model_id" eval="False"/>
+</record>
+<template id="report_route_visit_statement_of_account">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+<t t-call="web.external_layout">
+<div class="page">
+<h2 style="margin-bottom:4px;">Statement of Account</h2>
+<div style="font-size:12px; color:#555; margin-bottom:14px;">Mini pre-collection statement before settlement confirmation.</div>
+<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Visit</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="doc.visit_id.name or '-'"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Date</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-field="doc.visit_date"/>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Outlet</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="doc.outlet_id.display_name if doc.outlet_id else '-'"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Customer</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="doc.partner_id.display_name if doc.partner_id else '-'"/>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Salesperson</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="doc.user_id.display_name if doc.user_id else '-'"/>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<strong>Vehicle</strong>
+</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-esc="doc.vehicle_id.display_name if doc.vehicle_id else '-'"/>
+</td>
+</tr>
+</table>
+<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+<tr>
+<td colspan="4" style="padding:8px; border:1px solid #ddd; background:#f5f5f5;">
+<strong>Collection Summary</strong>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Previous Due</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.previous_due_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Current Visit Sale</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.current_visit_sale_amount or 0.0, doc.currency_id.name or '')"/>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Current Visit Returns</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.current_visit_return_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Net Amount For This Visit</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.net_amount_for_visit or 0.0, doc.currency_id.name or '')"/>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Amount Due Now</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Suggested Collection Now</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.suggested_collection_now or 0.0, doc.currency_id.name or '')"/>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Expected Remaining After Payment</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.expected_remaining_after_payment or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Open / Overdue Promises</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
+</tr>
+</table>
+<table style="width:100%; border-collapse:collapse;">
+<tr>
+<td colspan="4" style="padding:8px; border:1px solid #ddd; background:#f5f5f5;">
+<strong>Payment & Promise Snapshot</strong>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Previous Confirmed Payments</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%s / %.2f %s' % (doc.previous_confirmed_payment_count or 0, doc.previous_confirmed_payment_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Last Payment</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-if="doc.last_payment_date" t-field="doc.last_payment_date"/>
+<span t-if="not doc.last_payment_date">-</span>
+<t t-if="doc.last_payment_amount">
+-
+<span t-esc="'%.2f %s' % (doc.last_payment_amount or 0.0, doc.currency_id.name or '')"/>
+</t>
+</td>
+</tr>
+<tr>
+<td style="padding:6px 8px; border:1px solid #ddd;">Open Promise Amount</td>
+<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.open_promise_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:6px 8px; border:1px solid #ddd;">Next Promise</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">
+<span t-if="doc.next_promise_date" t-field="doc.next_promise_date"/>
+<span t-if="not doc.next_promise_date">-</span>
+<t t-if="doc.next_promise_amount">
+-
+<span t-esc="'%.2f %s' % (doc.next_promise_amount or 0.0, doc.currency_id.name or '')"/>
+</t>
+</td>
+</tr>
+</table>
+</div>
+</t>
+</t>
+</t>
+</template>
+</odoo>
