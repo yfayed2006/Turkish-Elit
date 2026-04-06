@@ -33,7 +33,7 @@
 <sheet>
 <div class="alert alert-warning" role="alert" invisible="not planning_finalized">
 <strong>Planning Locked:</strong>
-This route plan has been finalized. You cannot edit the plan, add visits, or remove visits until you click
+This route plan has been finalized. You cannot edit the plan, add visits, remove visits, or add open shortages until you click
 <strong>Reopen Daily Plan</strong>
 .
 </div>
@@ -51,6 +51,9 @@ Please review them before today's execution.
 <div class="oe_button_box" name="button_box">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker" invisible="visit_count == 0">
 <field name="visit_count" string="Executed Visits" widget="statinfo"/>
+</button>
+<button name="action_view_shortages" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="shortage_count == 0">
+<field name="shortage_count" string="Shortages" widget="statinfo"/>
 </button>
 <button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_proposal_count == 0">
 <field name="loading_proposal_count" string="Loading Proposal" widget="statinfo"/>
@@ -112,6 +115,10 @@ Please review them before today's execution.
 <field name="visited_count" readonly="1"/>
 <field name="skipped_count" readonly="1"/>
 </group>
+<group string="Shortage Planning">
+<field name="open_shortage_candidate_count" readonly="1"/>
+<field name="shortage_count" readonly="1"/>
+</group>
 </group>
 <notebook>
 <page string="Planned Visits">
@@ -125,10 +132,12 @@ Please review them before today's execution.
 <field name="area_id"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
 <field name="partner_id" readonly="1"/>
+<field name="shortage_count" string="Shortages" widget="badge" decoration-warning="shortage_count > 0"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
 <field name="skip_reason" optional="show"/>
 <field name="visit_id" string="Follow-up Visit" readonly="1"/>
 <field name="note" string="Line Note"/>
+<button name="action_view_outlet_shortages" type="object" string="Shortages" icon="fa-exclamation-triangle"/>
 <button name="action_open_skip_visit_wizard" type="object" string="Skip Visit" icon="fa-step-forward" invisible="state in ('visited', 'skipped') or visit_id.state == 'done'"/>
 <button name="action_reopen_line" type="object" string="Reopen Line" icon="fa-undo" invisible="state != 'skipped'"/>
 <button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id or state == 'skipped'"/>
