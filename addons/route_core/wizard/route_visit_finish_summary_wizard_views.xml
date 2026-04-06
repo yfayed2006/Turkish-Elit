@@ -22,17 +22,20 @@
 </group>
 </group>
 <group string="Settlement Summary" col="4" invisible="not is_direct_sales_stop">
-<field name="direct_stop_previous_due_amount" readonly="1"/>
+<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
 <field name="direct_stop_previous_due_since_display" string="Previous Due Since" readonly="1"/>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1" invisible="not direct_stop_returns_total"/>
-<field name="direct_stop_current_net_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-<field name="direct_stop_order_count" readonly="1" invisible="not direct_stop_order_count"/>
-<field name="direct_stop_return_count" readonly="1" invisible="not direct_stop_return_count"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
+<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1" invisible="not direct_stop_returns_total"/>
+<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
+<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
+<field name="direct_stop_open_promise_amount" string="Open Promise" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_latest_promise_status" string="Promise Status" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_order_count" string="Direct Sale Orders" readonly="1" invisible="not direct_stop_order_count"/>
+<field name="direct_stop_return_count" string="Direct Returns" readonly="1" invisible="not direct_stop_return_count"/>
+<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group string="Visit Summary" col="4" invisible="is_direct_sales_stop">
 <field name="consignment_current_due_amount" string="Current Due" readonly="1"/>
