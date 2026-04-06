@@ -92,9 +92,6 @@
 <xpath expr="//group[.//field[@name='recommended_visit_frequency'] and .//field[@name='visit_planning_reason']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='outlet_current_due_amount'] and .//field[@name='remaining_due_amount']]" position="attributes">
-<attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
-</xpath>
 <xpath expr="//group[.//field[@name='pending_near_expiry_line_count']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
