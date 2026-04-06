@@ -165,16 +165,22 @@ class RoutePdaHome(models.TransientModel):
     def _get_dashboard_current_visit(self, user):
         self.ensure_one()
         Visit = self.env["route.visit"]
-        domain = [
-            ("user_id", "=", user.id),
-            ("state", "=", "in_progress"),
-        ]
+        candidates = Visit.search(
+            [
+                ("user_id", "=", user.id),
+                ("state", "=", "in_progress"),
+            ],
+            order="start_datetime desc, id desc",
+            limit=20,
+        )
         scope = self.snapshot_visit_scope or "auto"
-        if scope == "consignment":
-            domain.append(("visit_execution_mode", "=", "consignment"))
-        elif scope == "direct_sales":
-            domain.append(("visit_execution_mode", "=", "direct_sales"))
-        return Visit.search(domain, order="start_datetime desc, id desc", limit=1)
+        if scope in ("consignment", "direct_sales"):
+            scoped = candidates.filtered(
+                lambda v: (getattr(v, "visit_execution_mode", False) or False) == scope
+            )
+            if scoped:
+                return scoped[:1]
+        return candidates[:1]
 
     def _open_self_view(self, view_xmlid, title, extra_context=None):
         self.ensure_one()
@@ -879,4 +885,3 @@ class RoutePdaHome(models.TransientModel):
             prefix = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
             title = f"{prefix} - {location.display_name}"
         return self._open_quants_by_location(location, title)
-
