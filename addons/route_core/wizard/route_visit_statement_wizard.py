@@ -37,6 +37,31 @@ class RouteVisitStatementWizard(models.TransientModel):
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
 
+    def _get_statement_reference_date(self, visit):
+        self.ensure_one()
+        return (visit.date if visit and visit.date else fields.Date.context_today(self))
+
+    def _get_statement_reference_datetime(self, visit):
+        self.ensure_one()
+        if not visit:
+            return fields.Datetime.now()
+        if visit.start_datetime:
+            return visit.start_datetime
+        ref_date = self._get_statement_reference_date(visit)
+        return fields.Datetime.to_datetime(f"{ref_date} 23:59:59")
+
+    def _get_statement_promise_status(self, payment, visit):
+        self.ensure_one()
+        if not payment or (payment.promise_amount or 0.0) <= 0.0 or payment.state != "confirmed":
+            return False
+        reference_date = self._get_statement_reference_date(visit)
+        promise_date = payment.promise_date
+        if promise_date and promise_date < reference_date:
+            return "overdue"
+        if promise_date and promise_date == reference_date:
+            return "due_today"
+        return "open"
+
     def _get_outlet_confirmed_payments(self, visit):
         Payment = self.env["route.visit.payment"]
         if not visit or not visit.outlet_id:
@@ -50,19 +75,18 @@ class RouteVisitStatementWizard(models.TransientModel):
         payments = self._get_outlet_confirmed_payments(visit)
         if not visit:
             return payments
-        return payments.filtered(lambda p: p.visit_id != visit and p.settlement_visit_id != visit)
+        reference_dt = self._get_statement_reference_datetime(visit)
+        return payments.filtered(
+            lambda p: p.visit_id != visit
+            and p.settlement_visit_id != visit
+            and (not p.payment_date or p.payment_date <= reference_dt)
+        )
 
     def _get_open_promises(self, visit):
-        payments = self._get_outlet_confirmed_payments(visit).filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        payments = self._get_previous_confirmed_payments(visit).filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
         if not payments:
             return payments
-
-        def _status(payment):
-            if hasattr(payment, "_get_snapshot_promise_status"):
-                return payment._get_snapshot_promise_status()
-            return payment.promise_status
-
-        return payments.filtered(lambda p: _status(p) in ("open", "due_today", "overdue"))
+        return payments.filtered(lambda p: self._get_statement_promise_status(p, visit) in ("open", "due_today", "overdue"))
 
     @api.depends("visit_id")
     def _compute_statement(self):
@@ -118,7 +142,7 @@ class RouteVisitStatementWizard(models.TransientModel):
 
             previous_confirmed = rec._get_previous_confirmed_payments(visit)
             open_promises = rec._get_open_promises(visit)
-            overdue_promises = open_promises.filtered(lambda p: (p._get_snapshot_promise_status() if hasattr(p, "_get_snapshot_promise_status") else p.promise_status) == "overdue")
+            overdue_promises = open_promises.filtered(lambda p: rec._get_statement_promise_status(p, visit) == "overdue")
 
             rec.previous_confirmed_payment_count = len(previous_confirmed)
             rec.previous_confirmed_payment_amount = sum(previous_confirmed.mapped("amount")) if previous_confirmed else 0.0
@@ -128,7 +152,9 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.overdue_promise_amount = sum((p.promise_amount or 0.0) for p in overdue_promises) if overdue_promises else 0.0
 
             last_payment = previous_confirmed[:1] if previous_confirmed else Payment
-            next_promise = open_promises.sorted(lambda p: p.promise_date or fields.Date.to_date("2099-12-31"))[:1] if open_promises else Payment
+            reference_date = rec._get_statement_reference_date(visit)
+            candidate_promises = open_promises.filtered(lambda p: p.promise_date and p.promise_date >= reference_date)
+            next_promise = candidate_promises.sorted(lambda p: p.promise_date)[:1] if candidate_promises else Payment
 
             rec.last_payment_date = last_payment.payment_date if last_payment else False
             rec.last_payment_amount = last_payment.amount if last_payment else 0.0
