@@ -152,14 +152,8 @@ class RoutePlanLine(models.Model):
 
     @api.depends("outlet_id")
     def _compute_shortage_count(self):
-        Shortage = self.env["route.shortage"]
         for rec in self:
             rec.shortage_count = 0
-            if rec.outlet_id:
-                rec.shortage_count = Shortage.search_count([
-                    ("outlet_id", "=", rec.outlet_id.id),
-                    ("state", "in", ["open", "planned"]),
-                ])
 
     @api.onchange("area_id")
     def _onchange_area_id(self):
@@ -261,19 +255,7 @@ class RoutePlanLine(models.Model):
         return self._get_pda_visit_action(visit)
 
     def action_view_outlet_shortages(self):
-        self.ensure_one()
-        if not self.outlet_id:
-            raise UserError(_("This route plan line has no outlet."))
-        action = self.env.ref("route_core.action_route_shortage").read()[0]
-        action["domain"] = [
-            ("outlet_id", "=", self.outlet_id.id),
-            ("state", "in", ["open", "planned"]),
-        ]
-        action["context"] = {
-            **self.env.context,
-            "default_outlet_id": self.outlet_id.id,
-        }
-        return action
+        return False
 
     def action_open_skip_visit_wizard(self):
         self.ensure_one()
@@ -539,3 +521,4 @@ class RoutePlanLine(models.Model):
         if plans:
             plans._sync_state_from_lines()
         return result
+
