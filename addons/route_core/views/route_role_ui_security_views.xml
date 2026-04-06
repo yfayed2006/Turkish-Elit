@@ -7,9 +7,6 @@
 <xpath expr="//button[@name='action_open_pending_visit_review_wizard']" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//button[@name='action_add_open_shortages']" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
 <xpath expr="//button[@name='action_finalize_daily_plan']" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
