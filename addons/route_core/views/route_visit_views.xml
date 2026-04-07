@@ -416,8 +416,8 @@
 <field name="end_datetime" readonly="1"/>
 </group>
 <group invisible="visit_execution_mode == 'direct_sales'">
-<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
-<field name="remaining_due_amount" string="Remaining Due" readonly="1"/>
+<field name="consignment_amount_due_now" string="Current Due" readonly="1"/>
+<field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="collected_amount" readonly="1"/>
 </group>
 <group invisible="visit_execution_mode != 'direct_sales'">
