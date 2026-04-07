@@ -446,7 +446,7 @@ Policy:
 <span t-field="payment.promise_date"/>
 </td>
 <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;">
-<span t-esc="'%.2f %s' % ((getattr(payment, 'effective_promise_amount', False) or payment.promise_amount or 0.0), currency_label or '')"/>
+<span t-esc="'%.2f %s' % ((payment.effective_promise_amount or payment.promise_amount or 0.0), currency_label or '')"/>
 </td>
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
@@ -729,7 +729,7 @@ Date:
 <span t-field="payment.promise_date"/>
 </td>
 <td style="padding:6px 8px; text-align:right; border-bottom:1px solid #f1f5f9;">
-<span t-esc="'%.2f %s' % ((getattr(payment, 'effective_promise_amount', False) or payment.promise_amount or 0.0), currency_label or '')"/>
+<span t-esc="'%.2f %s' % ((payment.effective_promise_amount or payment.promise_amount or 0.0), currency_label or '')"/>
 </td>
 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
