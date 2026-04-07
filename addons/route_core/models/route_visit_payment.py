@@ -343,6 +343,40 @@ class RouteVisitPayment(models.Model):
         for rec in self:
             rec.remaining_due_amount = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
 
+
+    @api.depends(
+        "collection_type",
+        "amount",
+        "promise_amount",
+        "state",
+        "source_type",
+        "visit_id.remaining_due_amount",
+        "visit_id.payment_ids.amount",
+        "visit_id.payment_ids.state",
+        "sale_order_id.amount_total",
+        "sale_order_id.direct_sale_payment_ids.amount",
+        "sale_order_id.direct_sale_payment_ids.state",
+    )
+    def _compute_effective_promise_amount(self):
+        for rec in self:
+            if not rec._get_target_model():
+                rec.effective_promise_amount = 0.0
+                continue
+
+            due_before_this_payment = rec._get_target_remaining_due(
+                exclude_self=(rec.state == "confirmed")
+            )
+            due_before_this_payment = max(due_before_this_payment or 0.0, 0.0)
+
+            if rec.collection_type == "partial":
+                rec.effective_promise_amount = max(
+                    due_before_this_payment - (rec.amount or 0.0), 0.0
+                )
+            elif rec.collection_type in ("defer_date", "next_visit"):
+                rec.effective_promise_amount = due_before_this_payment
+            else:
+                rec.effective_promise_amount = 0.0
+
     @api.depends(
         "promise_amount",
         "promise_date",
