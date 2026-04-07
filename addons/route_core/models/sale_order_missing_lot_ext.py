@@ -86,7 +86,7 @@ class SaleOrderLine(models.Model):
         "order_id.route_source_location_id",
         "product_id",
         "product_uom_qty",
-        "product_uom",
+        "product_uom_id",
     )
     def _compute_route_source_available_qty(self):
         for line in self:
