@@ -1,5 +1,5 @@
 <odoo>
-<!--       Admin / all payments       -->
+<!--        Admin / all payments        -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -23,14 +23,14 @@
 <field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="due_date" optional="hide"/>
 <field name="promise_date" optional="hide"/>
-<field name="promise_amount" optional="hide"/>
+<field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference" optional="hide"/>
 <field name="state" optional="hide"/>
 </list>
 </field>
 </record>
-<!--       Tailored visit list       -->
+<!--        Tailored visit list        -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--       Tailored direct sale list       -->
+<!--        Tailored direct sale list        -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -70,7 +70,7 @@
 <field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="due_date" string="Due Date" optional="hide"/>
 <field name="promise_date" string="Next Promise" optional="hide"/>
-<field name="promise_amount" string="Promise Amount" optional="hide"/>
+<field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference" string="Reference" optional="hide"/>
 <field name="state" string="Status" optional="hide"/>
@@ -129,7 +129,7 @@
 </form>
 </field>
 </record>
-<!--       Admin / all payments search       -->
+<!--        Admin / all payments search        -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -191,7 +191,7 @@
 </search>
 </field>
 </record>
-<!--       Visit collections search       -->
+<!--        Visit collections search        -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -244,7 +244,7 @@
 </search>
 </field>
 </record>
-<!--       Direct sale payments search       -->
+<!--        Direct sale payments search        -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
