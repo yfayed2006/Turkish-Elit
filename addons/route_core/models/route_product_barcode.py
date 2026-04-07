@@ -88,6 +88,34 @@ class ProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
+    def _route_source_available_domain(self):
+        if not self.env.context.get("route_only_source_available_products"):
+            return []
+        location_id = self.env.context.get("route_source_location_id")
+        if not location_id:
+            return [("id", "=", 0)]
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", location_id),
+                ("quantity", ">", 0),
+                ("product_id.sale_ok", "=", True),
+                ("product_id.active", "=", True),
+            ]
+        )
+        available_by_product = {}
+        for quant in quants:
+            product = quant.product_id
+            if not product:
+                continue
+            reserved = quant.reserved_quantity if "reserved_quantity" in quant._fields else 0.0
+            available_qty = max((quant.quantity or 0.0) - (reserved or 0.0), 0.0)
+            if available_qty <= 0:
+                continue
+            available_by_product[product.id] = available_by_product.get(product.id, 0.0) + available_qty
+        product_ids = [product_id for product_id, qty in available_by_product.items() if qty > 0]
+        return [("id", "in", product_ids or [0])]
+
+    @api.model
     def _route_barcode_domain(self, term, operator="ilike"):
         op = operator if operator in ("=", "ilike", "like", "=ilike", "=like") else "ilike"
         return ["|", ("barcode", op, term), ("default_code", op, term)]
@@ -208,6 +236,7 @@ class ProductProduct(models.Model):
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
         domain = list(domain or [])
+        domain = expression.AND([domain, self._route_source_available_domain()])
         term = (name or "").strip()
         if term:
             product_ids = self._route_collect_barcode_product_ids(term, operator=operator, limit=limit, extra_domain=domain)
@@ -223,13 +252,22 @@ class ProductTemplate(models.Model):
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
         domain = list(domain or [])
+        product_domain = self.env["product.product"]._route_source_available_domain()
         term = (name or "").strip()
         if term:
-            product_ids = self.env["product.product"]._route_collect_barcode_product_ids(term, operator=operator, limit=limit)
+            product_ids = self.env["product.product"]._route_collect_barcode_product_ids(
+                term,
+                operator=operator,
+                limit=limit,
+                extra_domain=product_domain,
+            )
             if product_ids:
                 template_ids = self.env["product.product"].browse(product_ids).mapped("product_tmpl_id").ids
                 if template_ids:
                     templates = self.search(expression.AND([domain, [("id", "in", template_ids)]]), limit=limit)
                     if templates:
                         return [(rec.id, rec.display_name) for rec in templates[:limit]]
+        if product_domain:
+            available_template_ids = self.env["product.product"].search(product_domain).mapped("product_tmpl_id").ids
+            domain = expression.AND([domain, [("id", "in", available_template_ids or [0])]])
         return super().name_search(name, domain, operator, limit)
