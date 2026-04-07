@@ -658,6 +658,10 @@ class RouteVisit(models.Model):
                 "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
                 "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
                 "default_origin": self.name,
+                "default_route_visit_id": self.id,
+                "route_visit_id": self.id,
+                "route_return_to_visit_after_confirm": True,
+                "route_only_source_available_products": True,
             },
         }
         view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
