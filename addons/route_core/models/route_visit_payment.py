@@ -148,6 +148,12 @@ class RouteVisitPayment(models.Model):
         currency_field="currency_id",
         default=0.0,
     )
+    effective_promise_amount = fields.Monetary(
+        string="Effective Promise Amount",
+        currency_field="currency_id",
+        compute="_compute_effective_promise_amount",
+        store=False,
+    )
     promise_status = fields.Selection(
         [
             ("open", "Open"),
@@ -556,6 +562,11 @@ class RouteVisitPayment(models.Model):
 
     def action_confirm(self):
         for rec in self:
+            # Re-sync draft promise values against the latest remaining due before confirmation.
+            # This prevents stale draft values from keeping an outdated promise amount when
+            # visit totals changed after the draft was first saved.
+            if rec.source_type == "visit" and not rec._is_direct_stop_settlement_payment():
+                rec._sync_promise_fields()
             rec._check_payment_rules()
             rec.state = "confirmed"
 
