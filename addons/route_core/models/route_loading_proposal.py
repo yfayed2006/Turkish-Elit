@@ -1135,11 +1135,31 @@ class RoutePlan(models.Model):
                 ("visit_id.date", ">=", lookback_start),
             ]
         )
+        direct_sale_outlets = outlets.filtered(lambda outlet: (getattr(outlet, "outlet_operation_mode", False) or "") in ("direct_sale", "direct_sales"))
+        direct_sale_lines = self.env["sale.order.line"].search(
+            [
+                ("order_id.route_order_mode", "=", "direct_sale"),
+                ("order_id.route_outlet_id", "in", direct_sale_outlets.ids),
+                ("order_id.state", "in", ["sale", "done"]),
+                ("product_id", "in", product_ids),
+                ("display_type", "=", False),
+                ("order_id.date_order", ">=", fields.Datetime.to_datetime(str(lookback_start) + " 00:00:00")),
+                ("order_id.date_order", "<=", fields.Datetime.to_datetime(str(reference_date) + " 23:59:59")),
+            ]
+        ) if direct_sale_outlets else self.env["sale.order.line"]
 
         profile_lines = sorted(
             profile_lines,
             key=lambda line: (
                 line.visit_id.date or reference_date,
+                line.id,
+            ),
+            reverse=True,
+        )
+        direct_sale_lines = sorted(
+            direct_sale_lines,
+            key=lambda line: (
+                line.order_id.date_order or fields.Datetime.to_datetime(str(reference_date) + " 00:00:00"),
                 line.id,
             ),
             reverse=True,
@@ -1157,6 +1177,15 @@ class RoutePlan(models.Model):
             status = line.movement_status or "no_sale_history"
             latest_status_by_pair[key] = status
             counts_by_product[line.product_id.id][status] += 1
+        for line in direct_sale_lines:
+            outlet = line.order_id.route_outlet_id
+            if not outlet or not line.product_id:
+                continue
+            key = (outlet.id, line.product_id.id)
+            if key in latest_status_by_pair:
+                continue
+            latest_status_by_pair[key] = "active"
+            counts_by_product[line.product_id.id]["active"] += 1
 
         profile_map = {}
         for product_id in product_ids:
@@ -1202,15 +1231,35 @@ class RoutePlan(models.Model):
         reference_date = self.date or fields.Date.context_today(self)
         lookback_start = reference_date - relativedelta(days=90)
 
+        consignment_outlets = outlets.filtered(
+            lambda outlet: (getattr(outlet, "outlet_operation_mode", False) or "") not in ("direct_sale", "direct_sales")
+        )
+        direct_sale_outlets = outlets.filtered(
+            lambda outlet: (getattr(outlet, "outlet_operation_mode", False) or "") in ("direct_sale", "direct_sales")
+        )
+
         recent_lines = self.env["route.visit.line"].search(
             [
-                ("visit_id.outlet_id", "in", outlets.ids),
+                ("visit_id.outlet_id", "in", consignment_outlets.ids),
                 ("visit_id.state", "!=", "cancel"),
                 ("visit_id.date", "<=", reference_date),
                 ("visit_id.date", ">=", lookback_start),
                 ("sold_qty", ">", 0),
             ]
-        )
+        ) if consignment_outlets else self.env["route.visit.line"]
+
+        recent_direct_sale_lines = self.env["sale.order.line"].search(
+            [
+                ("order_id.route_order_mode", "=", "direct_sale"),
+                ("order_id.route_outlet_id", "in", direct_sale_outlets.ids),
+                ("order_id.state", "in", ["sale", "done"]),
+                ("display_type", "=", False),
+                ("product_id", "!=", False),
+                ("product_uom_qty", ">", 0),
+                ("order_id.date_order", ">=", fields.Datetime.to_datetime(str(lookback_start) + " 00:00:00")),
+                ("order_id.date_order", "<=", fields.Datetime.to_datetime(str(reference_date) + " 23:59:59")),
+            ]
+        ) if direct_sale_outlets else self.env["sale.order.line"]
 
         shortage_lines = self.env["route.shortage.line"].search(
             [
@@ -1227,7 +1276,7 @@ class RoutePlan(models.Model):
         shortage_qty_map = defaultdict(float)
         aggregate = {}
 
-        for outlet in outlets:
+        for outlet in consignment_outlets:
             for balance in outlet.stock_balance_ids.filtered("product_id"):
                 key = (outlet.id, balance.product_id.id)
                 balance_qty_map[key] = _qty_down(balance.product_id, balance.qty or 0.0)
@@ -1243,6 +1292,21 @@ class RoutePlan(models.Model):
             key = (outlet.id, product.id)
             sales_entries[key].append((line.visit_id.date or reference_date, line.id, line.sold_qty or 0.0))
             candidate_products_by_outlet[outlet.id].add(product.id)
+
+        for line in recent_direct_sale_lines:
+            outlet = line.order_id.route_outlet_id
+            product = line.product_id
+            if not outlet or not product:
+                continue
+            line_uom = getattr(line, "product_uom", False) or getattr(line, "product_uom_id", False) or product.uom_id
+            sold_qty = line.product_uom_qty or 0.0
+            if line_uom and product.uom_id and line_uom != product.uom_id:
+                sold_qty = line_uom._compute_quantity(sold_qty, product.uom_id)
+            key = (outlet.id, product.id)
+            sales_entries[key].append((fields.Datetime.to_date(line.order_id.date_order) or reference_date, line.id, sold_qty))
+            candidate_products_by_outlet[outlet.id].add(product.id)
+            if getattr(line, "price_unit", False) and not product_price_map.get(product.id):
+                product_price_map[product.id] = line.price_unit
 
         for shortage_line in shortage_lines:
             outlet = shortage_line.shortage_id.outlet_id
@@ -1270,11 +1334,15 @@ class RoutePlan(models.Model):
 
         for outlet in outlets:
             product_ids = candidate_products_by_outlet.get(outlet.id, set())
+            is_direct_sale_outlet = (getattr(outlet, "outlet_operation_mode", False) or "") in ("direct_sale", "direct_sales")
             for product_id in product_ids:
-                stock_qty = balance_qty_map.get((outlet.id, product_id), 0.0)
+                stock_qty = 0.0 if is_direct_sale_outlet else balance_qty_map.get((outlet.id, product_id), 0.0)
                 baseline_qty = baseline_qty_map.get((outlet.id, product_id), 0.0)
                 shortage_qty = shortage_qty_map.get((outlet.id, product_id), 0.0)
-                current_need_qty = _qty_up(self.env["product.product"].browse(product_id), max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0))
+                if is_direct_sale_outlet:
+                    current_need_qty = _qty_up(self.env["product.product"].browse(product_id), baseline_qty or 0.0)
+                else:
+                    current_need_qty = _qty_up(self.env["product.product"].browse(product_id), max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0))
 
                 if current_need_qty <= 0 and shortage_qty <= 0:
                     continue
@@ -1318,7 +1386,7 @@ class RoutePlan(models.Model):
 
             basis_parts = [
                 _(
-                    "Recent sales baseline (last 90 days, up to 3 recent sold visits): %(qty).2f"
+                    "Recent demand baseline (last 90 days, up to 3 recent consignment sold visits or direct-sale orders): %(qty).2f"
                 )
                 % {"qty": bucket["recent_sales_baseline_qty"]},
                 _("Outlet balance: %(qty).2f") % {"qty": bucket["outlet_balance_qty"]},
@@ -1417,8 +1485,8 @@ class RoutePlan(models.Model):
         line_vals = self._build_loading_proposal_line_vals()
 
         note = _(
-            "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent sales baseline, product movement speed, and current vehicle balance. "
-            "Suggested load qty = max((current outlet need + open shortages) - vehicle balance, 0). "
+            "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent consignment sales history, recent direct-sale order history, product movement speed, and current vehicle balance. "
+            "Suggested load qty = max((current outlet need + open shortages) - vehicle balance, 0). Direct-sale outlets use recent direct-sale demand as the need baseline, while consignment outlets use outlet balance versus recent sold visits. "
             "Supervisor-selected source location: %(source)s. "
             "When the transfer is created, older available lots are allocated first."
         ) % {"source": source_location.display_name}
@@ -1484,7 +1552,6 @@ class RoutePlan(models.Model):
                 "default_location_id": vehicle_location.id,
             },
         }
-
 
 
 
