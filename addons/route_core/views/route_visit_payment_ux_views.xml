@@ -4,21 +4,8 @@
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="arch" type="xml">
-<xpath expr="//field[@name='payment_ids']" position="replace">
-<group string="Collection Summary" col="2">
-<group>
-<field name="net_due_amount" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-<field name="remaining_due_amount" readonly="1"/>
-</group>
-<group>
-<field name="promise_to_pay_count" readonly="1"/>
-<field name="next_promise_to_pay_date" readonly="1"/>
-<field name="latest_promise_to_pay_amount" readonly="1"/>
-<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-</group>
-</group>
-<field name="payment_ids" readonly="1" context="{'default_visit_id': id}">
+<xpath expr="//field[@name='display_payment_ids']" position="replace">
+<field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
 <list create="0" delete="0">
 <field name="payment_date"/>
 <field name="payment_mode"/>
@@ -28,7 +15,7 @@
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
-<field name="promise_amount"/>
+<field name="effective_promise_amount" string="Promise Amount"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
 <field name="state"/>
@@ -45,7 +32,7 @@
 <field name="settlement_document_ref" readonly="1"/>
 <field name="due_date" readonly="1"/>
 <field name="promise_date" readonly="1"/>
-<field name="promise_amount" readonly="1"/>
+<field name="effective_promise_amount" string="Promise Amount" readonly="1"/>
 <field name="promise_status" readonly="1"/>
 </group>
 <group>
@@ -70,38 +57,7 @@
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
 <xpath expr="//field[@name='display_payment_ids']" position="replace">
-<group string="Collection Summary" col="2" invisible="visit_execution_mode == 'direct_sales'">
-<group>
-<field name="net_due_amount" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-<field name="remaining_due_amount" readonly="1"/>
-</group>
-<group>
-<field name="promise_to_pay_count" readonly="1"/>
-<field name="next_promise_to_pay_date" readonly="1"/>
-<field name="latest_promise_to_pay_amount" readonly="1"/>
-<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-</group>
-</group>
-<group string="Direct Stop Settlement" col="2" invisible="visit_execution_mode != 'direct_sales'">
-<group>
-<field name="direct_stop_order_refs" readonly="1"/>
-<field name="direct_stop_return_refs" readonly="1"/>
-<field name="direct_stop_previous_due_amount" readonly="1"/>
-<field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_credit_amount" readonly="1" invisible="not direct_stop_credit_amount"/>
-<field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
-</group>
-<group>
-<field name="direct_stop_sales_total" readonly="1"/>
-<field name="direct_stop_returns_total" readonly="1"/>
-<field name="direct_stop_current_net_amount" readonly="1"/>
-<field name="direct_stop_grand_due_amount" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" readonly="1"/>
-</group>
-</group>
-<field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}" invisible="visit_execution_mode == 'direct_sales'">
+<field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
 <list create="0" delete="0">
 <field name="payment_date"/>
 <field name="payment_mode"/>
@@ -111,7 +67,7 @@
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
-<field name="promise_amount"/>
+<field name="effective_promise_amount" string="Promise Amount"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
 <field name="state"/>
@@ -128,50 +84,7 @@
 <field name="settlement_document_ref" readonly="1"/>
 <field name="due_date" readonly="1"/>
 <field name="promise_date" readonly="1"/>
-<field name="promise_amount" readonly="1"/>
-<field name="promise_status" readonly="1"/>
-</group>
-<group>
-<field name="reference" readonly="1"/>
-<field name="bank_name" readonly="1"/>
-<field name="pos_terminal" readonly="1"/>
-<field name="state" readonly="1"/>
-</group>
-</group>
-<group>
-<field name="note" readonly="1"/>
-</group>
-</sheet>
-</form>
-</field>
-<field name="settlement_payment_ids" readonly="1" context="{'default_visit_id': id, 'default_settlement_visit_id': id}" invisible="visit_execution_mode != 'direct_sales'">
-<list create="0" delete="0">
-<field name="payment_date"/>
-<field name="payment_mode"/>
-<field name="collection_type"/>
-<field name="source_document_ref" string="Source Document" optional="show"/>
-<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
-<field name="amount"/>
-<field name="due_date"/>
-<field name="promise_date"/>
-<field name="promise_amount"/>
-<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="reference"/>
-<field name="state"/>
-</list>
-<form>
-<sheet>
-<group>
-<group>
-<field name="payment_date" readonly="1"/>
-<field name="payment_mode" readonly="1"/>
-<field name="collection_type" readonly="1"/>
-<field name="amount" readonly="1"/>
-<field name="source_document_ref" readonly="1"/>
-<field name="settlement_document_ref" readonly="1"/>
-<field name="due_date" readonly="1"/>
-<field name="promise_date" readonly="1"/>
-<field name="promise_amount" readonly="1"/>
+<field name="effective_promise_amount" string="Promise Amount" readonly="1"/>
 <field name="promise_status" readonly="1"/>
 </group>
 <group>
