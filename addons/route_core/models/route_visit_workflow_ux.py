@@ -158,6 +158,12 @@ class RouteVisit(models.Model):
         compute="_compute_consignment_financial_snapshot",
         store=False,
     )
+    consignment_current_visit_sale_amount = fields.Monetary(
+        string="Current Visit Sale",
+        currency_field="currency_id",
+        compute="_compute_consignment_financial_snapshot",
+        store=False,
+    )
     consignment_current_visit_return_amount = fields.Monetary(
         string="Current Visit Returns",
         currency_field="currency_id",
@@ -720,6 +726,7 @@ class RouteVisit(models.Model):
     def _compute_consignment_financial_snapshot(self):
         for rec in self:
             rec.consignment_previous_due_amount = 0.0
+            rec.consignment_current_visit_sale_amount = 0.0
             rec.consignment_current_visit_return_amount = 0.0
             rec.consignment_net_amount_for_visit = 0.0
             rec.consignment_amount_due_now = 0.0
@@ -734,14 +741,16 @@ class RouteVisit(models.Model):
             net_amount_for_visit = sale_amount - return_amount
             amount_due_now = rec.outlet_current_due_amount or 0.0
             confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
-            promise_amount = sum((payment.promise_amount or 0.0) for payment in confirmed_payments) if confirmed_payments else 0.0
+            promise_amount = sum((getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0) for payment in confirmed_payments) if confirmed_payments else 0.0
 
+            effective_remaining = rec.remaining_due_amount or 0.0
+            rec.consignment_current_visit_sale_amount = sale_amount
             rec.consignment_current_visit_return_amount = return_amount
             rec.consignment_net_amount_for_visit = net_amount_for_visit
             rec.consignment_amount_due_now = amount_due_now
             rec.consignment_previous_due_amount = max(amount_due_now - max(net_amount_for_visit, 0.0), 0.0)
-            rec.consignment_immediate_remaining_amount = rec.remaining_due_amount or 0.0
-            rec.consignment_promise_amount = promise_amount
+            rec.consignment_immediate_remaining_amount = effective_remaining
+            rec.consignment_promise_amount = min(promise_amount, effective_remaining) if promise_amount else 0.0
 
     def _get_route_receipt_sale_order(self):
         self.ensure_one()
@@ -1418,14 +1427,16 @@ class RouteVisit(models.Model):
         sale_order_ref = self.summary_sale_order_ref or (sale_order.name if sale_order else "-")
         refill_ref = self.summary_refill_transfer_ref or (self.refill_picking_id.name or "-")
         return_refs = self.summary_return_transfer_refs or self._get_route_receipt_return_refs()
+        remaining_amount = self.remaining_due_amount or 0.0
+        raw_promise_amount = sum((getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0) for payment in promise_payments) if promise_payments else 0.0
         return {
             "sale_order_ref": sale_order_ref,
             "refill_ref": refill_ref,
             "return_refs": return_refs,
             "current_due": self.outlet_current_due_amount or 0.0,
             "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
-            "remaining_amount": self.remaining_due_amount or 0.0,
-            "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
+            "remaining_amount": remaining_amount,
+            "promise_amount": min(raw_promise_amount, remaining_amount) if raw_promise_amount else 0.0,
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
             "visit_sale_amount": sum(item.get("sold_amount", 0.0) for item in line_items),
             "returned_value": sum(item.get("return_amount", 0.0) for item in line_items),
