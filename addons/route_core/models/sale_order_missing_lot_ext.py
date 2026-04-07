@@ -1,5 +1,6 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools.float_utils import float_compare
 
 
 class SaleOrderLine(models.Model):
@@ -27,6 +28,58 @@ class SaleOrderLine(models.Model):
         readonly=True,
         store=False,
     )
+    route_vehicle_available_qty = fields.Float(
+        string="Available In Vehicle",
+        digits="Product Unit of Measure",
+        compute="_compute_route_vehicle_available_qty",
+        store=False,
+    )
+
+    def _route_get_line_uom(self):
+        self.ensure_one()
+        if "product_uom" in self._fields and self.product_uom:
+            return self.product_uom
+        if "product_uom_id" in self._fields and self.product_uom_id:
+            return self.product_uom_id
+        return self.product_id.uom_id
+
+    def _route_get_qty_in_product_uom(self):
+        self.ensure_one()
+        if not self.product_id:
+            return 0.0
+        qty = self.product_uom_qty or 0.0
+        line_uom = self._route_get_line_uom()
+        if line_uom and self.product_id.uom_id and line_uom != self.product_id.uom_id:
+            return line_uom._compute_quantity(qty, self.product_id.uom_id)
+        return qty
+
+    def _route_convert_qty_from_product_uom(self, qty):
+        self.ensure_one()
+        if not self.product_id:
+            return qty or 0.0
+        line_uom = self._route_get_line_uom()
+        if line_uom and self.product_id.uom_id and line_uom != self.product_id.uom_id:
+            return self.product_id.uom_id._compute_quantity(qty or 0.0, line_uom)
+        return qty or 0.0
+
+    def _route_get_available_qty_in_product_uom(self):
+        self.ensure_one()
+        order = self.order_id
+        if not order or order.route_order_mode != "direct_sale" or not self.product_id or not order.route_source_location_id:
+            return 0.0
+        qty_map = order._get_route_vehicle_qty_map()
+        return qty_map.get(self.product_id.id, 0.0)
+
+    @api.depends(
+        "product_id",
+        "product_uom_qty",
+        "order_id.route_order_mode",
+        "order_id.route_source_location_id",
+    )
+    def _compute_route_vehicle_available_qty(self):
+        for line in self:
+            available_qty = line._route_get_available_qty_in_product_uom()
+            line.route_vehicle_available_qty = line._route_convert_qty_from_product_uom(available_qty)
 
 
     @api.onchange("product_id")
@@ -41,7 +94,11 @@ class SaleOrderLine(models.Model):
             barcode = (line.route_product_barcode or "").strip()
             if not barcode or (line.product_id and barcode == (line.product_id.barcode or "")):
                 continue
-            product = Product._route_find_product_by_barcode(barcode, extra_domain=[("sale_ok", "=", True)])
+            extra_domain = [("sale_ok", "=", True)]
+            if line.order_id and line.order_id.route_order_mode == "direct_sale":
+                available_ids = line.order_id.route_available_product_ids.ids
+                extra_domain.append(("id", "in", available_ids or [0]))
+            product = Product._route_find_product_by_barcode(barcode, extra_domain=extra_domain)
             if product:
                 line.product_id = product
                 line.route_product_barcode = product.barcode or barcode
@@ -76,7 +133,8 @@ class SaleOrderLine(models.Model):
                     ],
                     order="in_date, lot_id, id",
                 )
-                lots = quants.mapped("lot_id")
+                valid_quants = quants.filtered(lambda q: max((q.quantity or 0.0) - ((q.reserved_quantity if "reserved_quantity" in q._fields else 0.0) or 0.0), 0.0) > 0.0)
+                lots = valid_quants.mapped("lot_id")
             line.route_available_lot_ids = lots
             if line.route_lot_id and line.route_lot_id not in lots:
                 line.route_lot_id = False
@@ -101,6 +159,66 @@ class SaleOrderLine(models.Model):
                     )
                 )
                 line.route_lot_id = sorted_lots[:1]
+
+    @api.onchange("product_id", "product_uom_qty", "order_id.route_source_location_id")
+    def _onchange_route_vehicle_qty_limit(self):
+        for line in self:
+            order = line.order_id
+            if not order or order.route_order_mode != "direct_sale" or not line.product_id:
+                continue
+            available_qty = line._route_get_available_qty_in_product_uom()
+            other_requested_qty = sum(
+                sibling._route_get_qty_in_product_uom()
+                for sibling in order.order_line.filtered(
+                    lambda l: l != line and l.product_id == line.product_id and not l.display_type
+                )
+            )
+            allowed_qty = max(available_qty - other_requested_qty, 0.0)
+            requested_qty = line._route_get_qty_in_product_uom()
+            rounding = line.product_id.uom_id.rounding if line.product_id.uom_id else 0.01
+            if float_compare(requested_qty, allowed_qty, precision_rounding=rounding) > 0:
+                line.product_uom_qty = line._route_convert_qty_from_product_uom(allowed_qty)
+                return {
+                    "warning": {
+                        "title": _("Vehicle stock limit reached"),
+                        "message": _(
+                            "Only %(qty).2f %(uom)s of %(product)s is still available in the vehicle for this order."
+                        )
+                        % {
+                            "qty": allowed_qty,
+                            "uom": line.product_id.uom_id.display_name if line.product_id.uom_id else _("Units"),
+                            "product": line.product_id.display_name,
+                        },
+                    }
+                }
+
+    @api.constrains("product_id", "product_uom_qty", "order_id", "order_id.route_source_location_id")
+    def _check_route_vehicle_available_qty(self):
+        for line in self:
+            order = line.order_id
+            if not order or order.route_order_mode != "direct_sale" or not line.product_id or line.display_type:
+                continue
+            available_qty = line._route_get_available_qty_in_product_uom()
+            other_requested_qty = sum(
+                sibling._route_get_qty_in_product_uom()
+                for sibling in order.order_line.filtered(
+                    lambda l: l != line and l.product_id == line.product_id and not l.display_type
+                )
+            )
+            allowed_qty = max(available_qty - other_requested_qty, 0.0)
+            requested_qty = line._route_get_qty_in_product_uom()
+            rounding = line.product_id.uom_id.rounding if line.product_id.uom_id else 0.01
+            if float_compare(requested_qty, allowed_qty, precision_rounding=rounding) > 0:
+                raise ValidationError(
+                    _(
+                        "Only %(allowed).2f %(uom)s of %(product)s is available in vehicle stock for this direct sale order."
+                    )
+                    % {
+                        "allowed": allowed_qty,
+                        "uom": line.product_id.uom_id.display_name if line.product_id.uom_id else _("Units"),
+                        "product": line.product_id.display_name,
+                    }
+                )
 
     @api.constrains("route_lot_id", "product_id")
     def _check_route_lot_product(self):
