@@ -23,7 +23,6 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
-        store=True,
         help="Show and enforce Route Sales Lot/Serial workflow where supported.",
     )
 
@@ -32,7 +31,6 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
-        store=True,
         help="Show expiry information in Route Sales where lot workflow is enabled.",
     )
 
@@ -42,7 +40,6 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
-        store=True,
         help="Consignment Route = shelf count, reconcile, refill, and visit collection. Direct Sales Route = outlet stops for sales, delivery, and payment without shelf count. Hybrid Route = both workflows are available.",
     )
 
@@ -51,7 +48,6 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
-        store=True,
         help="Enable Direct Sale workspace, orders, deliveries, payments, and related Route Sales actions.",
     )
 
@@ -60,7 +56,6 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
-        store=True,
         help="Enable manual Direct Return workflow and related Route Sales actions.",
     )
 
@@ -100,7 +95,6 @@ class ResCompany(models.Model):
             icp.set_param(company._route_feature_param_key("operation_mode"), operation_mode)
             icp.set_param(company._route_feature_param_key("enable_direct_sale"), "1" if direct_sale_enabled else "0")
             icp.set_param(company._route_feature_param_key("enable_direct_return"), "1" if direct_return_enabled else "0")
-
 
     def route_operation_allows_consignment(self):
         self.ensure_one()
