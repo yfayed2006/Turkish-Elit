@@ -632,4 +632,3 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
-
