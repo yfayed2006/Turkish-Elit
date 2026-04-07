@@ -194,6 +194,34 @@ class RouteVisit(models.Model):
         compute="_compute_consignment_financial_snapshot",
         store=False,
     )
+    direct_stop_immediate_remaining_amount = fields.Monetary(
+        string="Immediate Remaining",
+        currency_field="currency_id",
+        compute="_compute_direct_stop_financial_snapshot",
+        store=False,
+    )
+    direct_stop_open_promise_amount = fields.Monetary(
+        string="Promise Amount",
+        currency_field="currency_id",
+        compute="_compute_direct_stop_financial_snapshot",
+        store=False,
+    )
+    direct_stop_latest_promise_date = fields.Date(
+        string="Next Promise Date",
+        compute="_compute_direct_stop_financial_snapshot",
+        store=False,
+    )
+    direct_stop_latest_promise_status = fields.Selection(
+        [
+            ("open", "Open"),
+            ("due_today", "Due Today"),
+            ("overdue", "Overdue"),
+            ("closed", "Closed"),
+        ],
+        string="Latest Promise Status",
+        compute="_compute_direct_stop_financial_snapshot",
+        store=False,
+    )
 
 
     resolved_supervisor_user_id = fields.Many2one(
@@ -223,6 +251,33 @@ class RouteVisit(models.Model):
         compute="_compute_resolved_supervisor_info",
         store=False,
     )
+
+    @api.depends(
+        "visit_execution_mode",
+        "direct_stop_grand_due_amount",
+        "direct_stop_settlement_paid_amount",
+        "direct_stop_settlement_remaining_amount",
+        "settlement_payment_ids.amount",
+        "settlement_payment_ids.promise_amount",
+        "settlement_payment_ids.promise_date",
+        "settlement_payment_ids.state",
+        "settlement_payment_ids.collection_type",
+    )
+    def _compute_direct_stop_financial_snapshot(self):
+        for rec in self:
+            rec.direct_stop_immediate_remaining_amount = 0.0
+            rec.direct_stop_open_promise_amount = 0.0
+            rec.direct_stop_latest_promise_date = False
+            rec.direct_stop_latest_promise_status = False
+
+            if rec.visit_execution_mode != "direct_sales":
+                continue
+
+            summary = rec._get_direct_stop_receipt_summary() if rec.id else {}
+            rec.direct_stop_immediate_remaining_amount = summary.get("immediate_remaining_amount", 0.0)
+            rec.direct_stop_open_promise_amount = summary.get("promise_amount", 0.0)
+            rec.direct_stop_latest_promise_date = summary.get("latest_promise_date", False)
+            rec.direct_stop_latest_promise_status = summary.get("latest_promise_status", False)
 
     @api.depends("company_id", "user_id", "vehicle_id", "outlet_id", "outlet_id.area_id")
     def _compute_resolved_supervisor_info(self):
