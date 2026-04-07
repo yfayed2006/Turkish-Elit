@@ -143,10 +143,13 @@
 </group>
 <group>
 <field name="consignment_amount_due_now" string="Current Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="remaining_due_amount" string="Remaining Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="collected_amount" readonly="1"/>
+<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_open_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 </group>
 <group>
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
@@ -297,7 +300,7 @@
 </list>
 </field>
 </page>
-<page string="Direct Stop" invisible="visit_execution_mode != 'direct_sales' and outlet_operation_mode != 'direct_sale' and outlet_operation_mode != 'direct_sales'">
+<page string="Direct Stop" invisible="1">
 <group string="Direct Stop Review" col="3">
 <group>
 <field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
@@ -415,22 +418,21 @@
 <field name="start_datetime" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
 </group>
-<group invisible="visit_execution_mode == 'direct_sales'">
-<field name="consignment_amount_due_now" string="Current Due" readonly="1"/>
-<field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-</group>
-<group invisible="visit_execution_mode != 'direct_sales'">
-<field name="outlet_current_due_amount" string="Previous Due" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
+<group>
+<field name="consignment_amount_due_now" string="Current Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_open_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 </group>
 <group invisible="visit_execution_mode != 'direct_sales'">
 <field name="direct_stop_order_refs" string="Sale Order" readonly="1"/>
 <field name="direct_stop_return_refs" string="Return" readonly="1"/>
-<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
-<field name="direct_stop_credit_policy" string="Credit Handling" readonly="1" invisible="not direct_stop_credit_amount"/>
+<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_latest_promise_status" string="Latest Promise Status" readonly="1" widget="badge" invisible="not direct_stop_open_promise_amount" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
 </group>
 <group invisible="1">
 <field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
@@ -541,22 +543,37 @@
 </list>
 </field>
 </page>
-<page string="Summary" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'">
+<page string="Summary">
 <group string="Visit Summary" col="2">
-<group>
+<group invisible="visit_execution_mode == 'direct_sales'">
 <field name="consignment_previous_due_amount" string="Previous Due" readonly="1"/>
 <field name="consignment_current_visit_sale_amount" string="Current Visit Sale" readonly="1"/>
 <field name="consignment_current_visit_return_amount" string="Current Visit Returns" readonly="1"/>
 <field name="consignment_net_amount_for_visit" string="Net Amount For This Visit" readonly="1"/>
 <field name="consignment_amount_due_now" string="Amount Due Now" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
+<field name="collected_amount" string="Collected Amount" readonly="1"/>
 <field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="promise_to_pay_count == 0"/>
 </group>
-<group>
+<group invisible="visit_execution_mode != 'direct_sales'">
+<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
+<field name="direct_stop_sales_total" string="Current Visit Sale" readonly="1"/>
+<field name="direct_stop_returns_total" string="Current Visit Returns" readonly="1"/>
+<field name="direct_stop_current_net_amount" string="Net Amount For This Visit" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1"/>
+<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
+<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+</group>
+<group invisible="visit_execution_mode == 'direct_sales'">
 <field name="summary_sale_order_ref" string="Sale Order" readonly="1"/>
 <field name="summary_refill_transfer_ref" string="Refill Transfer" readonly="1"/>
 <field name="summary_return_transfer_refs" string="Return Transfers" readonly="1"/>
+<field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
+</group>
+<group invisible="visit_execution_mode != 'direct_sales'">
+<field name="direct_stop_order_refs" string="Sale Order" readonly="1"/>
+<field name="direct_stop_return_refs" string="Return" readonly="1"/>
 <field name="visit_process_state" readonly="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </group>
 </group>
@@ -564,13 +581,16 @@
 <group>
 <field name="ux_stage_title" string="Current Step" readonly="1"/>
 <field name="ux_stage_help" string="Step Help" readonly="1"/>
-<field name="promise_to_pay_count" readonly="1"/>
+<field name="promise_to_pay_count" string="Open Promises" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_open_promise_amount" string="Open Promises" readonly="1" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount"/>
 </group>
 <group>
-<field name="next_promise_to_pay_date" readonly="1" invisible="promise_to_pay_count == 0"/>
-<field name="latest_promise_status" readonly="1" invisible="promise_to_pay_count == 0" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="next_promise_to_pay_date" string="Next Promise Date" readonly="1" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0"/>
+<field name="latest_promise_status" string="Latest Promise Status" readonly="1" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
+<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount"/>
+<field name="direct_stop_latest_promise_status" string="Latest Promise Status" readonly="1" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
+<field name="outlet_near_expiry_count" readonly="1" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
 </group>
 </group>
 </page>
@@ -578,7 +598,7 @@
 <group string="Collection Summary" col="2" invisible="visit_execution_mode == 'direct_sales'">
 <group>
 <field name="consignment_amount_due_now" string="Current Due" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
+<field name="collected_amount" string="Collected Amount" readonly="1"/>
 <field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="promise_to_pay_count == 0"/>
 </group>
@@ -589,11 +609,27 @@
 <field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
 </group>
 </group>
+<group string="Collection Summary" col="2" invisible="visit_execution_mode != 'direct_sales'">
+<group>
+<field name="direct_stop_grand_due_amount" string="Current Due" readonly="1"/>
+<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1"/>
+<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
+<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+</group>
+<group>
+<field name="direct_stop_order_refs" string="Sale Order" readonly="1"/>
+<field name="direct_stop_return_refs" string="Return" readonly="1"/>
+<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_latest_promise_status" string="Latest Promise Status" readonly="1" invisible="not direct_stop_open_promise_amount" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
+</group>
+</group>
 <field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
 <list create="0" delete="0">
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
