@@ -290,7 +290,7 @@
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
-<field name="promise_amount"/>
+<field name="effective_promise_amount" string="Promise Amount"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
 <field name="state"/>
@@ -545,7 +545,7 @@
 <group string="Visit Summary" col="2">
 <group>
 <field name="consignment_previous_due_amount" string="Previous Due" readonly="1"/>
-<field name="net_due_amount" string="Current Visit Sale" readonly="1"/>
+<field name="consignment_current_visit_sale_amount" string="Current Visit Sale" readonly="1"/>
 <field name="consignment_current_visit_return_amount" string="Current Visit Returns" readonly="1"/>
 <field name="consignment_net_amount_for_visit" string="Net Amount For This Visit" readonly="1"/>
 <field name="consignment_amount_due_now" string="Amount Due Now" readonly="1"/>
@@ -597,7 +597,7 @@
 <field name="amount"/>
 <field name="due_date"/>
 <field name="promise_date"/>
-<field name="promise_amount"/>
+<field name="effective_promise_amount" string="Promise Amount"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
 <field name="state"/>
