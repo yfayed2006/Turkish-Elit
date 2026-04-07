@@ -1303,7 +1303,8 @@ class RoutePlan(models.Model):
             if line_uom and product.uom_id and line_uom != product.uom_id:
                 sold_qty = line_uom._compute_quantity(sold_qty, product.uom_id)
             key = (outlet.id, product.id)
-            sales_entries[key].append((fields.Datetime.to_date(line.order_id.date_order) or reference_date, line.id, sold_qty))
+            sales_date = fields.Date.to_date(line.order_id.date_order) if line.order_id.date_order else reference_date
+            sales_entries[key].append((sales_date or reference_date, line.id, sold_qty))
             candidate_products_by_outlet[outlet.id].add(product.id)
             if getattr(line, "price_unit", False) and not product_price_map.get(product.id):
                 product_price_map[product.id] = line.price_unit
