@@ -1,8 +1,5 @@
-from collections import defaultdict
-
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools.float_utils import float_compare
 
 
 class SaleOrder(models.Model):
@@ -42,13 +39,6 @@ class SaleOrder(models.Model):
         store=False,
         readonly=True,
         help="Direct sales stop linked to this order when the order is created from a direct sales route stop.",
-    )
-    route_available_product_ids = fields.Many2many(
-        "product.product",
-        string="Vehicle Available Products",
-        compute="_compute_route_available_product_ids",
-        store=False,
-        help="Products currently available for direct sale from the selected vehicle source location.",
     )
     direct_sale_payment_ids = fields.One2many(
         "route.visit.payment",
@@ -92,71 +82,6 @@ class SaleOrder(models.Model):
         store=False,
     )
 
-
-    @api.depends(
-        "route_order_mode",
-        "route_source_location_id",
-        "order_line.product_id",
-    )
-    def _compute_route_available_product_ids(self):
-        Product = self.env["product.product"]
-        sale_ok_products = Product.search([("sale_ok", "=", True), ("active", "=", True)])
-        for order in self:
-            if order.route_order_mode != "direct_sale":
-                order.route_available_product_ids = sale_ok_products
-                continue
-            qty_map = order._get_route_vehicle_qty_map()
-            allowed_ids = {product_id for product_id, qty in qty_map.items() if qty > 0.0}
-            allowed_ids.update(order.order_line.mapped("product_id").ids)
-            order.route_available_product_ids = Product.browse(sorted(allowed_ids))
-
-    def _get_route_vehicle_qty_map(self, source_location=False):
-        self.ensure_one()
-        source_location = source_location or self.route_source_location_id
-        qty_map = defaultdict(float)
-        if not source_location:
-            return qty_map
-        quants = self.env["stock.quant"].search(
-            [
-                ("location_id", "child_of", source_location.id),
-                ("quantity", ">", 0),
-            ]
-        )
-        for quant in quants:
-            if not quant.product_id:
-                continue
-            reserved = quant.reserved_quantity if "reserved_quantity" in quant._fields else 0.0
-            available_qty = max((quant.quantity or 0.0) - (reserved or 0.0), 0.0)
-            if available_qty <= 0:
-                continue
-            qty_map[quant.product_id.id] += available_qty
-        return qty_map
-
-    def _check_direct_sale_vehicle_stock_availability(self):
-        for order in self.filtered(lambda rec: rec.route_order_mode == "direct_sale"):
-            qty_map = order._get_route_vehicle_qty_map()
-            requested_qty_map = defaultdict(float)
-            for line in order.order_line.filtered(lambda l: l.product_id and not l.display_type and (l.product_uom_qty or 0.0) > 0):
-                requested_qty_map[line.product_id.id] += line._route_get_qty_in_product_uom()
-
-            for product_id, requested_qty in requested_qty_map.items():
-                product = self.env["product.product"].browse(product_id)
-                available_qty = qty_map.get(product_id, 0.0)
-                rounding = product.uom_id.rounding if product.uom_id else 0.01
-                if float_compare(requested_qty, available_qty, precision_rounding=rounding) > 0:
-                    raise UserError(
-                        _(
-                            "Direct Sale order %(order)s requests %(requested).2f %(uom)s of %(product)s, but only %(available).2f %(uom)s is available in vehicle location %(location)s."
-                        )
-                        % {
-                            "order": order.display_name,
-                            "requested": requested_qty,
-                            "available": available_qty,
-                            "uom": product.uom_id.display_name if product.uom_id else _("Units"),
-                            "product": product.display_name,
-                            "location": order.route_source_location_id.display_name or _("Vehicle"),
-                        }
-                    )
 
     @api.depends("origin", "state", "route_order_mode", "route_enable_direct_return")
     def _compute_route_show_no_direct_return(self):
@@ -834,6 +759,10 @@ class SaleOrder(models.Model):
         normal_orders = self.env["sale.order"]
         route_orders = self.env["sale.order"]
         direct_sale_orders = self.env["sale.order"]
+        return_to_visit_after_confirm = bool(self.env.context.get("route_return_to_visit_after_confirm"))
+        context_visit = self.env["route.visit"].browse(
+            self.env.context.get("route_visit_id") or self.env.context.get("default_route_visit_id") or False
+        ).exists()
 
         for order in self:
             if order.route_order_mode == "direct_sale":
@@ -862,7 +791,6 @@ class SaleOrder(models.Model):
         direct_sale_return_action = False
         for order in direct_sale_orders:
             order._ensure_route_direct_sale_enabled()
-            order._check_direct_sale_vehicle_stock_availability()
             if not order.route_outlet_id:
                 raise UserError(_("Route Outlet is required for Direct Sale orders."))
             if not order.partner_id:
@@ -879,6 +807,21 @@ class SaleOrder(models.Model):
             elif order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
                 order._ensure_direct_sale_payment_record()
                 if len(self) == 1:
-                    direct_sale_return_action = order._get_route_visit_return_action() or direct_sale_return_action
+                    visit_action = False
+                    if return_to_visit_after_confirm:
+                        visit = context_visit or order.route_visit_id or order._get_linked_route_visit()
+                        if visit:
+                            if hasattr(visit, "_get_pda_form_action"):
+                                visit_action = visit._get_pda_form_action()
+                            else:
+                                visit_action = {
+                                    "type": "ir.actions.act_window",
+                                    "name": _("PDA Visit"),
+                                    "res_model": "route.visit",
+                                    "res_id": visit.id,
+                                    "view_mode": "form",
+                                    "target": "current",
+                                }
+                    direct_sale_return_action = visit_action or order._get_route_visit_return_action() or direct_sale_return_action
 
         return direct_sale_return_action or action_result
