@@ -256,12 +256,9 @@ class RouteVisitPayment(models.Model):
             confirmed_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
             return (self.visit_id.remaining_due_amount or 0.0) + confirmed_amount
 
-        total_sales = 0.0
-        for line in self.visit_id.line_ids:
-            sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
-            unit_price = getattr(line, "unit_price", 0.0) or 0.0
-            total_sales += sold_qty * unit_price
-        return total_sales
+        if self.visit_id:
+            return self.visit_id.net_due_amount or 0.0
+        return 0.0
 
     def _get_confirmed_target_payments(self, exclude_self=False):
         self.ensure_one()
