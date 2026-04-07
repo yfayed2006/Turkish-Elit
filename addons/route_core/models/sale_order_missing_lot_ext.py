@@ -86,7 +86,7 @@ class SaleOrderLine(models.Model):
         "order_id.route_source_location_id",
         "product_id",
         "product_uom_qty",
-        "product_uom",
+        "product_uom_id",
     )
     def _compute_route_source_available_qty(self):
         for line in self:
@@ -570,3 +570,4 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
+
