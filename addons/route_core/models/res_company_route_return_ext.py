@@ -23,6 +23,7 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
+        store=True,
         help="Show and enforce Route Sales Lot/Serial workflow where supported.",
     )
 
@@ -31,6 +32,7 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
+        store=True,
         help="Show expiry information in Route Sales where lot workflow is enabled.",
     )
 
@@ -40,6 +42,7 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
+        store=True,
         help="Consignment Route = shelf count, reconcile, refill, and visit collection. Direct Sales Route = outlet stops for sales, delivery, and payment without shelf count. Hybrid Route = both workflows are available.",
     )
 
@@ -48,6 +51,7 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
+        store=True,
         help="Enable Direct Sale workspace, orders, deliveries, payments, and related Route Sales actions.",
     )
 
@@ -56,6 +60,7 @@ class ResCompany(models.Model):
         compute="_compute_route_feature_flags",
         inverse="_inverse_route_feature_flags",
         readonly=False,
+        store=True,
         help="Enable manual Direct Return workflow and related Route Sales actions.",
     )
 
