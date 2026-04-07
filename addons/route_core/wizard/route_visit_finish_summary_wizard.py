@@ -178,12 +178,13 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rows = []
             for payment in payments:
                 promise_text = "-"
-                if payment.promise_date or payment.promise_amount:
+                effective_promise = getattr(payment, "effective_promise_amount", False) or payment.promise_amount
+                if payment.promise_date or effective_promise:
                     bits = []
                     if payment.promise_date:
                         bits.append(str(payment.promise_date))
-                    if payment.promise_amount:
-                        bits.append(rec._format_currency_amount(payment.promise_amount))
+                    if effective_promise:
+                        bits.append(rec._format_currency_amount(effective_promise))
                     promise_text = " / ".join(bits)
                 rows.append(
                     "<tr>"
