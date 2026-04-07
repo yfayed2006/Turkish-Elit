@@ -1404,12 +1404,9 @@ class RouteVisit(models.Model):
                 resolved_amount = rec._get_direct_stop_settlement_resolved_amount(states=["confirmed"]) if rec.id else 0.0
                 remaining_amount = max((net_due or 0.0) - (resolved_amount or 0.0), 0.0)
             else:
-                total_sales = 0.0
-                for line in rec.line_ids:
-                    sold_qty = getattr(line, "sold_qty", 0.0) or 0.0
-                    unit_price = getattr(line, "unit_price", 0.0) or 0.0
-                    total_sales += sold_qty * unit_price
-                net_due = total_sales
+                total_sales = sum((line.sold_amount or 0.0) for line in rec.line_ids) if rec.line_ids else 0.0
+                total_returns = sum((line.return_amount or 0.0) for line in rec.line_ids) if rec.line_ids else 0.0
+                net_due = max((total_sales or 0.0) - (total_returns or 0.0), 0.0)
                 confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
                 total_collected = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
                 remaining_amount = max((net_due or 0.0) - (total_collected or 0.0), 0.0)
@@ -2188,5 +2185,4 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
-
 
