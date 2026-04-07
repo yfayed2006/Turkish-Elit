@@ -16,6 +16,10 @@
 </xpath>
 <xpath expr="//field[@name='order_line']/tree/field[@name='product_id'] | //field[@name='order_line']/list/field[@name='product_id']" position="after">
 <field name="route_product_barcode" string="Barcode" optional="show"/>
+<field name="route_vehicle_available_qty" string="Available In Vehicle" optional="show"/>
+</xpath>
+<xpath expr="//field[@name='order_line']/tree/field[@name='product_id'] | //field[@name='order_line']/list/field[@name='product_id']" position="attributes">
+<attribute name="domain">[('sale_ok', '=', True), ('id', 'in', parent.route_available_product_ids)]</attribute>
 </xpath>
 <xpath expr="//field[@name='partner_id']" position="after">
 <field name="route_order_mode"/>
@@ -23,6 +27,7 @@
 <field name="route_source_location_id" invisible="route_order_mode != 'direct_sale'" readonly="1"/>
 <field name="route_payment_mode" invisible="route_order_mode != 'direct_sale'"/>
 <field name="route_payment_due_date" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'" required="route_order_mode == 'direct_sale' and route_payment_mode == 'deferred'"/>
+<field name="route_available_product_ids" invisible="1" widget="many2many_tags"/>
 <field name="direct_sale_collected_amount" invisible="route_order_mode != 'direct_sale'" readonly="1"/>
 <field name="direct_sale_remaining_due" invisible="route_order_mode != 'direct_sale'" readonly="1"/>
 <field name="direct_sale_payment_count" invisible="1" readonly="1"/>
