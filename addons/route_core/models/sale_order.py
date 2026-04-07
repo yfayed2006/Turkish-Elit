@@ -802,26 +802,19 @@ class SaleOrder(models.Model):
 
             order._route_confirm_without_procurement()
             delivery_result = order._create_and_validate_direct_sale_delivery()
-            if isinstance(delivery_result, dict):
-                action_result = delivery_result
-            elif order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
+            deliveries_done = order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done")
+
+            if deliveries_done:
                 order._ensure_direct_sale_payment_record()
                 if len(self) == 1:
-                    visit_action = False
-                    if return_to_visit_after_confirm:
-                        visit = context_visit or order.route_visit_id or order._get_linked_route_visit()
-                        if visit:
-                            if hasattr(visit, "_get_pda_form_action"):
-                                visit_action = visit._get_pda_form_action()
-                            else:
-                                visit_action = {
-                                    "type": "ir.actions.act_window",
-                                    "name": _("PDA Visit"),
-                                    "res_model": "route.visit",
-                                    "res_id": visit.id,
-                                    "view_mode": "form",
-                                    "target": "current",
-                                }
-                    direct_sale_return_action = visit_action or order._get_route_visit_return_action() or direct_sale_return_action
+                    visit = context_visit or order.route_visit_id or order._get_linked_route_visit()
+                    if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales":
+                        if return_to_visit_after_confirm and hasattr(visit, "_get_pda_form_action"):
+                            direct_sale_return_action = visit._get_pda_form_action() or direct_sale_return_action
+                        else:
+                            direct_sale_return_action = order._get_route_visit_return_action() or direct_sale_return_action
+
+            if isinstance(delivery_result, dict) and not direct_sale_return_action:
+                action_result = delivery_result
 
         return direct_sale_return_action or action_result
