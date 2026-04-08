@@ -146,8 +146,8 @@
 <field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_open_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 </group>
@@ -316,7 +316,7 @@
 </group>
 <group>
 <field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
@@ -423,8 +423,8 @@
 <field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_open_promise_amount" string="Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 </group>
@@ -454,7 +454,7 @@
 </group>
 <group>
 <field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Settlement Remaining" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
