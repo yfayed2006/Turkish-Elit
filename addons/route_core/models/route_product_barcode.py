@@ -243,9 +243,17 @@ class ProductProduct(models.Model):
         return self.browse(product_ids[:1]) if product_ids else self.browse()
 
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, count=False, **kwargs):
         domain = self._route_apply_source_available_domain(domain)
-        return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
+        return super()._search(
+            domain,
+            offset=offset,
+            limit=limit,
+            order=order,
+            access_rights_uid=access_rights_uid,
+            count=count,
+            **kwargs,
+        )
 
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
