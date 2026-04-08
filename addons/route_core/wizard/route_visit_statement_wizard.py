@@ -89,6 +89,13 @@ class RouteVisitStatementWizard(models.TransientModel):
             return payments
         return payments.filtered(lambda p: self._get_statement_promise_status(p, visit) in ("open", "due_today", "overdue"))
 
+    @api.model
+    def _first_defined_amount(self, *values):
+        for value in values:
+            if value is not False and value is not None:
+                return value
+        return 0.0
+
     @api.depends("visit_id")
     def _compute_statement(self):
         Payment = self.env["route.visit.payment"]
@@ -128,8 +135,18 @@ class RouteVisitStatementWizard(models.TransientModel):
                 rec.current_visit_return_amount = visit.direct_stop_returns_total or 0.0
                 rec.net_amount_for_visit = visit.direct_stop_current_net_amount or 0.0
                 rec.amount_due_now = visit.direct_stop_grand_due_amount or 0.0
-                rec.suggested_collection_now = visit.direct_stop_immediate_remaining_amount or rec.net_amount_for_visit or 0.0
-                rec.expected_remaining_after_payment = max((rec.amount_due_now or 0.0) - (rec.suggested_collection_now or 0.0), 0.0)
+                current_immediate_remaining = max(
+                    rec._first_defined_amount(
+                        visit.direct_stop_immediate_remaining_amount,
+                        rec.amount_due_now,
+                    ),
+                    0.0,
+                )
+                rec.suggested_collection_now = current_immediate_remaining
+                rec.expected_remaining_after_payment = max(
+                    current_immediate_remaining - rec.suggested_collection_now,
+                    0.0,
+                )
             else:
                 sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else (visit.net_due_amount or 0.0)
                 return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
@@ -138,9 +155,19 @@ class RouteVisitStatementWizard(models.TransientModel):
                 rec.current_visit_return_amount = return_amount
                 rec.net_amount_for_visit = net_amount
                 rec.amount_due_now = visit.outlet_current_due_amount or 0.0
-                rec.suggested_collection_now = visit.remaining_due_amount or visit.net_due_amount or max(net_amount, 0.0)
+                current_immediate_remaining = max(
+                    rec._first_defined_amount(
+                        getattr(visit, "remaining_due_amount", False),
+                        rec.amount_due_now,
+                    ),
+                    0.0,
+                )
+                rec.suggested_collection_now = current_immediate_remaining
                 rec.previous_due_amount = max((rec.amount_due_now or 0.0) - max(net_amount, 0.0), 0.0)
-                rec.expected_remaining_after_payment = max((rec.amount_due_now or 0.0) - (rec.suggested_collection_now or 0.0), 0.0)
+                rec.expected_remaining_after_payment = max(
+                    current_immediate_remaining - rec.suggested_collection_now,
+                    0.0,
+                )
 
             previous_confirmed = rec._get_previous_confirmed_payments(visit)
             open_promises = rec._get_open_promises(visit)
