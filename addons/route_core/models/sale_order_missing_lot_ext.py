@@ -113,14 +113,16 @@ class SaleOrderLine(models.Model):
         ProductTemplate = self.env["product.template"]
 
         for location_id in source_locations:
-            quants = Quant.search(
-                [
-                    ("location_id", "child_of", location_id),
-                    ("quantity", ">", 0),
-                    ("product_id.sale_ok", "=", True),
-                    ("product_id.active", "=", True),
-                ]
-            )
+            quant_domain = [
+                ("location_id", "child_of", location_id),
+                ("quantity", ">", 0),
+                ("product_id.sale_ok", "=", True),
+                ("product_id.active", "=", True),
+            ]
+            if "detailed_type" in Product._fields:
+                quant_domain.append(("product_id.detailed_type", "in", ["product", "consu"]))
+
+            quants = Quant.search(quant_domain)
             available_by_product = {}
             for quant in quants:
                 product = quant.product_id
@@ -334,14 +336,16 @@ class SaleOrder(models.Model):
         }
 
         for location_id in source_locations:
-            quants = Quant.search(
-                [
-                    ("location_id", "child_of", location_id),
-                    ("quantity", ">", 0),
-                    ("product_id.sale_ok", "=", True),
-                    ("product_id.active", "=", True),
-                ]
-            )
+            quant_domain = [
+                ("location_id", "child_of", location_id),
+                ("quantity", ">", 0),
+                ("product_id.sale_ok", "=", True),
+                ("product_id.active", "=", True),
+            ]
+            if "detailed_type" in Product._fields:
+                quant_domain.append(("product_id.detailed_type", "in", ["product", "consu"]))
+
+            quants = Quant.search(quant_domain)
             available_by_product = {}
             for quant in quants:
                 product = quant.product_id
@@ -357,7 +361,6 @@ class SaleOrder(models.Model):
             if order.route_order_mode == "direct_sale" and order.route_source_location_id:
                 location_id = order.route_source_location_id.id
                 products = product_cache.get(location_id, Product)
-                products |= order.order_line.mapped("product_id")
                 order.route_available_product_ids = products
                 order.route_available_product_tmpl_ids = products.mapped("product_tmpl_id")
             else:
@@ -632,3 +635,4 @@ class SaleOrder(models.Model):
     def action_confirm(self):
         self._check_direct_sale_tracked_lines()
         return super().action_confirm()
+
