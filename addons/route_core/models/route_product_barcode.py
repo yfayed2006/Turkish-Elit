@@ -88,6 +88,12 @@ class ProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
+    def _route_apply_source_available_domain(self, domain=None):
+        source_domain = self._route_source_available_domain()
+        domain = list(domain or [])
+        return expression.AND([domain, source_domain]) if source_domain else domain
+
+    @api.model
     def _route_source_available_domain(self):
         if not self.env.context.get("route_only_source_available_products"):
             return []
@@ -237,9 +243,13 @@ class ProductProduct(models.Model):
         return self.browse(product_ids[:1]) if product_ids else self.browse()
 
     @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+        domain = self._route_apply_source_available_domain(domain)
+        return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
+
+    @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
-        domain = list(domain or [])
-        domain = expression.AND([domain, self._route_source_available_domain()])
+        domain = self._route_apply_source_available_domain(domain)
         term = (name or "").strip()
         if term:
             product_ids = self._route_collect_barcode_product_ids(term, operator=operator, limit=limit, extra_domain=domain)
@@ -253,9 +263,25 @@ class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     @api.model
+    def _route_source_available_template_domain(self):
+        product_domain = self.env["product.product"]._route_source_available_domain()
+        if not product_domain:
+            return []
+        available_template_ids = self.env["product.product"].with_context(route_only_source_available_products=False).search(product_domain).mapped("product_tmpl_id").ids
+        return [("id", "in", available_template_ids or [0])]
+
+    @api.model
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+        source_domain = self._route_source_available_template_domain()
+        domain = list(domain or [])
+        domain = expression.AND([domain, source_domain]) if source_domain else domain
+        return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
+
+    @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
         domain = list(domain or [])
         product_domain = self.env["product.product"]._route_source_available_domain()
+        source_template_domain = self._route_source_available_template_domain()
         term = (name or "").strip()
         if term:
             product_ids = self.env["product.product"]._route_collect_barcode_product_ids(
@@ -270,7 +296,7 @@ class ProductTemplate(models.Model):
                     templates = self.search(expression.AND([domain, [("id", "in", template_ids)]]), limit=limit)
                     if templates:
                         return [(rec.id, rec.display_name) for rec in templates[:limit]]
-        if product_domain:
-            available_template_ids = self.env["product.product"].search(product_domain).mapped("product_tmpl_id").ids
-            domain = expression.AND([domain, [("id", "in", available_template_ids or [0])]])
+        if source_template_domain:
+            domain = expression.AND([domain, source_template_domain])
         return super().name_search(name, domain, operator, limit)
+
