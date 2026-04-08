@@ -18,8 +18,13 @@ def _is_discrete_uom(product):
         return False
     rounding = getattr(uom, "rounding", 0.0) or 0.0
     name = (getattr(uom, "name", "") or "").strip().lower()
-    discrete_names = {"piece", "pieces", "unit", "units", "pc", "pcs", "قطعة"}
-    return rounding >= 1.0 or name in discrete_names
+    discrete_markers = {"piece", "pieces", "unit", "units", "pc", "pcs", "قطعة", "pack", "packs", "box", "boxes", "carton", "cartons", "case", "cases"}
+    category_name = ((getattr(getattr(uom, "category_id", False), "name", "") or "").strip().lower())
+    return (
+        rounding >= 1.0
+        or category_name in {"unit", "units"}
+        or any(marker in name for marker in discrete_markers)
+    )
 
 
 def _qty_up(product, qty):
@@ -180,7 +185,7 @@ class RouteLoadingProposal(models.Model):
         store=False,
     )
     total_required_qty = fields.Float(
-        string="Total Required Qty",
+        string="Required Qty",
         compute="_compute_totals",
         store=False,
     )
@@ -474,57 +479,6 @@ class RouteLoadingProposal(models.Model):
             lot.id,
         )
 
-    def _get_source_allocatable_snapshot(self, product, source_location):
-        self.ensure_one()
-        qty_total = 0.0
-        earliest_expiry_date = False
-        lot_names = []
-        if not product or not source_location:
-            return {
-                "qty": 0.0,
-                "earliest_expiry_date": False,
-                "lot_names": [],
-            }
-
-        domain = [
-            ("location_id", "child_of", source_location.id),
-            ("product_id", "=", product.id),
-            ("quantity", ">", 0),
-        ]
-        quants = self.env["stock.quant"].search(domain)
-        tracking = getattr(product, "tracking", "none") or "none"
-        today = fields.Date.context_today(self)
-
-        for quant in quants:
-            available_qty = self._get_quant_available_qty(quant)
-            if available_qty <= 0:
-                continue
-            lot = quant.lot_id
-            if tracking in ("lot", "serial"):
-                if not lot:
-                    continue
-                lot_date = _lot_priority_date(lot)
-                if lot_date and lot_date < today:
-                    continue
-                if lot_date and (not earliest_expiry_date or lot_date < earliest_expiry_date):
-                    earliest_expiry_date = lot_date
-                if lot and lot.name:
-                    lot_names.append((self._lot_sort_key(lot), lot.name))
-            elif lot:
-                lot_date = _lot_priority_date(lot)
-                if lot_date and (not earliest_expiry_date or lot_date < earliest_expiry_date):
-                    earliest_expiry_date = lot_date
-                if lot.name:
-                    lot_names.append((self._lot_sort_key(lot), lot.name))
-            qty_total += available_qty
-
-        unique_lot_names = list(dict.fromkeys(name for _key, name in sorted(lot_names) if name))
-        return {
-            "qty": qty_total,
-            "earliest_expiry_date": earliest_expiry_date,
-            "lot_names": unique_lot_names,
-        }
-
     def _prepare_tracked_move_lines(self, move):
         self.ensure_one()
         quantity_needed = move.product_uom_qty or 0.0
@@ -722,26 +676,6 @@ class RouteLoadingProposal(models.Model):
             raise UserError(_("Only draft loading proposals can be refreshed."))
         return self.action_open_source_location_wizard()
 
-    def _validate_source_availability_for_approval(self, approved_lines):
-        self.ensure_one()
-        source_location = self._get_effective_source_location()
-        for line in approved_lines:
-            snapshot = self._get_source_allocatable_snapshot(line.product_id, source_location)
-            available_qty = _qty_down(line.product_id, snapshot.get("qty", 0.0))
-            approved_qty = _qty_up(line.product_id, line.approved_qty or 0.0)
-            if approved_qty > available_qty:
-                raise UserError(
-                    _(
-                        "Cannot create the loading transfer for %(product)s. Approved Qty is %(approved).2f, but allocatable stock in %(source)s is only %(available).2f. Refresh the proposal or reduce the approved quantity."
-                    )
-                    % {
-                        "product": line.product_id.display_name,
-                        "approved": approved_qty,
-                        "source": source_location.display_name if source_location else _("the selected source location"),
-                        "available": available_qty,
-                    }
-                )
-
     def action_approve(self):
         self.ensure_one()
 
@@ -757,8 +691,6 @@ class RouteLoadingProposal(models.Model):
                 }
             )
             return self._open_form_action()
-
-        self._validate_source_availability_for_approval(approved_lines)
 
         if self.picking_id and self.picking_id.state != "cancel":
             return self.action_view_transfer()
@@ -908,11 +840,11 @@ class RouteLoadingProposalLine(models.Model):
         readonly=True,
     )
     planned_outlet_count = fields.Integer(string="Planned Outlets", default=0)
-    recent_sales_baseline_qty = fields.Float(string="Recent Sales Baseline", default=0.0)
+    recent_sales_baseline_qty = fields.Float(string="Recent Demand Baseline", default=0.0)
     outlet_balance_qty = fields.Float(string="Outlet Balance", default=0.0)
-    current_outlet_need_qty = fields.Float(string="Current Outlet Need", default=0.0)
+    current_outlet_need_qty = fields.Float(string="Planned Demand", default=0.0)
     open_shortage_qty = fields.Float(string="Open Shortages", default=0.0)
-    movement_profile = fields.Char(string="Movement Speed")
+    movement_profile = fields.Char(string="Movement Profile")
     vehicle_available_qty = fields.Float(string="Vehicle Balance", default=0.0)
     source_available_qty = fields.Float(
         string="Source Balance",
@@ -925,14 +857,14 @@ class RouteLoadingProposalLine(models.Model):
         store=False,
     )
     source_lot_summary = fields.Char(
-        string="Suggested Source Lots",
+        string="Source Lots",
         compute="_compute_source_stock_snapshot",
         store=False,
     )
     suggested_load_qty = fields.Float(string="Suggested Load Qty", default=0.0)
     approved_qty = fields.Float(string="Approved Qty", default=0.0)
     total_required_qty = fields.Float(
-        string="Total Required Qty",
+        string="Required Qty",
         compute="_compute_totals",
         store=True,
     )
@@ -970,10 +902,10 @@ class RouteLoadingProposalLine(models.Model):
         ),
     ]
 
-    @api.depends("current_outlet_need_qty", "open_shortage_qty")
+    @api.depends("current_outlet_need_qty")
     def _compute_totals(self):
         for rec in self:
-            rec.total_required_qty = (rec.current_outlet_need_qty or 0.0) + (rec.open_shortage_qty or 0.0)
+            rec.total_required_qty = rec.current_outlet_need_qty or 0.0
 
     @api.depends("total_required_qty", "suggested_load_qty", "approved_qty", "unit_price")
     def _compute_values(self):
@@ -985,23 +917,59 @@ class RouteLoadingProposalLine(models.Model):
 
     @api.depends("proposal_id.source_location_id", "product_id")
     def _compute_source_stock_snapshot(self):
+        grouped_lines = defaultdict(lambda: self.env["route.loading.proposal.line"])
         for line in self:
             line.source_available_qty = 0.0
             line.earliest_source_expiry_date = False
             line.source_lot_summary = False
             effective_source = line.proposal_id._get_effective_source_location() if line.proposal_id else False
-            if not effective_source or not line.product_id:
-                continue
+            if effective_source and line.product_id:
+                grouped_lines[effective_source.id] |= line
 
-            snapshot = line.proposal_id._get_source_allocatable_snapshot(line.product_id, effective_source)
-            line.source_available_qty = _qty_down(line.product_id, snapshot.get("qty", 0.0))
-            line.earliest_source_expiry_date = snapshot.get("earliest_expiry_date")
-            lot_names = snapshot.get("lot_names") or []
-            if lot_names:
-                preview = ", ".join(lot_names[:3])
-                if len(lot_names) > 3:
-                    preview = "%s ..." % preview
-                line.source_lot_summary = preview
+        Quant = self.env["stock.quant"]
+        for _location_id, lines in grouped_lines.items():
+            location = lines[:1].proposal_id._get_effective_source_location()
+            products = lines.mapped("product_id")
+            quants = Quant.search(
+                [
+                    ("location_id", "child_of", location.id),
+                    ("product_id", "in", products.ids),
+                    ("quantity", ">", 0),
+                ]
+            )
+
+            qty_map = defaultdict(float)
+            lot_names_map = defaultdict(list)
+            earliest_expiry_map = {}
+
+            for quant in quants:
+                available_qty = lines[:1].proposal_id._get_quant_available_qty(quant)
+                if available_qty <= 0 or not quant.product_id:
+                    continue
+                product_id = quant.product_id.id
+                qty_map[product_id] += available_qty
+                lot = quant.lot_id
+                if not lot:
+                    continue
+                lot_names_map[product_id].append((lines[:1].proposal_id._lot_sort_key(lot), lot.name or ""))
+                lot_date = _lot_priority_date(lot)
+                if lot_date and (
+                    not earliest_expiry_map.get(product_id)
+                    or lot_date < earliest_expiry_map[product_id]
+                ):
+                    earliest_expiry_map[product_id] = lot_date
+
+            for line in lines:
+                product_id = line.product_id.id
+                line.source_available_qty = _qty_down(line.product_id, qty_map.get(product_id, 0.0))
+                line.earliest_source_expiry_date = earliest_expiry_map.get(product_id)
+                lot_names = [name for _key, name in sorted(lot_names_map.get(product_id, [])) if name]
+                if lot_names:
+                    unique_names = list(dict.fromkeys(lot_names))
+                    preview = ", ".join(unique_names[:3])
+                    if len(unique_names) > 3:
+                        preview = "%s ..." % preview
+                    line.source_lot_summary = preview
 
     @api.onchange("approved_qty")
     def _onchange_approved_qty(self):
@@ -1298,19 +1266,10 @@ class RoutePlan(models.Model):
             ]
         ) if direct_sale_outlets else self.env["sale.order.line"]
 
-        shortage_lines = self.env["route.shortage.line"].search(
-            [
-                ("shortage_id.outlet_id", "in", outlets.ids),
-                ("shortage_id.state", "in", ["open", "planned"]),
-                ("qty_remaining", ">", 0),
-            ]
-        )
-
         candidate_products_by_outlet = defaultdict(set)
         sales_entries = defaultdict(list)
         balance_qty_map = {}
         product_price_map = {}
-        shortage_qty_map = defaultdict(float)
         aggregate = {}
 
         for outlet in consignment_outlets:
@@ -1346,17 +1305,6 @@ class RoutePlan(models.Model):
             if getattr(line, "price_unit", False) and not product_price_map.get(product.id):
                 product_price_map[product.id] = line.price_unit
 
-        for shortage_line in shortage_lines:
-            outlet = shortage_line.shortage_id.outlet_id
-            product = shortage_line.product_id
-            if not outlet or not product:
-                continue
-            key = (outlet.id, product.id)
-            shortage_qty_map[key] += _qty_up(product, shortage_line.qty_remaining or 0.0)
-            candidate_products_by_outlet[outlet.id].add(product.id)
-            if shortage_line.unit_price and not product_price_map.get(product.id):
-                product_price_map[product.id] = shortage_line.unit_price
-
         baseline_qty_map = {}
         for key, entries in sales_entries.items():
             recent_entries = sorted(entries, key=lambda item: (item[0], item[1]), reverse=True)[:3]
@@ -1376,13 +1324,12 @@ class RoutePlan(models.Model):
             for product_id in product_ids:
                 stock_qty = 0.0 if is_direct_sale_outlet else balance_qty_map.get((outlet.id, product_id), 0.0)
                 baseline_qty = baseline_qty_map.get((outlet.id, product_id), 0.0)
-                shortage_qty = shortage_qty_map.get((outlet.id, product_id), 0.0)
                 if is_direct_sale_outlet:
                     current_need_qty = _qty_up(self.env["product.product"].browse(product_id), baseline_qty or 0.0)
                 else:
                     current_need_qty = _qty_up(self.env["product.product"].browse(product_id), max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0))
 
-                if current_need_qty <= 0 and shortage_qty <= 0:
+                if current_need_qty <= 0:
                     continue
 
                 bucket = aggregate.setdefault(
@@ -1400,7 +1347,6 @@ class RoutePlan(models.Model):
                 bucket["recent_sales_baseline_qty"] += baseline_qty
                 bucket["outlet_balance_qty"] += stock_qty
                 bucket["current_outlet_need_qty"] += current_need_qty
-                bucket["open_shortage_qty"] += shortage_qty
                 bucket["outlet_names"].add(outlet.display_name or outlet.name)
 
         if not aggregate:
@@ -1415,9 +1361,8 @@ class RoutePlan(models.Model):
             if not product:
                 continue
 
-            total_required_qty = (bucket["current_outlet_need_qty"] or 0.0) + (bucket["open_shortage_qty"] or 0.0)
+            total_required_qty = _qty_up(product, bucket["current_outlet_need_qty"] or 0.0)
             vehicle_available_qty = _qty_down(product, vehicle_qty_map.get(product_id, 0.0))
-            total_required_qty = _qty_up(product, total_required_qty)
             suggested_load_qty = _qty_up(product, max(total_required_qty - vehicle_available_qty, 0.0))
             outlet_names = sorted(bucket["outlet_names"])
             unit_price = product_price_map.get(product_id) or product.lst_price or 0.0
@@ -1428,10 +1373,9 @@ class RoutePlan(models.Model):
                 )
                 % {"qty": bucket["recent_sales_baseline_qty"]},
                 _("Outlet balance: %(qty).2f") % {"qty": bucket["outlet_balance_qty"]},
-                _("Current outlet need: %(qty).2f") % {"qty": bucket["current_outlet_need_qty"]},
-                _("Open shortages: %(qty).2f") % {"qty": bucket["open_shortage_qty"]},
+                _("Planned demand: %(qty).2f") % {"qty": bucket["current_outlet_need_qty"]},
                 _("Vehicle balance: %(qty).2f") % {"qty": vehicle_available_qty},
-                _("Movement speed: %(label)s") % {"label": movement_profile_map.get(product_id) or _("No movement history")},
+                _("Movement profile: %(label)s") % {"label": movement_profile_map.get(product_id) or _("No movement history")},
             ]
 
             line_vals.append(
@@ -1443,6 +1387,7 @@ class RoutePlan(models.Model):
                     "current_outlet_need_qty": bucket["current_outlet_need_qty"],
                     "open_shortage_qty": bucket["open_shortage_qty"],
                     "movement_profile": movement_profile_map.get(product_id) or _("No movement history"),
+                    "open_shortage_qty": 0.0,
                     "vehicle_available_qty": vehicle_available_qty,
                     "suggested_load_qty": suggested_load_qty,
                     "approved_qty": suggested_load_qty,
@@ -1455,7 +1400,7 @@ class RoutePlan(models.Model):
         line_vals.sort(
             key=lambda vals: (
                 -(vals.get("suggested_load_qty") or 0.0),
-                -(vals.get("current_outlet_need_qty", 0.0) + vals.get("open_shortage_qty", 0.0)),
+                -(vals.get("current_outlet_need_qty", 0.0)),
                 self.env["product.product"].browse(vals["product_id"]).display_name or "",
             )
         )
