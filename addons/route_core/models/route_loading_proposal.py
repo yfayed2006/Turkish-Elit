@@ -474,6 +474,57 @@ class RouteLoadingProposal(models.Model):
             lot.id,
         )
 
+    def _get_source_allocatable_snapshot(self, product, source_location):
+        self.ensure_one()
+        qty_total = 0.0
+        earliest_expiry_date = False
+        lot_names = []
+        if not product or not source_location:
+            return {
+                "qty": 0.0,
+                "earliest_expiry_date": False,
+                "lot_names": [],
+            }
+
+        domain = [
+            ("location_id", "child_of", source_location.id),
+            ("product_id", "=", product.id),
+            ("quantity", ">", 0),
+        ]
+        quants = self.env["stock.quant"].search(domain)
+        tracking = getattr(product, "tracking", "none") or "none"
+        today = fields.Date.context_today(self)
+
+        for quant in quants:
+            available_qty = self._get_quant_available_qty(quant)
+            if available_qty <= 0:
+                continue
+            lot = quant.lot_id
+            if tracking in ("lot", "serial"):
+                if not lot:
+                    continue
+                lot_date = _lot_priority_date(lot)
+                if lot_date and lot_date < today:
+                    continue
+                if lot_date and (not earliest_expiry_date or lot_date < earliest_expiry_date):
+                    earliest_expiry_date = lot_date
+                if lot and lot.name:
+                    lot_names.append((self._lot_sort_key(lot), lot.name))
+            elif lot:
+                lot_date = _lot_priority_date(lot)
+                if lot_date and (not earliest_expiry_date or lot_date < earliest_expiry_date):
+                    earliest_expiry_date = lot_date
+                if lot.name:
+                    lot_names.append((self._lot_sort_key(lot), lot.name))
+            qty_total += available_qty
+
+        unique_lot_names = list(dict.fromkeys(name for _key, name in sorted(lot_names) if name))
+        return {
+            "qty": qty_total,
+            "earliest_expiry_date": earliest_expiry_date,
+            "lot_names": unique_lot_names,
+        }
+
     def _prepare_tracked_move_lines(self, move):
         self.ensure_one()
         quantity_needed = move.product_uom_qty or 0.0
@@ -671,6 +722,26 @@ class RouteLoadingProposal(models.Model):
             raise UserError(_("Only draft loading proposals can be refreshed."))
         return self.action_open_source_location_wizard()
 
+    def _validate_source_availability_for_approval(self, approved_lines):
+        self.ensure_one()
+        source_location = self._get_effective_source_location()
+        for line in approved_lines:
+            snapshot = self._get_source_allocatable_snapshot(line.product_id, source_location)
+            available_qty = _qty_down(line.product_id, snapshot.get("qty", 0.0))
+            approved_qty = _qty_up(line.product_id, line.approved_qty or 0.0)
+            if approved_qty > available_qty:
+                raise UserError(
+                    _(
+                        "Cannot create the loading transfer for %(product)s. Approved Qty is %(approved).2f, but allocatable stock in %(source)s is only %(available).2f. Refresh the proposal or reduce the approved quantity."
+                    )
+                    % {
+                        "product": line.product_id.display_name,
+                        "approved": approved_qty,
+                        "source": source_location.display_name if source_location else _("the selected source location"),
+                        "available": available_qty,
+                    }
+                )
+
     def action_approve(self):
         self.ensure_one()
 
@@ -686,6 +757,8 @@ class RouteLoadingProposal(models.Model):
                 }
             )
             return self._open_form_action()
+
+        self._validate_source_availability_for_approval(approved_lines)
 
         if self.picking_id and self.picking_id.state != "cancel":
             return self.action_view_transfer()
@@ -912,59 +985,23 @@ class RouteLoadingProposalLine(models.Model):
 
     @api.depends("proposal_id.source_location_id", "product_id")
     def _compute_source_stock_snapshot(self):
-        grouped_lines = defaultdict(lambda: self.env["route.loading.proposal.line"])
         for line in self:
             line.source_available_qty = 0.0
             line.earliest_source_expiry_date = False
             line.source_lot_summary = False
             effective_source = line.proposal_id._get_effective_source_location() if line.proposal_id else False
-            if effective_source and line.product_id:
-                grouped_lines[effective_source.id] |= line
+            if not effective_source or not line.product_id:
+                continue
 
-        Quant = self.env["stock.quant"]
-        for _location_id, lines in grouped_lines.items():
-            location = lines[:1].proposal_id._get_effective_source_location()
-            products = lines.mapped("product_id")
-            quants = Quant.search(
-                [
-                    ("location_id", "child_of", location.id),
-                    ("product_id", "in", products.ids),
-                    ("quantity", ">", 0),
-                ]
-            )
-
-            qty_map = defaultdict(float)
-            lot_names_map = defaultdict(list)
-            earliest_expiry_map = {}
-
-            for quant in quants:
-                available_qty = lines[:1].proposal_id._get_quant_available_qty(quant)
-                if available_qty <= 0 or not quant.product_id:
-                    continue
-                product_id = quant.product_id.id
-                qty_map[product_id] += available_qty
-                lot = quant.lot_id
-                if not lot:
-                    continue
-                lot_names_map[product_id].append((lines[:1].proposal_id._lot_sort_key(lot), lot.name or ""))
-                lot_date = _lot_priority_date(lot)
-                if lot_date and (
-                    not earliest_expiry_map.get(product_id)
-                    or lot_date < earliest_expiry_map[product_id]
-                ):
-                    earliest_expiry_map[product_id] = lot_date
-
-            for line in lines:
-                product_id = line.product_id.id
-                line.source_available_qty = _qty_down(line.product_id, qty_map.get(product_id, 0.0))
-                line.earliest_source_expiry_date = earliest_expiry_map.get(product_id)
-                lot_names = [name for _key, name in sorted(lot_names_map.get(product_id, [])) if name]
-                if lot_names:
-                    unique_names = list(dict.fromkeys(lot_names))
-                    preview = ", ".join(unique_names[:3])
-                    if len(unique_names) > 3:
-                        preview = "%s ..." % preview
-                    line.source_lot_summary = preview
+            snapshot = line.proposal_id._get_source_allocatable_snapshot(line.product_id, effective_source)
+            line.source_available_qty = _qty_down(line.product_id, snapshot.get("qty", 0.0))
+            line.earliest_source_expiry_date = snapshot.get("earliest_expiry_date")
+            lot_names = snapshot.get("lot_names") or []
+            if lot_names:
+                preview = ", ".join(lot_names[:3])
+                if len(lot_names) > 3:
+                    preview = "%s ..." % preview
+                line.source_lot_summary = preview
 
     @api.onchange("approved_qty")
     def _onchange_approved_qty(self):
