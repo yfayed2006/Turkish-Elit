@@ -168,6 +168,19 @@ class ResCompany(models.Model):
         self.ensure_one()
         return self.route_operation_mode in ("direct_sales", "hybrid")
 
+    def _compute_route_vehicle_loading_workflow(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            value = icp.get_param(company._route_feature_param_key("vehicle_loading_workflow"), default="optional")
+            company.route_vehicle_loading_workflow = value if value in ("disabled", "optional", "required") else "optional"
+
+    def _inverse_route_vehicle_loading_workflow(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            value = company.route_vehicle_loading_workflow or "optional"
+            if value not in ("disabled", "optional", "required"):
+                value = "optional"
+            icp.set_param(company._route_feature_param_key("vehicle_loading_workflow"), value)
 
     def route_vehicle_loading_is_enabled(self):
         self.ensure_one()
