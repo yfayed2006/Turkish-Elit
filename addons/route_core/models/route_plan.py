@@ -450,6 +450,81 @@ class RoutePlan(models.Model):
             "notes": line.note or False,
         }
 
+    def _get_vehicle_loading_workflow_mode(self):
+        self.ensure_one()
+        company = self.env.company
+        value = getattr(company, "route_vehicle_loading_workflow", False) or "optional"
+        return value if value in ("disabled", "optional", "required") else "optional"
+
+    def _ensure_vehicle_loading_ready_for_visit_start(self):
+        for rec in self:
+            if rec._get_vehicle_loading_workflow_mode() != "required":
+                continue
+            if not hasattr(rec, "_get_active_loading_proposal"):
+                continue
+            proposal = rec._get_active_loading_proposal()
+            if not proposal or proposal.state != "approved":
+                raise UserError(_("Vehicle Loading Workflow is set to Required. Please generate and approve the loading proposal before starting visits."))
+
+    def _get_manual_loading_source_location(self):
+        self.ensure_one()
+        proposal = hasattr(self, "_get_active_loading_proposal") and self._get_active_loading_proposal() or False
+        if proposal and getattr(proposal, "source_location_id", False):
+            return proposal.source_location_id
+
+        warehouse = self.env["stock.warehouse"].search([('company_id', 'in', [False, self.env.company.id])], order='company_id desc, id asc', limit=1)
+        if warehouse and getattr(warehouse, 'lot_stock_id', False):
+            return warehouse.lot_stock_id
+
+        return self.env["stock.location"].search([('usage','=','internal'), '|', ('company_id','=',False), ('company_id','=',self.env.company.id)], order='company_id desc, id asc', limit=1)
+
+    def _get_manual_loading_picking_type(self, source_location):
+        self.ensure_one()
+        picking_type_model = self.env["stock.picking.type"]
+        warehouse = self.env["stock.warehouse"]
+        if source_location:
+            warehouse = warehouse.search([('lot_stock_id', '=', source_location.id), ('company_id', 'in', [False, self.env.company.id])], order='company_id desc, id asc', limit=1)
+        if warehouse and getattr(warehouse, 'int_type_id', False):
+            return warehouse.int_type_id
+        return picking_type_model.search([('code', '=', 'internal'), '|', ('company_id', '=', self.env.company.id), ('company_id', '=', False)], order='company_id desc, sequence asc, id asc', limit=1)
+
+    def action_create_vehicle_transfer_manually(self):
+        self.ensure_one()
+        if self.state == 'cancel':
+            raise UserError(_("You cannot create a vehicle transfer from a cancelled route plan."))
+        if not self.vehicle_id:
+            raise UserError(_("Please select a vehicle first."))
+        if not getattr(self.vehicle_id, 'stock_location_id', False):
+            raise UserError(_("Please set the vehicle stock location first."))
+
+        source_location = self._get_manual_loading_source_location()
+        if not source_location:
+            raise UserError(_("No internal source warehouse location was found. Please configure a warehouse stock location first."))
+        if source_location == self.vehicle_id.stock_location_id:
+            raise UserError(_("The source warehouse location and the vehicle location cannot be the same."))
+
+        picking_type = self._get_manual_loading_picking_type(source_location)
+        if not picking_type:
+            raise UserError(_("No internal transfer operation type was found for manual vehicle loading."))
+
+        action = self.env.ref('stock.action_picking_tree_all').read()[0]
+        form_view = self.env.ref('stock.view_picking_form', raise_if_not_found=False)
+        action.update({
+            'name': _("Create Vehicle Transfer Manually"),
+            'view_mode': 'form',
+            'views': [(form_view.id, 'form')] if form_view else [(False, 'form')],
+            'target': 'current',
+            'context': {
+                'default_picking_type_id': picking_type.id,
+                'default_location_id': source_location.id,
+                'default_location_dest_id': self.vehicle_id.stock_location_id.id,
+                'default_origin': "%s / %s" % ((self.name or _("Route Plan")), _("Manual Vehicle Transfer")),
+                'default_move_type': 'direct',
+                'default_company_id': self.env.company.id,
+            },
+        })
+        return action
+
     def _create_visit_for_line(self, line):
         self.ensure_one()
 
@@ -467,6 +542,7 @@ class RoutePlan(models.Model):
                 )
             )
 
+        self._ensure_vehicle_loading_ready_for_visit_start()
         self._ensure_single_active_visit(current_line=line)
         self._ensure_no_unresolved_previous_pending(line)
 
