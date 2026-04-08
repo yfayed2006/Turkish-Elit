@@ -11,6 +11,8 @@
 <field name="route_operation_mode"/>
 <field name="route_enable_direct_sale"/>
 <field name="route_enable_direct_return"/>
+<field name="route_vehicle_loading_workflow"/>
+<label string="Disabled = manual vehicle transfer only. Optional = proposal is available but not required. Required = visits cannot start before the loading proposal is approved." colspan="2"/>
 </group>
 </group>
 <group string="Route Product Settings">
