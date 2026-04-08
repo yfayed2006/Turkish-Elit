@@ -245,12 +245,12 @@ class ProductProduct(models.Model):
     @api.model
     def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, count=False, **kwargs):
         domain = self._route_apply_source_available_domain(domain)
+        kwargs.pop("access_rights_uid", None)
         return super()._search(
             domain,
             offset=offset,
             limit=limit,
             order=order,
-            access_rights_uid=access_rights_uid,
             count=count,
             **kwargs,
         )
@@ -279,11 +279,12 @@ class ProductTemplate(models.Model):
         return [("id", "in", available_template_ids or [0])]
 
     @api.model
-    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, count=False, **kwargs):
         source_domain = self._route_source_available_template_domain()
         domain = list(domain or [])
         domain = expression.AND([domain, source_domain]) if source_domain else domain
-        return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
+        kwargs.pop("access_rights_uid", None)
+        return super()._search(domain, offset=offset, limit=limit, order=order, count=count, **kwargs)
 
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
@@ -307,4 +308,3 @@ class ProductTemplate(models.Model):
         if source_template_domain:
             domain = expression.AND([domain, source_template_domain])
         return super().name_search(name, domain, operator, limit)
-
