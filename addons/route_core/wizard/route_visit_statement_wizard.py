@@ -22,8 +22,8 @@ class RouteVisitStatementWizard(models.TransientModel):
     current_visit_return_amount = fields.Monetary(string="Current Visit Returns", currency_field="currency_id", compute="_compute_statement", readonly=True)
     net_amount_for_visit = fields.Monetary(string="Net Amount For This Visit", currency_field="currency_id", compute="_compute_statement", readonly=True)
     amount_due_now = fields.Monetary(string="Amount Due Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
-    suggested_collection_now = fields.Monetary(string="Suggested Collection Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
-    expected_remaining_after_payment = fields.Monetary(string="Expected Remaining After Payment", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    suggested_collection_now = fields.Monetary(string="Suggested Cash Collection Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    expected_remaining_after_payment = fields.Monetary(string="Expected Immediate Remaining", currency_field="currency_id", compute="_compute_statement", readonly=True)
 
     previous_confirmed_payment_count = fields.Integer(string="Previous Confirmed Payments", compute="_compute_statement", readonly=True)
     previous_confirmed_payment_amount = fields.Monetary(string="Previous Confirmed Payments Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
@@ -128,7 +128,7 @@ class RouteVisitStatementWizard(models.TransientModel):
                 rec.current_visit_return_amount = visit.direct_stop_returns_total or 0.0
                 rec.net_amount_for_visit = visit.direct_stop_current_net_amount or 0.0
                 rec.amount_due_now = visit.direct_stop_grand_due_amount or 0.0
-                rec.suggested_collection_now = visit.direct_stop_settlement_remaining_amount or rec.net_amount_for_visit or 0.0
+                rec.suggested_collection_now = visit.direct_stop_immediate_remaining_amount or rec.net_amount_for_visit or 0.0
                 rec.expected_remaining_after_payment = max((rec.amount_due_now or 0.0) - (rec.suggested_collection_now or 0.0), 0.0)
             else:
                 sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else (visit.net_due_amount or 0.0)
