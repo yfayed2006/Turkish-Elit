@@ -14,7 +14,7 @@
 <t t-call="web.external_layout">
 <div class="page">
 <h2 style="margin-bottom:4px;">Statement of Account</h2>
-<div style="font-size:12px; color:#555; margin-bottom:14px;">Mini pre-collection statement before settlement confirmation.</div>
+<div style="font-size:12px; color:#555; margin-bottom:14px;">Pre-collection statement for review before settlement confirmation.</div>
 <table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
 <tr>
 <td style="padding:6px 8px; border:1px solid #ddd;">
@@ -80,11 +80,11 @@
 <tr>
 <td style="padding:6px 8px; border:1px solid #ddd;">Amount Due Now</td>
 <td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Suggested Collection Now</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">Suggested Cash Collection Now</td>
 <td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.suggested_collection_now or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Expected Remaining After Payment</td>
+<td style="padding:6px 8px; border:1px solid #ddd;">Expected Immediate Remaining</td>
 <td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.expected_remaining_after_payment or 0.0, doc.currency_id.name or '')"/>
 <td style="padding:6px 8px; border:1px solid #ddd;">Open / Overdue Promises</td>
 <td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
