@@ -498,19 +498,19 @@ class RouteVisit(models.Model):
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "start_visit"
                     rec.ux_stage_title = _("Start direct sales stop")
-                    rec.ux_stage_help = _("Begin the direct sales stop.")
+                    rec.ux_stage_help = _("Begin the visit.")
                 elif rec.state == "in_progress" and not sales_answered:
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "direct_sale_decision"
                     rec.ux_stage_title = _("Sales decision")
-                    rec.ux_stage_help = _("Do you want to create a direct sale order for this stop?")
+                    rec.ux_stage_help = _("Decide whether to create a direct sale order for this stop.")
                     rec.ux_can_create_direct_sale = bool(rec.route_enable_direct_sale)
                     rec.ux_can_no_sale = True
                 elif rec.state == "in_progress" and not returns_answered:
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "direct_return_decision"
                     rec.ux_stage_title = _("Return decision")
-                    rec.ux_stage_help = _("Is there a direct return for this stop?")
+                    rec.ux_stage_help = _("Decide whether there is a direct return for this stop.")
                     rec.ux_can_open_direct_sale_orders = bool(sale_orders)
                     rec.ux_can_open_direct_sale_payments = bool(sale_orders)
                     rec.ux_can_create_direct_return = bool(rec.route_enable_direct_return)
@@ -538,21 +538,21 @@ class RouteVisit(models.Model):
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "collect_payment"
                         rec.ux_stage_title = _("Direct stop settlement")
-                        rec.ux_stage_help = _("Review previous due, current sales, current returns, then settle the direct-sales stop.")
+                        rec.ux_stage_help = _("Review amount due now, immediate remaining, and promise amount, then settle the stop.")
                         rec.ux_can_collect_payment = True
                         rec.ux_can_open_payments = has_confirmed_payments
                     elif not settlement_reviewed:
                         rec.ux_stage = "collection"
                         rec.ux_primary_action = "collect_payment"
                         rec.ux_stage_title = _("Review settlement")
-                        rec.ux_stage_help = _("No payment is due. Open the settlement screen, review the direct-sales summary, then close it to continue.")
+                        rec.ux_stage_help = _("No payment is due. Open the settlement screen, review the summary, then close it to continue.")
                         rec.ux_can_collect_payment = True
                         rec.ux_can_open_payments = has_confirmed_payments
                     else:
                         rec.ux_stage = "ready_to_close"
                         rec.ux_primary_action = "finish_visit"
                         rec.ux_stage_title = _("Settlement and finish")
-                        rec.ux_stage_help = _("Settlement has been reviewed. Finish the stop.")
+                        rec.ux_stage_help = _("Settlement has been reviewed. Finish the visit.")
                         rec.ux_can_finish_visit = True
                         rec.ux_can_open_payments = has_confirmed_payments
 
@@ -727,7 +727,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "collection"
                 rec.ux_primary_action = "collect_payment"
                 rec.ux_stage_title = _("Collect payment")
-                rec.ux_stage_help = _("Add a full payment, partial payment, deferment, or carry forward. Use Skip Collection below only when collection is not possible.")
+                rec.ux_stage_help = _("Review amount due now, immediate remaining, and promise amount, then save the collection decision. Use Skip Collection only when collection is not possible.")
 
             elif rec.visit_process_state in ("collection_done", "ready_to_close"):
                 rec.ux_stage = "ready_to_close"
@@ -1594,12 +1594,12 @@ class RouteVisit(models.Model):
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
             _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
-            _("Current Due: %.2f %s") % (summary.get("current_due", 0.0), currency_code),
+            _("Amount Due Now: %.2f %s") % (summary.get("current_due", 0.0), currency_code),
             _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
-            _("Remaining: %.2f %s") % (summary.get("remaining_amount", 0.0), currency_code),
+            _("Immediate Remaining: %.2f %s") % (summary.get("remaining_amount", 0.0), currency_code),
         ]
         if summary.get("promise_amount"):
-            lines.append(_("Promise: %.2f %s") % (summary["promise_amount"], currency_code))
+            lines.append(_("Promise Amount: %.2f %s") % (summary["promise_amount"], currency_code))
             if summary.get("latest_promise_date"):
                 lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
         elif (summary.get("remaining_amount") or 0.0) <= 0.0:
@@ -1718,7 +1718,7 @@ class RouteVisit(models.Model):
         credit_amount = summary.get("credit_amount") or 0.0
 
         if promise_amount:
-            lines.append(_("Promise: %.2f %s") % (promise_amount, currency_code))
+            lines.append(_("Promise Amount: %.2f %s") % (promise_amount, currency_code))
             if summary.get("latest_promise_date"):
                 lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
         elif credit_amount:
@@ -1907,6 +1907,7 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
+
 
 
 
