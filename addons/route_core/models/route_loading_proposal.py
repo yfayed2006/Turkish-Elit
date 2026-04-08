@@ -18,13 +18,8 @@ def _is_discrete_uom(product):
         return False
     rounding = getattr(uom, "rounding", 0.0) or 0.0
     name = (getattr(uom, "name", "") or "").strip().lower()
-    discrete_markers = {"piece", "pieces", "unit", "units", "pc", "pcs", "قطعة", "pack", "packs", "box", "boxes", "carton", "cartons", "case", "cases"}
-    category_name = ((getattr(getattr(uom, "category_id", False), "name", "") or "").strip().lower())
-    return (
-        rounding >= 1.0
-        or category_name in {"unit", "units"}
-        or any(marker in name for marker in discrete_markers)
-    )
+    discrete_names = {"piece", "pieces", "unit", "units", "pc", "pcs", "قطعة"}
+    return rounding >= 1.0 or name in discrete_names
 
 
 def _qty_up(product, qty):
@@ -185,7 +180,7 @@ class RouteLoadingProposal(models.Model):
         store=False,
     )
     total_required_qty = fields.Float(
-        string="Required Qty",
+        string="Total Required Qty",
         compute="_compute_totals",
         store=False,
     )
@@ -840,11 +835,11 @@ class RouteLoadingProposalLine(models.Model):
         readonly=True,
     )
     planned_outlet_count = fields.Integer(string="Planned Outlets", default=0)
-    recent_sales_baseline_qty = fields.Float(string="Recent Demand Baseline", default=0.0)
+    recent_sales_baseline_qty = fields.Float(string="Recent Sales Baseline", default=0.0)
     outlet_balance_qty = fields.Float(string="Outlet Balance", default=0.0)
-    current_outlet_need_qty = fields.Float(string="Planned Demand", default=0.0)
+    current_outlet_need_qty = fields.Float(string="Current Outlet Need", default=0.0)
     open_shortage_qty = fields.Float(string="Open Shortages", default=0.0)
-    movement_profile = fields.Char(string="Movement Profile")
+    movement_profile = fields.Char(string="Movement Speed")
     vehicle_available_qty = fields.Float(string="Vehicle Balance", default=0.0)
     source_available_qty = fields.Float(
         string="Source Balance",
@@ -857,14 +852,14 @@ class RouteLoadingProposalLine(models.Model):
         store=False,
     )
     source_lot_summary = fields.Char(
-        string="Source Lots",
+        string="Suggested Source Lots",
         compute="_compute_source_stock_snapshot",
         store=False,
     )
     suggested_load_qty = fields.Float(string="Suggested Load Qty", default=0.0)
     approved_qty = fields.Float(string="Approved Qty", default=0.0)
     total_required_qty = fields.Float(
-        string="Required Qty",
+        string="Total Required Qty",
         compute="_compute_totals",
         store=True,
     )
@@ -902,10 +897,10 @@ class RouteLoadingProposalLine(models.Model):
         ),
     ]
 
-    @api.depends("current_outlet_need_qty")
+    @api.depends("current_outlet_need_qty", "open_shortage_qty")
     def _compute_totals(self):
         for rec in self:
-            rec.total_required_qty = rec.current_outlet_need_qty or 0.0
+            rec.total_required_qty = (rec.current_outlet_need_qty or 0.0) + (rec.open_shortage_qty or 0.0)
 
     @api.depends("total_required_qty", "suggested_load_qty", "approved_qty", "unit_price")
     def _compute_values(self):
@@ -1098,6 +1093,31 @@ class RoutePlan(models.Model):
         store=False,
     )
 
+    def _compute_loading_workflow_flags(self):
+        company = self.env.company
+        value = getattr(company, "route_vehicle_loading_workflow", False) or "optional"
+        if value not in ("disabled", "optional", "required"):
+            value = "optional"
+        for rec in self:
+            rec.loading_workflow_mode = value
+            rec.loading_workflow_enabled = value in ("optional", "required")
+            rec.loading_workflow_required = value == "required"
+
+    def _ensure_loading_workflow_allows_generation(self):
+        for rec in self:
+            mode = rec.loading_workflow_mode or "optional"
+            if mode == "disabled":
+                raise UserError(_("Vehicle Loading Workflow is set to Disabled. Use manual vehicle transfer instead."))
+
+    def _ensure_loading_workflow_ready_for_visit_start(self):
+        for rec in self:
+            mode = rec.loading_workflow_mode or "optional"
+            if mode != "required":
+                continue
+            proposal = rec._get_active_loading_proposal()
+            if not proposal or proposal.state != "approved":
+                raise UserError(_("Vehicle Loading Workflow is set to Required. Please generate and approve the loading proposal before starting visits."))
+
     def _compute_loading_proposal_stats(self):
         Proposal = self.env["route.loading.proposal"].sudo()
         grouped = {}
@@ -1287,10 +1307,19 @@ class RoutePlan(models.Model):
             ]
         ) if direct_sale_outlets else self.env["sale.order.line"]
 
+        shortage_lines = self.env["route.shortage.line"].search(
+            [
+                ("shortage_id.outlet_id", "in", outlets.ids),
+                ("shortage_id.state", "in", ["open", "planned"]),
+                ("qty_remaining", ">", 0),
+            ]
+        )
+
         candidate_products_by_outlet = defaultdict(set)
         sales_entries = defaultdict(list)
         balance_qty_map = {}
         product_price_map = {}
+        shortage_qty_map = defaultdict(float)
         aggregate = {}
 
         for outlet in consignment_outlets:
@@ -1326,6 +1355,17 @@ class RoutePlan(models.Model):
             if getattr(line, "price_unit", False) and not product_price_map.get(product.id):
                 product_price_map[product.id] = line.price_unit
 
+        for shortage_line in shortage_lines:
+            outlet = shortage_line.shortage_id.outlet_id
+            product = shortage_line.product_id
+            if not outlet or not product:
+                continue
+            key = (outlet.id, product.id)
+            shortage_qty_map[key] += _qty_up(product, shortage_line.qty_remaining or 0.0)
+            candidate_products_by_outlet[outlet.id].add(product.id)
+            if shortage_line.unit_price and not product_price_map.get(product.id):
+                product_price_map[product.id] = shortage_line.unit_price
+
         baseline_qty_map = {}
         for key, entries in sales_entries.items():
             recent_entries = sorted(entries, key=lambda item: (item[0], item[1]), reverse=True)[:3]
@@ -1345,12 +1385,13 @@ class RoutePlan(models.Model):
             for product_id in product_ids:
                 stock_qty = 0.0 if is_direct_sale_outlet else balance_qty_map.get((outlet.id, product_id), 0.0)
                 baseline_qty = baseline_qty_map.get((outlet.id, product_id), 0.0)
+                shortage_qty = shortage_qty_map.get((outlet.id, product_id), 0.0)
                 if is_direct_sale_outlet:
                     current_need_qty = _qty_up(self.env["product.product"].browse(product_id), baseline_qty or 0.0)
                 else:
                     current_need_qty = _qty_up(self.env["product.product"].browse(product_id), max((baseline_qty or 0.0) - (stock_qty or 0.0), 0.0))
 
-                if current_need_qty <= 0:
+                if current_need_qty <= 0 and shortage_qty <= 0:
                     continue
 
                 bucket = aggregate.setdefault(
@@ -1368,6 +1409,7 @@ class RoutePlan(models.Model):
                 bucket["recent_sales_baseline_qty"] += baseline_qty
                 bucket["outlet_balance_qty"] += stock_qty
                 bucket["current_outlet_need_qty"] += current_need_qty
+                bucket["open_shortage_qty"] += shortage_qty
                 bucket["outlet_names"].add(outlet.display_name or outlet.name)
 
         if not aggregate:
@@ -1382,8 +1424,9 @@ class RoutePlan(models.Model):
             if not product:
                 continue
 
-            total_required_qty = _qty_up(product, bucket["current_outlet_need_qty"] or 0.0)
+            total_required_qty = (bucket["current_outlet_need_qty"] or 0.0) + (bucket["open_shortage_qty"] or 0.0)
             vehicle_available_qty = _qty_down(product, vehicle_qty_map.get(product_id, 0.0))
+            total_required_qty = _qty_up(product, total_required_qty)
             suggested_load_qty = _qty_up(product, max(total_required_qty - vehicle_available_qty, 0.0))
             outlet_names = sorted(bucket["outlet_names"])
             unit_price = product_price_map.get(product_id) or product.lst_price or 0.0
@@ -1394,9 +1437,10 @@ class RoutePlan(models.Model):
                 )
                 % {"qty": bucket["recent_sales_baseline_qty"]},
                 _("Outlet balance: %(qty).2f") % {"qty": bucket["outlet_balance_qty"]},
-                _("Planned demand: %(qty).2f") % {"qty": bucket["current_outlet_need_qty"]},
+                _("Current outlet need: %(qty).2f") % {"qty": bucket["current_outlet_need_qty"]},
+                _("Open shortages: %(qty).2f") % {"qty": bucket["open_shortage_qty"]},
                 _("Vehicle balance: %(qty).2f") % {"qty": vehicle_available_qty},
-                _("Movement profile: %(label)s") % {"label": movement_profile_map.get(product_id) or _("No movement history")},
+                _("Movement speed: %(label)s") % {"label": movement_profile_map.get(product_id) or _("No movement history")},
             ]
 
             line_vals.append(
@@ -1408,7 +1452,6 @@ class RoutePlan(models.Model):
                     "current_outlet_need_qty": bucket["current_outlet_need_qty"],
                     "open_shortage_qty": bucket["open_shortage_qty"],
                     "movement_profile": movement_profile_map.get(product_id) or _("No movement history"),
-                    "open_shortage_qty": 0.0,
                     "vehicle_available_qty": vehicle_available_qty,
                     "suggested_load_qty": suggested_load_qty,
                     "approved_qty": suggested_load_qty,
@@ -1421,7 +1464,7 @@ class RoutePlan(models.Model):
         line_vals.sort(
             key=lambda vals: (
                 -(vals.get("suggested_load_qty") or 0.0),
-                -(vals.get("current_outlet_need_qty", 0.0)),
+                -(vals.get("current_outlet_need_qty", 0.0) + vals.get("open_shortage_qty", 0.0)),
                 self.env["product.product"].browse(vals["product_id"]).display_name or "",
             )
         )
@@ -1558,7 +1601,6 @@ class RoutePlan(models.Model):
                 "default_location_id": vehicle_location.id,
             },
         }
-
 
 
 
