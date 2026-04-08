@@ -229,15 +229,15 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             if not rec.is_direct_sales_stop:
                 summary = rec.visit_id._get_consignment_receipt_summary() if rec.visit_id and hasattr(rec.visit_id, "_get_consignment_receipt_summary") else {}
                 parts = [
-                    _('<div class="alert alert-success mb-0"><strong>Consignment visit finished successfully.</strong>'),
+                    _('<div class="alert alert-success mb-0"><strong>Visit completed successfully.</strong>'),
                     _("Outlet: %s") % (rec.outlet_id.display_name if rec.outlet_id else "-"),
                     _("Date: %s") % (rec.visit_date or "-"),
                     _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
                     _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
                     _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
-                    _("Current Due: %s") % rec._format_currency_amount(summary.get("current_due", 0.0)),
+                    _("Amount Due Now: %s") % rec._format_currency_amount(summary.get("current_due", 0.0)),
                     _("Collected: %s") % rec._format_currency_amount(summary.get("settled_amount", 0.0)),
-                    _("Remaining: %s") % rec._format_currency_amount(summary.get("remaining_amount", 0.0)),
+                    _("Immediate Remaining: %s") % rec._format_currency_amount(summary.get("remaining_amount", 0.0)),
                     "</div>",
                 ]
                 rec.finish_message = "<br/>".join(parts)
@@ -253,7 +253,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 extra = _("The stop has been closed. Review the saved settlement records if needed.")
 
             parts = [
-                _('<div class="alert alert-success mb-0"><strong>Direct sales stop completed successfully.</strong>'),
+                _('<div class="alert alert-success mb-0"><strong>Visit completed successfully.</strong>'),
                 _("Outlet: %s") % (rec.outlet_id.display_name if rec.outlet_id else "-"),
                 _("Date: %s") % (rec.visit_date or "-"),
             ]
@@ -263,9 +263,11 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 parts.append(_("Sales total: %s") % rec._format_currency_amount(rec.direct_stop_sales_total))
             if (rec.direct_stop_returns_total or 0.0) > 0.0:
                 parts.append(_("Returns total: %s") % rec._format_currency_amount(rec.direct_stop_returns_total))
-            parts.append(_("Collected now: %s") % rec._format_currency_amount(rec.direct_stop_settlement_paid_amount))
+            parts.append(_("Amount Due Now: %s") % rec._format_currency_amount(rec.direct_stop_grand_due_amount))
+            parts.append(_("Collected Amount: %s") % rec._format_currency_amount(rec.direct_stop_settlement_paid_amount))
+            parts.append(_("Immediate Remaining: %s") % rec._format_currency_amount(rec.direct_stop_immediate_remaining_amount))
             if (rec.direct_stop_open_promise_amount or 0.0) > 0.0:
-                parts.append(_("Open promise: %s") % rec._format_currency_amount(rec.direct_stop_open_promise_amount))
+                parts.append(_("Promise Amount: %s") % rec._format_currency_amount(rec.direct_stop_open_promise_amount))
                 if rec.direct_stop_latest_promise_date:
                     parts.append(_("Next promise date: %s") % rec.direct_stop_latest_promise_date)
             parts.append(extra)
