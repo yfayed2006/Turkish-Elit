@@ -25,17 +25,25 @@
 <button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
-<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="not planning_finalized or state == 'cancel' or loading_proposal_count > 0"/>
-<button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_proposal_count == 0"/>
+<button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="loading_workflow_enabled == False or not planning_finalized or state == 'cancel' or loading_proposal_count > 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_workflow_enabled == False or loading_proposal_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_vehicle_transfer_manually" type="object" string="Create Vehicle Transfer Manually" class="btn-secondary" invisible="loading_workflow_mode == 'required' or not planning_finalized or not vehicle_id or state == 'cancel'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
 <button name="action_open_vehicle_closing" type="object" string="Close Vehicle Day" class="btn-secondary" invisible="not planning_finalized or not vehicle_id or state == 'cancel'"/>
 </header>
 <sheet>
+<field name="loading_workflow_mode" invisible="1"/>
+<field name="loading_workflow_enabled" invisible="1"/>
+<field name="loading_workflow_required" invisible="1"/>
 <div class="alert alert-warning" role="alert" invisible="not planning_finalized">
 <strong>Planning Locked:</strong>
 This route plan has been finalized. You cannot edit the plan, add visits, or remove visits until you click
 <strong>Reopen Daily Plan</strong>
 .
+</div>
+<div class="alert alert-info" role="alert" invisible="loading_workflow_mode != 'optional'">
+<strong>Optional Vehicle Loading:</strong>
+Loading Proposal is available for planning help only. You can continue route execution even if the vehicle transfer is created manually later by the warehouse team.
 </div>
 <div class="alert alert-info" role="alert" invisible="previous_pending_visit_count == 0">
 <strong>Previous pending visits detected:</strong>
@@ -52,7 +60,7 @@ Please review them before today's execution.
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker" invisible="visit_count == 0">
 <field name="visit_count" string="Executed Visits" widget="statinfo"/>
 </button>
-<button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_proposal_count == 0">
+<button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_workflow_enabled == False or loading_proposal_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <field name="loading_proposal_count" string="Loading Proposal" widget="statinfo"/>
 </button>
 <button name="action_open_vehicle_closing" type="object" class="oe_stat_button" icon="fa-check-square-o" invisible="vehicle_closing_count == 0">
@@ -92,9 +100,10 @@ Please review them before today's execution.
 <field name="previous_pending_visit_count" readonly="1"/>
 <field name="previous_pending_outlet_summary" readonly="1" invisible="not previous_pending_outlet_summary"/>
 </group>
-<group string="Loading Proposal">
+<group string="Vehicle Loading" invisible="loading_workflow_enabled == False" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <field name="loading_proposal_count" readonly="1"/>
 <field name="loading_proposal_state" string="Proposal Status" readonly="1" widget="badge" decoration-info="loading_proposal_state == 'draft'" decoration-success="loading_proposal_state == 'approved'" decoration-danger="loading_proposal_state == 'cancelled'"/>
+<field name="loading_workflow_mode" string="Workflow" readonly="1"/>
 </group>
 <group string="Vehicle Closing">
 <field name="vehicle_closing_count" readonly="1"/>
