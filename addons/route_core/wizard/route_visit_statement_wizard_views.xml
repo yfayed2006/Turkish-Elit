@@ -20,8 +20,8 @@
 <field name="current_visit_return_amount" readonly="1"/>
 <field name="net_amount_for_visit" readonly="1"/>
 <field name="amount_due_now" readonly="1"/>
-<field name="suggested_collection_now" readonly="1"/>
-<field name="expected_remaining_after_payment" readonly="1"/>
+<field name="suggested_collection_now" string="Suggested Cash Collection Now" readonly="1"/>
+<field name="expected_remaining_after_payment" string="Expected Immediate Remaining" readonly="1"/>
 </group>
 <group string="Payment and Promise Snapshot" col="4">
 <field name="previous_confirmed_payment_count" readonly="1"/>
@@ -35,7 +35,7 @@
 <field name="next_promise_date" readonly="1"/>
 <field name="next_promise_amount" readonly="1"/>
 </group>
-<div class="alert alert-info mt-3" role="alert"> This statement is for review. Continue to Collection is available only while the visit is still in the active collection stage. The full settlement receipt remains available after the visit is finished. </div>
+<div class="alert alert-info mt-3" role="alert"> This statement is for review. Continue to Collection is available only while the visit is still in the active collection stage. Suggested Cash Collection Now means the cash amount recommended to collect now, before any new promise is recorded. The full settlement receipt remains available after the visit is finished. </div>
 </sheet>
 <footer>
 <button name="action_print_statement_pdf" string="Print Statement" type="object" class="btn-primary"/>
