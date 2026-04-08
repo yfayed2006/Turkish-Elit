@@ -59,6 +59,20 @@ class ResCompany(models.Model):
         help="Enable manual Direct Return workflow and related Route Sales actions.",
     )
 
+
+    route_vehicle_loading_workflow = fields.Selection(
+        [
+            ("disabled", "Disabled"),
+            ("optional", "Optional"),
+            ("required", "Required"),
+        ],
+        string="Vehicle Loading Workflow",
+        compute="_compute_route_vehicle_loading_workflow",
+        inverse="_inverse_route_vehicle_loading_workflow",
+        readonly=False,
+        help="Disabled = supervisors skip the loading proposal and vehicle transfer can be handled manually. Optional = loading proposal is available but does not block route execution. Required = visits cannot start until an approved loading proposal exists.",
+    )
+
     def _route_feature_param_key(self, feature_name):
         self.ensure_one()
         return f"route_core.{feature_name}.{self.id}"
@@ -153,3 +167,12 @@ class ResCompany(models.Model):
     def route_operation_allows_direct_sale(self):
         self.ensure_one()
         return self.route_operation_mode in ("direct_sales", "hybrid")
+
+
+    def route_vehicle_loading_is_enabled(self):
+        self.ensure_one()
+        return (self.route_vehicle_loading_workflow or "optional") in ("optional", "required")
+
+    def route_vehicle_loading_is_required(self):
+        self.ensure_one()
+        return (self.route_vehicle_loading_workflow or "optional") == "required"
