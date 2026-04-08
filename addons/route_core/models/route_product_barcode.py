@@ -94,14 +94,17 @@ class ProductProduct(models.Model):
         location_id = self.env.context.get("route_source_location_id")
         if not location_id:
             return [("id", "=", 0)]
-        quants = self.env["stock.quant"].search(
-            [
-                ("location_id", "child_of", location_id),
-                ("quantity", ">", 0),
-                ("product_id.sale_ok", "=", True),
-                ("product_id.active", "=", True),
-            ]
-        )
+
+        quant_domain = [
+            ("location_id", "child_of", location_id),
+            ("quantity", ">", 0),
+            ("product_id.sale_ok", "=", True),
+            ("product_id.active", "=", True),
+        ]
+        if "detailed_type" in self._fields:
+            quant_domain.append(("product_id.detailed_type", "in", ["product", "consu"]))
+
+        quants = self.env["stock.quant"].search(quant_domain)
         available_by_product = {}
         for quant in quants:
             product = quant.product_id
