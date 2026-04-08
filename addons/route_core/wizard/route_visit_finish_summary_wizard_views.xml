@@ -30,7 +30,7 @@
 <field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
 <field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
 <field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
-<field name="direct_stop_open_promise_amount" string="Open Promise" readonly="1" invisible="not direct_stop_open_promise_amount"/>
+<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="not direct_stop_open_promise_amount"/>
 <field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
 <field name="direct_stop_latest_promise_status" string="Promise Status" readonly="1" invisible="not direct_stop_open_promise_amount"/>
 <field name="direct_stop_order_count" string="Direct Sale Orders" readonly="1" invisible="not direct_stop_order_count"/>
@@ -38,9 +38,9 @@
 <field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 <group string="Visit Summary" col="4" invisible="is_direct_sales_stop">
-<field name="consignment_current_due_amount" string="Current Due" readonly="1"/>
+<field name="consignment_current_due_amount" string="Amount Due Now" readonly="1"/>
 <field name="consignment_collected_amount" string="Collected" readonly="1"/>
-<field name="consignment_remaining_amount" string="Remaining" readonly="1"/>
+<field name="consignment_remaining_amount" string="Immediate Remaining" readonly="1"/>
 <field name="consignment_promise_amount" string="Promise Amount" readonly="1"/>
 </group>
 <group string="Visit Documents" col="4" invisible="is_direct_sales_stop">
