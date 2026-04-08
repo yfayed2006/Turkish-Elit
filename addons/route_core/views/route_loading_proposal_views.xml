@@ -65,7 +65,7 @@
 <field name="destination_location_id" readonly="1"/>
 <field name="picking_id" readonly="1" invisible="transfer_count == 0"/>
 <field name="approval_datetime" readonly="1" invisible="not approval_datetime"/>
-<field name="transfer_state" readonly="1" invisible="transfer_count == 0"/>
+<field name="transfer_state" string="Transfer Status" readonly="1" invisible="transfer_count == 0" widget="badge"/>
 </group>
 </group>
 <separator string="Loading Summary"/>
