@@ -1077,6 +1077,27 @@ class RoutePlan(models.Model):
         store=False,
     )
 
+    loading_workflow_mode = fields.Selection(
+        [
+            ("disabled", "Disabled"),
+            ("optional", "Optional"),
+            ("required", "Required"),
+        ],
+        string="Vehicle Loading Workflow",
+        compute="_compute_loading_workflow_flags",
+        store=False,
+    )
+    loading_workflow_enabled = fields.Boolean(
+        string="Loading Proposal Enabled",
+        compute="_compute_loading_workflow_flags",
+        store=False,
+    )
+    loading_workflow_required = fields.Boolean(
+        string="Loading Proposal Required",
+        compute="_compute_loading_workflow_flags",
+        store=False,
+    )
+
     def _compute_loading_proposal_stats(self):
         Proposal = self.env["route.loading.proposal"].sudo()
         grouped = {}
@@ -1431,6 +1452,7 @@ class RoutePlan(models.Model):
 
     def action_generate_loading_proposal(self):
         self.ensure_one()
+        self._ensure_loading_workflow_allows_generation()
 
         if not self.planning_finalized:
             raise UserError(
@@ -1447,6 +1469,7 @@ class RoutePlan(models.Model):
 
     def _generate_loading_proposal_with_source(self, source_location, proposal=False):
         self.ensure_one()
+        self._ensure_loading_workflow_allows_generation()
 
         if not self.planning_finalized:
             raise UserError(
