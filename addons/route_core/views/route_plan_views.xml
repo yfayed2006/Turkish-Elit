@@ -94,7 +94,7 @@ Please review them before today's execution.
 </group>
 <group string="Loading Proposal">
 <field name="loading_proposal_count" readonly="1"/>
-<field name="loading_proposal_state" readonly="1"/>
+<field name="loading_proposal_state" string="Proposal Status" readonly="1" widget="badge" decoration-info="loading_proposal_state == 'draft'" decoration-success="loading_proposal_state == 'approved'" decoration-danger="loading_proposal_state == 'cancelled'"/>
 </group>
 <group string="Vehicle Closing">
 <field name="vehicle_closing_count" readonly="1"/>
