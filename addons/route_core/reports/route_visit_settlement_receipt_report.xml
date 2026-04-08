@@ -178,9 +178,9 @@ Since:
 </tr>
 <tr>
 <td style="border:1px solid #bfdbfe; background:#eff6ff; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.4px; margin-bottom:6px;">Grand Total Due</div>
+<div style="font-size:10px; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.4px; margin-bottom:6px;">Amount Due Now</div>
 <div style="font-size:20px; font-weight:700; color:#1e3a8a;" t-esc="'%.2f %s' % (summary['grand_total_due'], currency_label)"/>
-<div style="font-size:10px; color:#1d4ed8; margin-top:5px;">Previous due plus current stop net.</div>
+<div style="font-size:10px; color:#1d4ed8; margin-top:5px;">Previous due plus current stop net amount.</div>
 </td>
 <td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#15803d; letter-spacing:0.4px; margin-bottom:6px;">Collected Now</div>
@@ -193,7 +193,7 @@ Since:
 <div style="font-size:10px; color:#b91c1c; margin-top:5px;">Grand total due minus collected cash for this stop.</div>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Open Promise / Credit</div>
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Promise Amount / Credit</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % ((summary['promise_amount'] or summary['credit_amount']), currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">
 <span t-if="summary['latest_promise_date']">
@@ -655,7 +655,7 @@ Date:
 <table style="width:100%; border-collapse:separate; border-spacing:6px; margin:0 -6px 8px -6px;">
 <tr>
 <td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Current Due</div>
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Amount Due Now</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (previous_due, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Outlet due before confirming new collections.</div>
 </td>
@@ -677,7 +677,7 @@ Date:
 </tr>
 <tr>
 <td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:6px 8px;">
-<div style="font-size:10px; text-transform:uppercase; color:#15803d; margin-bottom:6px;">Collected</div>
+<div style="font-size:10px; text-transform:uppercase; color:#15803d; margin-bottom:6px;">Collected Amount</div>
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary.get('settled_amount', 0.0), currency_label)"/>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:6px 8px;">
