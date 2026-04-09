@@ -1301,7 +1301,7 @@ class RoutePlan(models.Model):
                 profile_map[product_id] = "Mixed"
         return profile_map
 
-    def _build_loading_proposal_line_vals(self):
+    def _build_loading_proposal_line_vals(self, source_location=False):
         self.ensure_one()
 
         if not self.planning_finalized:
@@ -1467,8 +1467,18 @@ class RoutePlan(models.Model):
 
         products = self.env["product.product"].browse(list(aggregate.keys())).exists()
         product_map = {product.id: product for product in products}
-        effective_source = self._get_effective_source_location() or self._get_default_source_location()
-        source_qty_map, _earliest_expiry_map, _lot_names_map = self._get_source_stock_snapshot_data(effective_source, products)
+
+        helper_proposal = self._get_active_loading_proposal() or self.env["route.loading.proposal"].new(
+            {
+                "plan_id": self.id,
+                "company_id": (self.company_id or self.env.company).id,
+            }
+        )
+        effective_source = source_location or helper_proposal._get_effective_source_location() or helper_proposal._get_default_source_location()
+        source_qty_map, _earliest_expiry_map, _lot_names_map = helper_proposal._get_source_stock_snapshot_data(
+            effective_source,
+            products,
+        )
         line_vals = []
 
         for product_id, bucket in aggregate.items():
@@ -1588,7 +1598,7 @@ class RoutePlan(models.Model):
         if proposal and proposal.state == "approved" and proposal.picking_id and proposal.picking_id.state != "cancel":
             return proposal
 
-        line_vals = self._build_loading_proposal_line_vals()
+        line_vals = self._build_loading_proposal_line_vals(source_location=source_location)
 
         note = _(
             "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent consignment sales history, recent direct-sale order history, product movement speed, current vehicle balance, and the current source warehouse balance. "
