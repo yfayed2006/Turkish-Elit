@@ -26,6 +26,47 @@
 </list>
 </field>
 </record>
+<record id="view_route_outlet_pda_search" model="ir.ui.view">
+<field name="name">route.outlet.pda.search</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<search string="Outlets">
+<field name="name" string="Outlet"/>
+<field name="code" string="Outlet Code"/>
+<field name="partner_id" string="Customer"/>
+<field name="route_city_id" string="City"/>
+<field name="area_id" string="Area"/>
+<field name="phone"/>
+<field name="mobile"/>
+<filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+<filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+</search>
+</field>
+</record>
+<record id="view_route_outlet_pda_list" model="ir.ui.view">
+<field name="name">route.outlet.pda.list</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<list string="Outlets" create="0" edit="0" delete="0">
+<field name="code" string="Outlet Code" optional="show"/>
+<field name="name" string="Outlet"/>
+<field name="outlet_operation_mode" string="Mode" widget="badge" optional="show" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
+<field name="route_city_id" string="City" optional="show"/>
+<field name="route_area_name" string="Area" optional="show"/>
+<field name="summary_alert_level" string="Status" widget="badge" optional="show" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+<field name="current_due_amount" string="Current Due" sum="Total Due" optional="show"/>
+<field name="near_expiry_product_count" string="Near Expiry" widget="badge" optional="hide" decoration-warning="near_expiry_product_count > 0" column_invisible="context.get('route_hide_near_expiry', False)"/>
+<field name="last_visit_date" string="Last Visit Date" optional="show"/>
+<field name="last_sale_order_id" string="Last Sale Order" optional="show"/>
+<field name="visit_count" string="Visits" optional="show"/>
+<field name="phone" optional="hide"/>
+<field name="mobile" optional="hide"/>
+<field name="active" optional="hide"/>
+</list>
+</field>
+</record>
 <record id="view_route_outlet_form" model="ir.ui.view">
 <field name="name">route.outlet.form</field>
 <field name="model">route.outlet</field>
@@ -405,6 +446,81 @@
 <field name="note" placeholder="Internal notes..."/>
 </page>
 </notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_outlet_pda_form" model="ir.ui.view">
+<field name="name">route.outlet.pda.form</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<form string="Outlet" create="0" edit="0" delete="0">
+<sheet>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
+<div class="oe_button_box" name="button_box">
+<button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="visit_count" string="Visits" widget="statinfo"/>
+</button>
+<button name="action_view_payments" type="object" class="oe_stat_button" icon="fa-money">
+<field name="payment_count" string="Payments" widget="statinfo"/>
+</button>
+<button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
+<field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
+</button>
+<button name="action_view_stock_balances" type="object" class="oe_stat_button" icon="fa-cubes" invisible="outlet_operation_mode != 'consignment'">
+<field name="stock_balance_count" string="Stock" widget="statinfo"/>
+</button>
+</div>
+<div class="oe_title">
+<h1>
+<field name="name" readonly="1"/>
+</h1>
+</div>
+<group string="Outlet Summary" col="2">
+<group>
+<field name="code" readonly="1"/>
+<field name="partner_id" string="Customer" readonly="1"/>
+<field name="outlet_operation_mode" readonly="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
+<field name="route_city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="phone" readonly="1"/>
+<field name="mobile" readonly="1"/>
+</group>
+<group>
+<field name="summary_alert_level" string="Status" readonly="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+<field name="current_due_amount" readonly="1"/>
+<field name="last_visit_id" readonly="1"/>
+<field name="last_visit_date" readonly="1"/>
+<field name="last_sale_order_id" readonly="1"/>
+<field name="last_payment_id" readonly="1"/>
+<field name="visit_count" readonly="1"/>
+</group>
+</group>
+<group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
+<group>
+<field name="stock_balance_count" readonly="1"/>
+<field name="stock_total_qty" readonly="1"/>
+<field name="stock_total_value" readonly="1"/>
+<field name="refill_needed_count" readonly="1"/>
+</group>
+<group>
+<field name="zero_stock_product_count" readonly="1"/>
+<field name="near_expiry_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="expired_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="last_stock_update_at" readonly="1"/>
+</group>
+</group>
+<group string="Latest References" col="2">
+<group>
+<field name="last_sale_order_id" readonly="1"/>
+<field name="last_payment_id" readonly="1"/>
+</group>
+<group>
+<field name="in_progress_visit_id" readonly="1"/>
+<field name="next_route_plan_id" readonly="1"/>
+</group>
+</group>
 </sheet>
 </form>
 </field>
