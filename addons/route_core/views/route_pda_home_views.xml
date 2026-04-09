@@ -69,21 +69,6 @@
 </button>
 </div>
 </div>
-<div class="route_pda_group route_pda_group_modes">
-<div class="route_pda_group_title">Operation Modes</div>
-<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_mode_grid">
-<button type="object" name="action_open_direct_sale_mode_screen" class="btn route_pda_app_btn route_pda_app_btn_sales route_pda_mode_btn" invisible="route_show_sales_center == False">
-<i class="fa fa-shopping-cart route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale</span>
-<span class="route_pda_app_hint">Open direct sale tools</span>
-</button>
-<button type="object" name="action_open_consignment_mode_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot route_pda_mode_btn" invisible="route_show_consignment_tools == False">
-<i class="fa fa-cubes route_pda_app_icon"/>
-<span class="route_pda_app_label">Consignment</span>
-<span class="route_pda_app_hint">Open consignment tools</span>
-</button>
-</div>
-</div>
 </sheet>
 </form>
 </field>
