@@ -29,6 +29,17 @@ class RouteOutlet(models.Model):
         readonly=True,
     )
 
+    route_enable_lot_serial_tracking = fields.Boolean(
+        related="company_id.route_enable_lot_serial_tracking",
+        readonly=True,
+        store=False,
+    )
+    route_enable_expiry_tracking = fields.Boolean(
+        related="company_id.route_enable_expiry_tracking",
+        readonly=True,
+        store=False,
+    )
+
     area_id = fields.Many2one(
         "route.area",
         string="Area",
