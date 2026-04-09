@@ -1689,4 +1689,3 @@ class RoutePlan(models.Model):
             },
         }
 
-
