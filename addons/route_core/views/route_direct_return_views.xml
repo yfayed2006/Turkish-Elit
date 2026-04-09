@@ -83,8 +83,8 @@
 <field name="arch" type="xml">
 <xpath expr="//field[@name='move_ids_without_package']//field[@name='product_id'] | //field[@name='move_ids']//field[@name='product_id']" position="after">
 <field name="route_product_barcode" string="Barcode" optional="show"/>
-<field name="route_direct_return_unit_price" string="Unit Price" optional="show"/>
-<field name="route_direct_return_estimated_amount" string="Amount" optional="show"/>
+<field name="route_direct_return_unit_price" string="Unit Price" optional="show" column_invisible="parent.picking_type_code == 'internal'"/>
+<field name="route_direct_return_estimated_amount" string="Amount" optional="show" column_invisible="parent.picking_type_code == 'internal'"/>
 </xpath>
 </field>
 </record>
