@@ -51,6 +51,7 @@
 <field name="arch" type="xml">
 <list string="Outlets" create="0" edit="0" delete="0">
 <field name="code" string="Outlet Code" optional="show"/>
+<field name="barcode" string="Barcode" optional="show" column_invisible="context.get('route_show_barcode', False) == False"/>
 <field name="name" string="Outlet"/>
 <field name="outlet_operation_mode" string="Mode" widget="badge" optional="show" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
 <field name="route_city_id" string="City" optional="show"/>
@@ -480,6 +481,7 @@
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
+<field name="barcode" readonly="1"/>
 <field name="partner_id" string="Customer" readonly="1"/>
 <field name="outlet_operation_mode" readonly="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
 <field name="route_city_id" readonly="1"/>
@@ -489,12 +491,24 @@
 </group>
 <group>
 <field name="summary_alert_level" string="Status" readonly="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
-<field name="current_due_amount" readonly="1"/>
 <field name="last_visit_id" readonly="1"/>
 <field name="last_visit_date" readonly="1"/>
 <field name="last_sale_order_id" readonly="1"/>
-<field name="last_payment_id" readonly="1"/>
 <field name="visit_count" readonly="1"/>
+<field name="in_progress_visit_id" readonly="1"/>
+<field name="next_route_plan_id" readonly="1"/>
+</group>
+</group>
+<group string="Financial Snapshot" col="2">
+<group>
+<field name="current_due_amount" readonly="1"/>
+<field name="payment_count" readonly="1"/>
+<field name="unpaid_visit_count" readonly="1"/>
+</group>
+<group>
+<field name="last_payment_id" readonly="1"/>
+<field name="last_payment_date" readonly="1"/>
+<field name="last_payment_amount" readonly="1"/>
 </group>
 </group>
 <group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
