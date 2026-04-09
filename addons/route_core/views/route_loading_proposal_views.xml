@@ -99,6 +99,7 @@
 <field name="total_required_qty" readonly="1" string="Required Qty"/>
 <field name="vehicle_available_qty" readonly="1" string="Vehicle Balance"/>
 <field name="source_available_qty" readonly="1" string="Source Balance"/>
+<field name="uncovered_qty" readonly="1" string="Uncovered Qty"/>
 <field name="earliest_source_expiry_date" readonly="1" string="Earliest Source Expiry" optional="show"/>
 <field name="source_lot_summary" readonly="1" string="Source Lots" optional="show"/>
 <field name="suggested_load_qty" readonly="1" string="Suggested Load Qty"/>
