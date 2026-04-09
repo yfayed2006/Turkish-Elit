@@ -786,10 +786,10 @@ class RoutePdaHome(models.TransientModel):
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
         self._ensure_direct_sale_enabled()
-        return self._prepare_action(
-            "route_core.action_route_outlet",
+        return self._prepare_outlet_workspace_action(
             name="Direct Sale Outlets",
             domain=[("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)],
+            context={"route_show_barcode": True},
         )
 
     def action_create_direct_sale(self):
@@ -845,7 +845,11 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_outlets(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_route_outlet", name="Outlets")
+        # Legacy fallback used by older workspace buttons. Keep it aligned with All Outlets.
+        return self._prepare_outlet_workspace_action(
+            name="All Outlets",
+            domain=[("active", "=", True)],
+        )
 
     def action_open_outlet_balances(self):
         self.ensure_one()
