@@ -1,4 +1,3 @@
-
 .route_pda_home_sheet {
     max-width: 1180px;
 }
@@ -68,6 +67,10 @@
 
 .route_pda_apps_grid_4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.route_pda_apps_grid_3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .route_pda_apps_grid_2 {
@@ -258,6 +261,7 @@
 
     .route_pda_apps_grid,
     .route_pda_apps_grid_4,
+    .route_pda_apps_grid_3,
     .route_pda_apps_grid_2,
     .route_pda_metric_grid,
     .route_pda_card_grid_3,
