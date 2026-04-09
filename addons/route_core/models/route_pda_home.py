@@ -933,6 +933,35 @@ class RoutePdaHome(models.TransientModel):
             ("company_id", "=", False),
         ], order="company_id desc, sequence asc, id asc", limit=1)
 
+    def _prepare_outlet_workspace_action(self, *, name, domain, context=None):
+        self.ensure_one()
+        action = self._prepare_action(
+            "route_core.action_route_outlet",
+            name=name,
+            domain=domain,
+            context={
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+                "route_hide_near_expiry": not bool(self.route_enable_lot_serial_tracking and self.route_enable_expiry_tracking),
+                **(context or {}),
+            },
+        )
+        list_view = self.env.ref("route_core.view_route_outlet_pda_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_outlet_pda_search", raise_if_not_found=False)
+        views = []
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
+
     def action_open_consignment_outlet_stock(self):
         self.ensure_one()
         return self._prepare_action(
@@ -944,8 +973,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_direct_sale_customers(self):
         self.ensure_one()
-        return self._prepare_action(
-            "route_core.action_route_outlet",
+        return self._prepare_outlet_workspace_action(
             name="Direct Sale Customers",
             domain=[("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)],
             context={"group_by": "partner_id"},
@@ -953,8 +981,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_consignment_customers(self):
         self.ensure_one()
-        return self._prepare_action(
-            "route_core.action_route_outlet",
+        return self._prepare_outlet_workspace_action(
             name="Consignment Customers",
             domain=[("outlet_operation_mode", "=", "consignment"), ("active", "=", True)],
             context={"group_by": "partner_id"},
@@ -962,8 +989,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_all_outlets(self):
         self.ensure_one()
-        return self._prepare_action(
-            "route_core.action_route_outlet",
+        return self._prepare_outlet_workspace_action(
             name="All Outlets",
             domain=[("active", "=", True)],
         )
