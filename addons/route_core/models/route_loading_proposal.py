@@ -470,26 +470,6 @@ class RouteLoadingProposal(models.Model):
         available = (quant.quantity or 0.0) - reserved
         return max(available, 0.0)
 
-    def _is_quant_reservable_from_source(self, quant):
-        product = quant.product_id
-        if not product:
-            return False
-        available_qty = self._get_quant_available_qty(quant)
-        if available_qty <= 0:
-            return False
-
-        tracking = getattr(product, "tracking", "none") or "none"
-        if tracking in ("lot", "serial"):
-            lot = quant.lot_id
-            if not lot:
-                return False
-            lot_date = _lot_priority_date(lot)
-            today = fields.Date.context_today(self)
-            if lot_date and lot_date < today:
-                return False
-
-        return True
-
     def _get_source_stock_snapshot_data(self, source_location, products):
         qty_map = defaultdict(float)
         lot_names_map = defaultdict(list)
@@ -506,9 +486,9 @@ class RouteLoadingProposal(models.Model):
         )
 
         for quant in quants:
-            if not self._is_quant_reservable_from_source(quant):
-                continue
             available_qty = self._get_quant_available_qty(quant)
+            if available_qty <= 0 or not quant.product_id:
+                continue
             product_id = quant.product_id.id
             qty_map[product_id] += available_qty
             lot = quant.lot_id
@@ -1491,7 +1471,7 @@ class RoutePlan(models.Model):
         helper_proposal = self._get_active_loading_proposal() or self.env["route.loading.proposal"].new(
             {
                 "plan_id": self.id,
-                "company_id": (self.company_id or self.env.company).id,
+                "company_id": (((getattr(self, "company_id", False)) or self.env.company).id),
             }
         )
         effective_source = source_location or helper_proposal._get_effective_source_location() or helper_proposal._get_default_source_location()
