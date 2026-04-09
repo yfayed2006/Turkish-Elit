@@ -28,6 +28,7 @@ class RoutePdaHome(models.TransientModel):
     route_show_direct_sale_tools = fields.Boolean(string="Show Direct Sale Tools", compute="_compute_route_ui_mode")
     route_show_direct_return_tools = fields.Boolean(string="Show Direct Return Tools", compute="_compute_route_ui_mode")
     route_show_lot_ui = fields.Boolean(string="Show Lot and Expiry Labels", compute="_compute_route_ui_mode")
+    route_workspace_show_vehicle_closing = fields.Boolean(related="company_id.route_workspace_show_vehicle_closing", readonly=True, store=False)
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
@@ -48,6 +49,8 @@ class RoutePdaHome(models.TransientModel):
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
     direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
+    direct_transfer_today_count = fields.Integer(string="Direct Transfers Today", compute="_compute_dashboard")
+    direct_transfer_today_qty = fields.Float(string="Direct Transfer Quantity Today", compute="_compute_dashboard")
     direct_sale_today_amount = fields.Monetary(string="Direct Sales Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_return_today_amount = fields.Monetary(string="Direct Returns Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sales_outstanding_amount = fields.Monetary(string="Outstanding After Settlement", currency_field="currency_id", compute="_compute_dashboard")
@@ -193,15 +196,16 @@ class RoutePdaHome(models.TransientModel):
         return self.action_open_consignment_mode_screen()
 
     def action_open_product_center_screen(self):
-        title = "Products and Lots" if self.route_show_lot_ui else "Product Center"
-        return self._open_self_view("route_core.view_route_pda_product_center_form", title)
+        return self._open_self_view("route_core.view_route_pda_product_center_form", "Products and Stock")
+
+    def action_open_product_actions_screen(self):
+        return self._open_self_view("route_core.view_route_pda_sales_center_form", "Product Actions")
 
     def action_open_sales_center_screen(self):
-        self._ensure_sales_center_enabled()
-        return self._open_self_view("route_core.view_route_pda_sales_center_form", "Sales Center")
+        return self.action_open_product_actions_screen()
 
     def action_open_outlet_center_screen(self):
-        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Outlet Center")
+        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer and Outlets")
 
 
     def action_open_direct_sale_mode_screen(self):
@@ -228,7 +232,7 @@ class RoutePdaHome(models.TransientModel):
     def action_open_collections_snapshot_screen(self):
         return self._open_self_view(
             "route_core.view_route_pda_collections_snapshot_form",
-            "Collections Snapshot",
+            "Daily Summary",
             extra_context={"collections_snapshot_origin": "snapshot_center"},
         )
 
@@ -238,7 +242,7 @@ class RoutePdaHome(models.TransientModel):
     def action_open_collections_snapshot_from_collections_center(self):
         return self._open_self_view(
             "route_core.view_route_pda_collections_snapshot_form",
-            "Collections Snapshot",
+            "Daily Summary",
             extra_context={"collections_snapshot_origin": "collections_center"},
         )
 
@@ -488,6 +492,7 @@ class RoutePdaHome(models.TransientModel):
                 ("return_date", "=", today),
                 ("state", "=", "done"),
             ])
+            today_direct_transfers = rec._get_workspace_direct_transfers(start_dt=start_dt, end_dt=end_dt)
             open_direct_sales_visits = today_visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == "direct_sales" and v.state != "done")
 
             vehicle = rec._get_current_vehicle()
@@ -529,6 +534,11 @@ class RoutePdaHome(models.TransientModel):
             rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
+            rec.direct_transfer_today_count = len(today_direct_transfers)
+            rec.direct_transfer_today_qty = sum(
+                (getattr(move, "product_uom_qty", 0.0) or getattr(move, "quantity", 0.0) or 0.0)
+                for move in today_direct_transfers.mapped("move_ids_without_package")
+            ) if today_direct_transfers else 0.0
             rec.direct_sale_today_amount = sum(today_direct_orders.mapped("amount_total")) if today_direct_orders else 0.0
             rec.direct_return_today_amount = sum(today_direct_returns.mapped("amount_total")) if today_direct_returns else 0.0
             rec.direct_sales_outstanding_amount = sum(open_direct_sales_visits.mapped("direct_stop_settlement_remaining_amount")) if open_direct_sales_visits else 0.0
@@ -869,21 +879,154 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_products(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_route_pda_products", name="All Products and Lots" if self.route_show_lot_ui else "All Products")
+        return self._prepare_action("route_core.action_route_pda_products", name="All Products")
 
     def action_open_vehicle_products(self):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
-        return self._open_quants_by_location(location, "Vehicle Products and Lots" if self.route_show_lot_ui else "Vehicle Products")
+        return self._open_quants_by_location(location, "Vehicle Products Stock")
 
     def action_open_main_warehouse_products(self):
         self.ensure_one()
         location = self._get_main_warehouse_location()
-        title = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
+        title = "Main Warehouse Products Stock"
         if location:
-            prefix = "Warehouse Products and Lots" if self.route_show_lot_ui else "Main Warehouse Products"
-            title = f"{prefix} - {location.display_name}"
+            title = f"Main Warehouse Products Stock - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
+    def _workspace_direct_transfer_origin_prefix(self):
+        self.ensure_one()
+        return "Route Workspace / Direct Transfer"
+
+    def _get_workspace_direct_transfers(self, start_dt=None, end_dt=None):
+        self.ensure_one()
+        domain = [
+            ("company_id", "=", self.env.company.id),
+            ("picking_type_id.code", "=", "internal"),
+            ("origin", "ilike", self._workspace_direct_transfer_origin_prefix()),
+            ("create_uid", "=", self.env.user.id),
+            ("state", "!=", "cancel"),
+        ]
+        if start_dt:
+            domain.append(("create_date", ">=", start_dt))
+        if end_dt:
+            domain.append(("create_date", "<", end_dt))
+        return self.env["stock.picking"].search(domain, order="create_date desc, id desc")
+
+    def _get_workspace_internal_picking_type(self, source_location=False):
+        self.ensure_one()
+        picking_type_model = self.env["stock.picking.type"]
+        warehouse_model = self.env["stock.warehouse"]
+        warehouse = warehouse_model.browse()
+        if source_location:
+            warehouse = warehouse_model.search([
+                ("lot_stock_id", "=", source_location.id),
+                ("company_id", "in", [False, self.env.company.id]),
+            ], order="company_id desc, id asc", limit=1)
+        if warehouse and getattr(warehouse, "int_type_id", False):
+            return warehouse.int_type_id
+        return picking_type_model.search([
+            ("code", "=", "internal"),
+            "|",
+            ("company_id", "=", self.env.company.id),
+            ("company_id", "=", False),
+        ], order="company_id desc, sequence asc, id asc", limit=1)
+
+    def action_open_consignment_outlet_stock(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_outlet_stock_balance",
+            name="Consignment Outlets Stock",
+            domain=[("outlet_id.outlet_operation_mode", "=", "consignment"), ("qty", ">", 0)],
+            context={"group_by": "outlet_id", "search_default_filter_has_qty": 1},
+        )
+
+    def action_open_direct_sale_customers(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_outlet",
+            name="Direct Sale Customers",
+            domain=[("outlet_operation_mode", "=", "direct_sale"), ("active", "=", True)],
+            context={"group_by": "partner_id"},
+        )
+
+    def action_open_consignment_customers(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_outlet",
+            name="Consignment Customers",
+            domain=[("outlet_operation_mode", "=", "consignment"), ("active", "=", True)],
+            context={"group_by": "partner_id"},
+        )
+
+    def action_open_all_outlets(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_outlet",
+            name="All Outlets",
+            domain=[("active", "=", True)],
+        )
+
+    def action_create_direct_transfer(self):
+        self.ensure_one()
+        vehicle = self._get_current_vehicle()
+        vehicle_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        warehouse_location = self._get_main_warehouse_location()
+        source_location = vehicle_location or warehouse_location
+        destination_location = warehouse_location if vehicle_location and warehouse_location and warehouse_location != vehicle_location else False
+        if not source_location and not destination_location:
+            raise UserError(_("No internal stock location was found to start a direct transfer."))
+
+        picking_type = self._get_workspace_internal_picking_type(source_location=source_location or warehouse_location)
+        if not picking_type:
+            raise UserError(_("No internal transfer operation type was found for Product Actions."))
+
+        context = {
+            "default_picking_type_id": picking_type.id,
+            "default_origin": self._workspace_direct_transfer_origin_prefix(),
+            "default_move_type": "direct",
+            "default_company_id": self.env.company.id,
+        }
+        if source_location:
+            context["default_location_id"] = source_location.id
+        if destination_location and destination_location != source_location:
+            context["default_location_dest_id"] = destination_location.id
+
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        action.update({
+            "name": "Create Direct Transfer",
+            "res_model": "stock.picking",
+            "view_mode": "form",
+            "views": [(form_view.id, "form")] if form_view else [(False, "form")],
+            "target": "current",
+            "context": context,
+        })
+        return action
+
+    def action_open_previous_direct_sale_orders(self):
+        self.ensure_one()
+        action = self.action_open_direct_sale_orders()
+        action["name"] = "Previous Direct Sale Orders"
+        return action
+
+    def action_open_previous_direct_return_orders(self):
+        self.ensure_one()
+        action = self.action_open_direct_sale_returns()
+        action["name"] = "Previous Direct Return Orders"
+        return action
+
+    def action_open_previous_direct_transfer_orders(self):
+        self.ensure_one()
+        transfers = self._get_workspace_direct_transfers()
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action.update({
+            "name": "Previous Direct Transfer Orders",
+            "domain": [("id", "in", transfers.ids)],
+            "context": {"create": 0, "delete": 0},
+        })
+        return action
+
 
 
