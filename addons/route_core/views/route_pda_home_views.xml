@@ -12,12 +12,11 @@
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="route_show_sales_center" invisible="1"/>
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_direct_return_tools" invisible="1"/>
 <field name="route_show_lot_ui" invisible="1"/>
+<field name="route_workspace_show_vehicle_closing" invisible="1"/>
 <div class="route_pda_home_header route_pda_home_header_compact">
 <h1 class="route_pda_home_title">Route Workspace</h1>
 <div class="route_pda_home_subtitle_text route_pda_home_subtitle_compact">
@@ -39,14 +38,14 @@
 <i class="fa fa-play-circle route_pda_app_icon"/>
 <span class="route_pda_app_label">Current Visit</span>
 </button>
-<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_app_btn route_pda_app_btn_info">
+<button type="object" name="action_open_my_vehicle_closing" class="btn route_pda_app_btn route_pda_app_btn_info" invisible="route_workspace_show_vehicle_closing == False">
 <i class="fa fa-truck route_pda_app_icon"/>
 <span class="route_pda_app_label">Vehicle Closing</span>
 </button>
 <button type="object" name="action_open_visit_collections_center_screen" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-credit-card route_pda_app_icon"/>
 <span class="route_pda_app_label">Visit Collections</span>
-<span class="route_pda_app_hint">Cash in Hand</span>
+<span class="route_pda_app_hint">Cash In Hand</span>
 <span class="route_pda_app_hint_value route_pda_app_hint_money">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
@@ -55,15 +54,18 @@
 </div>
 <div class="route_pda_group route_pda_group_shared_centers">
 <div class="route_pda_group_title">Shared Centers</div>
-<div class="route_pda_apps_grid route_pda_apps_grid_2">
+<div class="route_pda_apps_grid route_pda_apps_grid_3">
 <button type="object" name="action_open_product_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == True">Product Center</span>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == False">Products and Lots</span>
+<span class="route_pda_app_label">Products and Stock</span>
 </button>
 <button type="object" name="action_open_outlet_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-building route_pda_app_icon"/>
-<span class="route_pda_app_label">Outlet Center</span>
+<span class="route_pda_app_label">Customer and Outlets</span>
+</button>
+<button type="object" name="action_open_product_actions_screen" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-exchange route_pda_app_icon"/>
+<span class="route_pda_app_label">Product Actions</span>
 </button>
 </div>
 </div>
@@ -78,9 +80,7 @@
 <button type="object" name="action_open_consignment_mode_screen" class="btn route_pda_app_btn route_pda_app_btn_snapshot route_pda_mode_btn" invisible="route_show_consignment_tools == False">
 <i class="fa fa-cubes route_pda_app_icon"/>
 <span class="route_pda_app_label">Consignment</span>
-<span class="route_pda_app_hint" invisible="route_show_lot_ui == True">Open consignment tools</span>
-<span class="route_pda_app_hint" invisible="route_enable_lot_serial_tracking == False and route_enable_expiry_tracking == False">Open stock, lot and expiry tools</span>
-<span class="route_pda_app_hint" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == True">Open stock and lot tools</span>
+<span class="route_pda_app_hint">Open consignment tools</span>
 </button>
 </div>
 </div>
@@ -109,7 +109,7 @@
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_sales_center_screen" class="btn route_pda_app_btn route_pda_app_btn_sales">
 <i class="fa fa-line-chart route_pda_app_icon"/>
-<span class="route_pda_app_label">Sales Center</span>
+<span class="route_pda_app_label">Product Actions</span>
 </button>
 <button type="object" name="action_open_direct_sale_outlets" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
 <i class="fa fa-building route_pda_app_icon"/>
@@ -245,33 +245,32 @@
 <field name="name">route.pda.home.product.center.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Product Center" create="0" edit="0" delete="0">
+<form string="Products and Stock" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
+<field name="route_show_consignment_tools" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
 <span>Back to Route Workspace</span>
 </button>
-<h2 class="route_pda_detail_title" invisible="route_show_lot_ui == True">Product Center</h2>
-<h2 class="route_pda_detail_title" invisible="route_show_lot_ui == False">Products and Lots</h2>
+<h2 class="route_pda_detail_title">Products and Stock</h2>
 </div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_vehicle_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-truck route_pda_app_icon"/>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == True">Vehicle Products</span>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == False">Vehicle Products and Lots</span>
+<span class="route_pda_app_label">Vehicle Products Stock</span>
 </button>
 <button type="object" name="action_open_main_warehouse_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-home route_pda_app_icon"/>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == True">Main Warehouse Products</span>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == False">Warehouse Products and Lots</span>
+<span class="route_pda_app_label">Main Warehouse Products Stock</span>
 </button>
 <button type="object" name="action_open_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == True">All Products</span>
-<span class="route_pda_app_label" invisible="route_show_lot_ui == False">All Products and Lots</span>
+<span class="route_pda_app_label">All Products</span>
+</button>
+<button type="object" name="action_open_consignment_outlet_stock" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_consignment_tools == False">
+<i class="fa fa-cubes route_pda_app_icon"/>
+<span class="route_pda_app_label">Consignment Outlets Stock</span>
 </button>
 </div>
 </sheet>
@@ -282,65 +281,81 @@
 <field name="name">route.pda.home.sales.center.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Sales Center" create="0" edit="0" delete="0">
+<form string="Product Actions" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_enable_direct_sale" invisible="1"/>
 <field name="route_enable_direct_return" invisible="1"/>
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_direct_return_tools" invisible="1"/>
-<field name="route_show_lot_ui" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
 <span>Back to Route Workspace</span>
 </button>
-<h2 class="route_pda_detail_title">Sales Center</h2>
+<h2 class="route_pda_detail_title">Product Actions</h2>
 </div>
-<group string="Today Sales Snapshot" col="4">
-<group>
-<field name="direct_sale_order_today_count" readonly="1"/>
-<field name="direct_return_today_count" readonly="1"/>
-</group>
-<group>
-<field name="direct_sale_today_amount" readonly="1"/>
-<field name="direct_return_today_amount" readonly="1"/>
-</group>
-<group>
-<field name="direct_sale_cash_today_amount" readonly="1"/>
-<field name="direct_sale_bank_today_amount" readonly="1"/>
-<field name="direct_sale_pos_today_amount" readonly="1"/>
-</group>
-<group>
-<field name="direct_sales_outstanding_amount" readonly="1"/>
-<field name="direct_sale_deferred_today_amount" readonly="1"/>
-<field name="direct_sale_open_promise_due_today_amount" readonly="1"/>
-<field name="direct_sale_open_promise_due_today_count" readonly="1"/>
-</group>
-</group>
+<div class="route_pda_card_grid route_pda_card_grid_3">
+<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
+<div class="route_pda_info_label">Direct Sale Orders Today</div>
+<div class="route_pda_info_value">
+<field name="direct_sale_order_today_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
+<div class="route_pda_info_label">Direct Sales Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="direct_sale_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Direct Transfers Today</div>
+<div class="route_pda_info_value">
+<field name="direct_transfer_today_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Direct Transfer Qty Today</div>
+<div class="route_pda_info_value">
+<field name="direct_transfer_today_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_direct_return_tools == False">
+<div class="route_pda_info_label">Direct Returns Today</div>
+<div class="route_pda_info_value">
+<field name="direct_return_today_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="route_show_direct_return_tools == False">
+<div class="route_pda_info_label">Direct Returns Amount Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="direct_return_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
-<button type="object" name="action_open_direct_sale_outlets" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-building route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Outlets</span>
-</button>
 <button type="object" name="action_create_direct_sale" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
 <i class="fa fa-plus-square route_pda_app_icon"/>
-<span class="route_pda_app_label">Create Direct Sale</span>
+<span class="route_pda_app_label">Create Direct Sale Order</span>
 </button>
-<button type="object" name="action_open_direct_sale_orders" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-file-text-o route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Orders</span>
+<button type="object" name="action_create_direct_transfer" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-exchange route_pda_app_icon"/>
+<span class="route_pda_app_label">Create Direct Transfer Order</span>
 </button>
 <button type="object" name="action_create_direct_return" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_return_tools == False">
 <i class="fa fa-reply route_pda_app_icon"/>
-<span class="route_pda_app_label">Create Direct Return</span>
+<span class="route_pda_app_label">Create Direct Return Order</span>
 </button>
-<button type="object" name="action_open_direct_sale_returns" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_return_tools == False">
+<button type="object" name="action_open_previous_direct_sale_orders" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
+<i class="fa fa-file-text-o route_pda_app_icon"/>
+<span class="route_pda_app_label">Previous Direct Sale Orders</span>
+</button>
+<button type="object" name="action_open_previous_direct_transfer_orders" class="btn route_pda_app_btn route_pda_app_btn_sales">
+<i class="fa fa-truck route_pda_app_icon"/>
+<span class="route_pda_app_label">Previous Direct Transfer Orders</span>
+</button>
+<button type="object" name="action_open_previous_direct_return_orders" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_return_tools == False">
 <i class="fa fa-undo route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Returns</span>
-</button>
-<button type="object" name="action_open_direct_sale_payments" class="btn route_pda_app_btn route_pda_app_btn_sales" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-credit-card route_pda_app_icon"/>
-<span class="route_pda_app_label">Direct Sale Collections</span>
+<span class="route_pda_app_label">Previous Direct Return Orders</span>
 </button>
 </div>
 </sheet>
@@ -351,23 +366,29 @@
 <field name="name">route.pda.home.outlet.center.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Outlet Center" create="0" edit="0" delete="0">
+<form string="Customer and Outlets" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<field name="route_show_direct_sale_tools" invisible="1"/>
+<field name="route_show_consignment_tools" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
 <span>Back to Route Workspace</span>
 </button>
-<h2 class="route_pda_detail_title">Outlet Center</h2>
+<h2 class="route_pda_detail_title">Customer and Outlets</h2>
 </div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
-<button type="object" name="action_open_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog">
-<i class="fa fa-building route_pda_app_icon"/>
-<span class="route_pda_app_label">Outlets</span>
+<button type="object" name="action_open_direct_sale_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_direct_sale_tools == False">
+<i class="fa fa-users route_pda_app_icon"/>
+<span class="route_pda_app_label">Direct Sale Customers</span>
 </button>
-<button type="object" name="action_open_outlet_balances" class="btn route_pda_app_btn route_pda_app_btn_catalog">
-<i class="fa fa-cubes route_pda_app_icon"/>
-<span class="route_pda_app_label">Outlet Stock</span>
+<button type="object" name="action_open_consignment_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_consignment_tools == False">
+<i class="fa fa-users route_pda_app_icon"/>
+<span class="route_pda_app_label">Consignment Customers</span>
+</button>
+<button type="object" name="action_open_all_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-building route_pda_app_icon"/>
+<span class="route_pda_app_label">All Outlets</span>
 </button>
 </div>
 </sheet>
@@ -574,8 +595,8 @@
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
 <button type="object" name="action_open_collections_snapshot_from_collections_center" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-line-chart route_pda_app_icon"/>
-<span class="route_pda_app_label">Collections Snapshot</span>
-<span class="route_pda_app_hint">Cash in Hand</span>
+<span class="route_pda_app_label">Daily Summary</span>
+<span class="route_pda_app_hint">Cash In Hand</span>
 <span class="route_pda_app_hint_value route_pda_app_hint_money">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
@@ -583,7 +604,7 @@
 <button type="object" name="action_open_visit_collections" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-credit-card route_pda_app_icon"/>
 <span class="route_pda_app_label">All Collections</span>
-<span class="route_pda_app_hint">Open all direct and consignment collections</span>
+<span class="route_pda_app_hint">Open all collection documents</span>
 </button>
 </div>
 </sheet>
@@ -594,7 +615,7 @@
 <field name="name">route.pda.home.collections.snapshot.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Collections Snapshot" create="0" edit="0" delete="0">
+<form string="Daily Summary" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_enable_direct_sale" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
@@ -605,7 +626,7 @@
 <i class="fa fa-arrow-left"/>
 <span>Back</span>
 </button>
-<h2 class="route_pda_detail_title">Collections Snapshot</h2>
+<h2 class="route_pda_detail_title">Daily Summary</h2>
 <button type="object" name="action_open_current_visit_statement_of_account" class="btn route_pda_back_btn">
 <i class="fa fa-file-text-o"/>
 <span>Statement of Account</span>
@@ -625,7 +646,7 @@
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">POS</div>
+<div class="route_pda_info_label">POS Collection</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
@@ -643,19 +664,19 @@
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_consignment_tools == False">
-<div class="route_pda_info_label">Consignment Collections Today</div>
+<div class="route_pda_info_label">Consignment Sale Order Collections</div>
 <div class="route_pda_info_value">
 <field name="visit_collection_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Visit Settlements Today</div>
+<div class="route_pda_info_label">Direct Visit Collections Today</div>
 <div class="route_pda_info_value">
 <field name="direct_stop_payment_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sale Order Collections Today</div>
+<div class="route_pda_info_label">Direct Sale Order Collections</div>
 <div class="route_pda_info_value">
 <field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
 </div>
