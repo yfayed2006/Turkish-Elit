@@ -73,6 +73,14 @@ class ResCompany(models.Model):
         help="Disabled = supervisors skip the loading proposal and vehicle transfer can be handled manually. Optional = loading proposal is available but does not block route execution. Required = visits cannot start until an approved loading proposal exists.",
     )
 
+    route_workspace_show_vehicle_closing = fields.Boolean(
+        string="Show Vehicle Closing in Route Workspace",
+        compute="_compute_route_workspace_show_vehicle_closing",
+        inverse="_inverse_route_workspace_show_vehicle_closing",
+        readonly=False,
+        help="If enabled, the Vehicle Closing button is visible to the salesperson in Route Workspace. Disable it when vehicle closing is handled by warehouse or supervisor users.",
+    )
+
     def _route_feature_param_key(self, feature_name):
         self.ensure_one()
         return f"route_core.{feature_name}.{self.id}"
@@ -181,6 +189,18 @@ class ResCompany(models.Model):
             if value not in ("disabled", "optional", "required"):
                 value = "optional"
             icp.set_param(company._route_feature_param_key("vehicle_loading_workflow"), value)
+
+    def _compute_route_workspace_show_vehicle_closing(self):
+        for company in self:
+            company.route_workspace_show_vehicle_closing = company._route_param_is_enabled(
+                "workspace_show_vehicle_closing", default="1"
+            )
+
+    def _inverse_route_workspace_show_vehicle_closing(self):
+        for company in self:
+            company._set_route_param_enabled(
+                "workspace_show_vehicle_closing", bool(company.route_workspace_show_vehicle_closing)
+            )
 
     def route_vehicle_loading_is_enabled(self):
         self.ensure_one()
