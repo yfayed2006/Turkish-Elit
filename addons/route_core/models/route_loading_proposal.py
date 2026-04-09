@@ -477,6 +477,7 @@ class RouteLoadingProposal(models.Model):
         if not source_location or not products:
             return qty_map, earliest_expiry_map, lot_names_map
 
+        today = fields.Date.context_today(self)
         quants = self.env["stock.quant"].search(
             [
                 ("location_id", "child_of", source_location.id),
@@ -489,13 +490,17 @@ class RouteLoadingProposal(models.Model):
             available_qty = self._get_quant_available_qty(quant)
             if available_qty <= 0 or not quant.product_id:
                 continue
+
+            lot = quant.lot_id
+            lot_date = _lot_priority_date(lot) if lot else False
+            if lot_date and lot_date < today:
+                continue
+
             product_id = quant.product_id.id
             qty_map[product_id] += available_qty
-            lot = quant.lot_id
             if not lot:
                 continue
             lot_names_map[product_id].append((self._lot_sort_key(lot), lot.name or ""))
-            lot_date = _lot_priority_date(lot)
             if lot_date and (
                 not earliest_expiry_map.get(product_id)
                 or lot_date < earliest_expiry_map[product_id]
@@ -756,8 +761,34 @@ class RouteLoadingProposal(models.Model):
         if self.picking_id and self.picking_id.state != "cancel":
             return self.action_view_transfer()
 
-        picking = self.env["stock.picking"].create(self._prepare_picking_vals())
+        effective_source = self._get_effective_source_location()
+        source_qty_map, _earliest_map, _lot_names_map = self._get_source_stock_snapshot_data(
+            effective_source,
+            approved_lines.mapped("product_id"),
+        )
+
+        allocatable_lines = self.env["route.loading.proposal.line"]
         for line in approved_lines:
+            current_available = _qty_down(line.product_id, source_qty_map.get(line.product_id.id, 0.0))
+            desired_qty = _qty_up(line.product_id, line.approved_qty)
+            allocatable_qty = _qty_up(line.product_id, min(desired_qty, current_available))
+            if abs((line.approved_qty or 0.0) - allocatable_qty) > 1e-9:
+                line.write({"approved_qty": allocatable_qty})
+            if allocatable_qty > 0:
+                allocatable_lines |= line
+
+        if not allocatable_lines:
+            self.write(
+                {
+                    "state": "approved",
+                    "approval_datetime": fields.Datetime.now(),
+                    "picking_id": False,
+                }
+            )
+            return self._open_form_action()
+
+        picking = self.env["stock.picking"].create(self._prepare_picking_vals())
+        for line in allocatable_lines:
             self.env["stock.move"].create(self._prepare_move_vals(picking, line))
 
         if picking.state == "draft":
