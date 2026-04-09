@@ -199,6 +199,11 @@ class RouteLoadingProposal(models.Model):
         compute="_compute_totals",
         store=False,
     )
+    total_uncovered_qty = fields.Float(
+        string="Uncovered Qty",
+        compute="_compute_totals",
+        store=False,
+    )
     total_required_value = fields.Monetary(
         string="Required Value",
         currency_field="currency_id",
@@ -233,6 +238,7 @@ class RouteLoadingProposal(models.Model):
         "line_ids.approved_qty",
         "line_ids.required_value",
         "line_ids.approved_value",
+        "source_location_id",
     )
     def _compute_totals(self):
         for rec in self:
@@ -243,6 +249,7 @@ class RouteLoadingProposal(models.Model):
             rec.total_vehicle_balance_qty = sum(rec.line_ids.mapped("vehicle_available_qty"))
             rec.total_suggested_qty = sum(rec.line_ids.mapped("suggested_load_qty"))
             rec.total_approved_qty = sum(rec.line_ids.mapped("approved_qty"))
+            rec.total_uncovered_qty = sum(rec.line_ids.mapped("uncovered_qty"))
             rec.total_required_value = sum(rec.line_ids.mapped("required_value"))
             rec.total_approved_value = sum(rec.line_ids.mapped("approved_value"))
 
@@ -463,6 +470,40 @@ class RouteLoadingProposal(models.Model):
         available = (quant.quantity or 0.0) - reserved
         return max(available, 0.0)
 
+    def _get_source_stock_snapshot_data(self, source_location, products):
+        qty_map = defaultdict(float)
+        lot_names_map = defaultdict(list)
+        earliest_expiry_map = {}
+        if not source_location or not products:
+            return qty_map, earliest_expiry_map, lot_names_map
+
+        quants = self.env["stock.quant"].search(
+            [
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "in", products.ids),
+                ("quantity", ">", 0),
+            ]
+        )
+
+        for quant in quants:
+            available_qty = self._get_quant_available_qty(quant)
+            if available_qty <= 0 or not quant.product_id:
+                continue
+            product_id = quant.product_id.id
+            qty_map[product_id] += available_qty
+            lot = quant.lot_id
+            if not lot:
+                continue
+            lot_names_map[product_id].append((self._lot_sort_key(lot), lot.name or ""))
+            lot_date = _lot_priority_date(lot)
+            if lot_date and (
+                not earliest_expiry_map.get(product_id)
+                or lot_date < earliest_expiry_map[product_id]
+            ):
+                earliest_expiry_map[product_id] = lot_date
+
+        return qty_map, earliest_expiry_map, lot_names_map
+
     def _lot_sort_key(self, lot):
         lot_date = _lot_priority_date(lot)
         today = fields.Date.context_today(self)
@@ -621,6 +662,31 @@ class RouteLoadingProposal(models.Model):
                 )
             if rec.source_location_id != effective_source:
                 rec.source_location_id = effective_source.id
+
+            source_qty_map, _earliest_map, _lot_names_map = rec._get_source_stock_snapshot_data(
+                effective_source,
+                rec.line_ids.mapped("product_id"),
+            )
+            shortage_messages = []
+            for line in rec.line_ids.filtered(lambda l: (l.approved_qty or 0.0) > 0 and l.product_id):
+                available_qty = _qty_down(line.product_id, source_qty_map.get(line.product_id.id, 0.0))
+                approved_qty = _qty_up(line.product_id, line.approved_qty)
+                if approved_qty > available_qty + 1e-9:
+                    shortage_messages.append(
+                        _("%(product)s: approved %(approved).2f, source available %(available).2f")
+                        % {
+                            "product": line.product_id.display_name,
+                            "approved": approved_qty,
+                            "available": available_qty,
+                        }
+                    )
+            if shortage_messages:
+                raise UserError(
+                    _(
+                        "Some approved quantities exceed the currently available source balance. Adjust the proposal first:\n- %(details)s"
+                    )
+                    % {"details": "\n- ".join(shortage_messages)}
+                )
 
     def _prepare_picking_vals(self):
         self.ensure_one()
@@ -856,6 +922,11 @@ class RouteLoadingProposalLine(models.Model):
         compute="_compute_source_stock_snapshot",
         store=False,
     )
+    uncovered_qty = fields.Float(
+        string="Uncovered Qty",
+        compute="_compute_uncovered_qty",
+        store=False,
+    )
     suggested_load_qty = fields.Float(string="Suggested Load Qty", default=0.0)
     approved_qty = fields.Float(string="Approved Qty", default=0.0)
     total_required_qty = fields.Float(
@@ -902,6 +973,13 @@ class RouteLoadingProposalLine(models.Model):
         for rec in self:
             rec.total_required_qty = (rec.current_outlet_need_qty or 0.0) + (rec.open_shortage_qty or 0.0)
 
+    @api.depends("total_required_qty", "vehicle_available_qty", "source_available_qty")
+    def _compute_uncovered_qty(self):
+        for rec in self:
+            gap_qty = max((rec.total_required_qty or 0.0) - (rec.vehicle_available_qty or 0.0), 0.0)
+            cover_qty = min(gap_qty, rec.source_available_qty or 0.0)
+            rec.uncovered_qty = _qty_up(rec.product_id, max(gap_qty - cover_qty, 0.0))
+
     @api.depends("total_required_qty", "suggested_load_qty", "approved_qty", "unit_price")
     def _compute_values(self):
         for rec in self:
@@ -921,38 +999,10 @@ class RouteLoadingProposalLine(models.Model):
             if effective_source and line.product_id:
                 grouped_lines[effective_source.id] |= line
 
-        Quant = self.env["stock.quant"]
         for _location_id, lines in grouped_lines.items():
             location = lines[:1].proposal_id._get_effective_source_location()
             products = lines.mapped("product_id")
-            quants = Quant.search(
-                [
-                    ("location_id", "child_of", location.id),
-                    ("product_id", "in", products.ids),
-                    ("quantity", ">", 0),
-                ]
-            )
-
-            qty_map = defaultdict(float)
-            lot_names_map = defaultdict(list)
-            earliest_expiry_map = {}
-
-            for quant in quants:
-                available_qty = lines[:1].proposal_id._get_quant_available_qty(quant)
-                if available_qty <= 0 or not quant.product_id:
-                    continue
-                product_id = quant.product_id.id
-                qty_map[product_id] += available_qty
-                lot = quant.lot_id
-                if not lot:
-                    continue
-                lot_names_map[product_id].append((lines[:1].proposal_id._lot_sort_key(lot), lot.name or ""))
-                lot_date = _lot_priority_date(lot)
-                if lot_date and (
-                    not earliest_expiry_map.get(product_id)
-                    or lot_date < earliest_expiry_map[product_id]
-                ):
-                    earliest_expiry_map[product_id] = lot_date
+            qty_map, earliest_expiry_map, lot_names_map = lines[:1].proposal_id._get_source_stock_snapshot_data(location, products)
 
             for line in lines:
                 product_id = line.product_id.id
@@ -1417,6 +1467,8 @@ class RoutePlan(models.Model):
 
         products = self.env["product.product"].browse(list(aggregate.keys())).exists()
         product_map = {product.id: product for product in products}
+        effective_source = self._get_effective_source_location() or self._get_default_source_location()
+        source_qty_map, _earliest_expiry_map, _lot_names_map = self._get_source_stock_snapshot_data(effective_source, products)
         line_vals = []
 
         for product_id, bucket in aggregate.items():
@@ -1427,7 +1479,10 @@ class RoutePlan(models.Model):
             total_required_qty = (bucket["current_outlet_need_qty"] or 0.0) + (bucket["open_shortage_qty"] or 0.0)
             vehicle_available_qty = _qty_down(product, vehicle_qty_map.get(product_id, 0.0))
             total_required_qty = _qty_up(product, total_required_qty)
-            suggested_load_qty = _qty_up(product, max(total_required_qty - vehicle_available_qty, 0.0))
+            gap_qty = _qty_up(product, max(total_required_qty - vehicle_available_qty, 0.0))
+            source_available_qty = _qty_down(product, source_qty_map.get(product_id, 0.0))
+            suggested_load_qty = _qty_up(product, min(gap_qty, source_available_qty))
+            uncovered_qty = _qty_up(product, max(gap_qty - suggested_load_qty, 0.0))
             outlet_names = sorted(bucket["outlet_names"])
             unit_price = product_price_map.get(product_id) or product.lst_price or 0.0
 
@@ -1440,6 +1495,8 @@ class RoutePlan(models.Model):
                 _("Current outlet need: %(qty).2f") % {"qty": bucket["current_outlet_need_qty"]},
                 _("Open shortages: %(qty).2f") % {"qty": bucket["open_shortage_qty"]},
                 _("Vehicle balance: %(qty).2f") % {"qty": vehicle_available_qty},
+                _("Source balance: %(qty).2f") % {"qty": source_available_qty},
+                _("Uncovered qty after source check: %(qty).2f") % {"qty": uncovered_qty},
                 _("Movement speed: %(label)s") % {"label": movement_profile_map.get(product_id) or _("No movement history")},
             ]
 
@@ -1534,8 +1591,8 @@ class RoutePlan(models.Model):
         line_vals = self._build_loading_proposal_line_vals()
 
         note = _(
-            "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent consignment sales history, recent direct-sale order history, product movement speed, and current vehicle balance. "
-            "Suggested load qty = max((current outlet need + open shortages) - vehicle balance, 0). Direct-sale outlets use recent direct-sale demand as the need baseline, while consignment outlets use outlet balance versus recent sold visits. "
+            "Generated from the finalized daily route plan using planned visits, open shortages, current outlet stock balances, recent consignment sales history, recent direct-sale order history, product movement speed, current vehicle balance, and the current source warehouse balance. "
+            "Suggested load qty = min(max((current outlet need + open shortages) - vehicle balance, 0), source balance). Direct-sale outlets use recent direct-sale demand as the need baseline, while consignment outlets use outlet balance versus recent sold visits. "
             "Supervisor-selected source location: %(source)s. "
             "When the transfer is created, older available lots are allocated first."
         ) % {"source": source_location.display_name}
