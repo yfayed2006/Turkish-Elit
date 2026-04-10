@@ -106,7 +106,9 @@
 <field name="route_area_name" invisible="1"/>
 <field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}" required="outlet_operation_mode == 'direct_sale'"/>
 <field name="outlet_operation_mode" widget="radio"/>
-<field name="stock_location_id" invisible="outlet_operation_mode != 'consignment'" domain="[('usage', '=', 'internal')]" context="{'default_name': name, 'default_usage': 'internal', 'default_company_id': company_id, 'default_active': True}" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="consignment_stock_location_mode" invisible="outlet_operation_mode != 'consignment'"/>
+<field name="stock_location_id" invisible="outlet_operation_mode != 'consignment' or consignment_stock_location_mode != 'select_existing'" domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="auto_stock_location_preview" readonly="1" invisible="outlet_operation_mode != 'consignment' or consignment_stock_location_mode != 'auto_create'"/>
 <field name="direct_sale_pricelist_id" invisible="outlet_operation_mode != 'direct_sale'" options="{'no_open': False}"/>
 <field name="active"/>
 </group>
