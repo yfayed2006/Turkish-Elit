@@ -344,11 +344,26 @@ class RoutePdaHome(models.TransientModel):
             return "direct_stop"
         return "consignment_visit"
 
+    def _get_current_route_plan(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        vehicle = self._get_current_vehicle()
+        domain = [("company_id", "=", self.env.company.id), ("user_id", "=", self.env.user.id), ("date", "=", today)]
+        if vehicle:
+            domain.append(("vehicle_id", "=", vehicle.id))
+        return self.env["route.plan"].search(domain, order="planning_finalized desc, id desc", limit=1)
+
     def _get_main_warehouse_location(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
         vehicle = self._get_current_vehicle()
         Proposal = self.env["route.loading.proposal"].sudo()
+
+        plan = self._get_current_route_plan()
+        if plan and hasattr(plan, "_get_effective_source_location"):
+            plan_location = plan._get_effective_source_location()
+            if plan_location:
+                return plan_location
 
         base_domain = [
             ("company_id", "=", self.env.company.id),
@@ -357,7 +372,6 @@ class RoutePdaHome(models.TransientModel):
         if vehicle:
             base_domain.append(("vehicle_id", "=", vehicle.id))
 
-        # First priority: the actual approved transfer source used to load the vehicle.
         approved_today = Proposal.search(
             base_domain + [("plan_date", "=", today), ("state", "=", "approved")],
             order="approval_datetime desc, id desc",
@@ -370,7 +384,6 @@ class RoutePdaHome(models.TransientModel):
             if approved_today.source_location_id:
                 return approved_today.source_location_id
 
-        # Second priority: any latest approved proposal for this vehicle/salesperson.
         approved_any = Proposal.search(
             base_domain + [("state", "=", "approved")],
             order="approval_datetime desc, id desc",
@@ -383,7 +396,6 @@ class RoutePdaHome(models.TransientModel):
             if approved_any.source_location_id:
                 return approved_any.source_location_id
 
-        # Third priority: latest draft for today if supervisor prepared a proposal but has not approved yet.
         draft_today = Proposal.search(
             base_domain + [("plan_date", "=", today), ("state", "=", "draft")],
             order="id desc",
@@ -391,6 +403,10 @@ class RoutePdaHome(models.TransientModel):
         )
         if draft_today and draft_today.source_location_id:
             return draft_today.source_location_id
+
+        default_warehouse = self.env.company.route_default_source_warehouse_id
+        if default_warehouse and getattr(default_warehouse, "lot_stock_id", False):
+            return default_warehouse.lot_stock_id
 
         warehouse = self.env["stock.warehouse"].search(
             [("company_id", "=", self.env.company.id)],
@@ -940,7 +956,7 @@ class RoutePdaHome(models.TransientModel):
     def _prepare_outlet_workspace_action(self, *, name, domain, context=None):
         self.ensure_one()
         action = self._prepare_action(
-            "route_core.action_route_outlet_pda",
+            "route_core.action_route_outlet",
             name=name,
             domain=domain,
             context={
@@ -988,7 +1004,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_outlet_workspace_action(
             name="Consignment Customers",
             domain=[("outlet_operation_mode", "=", "consignment"), ("active", "=", True)],
-            context={"group_by": "partner_id", "route_show_barcode": True},
+            context={"group_by": "partner_id"},
         )
 
     def action_open_all_outlets(self):
@@ -996,7 +1012,6 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_outlet_workspace_action(
             name="All Outlets",
             domain=[("active", "=", True)],
-            context={"route_show_barcode": True},
         )
 
     def action_create_direct_transfer(self):
