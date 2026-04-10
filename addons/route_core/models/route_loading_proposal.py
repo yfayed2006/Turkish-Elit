@@ -436,10 +436,15 @@ class RouteLoadingProposal(models.Model):
         company = self.company_id or self.env.company
         location_model = self.env["stock.location"]
 
-        # Route Core preference: force MUS/Stock as the primary warehouse source whenever it exists.
-        preferred_location = self._get_mus_stock_location()
-        if preferred_location:
-            return preferred_location
+        plan = self.plan_id
+        if plan and hasattr(plan, "_get_effective_source_location"):
+            plan_location = plan._get_effective_source_location()
+            if plan_location:
+                return plan_location
+
+        default_warehouse = getattr(company, "route_default_source_warehouse_id", False)
+        if default_warehouse and getattr(default_warehouse, "lot_stock_id", False):
+            return default_warehouse.lot_stock_id
 
         picking_type = self._get_internal_picking_type()
         if (
@@ -1699,4 +1704,5 @@ class RoutePlan(models.Model):
                 "default_location_id": vehicle_location.id,
             },
         }
+
 
