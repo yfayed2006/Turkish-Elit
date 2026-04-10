@@ -58,6 +58,14 @@ class RouteLoadingSourceWizard(models.TransientModel):
             raise UserError(
                 _("The source warehouse location and the vehicle location cannot be the same.")
             )
+
+        warehouse = self.env["stock.warehouse"].search([
+            ("lot_stock_id", "=", self.source_location_id.id),
+            ("company_id", "in", [False, self.plan_id.company_id.id]),
+        ], order="company_id desc, id asc", limit=1)
+        if warehouse and self.plan_id.source_warehouse_id != warehouse:
+            self.plan_id.source_warehouse_id = warehouse.id
+
         proposal = self.plan_id._generate_loading_proposal_with_source(
             self.source_location_id,
             proposal=self.proposal_id,
