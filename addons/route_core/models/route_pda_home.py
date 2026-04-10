@@ -940,7 +940,7 @@ class RoutePdaHome(models.TransientModel):
     def _prepare_outlet_workspace_action(self, *, name, domain, context=None):
         self.ensure_one()
         action = self._prepare_action(
-            "route_core.action_route_outlet",
+            "route_core.action_route_outlet_pda",
             name=name,
             domain=domain,
             context={
@@ -1058,6 +1058,5 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
-
 
 
