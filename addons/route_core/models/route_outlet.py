@@ -149,6 +149,14 @@ class RouteOutlet(models.Model):
         string="Sale Orders Count",
         compute="_compute_visit_stats",
     )
+    return_order_count = fields.Integer(
+        string="Return Orders Count",
+        compute="_compute_reference_stats",
+    )
+    transfer_count = fields.Integer(
+        string="Transfers Count",
+        compute="_compute_reference_stats",
+    )
     stock_balance_count = fields.Integer(
         string="Stock Items",
         compute="_compute_stock_stats",
@@ -176,6 +184,14 @@ class RouteOutlet(models.Model):
     last_no_sale_reason = fields.Text(
         string="Last No Sale Reason",
         compute="_compute_visit_stats",
+    )
+    last_return_ref = fields.Char(
+        string="Last Return Order",
+        compute="_compute_reference_stats",
+    )
+    last_transfer_ref = fields.Char(
+        string="Last Transfer",
+        compute="_compute_reference_stats",
     )
 
     current_due_amount = fields.Monetary(
@@ -441,6 +457,20 @@ class RouteOutlet(models.Model):
         string="Deferred Payments",
         compute="_compute_payment_stats",
     )
+    open_promise_count = fields.Integer(
+        string="Open Promises",
+        compute="_compute_payment_stats",
+    )
+    total_collected_amount = fields.Monetary(
+        string="Total Collected",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
+    last_collected_amount = fields.Monetary(
+        string="Last Collected Amount",
+        currency_field="currency_id",
+        compute="_compute_payment_stats",
+    )
 
     last_payment_id = fields.Many2one(
         "route.visit.payment",
@@ -682,6 +712,56 @@ class RouteOutlet(models.Model):
             )
         return area
 
+    def _get_direct_sale_orders(self):
+        self.ensure_one()
+        return self.env["sale.order"].search([
+            ("route_outlet_id", "=", self.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("state", "!=", "cancel"),
+        ], order="date_order desc, id desc")
+
+    def _get_consignment_transfer_pickings(self):
+        self.ensure_one()
+        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
+        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
+            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
+        )
+        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
+
+    @api.depends(
+        "visit_ids.return_picking_ids",
+        "visit_ids.return_picking_ids.name",
+        "visit_ids.return_picking_ids.state",
+        "visit_ids.refill_picking_id",
+        "visit_ids.refill_picking_id.name",
+        "visit_ids.refill_picking_id.state",
+        "visit_ids.refill_picking_id.scheduled_date",
+        "visit_ids.return_picking_ids.scheduled_date",
+    )
+    def _compute_reference_stats(self):
+        direct_return_model = self.env["route.direct.return"]
+        for record in self:
+            record.return_order_count = 0
+            record.transfer_count = 0
+            record.last_return_ref = False
+            record.last_transfer_ref = False
+
+            if record.outlet_operation_mode == "direct_sale":
+                direct_returns = direct_return_model.search([
+                    ("outlet_id", "=", record.id),
+                    ("state", "!=", "cancel"),
+                ], order="return_date desc, id desc")
+                record.return_order_count = len(direct_returns)
+                record.last_return_ref = direct_returns[:1].name if direct_returns else False
+            else:
+                pickings = record._get_consignment_transfer_pickings()
+                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
+                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
+                record.return_order_count = len(return_pickings)
+                record.transfer_count = len(pickings)
+                record.last_return_ref = return_pickings[:1].name if return_pickings else False
+                record.last_transfer_ref = pickings[:1].name if pickings else False
+
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -716,6 +796,8 @@ class RouteOutlet(models.Model):
             )
 
             sale_orders = visits.mapped("sale_order_id").filtered(lambda so: so and so.state != "cancel")
+            if record.outlet_operation_mode == "direct_sale":
+                sale_orders |= record._get_direct_sale_orders()
             sale_orders = sale_orders.sorted(
                 key=lambda so: ((fields.Datetime.to_datetime(so.date_order) if so.date_order else fields.Datetime.now()), so.id),
                 reverse=True,
@@ -839,12 +921,17 @@ class RouteOutlet(models.Model):
             else:
                 record.commission_trend_status = "flat"
 
-            record.current_due_amount = sum(
-                active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0).mapped("remaining_due_amount")
-            )
-            record.unpaid_visit_count = len(
-                active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0)
-            )
+            if record.outlet_operation_mode == "direct_sale":
+                direct_sale_orders = record._get_direct_sale_orders()
+                record.current_due_amount = sum(direct_sale_orders.mapped("direct_sale_remaining_due"))
+                record.unpaid_visit_count = len(direct_sale_orders.filtered(lambda so: (so.direct_sale_remaining_due or 0.0) > 0.0))
+            else:
+                record.current_due_amount = sum(
+                    active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0).mapped("remaining_due_amount")
+                )
+                record.unpaid_visit_count = len(
+                    active_visits.filtered(lambda v: (v.remaining_due_amount or 0.0) > 0)
+                )
 
             last_no_sale_visit = next((visit for visit in visits if visit.no_sale_reason), False)
             record.last_no_sale_reason = last_no_sale_visit.no_sale_reason if last_no_sale_visit else False
@@ -882,16 +969,20 @@ class RouteOutlet(models.Model):
             confirmed_payments = payments.filtered(lambda p: p.state == "confirmed")
             last_payment = confirmed_payments[:1] if confirmed_payments else False
 
+            last_collected = confirmed_payments.filtered(lambda p: (p.amount or 0.0) > 0.0)[:1]
+            open_promises = confirmed_payments.filtered(
+                lambda p: (p.collection_type in ("defer_date", "next_visit") or (p.promise_amount or 0.0) > 0.0)
+                and (p._get_target_remaining_due(exclude_self=(p.state == "confirmed")) or 0.0) > 0.0
+            )
+
             record.payment_count = len(payments)
             record.last_payment_id = last_payment
             record.last_payment_date = last_payment.payment_date if last_payment else False
             record.last_payment_amount = last_payment.amount if last_payment else 0.0
-            record.deferred_payment_count = len(
-                confirmed_payments.filtered(
-                    lambda p: p.collection_type in ("defer_date", "next_visit")
-                    and (p._get_target_remaining_due(exclude_self=(p.state == "confirmed")) or 0.0) > 0.0
-                )
-            )
+            record.last_collected_amount = last_collected.amount if last_collected else 0.0
+            record.total_collected_amount = sum(confirmed_payments.mapped("amount"))
+            record.open_promise_count = len(open_promises)
+            record.deferred_payment_count = len(open_promises)
 
             monthly_collections = {
                 "current": 0.0,
@@ -1130,6 +1221,56 @@ class RouteOutlet(models.Model):
                 "</div>"
             )
 
+    def _get_direct_sale_orders(self):
+        self.ensure_one()
+        return self.env["sale.order"].search([
+            ("route_outlet_id", "=", self.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("state", "!=", "cancel"),
+        ], order="date_order desc, id desc")
+
+    def _get_consignment_transfer_pickings(self):
+        self.ensure_one()
+        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
+        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
+            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
+        )
+        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
+
+    @api.depends(
+        "visit_ids.return_picking_ids",
+        "visit_ids.return_picking_ids.name",
+        "visit_ids.return_picking_ids.state",
+        "visit_ids.refill_picking_id",
+        "visit_ids.refill_picking_id.name",
+        "visit_ids.refill_picking_id.state",
+        "visit_ids.refill_picking_id.scheduled_date",
+        "visit_ids.return_picking_ids.scheduled_date",
+    )
+    def _compute_reference_stats(self):
+        direct_return_model = self.env["route.direct.return"]
+        for record in self:
+            record.return_order_count = 0
+            record.transfer_count = 0
+            record.last_return_ref = False
+            record.last_transfer_ref = False
+
+            if record.outlet_operation_mode == "direct_sale":
+                direct_returns = direct_return_model.search([
+                    ("outlet_id", "=", record.id),
+                    ("state", "!=", "cancel"),
+                ], order="return_date desc, id desc")
+                record.return_order_count = len(direct_returns)
+                record.last_return_ref = direct_returns[:1].name if direct_returns else False
+            else:
+                pickings = record._get_consignment_transfer_pickings()
+                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
+                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
+                record.return_order_count = len(return_pickings)
+                record.transfer_count = len(pickings)
+                record.last_return_ref = return_pickings[:1].name if return_pickings else False
+                record.last_transfer_ref = pickings[:1].name if pickings else False
+
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -1208,6 +1349,56 @@ class RouteOutlet(models.Model):
                 "</table>"
                 "</div>"
             )
+
+    def _get_direct_sale_orders(self):
+        self.ensure_one()
+        return self.env["sale.order"].search([
+            ("route_outlet_id", "=", self.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("state", "!=", "cancel"),
+        ], order="date_order desc, id desc")
+
+    def _get_consignment_transfer_pickings(self):
+        self.ensure_one()
+        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
+        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
+            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
+        )
+        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
+
+    @api.depends(
+        "visit_ids.return_picking_ids",
+        "visit_ids.return_picking_ids.name",
+        "visit_ids.return_picking_ids.state",
+        "visit_ids.refill_picking_id",
+        "visit_ids.refill_picking_id.name",
+        "visit_ids.refill_picking_id.state",
+        "visit_ids.refill_picking_id.scheduled_date",
+        "visit_ids.return_picking_ids.scheduled_date",
+    )
+    def _compute_reference_stats(self):
+        direct_return_model = self.env["route.direct.return"]
+        for record in self:
+            record.return_order_count = 0
+            record.transfer_count = 0
+            record.last_return_ref = False
+            record.last_transfer_ref = False
+
+            if record.outlet_operation_mode == "direct_sale":
+                direct_returns = direct_return_model.search([
+                    ("outlet_id", "=", record.id),
+                    ("state", "!=", "cancel"),
+                ], order="return_date desc, id desc")
+                record.return_order_count = len(direct_returns)
+                record.last_return_ref = direct_returns[:1].name if direct_returns else False
+            else:
+                pickings = record._get_consignment_transfer_pickings()
+                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
+                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
+                record.return_order_count = len(return_pickings)
+                record.transfer_count = len(pickings)
+                record.last_return_ref = return_pickings[:1].name if return_pickings else False
+                record.last_transfer_ref = pickings[:1].name if pickings else False
 
     @api.depends(
         "visit_ids",
@@ -1288,6 +1479,56 @@ class RouteOutlet(models.Model):
             record.net_two_months_ago = monthly_net["two_months_ago"]
             record.net_last_3_months_total = sum(monthly_net.values())
             record.net_lifetime_total = net_lifetime_total
+
+    def _get_direct_sale_orders(self):
+        self.ensure_one()
+        return self.env["sale.order"].search([
+            ("route_outlet_id", "=", self.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("state", "!=", "cancel"),
+        ], order="date_order desc, id desc")
+
+    def _get_consignment_transfer_pickings(self):
+        self.ensure_one()
+        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
+        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
+            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
+        )
+        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
+
+    @api.depends(
+        "visit_ids.return_picking_ids",
+        "visit_ids.return_picking_ids.name",
+        "visit_ids.return_picking_ids.state",
+        "visit_ids.refill_picking_id",
+        "visit_ids.refill_picking_id.name",
+        "visit_ids.refill_picking_id.state",
+        "visit_ids.refill_picking_id.scheduled_date",
+        "visit_ids.return_picking_ids.scheduled_date",
+    )
+    def _compute_reference_stats(self):
+        direct_return_model = self.env["route.direct.return"]
+        for record in self:
+            record.return_order_count = 0
+            record.transfer_count = 0
+            record.last_return_ref = False
+            record.last_transfer_ref = False
+
+            if record.outlet_operation_mode == "direct_sale":
+                direct_returns = direct_return_model.search([
+                    ("outlet_id", "=", record.id),
+                    ("state", "!=", "cancel"),
+                ], order="return_date desc, id desc")
+                record.return_order_count = len(direct_returns)
+                record.last_return_ref = direct_returns[:1].name if direct_returns else False
+            else:
+                pickings = record._get_consignment_transfer_pickings()
+                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
+                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
+                record.return_order_count = len(return_pickings)
+                record.transfer_count = len(pickings)
+                record.last_return_ref = return_pickings[:1].name if return_pickings else False
+                record.last_transfer_ref = pickings[:1].name if pickings else False
 
     @api.depends(
         "visit_ids",
@@ -1596,7 +1837,9 @@ class RouteOutlet(models.Model):
 
     def action_view_sale_orders(self):
         self.ensure_one()
-        sale_orders = self.visit_ids.mapped("sale_order_id").filtered(lambda so: so)
+        sale_orders = self.visit_ids.mapped("sale_order_id").filtered(lambda so: so and so.state != "cancel")
+        if self.outlet_operation_mode == "direct_sale":
+            sale_orders |= self._get_direct_sale_orders()
         action = {
             "type": "ir.actions.act_window",
             "name": _("Sale Orders"),
@@ -1612,7 +1855,39 @@ class RouteOutlet(models.Model):
         action["context"] = dict(
             self.env.context,
             default_partner_id=self.partner_id.id if self.partner_id else False,
+            create=0,
         )
+        return action
+
+
+    def action_view_return_orders(self):
+        self.ensure_one()
+        if self.outlet_operation_mode == "direct_sale":
+            action = self.env.ref("route_core.action_route_direct_return").read()[0]
+            action["name"] = _("Return Orders")
+            action["domain"] = [("outlet_id", "=", self.id), ("state", "!=", "cancel")]
+            action["context"] = dict(self.env.context, default_outlet_id=self.id, create=0)
+            return action
+
+        pickings = self._get_consignment_transfer_pickings()
+        refill_ids = set(self.visit_ids.mapped("refill_picking_id").ids)
+        pickings = pickings.filtered(lambda p: p.id not in refill_ids)
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = _("Return Orders")
+        action["domain"] = [("id", "in", pickings.ids)]
+        action["context"] = dict(self.env.context, create=0)
+        return action
+
+    def action_view_transfers(self):
+        self.ensure_one()
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = _("Transfers")
+        if self.outlet_operation_mode == "consignment":
+            pickings = self._get_consignment_transfer_pickings()
+            action["domain"] = [("id", "in", pickings.ids)]
+        else:
+            action["domain"] = [("id", "=", 0)]
+        action["context"] = dict(self.env.context, create=0)
         return action
 
     def action_view_open_shortages(self):
