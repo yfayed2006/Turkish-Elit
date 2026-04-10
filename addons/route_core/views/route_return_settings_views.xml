@@ -12,6 +12,7 @@
 <field name="route_enable_direct_sale"/>
 <field name="route_enable_direct_return"/>
 <field name="route_vehicle_loading_workflow"/>
+<field name="route_default_source_warehouse_id" options="{'no_create': True}"/>
 <field name="route_workspace_show_vehicle_closing"/>
 <div class="text-muted" colspan="2"> Disabled = manual vehicle transfer only. Optional = proposal is available but not required. Required = visits cannot start before the loading proposal is approved. </div>
 <div class="text-muted" colspan="2"> Disable Vehicle Closing in Route Workspace when end-of-day vehicle reconciliation is handled by warehouse or supervisor users instead of the salesperson. </div>
