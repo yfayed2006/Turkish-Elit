@@ -1,11 +1,11 @@
 <odoo>
-<record id="view_route_outlet_form_setup_cleanup" model="ir.ui.view">
-<field name="name">route.outlet.form.setup.cleanup</field>
+<record id="view_route_outlet_form_setup_cleanup_final" model="ir.ui.view">
+<field name="name">route.outlet.form.setup.cleanup.final</field>
 <field name="model">route.outlet</field>
 <field name="inherit_id" ref="route_core.view_route_outlet_form"/>
-<field name="priority" eval="95"/>
+<field name="priority" eval="999"/>
 <field name="arch" type="xml">
-<xpath expr="//form/sheet/group/group[1]" position="replace">
+<xpath expr="//form/sheet/group/group[field[@name='route_country_id'] and field[@name='outlet_operation_mode']]" position="replace">
 <group>
 <field name="code" readonly="1"/>
 <field name="barcode"/>
