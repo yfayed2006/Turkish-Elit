@@ -33,6 +33,20 @@ class RoutePlan(models.Model):
         required=True,
         ondelete="restrict",
     )
+    source_warehouse_id = fields.Many2one(
+        "stock.warehouse",
+        string="Source Warehouse",
+        domain="[('company_id', 'in', [False, company_id])]",
+        default=lambda self: self.env.company.route_default_source_warehouse_id,
+        help="Main warehouse selected by the supervisor for this daily route plan. It is used by Main Warehouse Products Stock, loading proposal generation, and manual vehicle transfers.",
+    )
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        default=lambda self: self.env.company,
+        required=True,
+        readonly=True,
+    )
     area_id = fields.Many2one(
         "route.area",
         string="Area",
@@ -466,27 +480,36 @@ class RoutePlan(models.Model):
             if not proposal or proposal.state != "approved":
                 raise UserError(_("Vehicle Loading Workflow is set to Required. Please generate and approve the loading proposal before starting visits."))
 
+    def _get_effective_source_warehouse(self):
+        self.ensure_one()
+        warehouse = self.source_warehouse_id or self.company_id.route_default_source_warehouse_id
+        if warehouse:
+            return warehouse
+        return self.env["stock.warehouse"].search([('company_id', 'in', [False, self.company_id.id])], order='company_id desc, id asc', limit=1)
+
+    def _get_effective_source_location(self):
+        self.ensure_one()
+        warehouse = self._get_effective_source_warehouse()
+        if warehouse and getattr(warehouse, 'lot_stock_id', False):
+            return warehouse.lot_stock_id
+        return self.env["stock.location"].search([('usage','=','internal'), '|', ('company_id','=',False), ('company_id','=',self.company_id.id)], order='company_id desc, id asc', limit=1)
+
     def _get_manual_loading_source_location(self):
         self.ensure_one()
         proposal = hasattr(self, "_get_active_loading_proposal") and self._get_active_loading_proposal() or False
         if proposal and getattr(proposal, "source_location_id", False):
             return proposal.source_location_id
-
-        warehouse = self.env["stock.warehouse"].search([('company_id', 'in', [False, self.env.company.id])], order='company_id desc, id asc', limit=1)
-        if warehouse and getattr(warehouse, 'lot_stock_id', False):
-            return warehouse.lot_stock_id
-
-        return self.env["stock.location"].search([('usage','=','internal'), '|', ('company_id','=',False), ('company_id','=',self.env.company.id)], order='company_id desc, id asc', limit=1)
+        return self._get_effective_source_location()
 
     def _get_manual_loading_picking_type(self, source_location):
         self.ensure_one()
         picking_type_model = self.env["stock.picking.type"]
         warehouse = self.env["stock.warehouse"]
         if source_location:
-            warehouse = warehouse.search([('lot_stock_id', '=', source_location.id), ('company_id', 'in', [False, self.env.company.id])], order='company_id desc, id asc', limit=1)
+            warehouse = warehouse.search([('lot_stock_id', '=', source_location.id), ('company_id', 'in', [False, self.company_id.id])], order='company_id desc, id asc', limit=1)
         if warehouse and getattr(warehouse, 'int_type_id', False):
             return warehouse.int_type_id
-        return picking_type_model.search([('code', '=', 'internal'), '|', ('company_id', '=', self.env.company.id), ('company_id', '=', False)], order='company_id desc, sequence asc, id asc', limit=1)
+        return picking_type_model.search([('code', '=', 'internal'), '|', ('company_id', '=', self.company_id.id), ('company_id', '=', False)], order='company_id desc, sequence asc, id asc', limit=1)
 
     def action_create_vehicle_transfer_manually(self):
         self.ensure_one()
@@ -520,7 +543,7 @@ class RoutePlan(models.Model):
                 'default_location_dest_id': self.vehicle_id.stock_location_id.id,
                 'default_origin': "%s / %s" % ((self.name or _("Route Plan")), _("Manual Vehicle Transfer")),
                 'default_move_type': 'direct',
-                'default_company_id': self.env.company.id,
+                'default_company_id': self.company_id.id,
             },
         })
         return action
