@@ -83,6 +83,7 @@ Please review them before today's execution.
 <field name="date" readonly="planning_finalized"/>
 <field name="user_id" readonly="planning_finalized"/>
 <field name="vehicle_id" readonly="planning_finalized"/>
+<field name="source_warehouse_id" readonly="planning_finalized" options="{'no_create': True}"/>
 </group>
 <group>
 <field name="area_id" readonly="planning_finalized"/>
