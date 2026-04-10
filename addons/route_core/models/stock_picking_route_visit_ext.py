@@ -12,25 +12,32 @@ class StockPicking(models.Model):
         ondelete="set null",
     )
 
-    def _route_get_consignment_outlets_to_sync(self):
-        outlets = self.env["route.outlet"].sudo().search([
+    def _get_related_consignment_outlets_for_balance_sync(self):
+        self.ensure_one()
+        outlet_model = self.env["route.outlet"].sudo()
+        locations = (self.location_id | self.location_dest_id).filtered(lambda loc: loc)
+        if not locations:
+            return outlet_model.browse()
+        return outlet_model.search([
             ("outlet_operation_mode", "=", "consignment"),
-            ("stock_location_id", "!=", False),
+            ("stock_location_id", "child_of", locations.ids),
         ])
-        touched_locations = (self.mapped("location_id") | self.mapped("location_dest_id")).filtered(lambda loc: loc)
-        if not touched_locations:
-            return self.env["route.outlet"]
-        return outlets.filtered(lambda outlet: outlet.stock_location_id in touched_locations)
 
-    def _route_sync_consignment_outlet_balances(self):
-        outlets = self._route_get_consignment_outlets_to_sync()
-        if outlets and hasattr(outlets, "_sync_stock_balances_from_quants"):
-            outlets._sync_stock_balances_from_quants()
+    def _sync_related_consignment_outlet_balances(self):
+        outlet_model = self.env["route.outlet"].sudo()
+        outlets = outlet_model.browse()
+        for picking in self.filtered(lambda p: p.state == "done" and getattr(p.picking_type_id, "code", False) == "internal"):
+            outlets |= picking._get_related_consignment_outlets_for_balance_sync()
+        if outlets:
+            outlets._sync_outlet_stock_balance_records()
         return True
 
     def button_validate(self):
         result = super().button_validate()
-        done_pickings = self.filtered(lambda picking: picking.state == "done")
-        if done_pickings:
-            done_pickings._route_sync_consignment_outlet_balances()
+        self.filtered(lambda p: p.state == "done")._sync_related_consignment_outlet_balances()
+        return result
+
+    def action_done(self):
+        result = super().action_done()
+        self.filtered(lambda p: p.state == "done")._sync_related_consignment_outlet_balances()
         return result
