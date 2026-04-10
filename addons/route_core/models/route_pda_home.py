@@ -988,7 +988,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_outlet_workspace_action(
             name="Consignment Customers",
             domain=[("outlet_operation_mode", "=", "consignment"), ("active", "=", True)],
-            context={"group_by": "partner_id"},
+            context={"group_by": "partner_id", "route_show_barcode": True},
         )
 
     def action_open_all_outlets(self):
@@ -996,6 +996,7 @@ class RoutePdaHome(models.TransientModel):
         return self._prepare_outlet_workspace_action(
             name="All Outlets",
             domain=[("active", "=", True)],
+            context={"route_show_barcode": True},
         )
 
     def action_create_direct_transfer(self):
