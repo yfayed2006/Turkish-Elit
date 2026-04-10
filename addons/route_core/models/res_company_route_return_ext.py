@@ -81,6 +81,14 @@ class ResCompany(models.Model):
         help="If enabled, the Vehicle Closing button is visible to the salesperson in Route Workspace. Disable it when vehicle closing is handled by warehouse or supervisor users.",
     )
 
+
+    route_default_source_warehouse_id = fields.Many2one(
+        "stock.warehouse",
+        string="Default Source Warehouse",
+        domain="[('company_id', 'in', [False, id])]",
+        help="Default main warehouse used for Route Workspace stock screens, loading proposals, and manual vehicle transfers when the supervisor does not choose a different warehouse on the route plan.",
+    )
+
     def _route_feature_param_key(self, feature_name):
         self.ensure_one()
         return f"route_core.{feature_name}.{self.id}"
