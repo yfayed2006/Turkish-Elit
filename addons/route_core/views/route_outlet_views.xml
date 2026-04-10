@@ -61,11 +61,9 @@
 <field name="near_expiry_product_count" string="Near Expiry" widget="badge" optional="hide" decoration-warning="near_expiry_product_count > 0" column_invisible="context.get('route_hide_near_expiry', False)"/>
 <field name="last_visit_date" string="Last Visit Date" optional="show"/>
 <field name="last_sale_order_id" string="Last Sale Order" optional="show"/>
-<field name="last_return_ref" string="Last Return Order" optional="show"/>
-<field name="last_transfer_ref" string="Last Transfer" optional="hide"/>
 <field name="visit_count" string="Visits" optional="show"/>
-<field name="phone" optional="show"/>
-<field name="mobile" optional="show"/>
+<field name="phone" optional="hide"/>
+<field name="mobile" optional="hide"/>
 <field name="active" optional="hide"/>
 </list>
 </field>
@@ -76,7 +74,7 @@
 <field name="arch" type="xml">
 <form string="Outlet">
 <sheet>
-<div class="oe_button_box" name="button_box">
+<div class="oe_button_box" name="button_box" invisible="not id">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="visit_count" string="Visits" widget="statinfo"/>
 </button>
@@ -108,6 +106,8 @@
 <field name="route_area_name" invisible="1"/>
 <field name="partner_id" domain="[('is_company', '=', True)]" context="{'default_is_company': True}" options="{'no_open': False}" required="outlet_operation_mode == 'direct_sale'"/>
 <field name="outlet_operation_mode" widget="radio"/>
+<field name="stock_location_id" invisible="outlet_operation_mode != 'consignment'"/>
+<field name="direct_sale_pricelist_id" invisible="outlet_operation_mode != 'direct_sale'" options="{'no_open': False}"/>
 <field name="active"/>
 </group>
 <group>
@@ -117,10 +117,9 @@
 <field name="shelf_credit_limit_amount"/>
 <field name="remaining_shelf_credit_amount" readonly="1"/>
 <field name="active_stock_tracking"/>
-<field name="open_shortage_count" readonly="1"/>
 </group>
 </group>
-<group string="Latest Activity">
+<group string="Latest Activity" invisible="not id">
 <group>
 <field name="last_visit_id" readonly="1"/>
 <field name="last_visit_date" readonly="1"/>
@@ -132,7 +131,7 @@
 <field name="total_shortage_count" readonly="1"/>
 </group>
 </group>
-<notebook>
+<notebook invisible="not id">
 <page string="Summary">
 <group string="Summary KPIs" col="4">
 <group>
@@ -461,7 +460,7 @@
 <sheet>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
-<div class="oe_button_box" name="button_box">
+<div class="oe_button_box" name="button_box" invisible="not id">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="visit_count" string="Visits" widget="statinfo"/>
 </button>
@@ -470,12 +469,6 @@
 </button>
 <button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
 <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
-</button>
-<button name="action_view_return_orders" type="object" class="oe_stat_button" icon="fa-undo">
-<field name="return_order_count" string="Return Orders" widget="statinfo"/>
-</button>
-<button name="action_view_transfers" type="object" class="oe_stat_button" icon="fa-exchange" invisible="outlet_operation_mode != 'consignment'">
-<field name="transfer_count" string="Transfers" widget="statinfo"/>
 </button>
 <button name="action_view_stock_balances" type="object" class="oe_stat_button" icon="fa-cubes" invisible="outlet_operation_mode != 'consignment'">
 <field name="stock_balance_count" string="Stock" widget="statinfo"/>
@@ -510,15 +503,13 @@
 <group string="Financial Snapshot" col="2">
 <group>
 <field name="current_due_amount" readonly="1"/>
-<field name="total_collected_amount" readonly="1"/>
-<field name="open_promise_count" readonly="1"/>
+<field name="payment_count" readonly="1"/>
 <field name="unpaid_visit_count" readonly="1"/>
 </group>
 <group>
 <field name="last_payment_id" readonly="1"/>
 <field name="last_payment_date" readonly="1"/>
-<field name="last_collected_amount" readonly="1"/>
-<field name="payment_count" readonly="1"/>
+<field name="last_payment_amount" readonly="1"/>
 </group>
 </group>
 <group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
@@ -538,8 +529,6 @@
 <group string="Latest References" col="2">
 <group>
 <field name="last_sale_order_id" readonly="1"/>
-<field name="last_return_ref" readonly="1"/>
-<field name="last_transfer_ref" readonly="1" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="last_payment_id" readonly="1"/>
 </group>
 <group>
@@ -550,25 +539,6 @@
 </sheet>
 </form>
 </field>
-</record>
-<record id="action_route_outlet_pda" model="ir.actions.act_window">
-<field name="name">Outlets</field>
-<field name="res_model">route.outlet</field>
-<field name="view_mode">list,form</field>
-<field name="search_view_id" ref="view_route_outlet_pda_search"/>
-<field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
-</record>
-<record id="action_route_outlet_pda_list_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="1"/>
-<field name="view_mode">list</field>
-<field name="view_id" ref="view_route_outlet_pda_list"/>
-<field name="act_window_id" ref="action_route_outlet_pda"/>
-</record>
-<record id="action_route_outlet_pda_form_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="2"/>
-<field name="view_mode">form</field>
-<field name="view_id" ref="view_route_outlet_pda_form"/>
-<field name="act_window_id" ref="action_route_outlet_pda"/>
 </record>
 <record id="action_route_outlet" model="ir.actions.act_window">
 <field name="name">Outlets</field>
