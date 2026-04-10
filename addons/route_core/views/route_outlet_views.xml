@@ -538,7 +538,8 @@
 <group string="Latest References" col="2">
 <group>
 <field name="last_sale_order_id" readonly="1"/>
-<field name="last_return_ref" readonly="1"/>
+<field name="last_return_ref" string="Last Return Order" readonly="1" invisible="outlet_operation_mode != 'direct_sale'"/>
+<field name="last_return_ref" string="Last Return Transfer" readonly="1" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="last_transfer_ref" readonly="1" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="last_payment_id" readonly="1"/>
 </group>
