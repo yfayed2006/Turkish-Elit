@@ -32,4 +32,15 @@
 </xpath>
 </field>
 </record>
+<!--   Outlet: keep helper field without duplicating stock location on form   -->
+<record id="view_route_outlet_form_location_ext" model="ir.ui.view">
+<field name="name">route.outlet.form.location.ext</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/sheet/group/group[1]/field[@name='area_id']" position="after">
+<field name="consignment_stock_location_mode" invisible="1"/>
+</xpath>
+</field>
+</record>
 </odoo>
