@@ -26,9 +26,9 @@
 <field name="sequence">40</field>
 </record>
 <record id="menu_route_outlet" model="ir.ui.menu">
-<field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
-<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-<field name="sequence">50</field>
+<field name="parent_id" ref="route_core.menu_route_configuration"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+<field name="sequence">15</field>
 </record>
 <record id="menu_route_shortage" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
@@ -81,7 +81,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--      Salesperson-safe menu actions      -->
+<!--       Salesperson-safe menu actions       -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Route Plans</field>
 <field name="res_model">route.plan</field>
