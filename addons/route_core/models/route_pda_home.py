@@ -344,11 +344,26 @@ class RoutePdaHome(models.TransientModel):
             return "direct_stop"
         return "consignment_visit"
 
+    def _get_current_route_plan(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        vehicle = self._get_current_vehicle()
+        domain = [("company_id", "=", self.env.company.id), ("user_id", "=", self.env.user.id), ("date", "=", today)]
+        if vehicle:
+            domain.append(("vehicle_id", "=", vehicle.id))
+        return self.env["route.plan"].search(domain, order="planning_finalized desc, id desc", limit=1)
+
     def _get_main_warehouse_location(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
         vehicle = self._get_current_vehicle()
         Proposal = self.env["route.loading.proposal"].sudo()
+
+        plan = self._get_current_route_plan()
+        if plan and hasattr(plan, "_get_effective_source_location"):
+            plan_location = plan._get_effective_source_location()
+            if plan_location:
+                return plan_location
 
         base_domain = [
             ("company_id", "=", self.env.company.id),
@@ -357,7 +372,6 @@ class RoutePdaHome(models.TransientModel):
         if vehicle:
             base_domain.append(("vehicle_id", "=", vehicle.id))
 
-        # First priority: the actual approved transfer source used to load the vehicle.
         approved_today = Proposal.search(
             base_domain + [("plan_date", "=", today), ("state", "=", "approved")],
             order="approval_datetime desc, id desc",
@@ -370,7 +384,6 @@ class RoutePdaHome(models.TransientModel):
             if approved_today.source_location_id:
                 return approved_today.source_location_id
 
-        # Second priority: any latest approved proposal for this vehicle/salesperson.
         approved_any = Proposal.search(
             base_domain + [("state", "=", "approved")],
             order="approval_datetime desc, id desc",
@@ -383,7 +396,6 @@ class RoutePdaHome(models.TransientModel):
             if approved_any.source_location_id:
                 return approved_any.source_location_id
 
-        # Third priority: latest draft for today if supervisor prepared a proposal but has not approved yet.
         draft_today = Proposal.search(
             base_domain + [("plan_date", "=", today), ("state", "=", "draft")],
             order="id desc",
@@ -391,6 +403,10 @@ class RoutePdaHome(models.TransientModel):
         )
         if draft_today and draft_today.source_location_id:
             return draft_today.source_location_id
+
+        default_warehouse = self.env.company.route_default_source_warehouse_id
+        if default_warehouse and getattr(default_warehouse, "lot_stock_id", False):
+            return default_warehouse.lot_stock_id
 
         warehouse = self.env["stock.warehouse"].search(
             [("company_id", "=", self.env.company.id)],
@@ -537,7 +553,7 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_transfer_today_count = len(today_direct_transfers)
             rec.direct_transfer_today_qty = sum(
                 (getattr(move, "product_uom_qty", 0.0) or getattr(move, "quantity", 0.0) or 0.0)
-                for move in today_direct_transfers.mapped("move_ids_without_package")
+                for move in rec._get_picking_moves(today_direct_transfers)
             ) if today_direct_transfers else 0.0
             rec.direct_sale_today_amount = sum(today_direct_orders.mapped("amount_total")) if today_direct_orders else 0.0
             rec.direct_return_today_amount = sum(today_direct_returns.mapped("amount_total")) if today_direct_returns else 0.0
@@ -899,6 +915,18 @@ class RoutePdaHome(models.TransientModel):
             title = f"Main Warehouse Products Stock - {location.display_name}"
         return self._open_quants_by_location(location, title)
 
+    def _get_picking_moves(self, pickings):
+        self.ensure_one()
+        pickings = pickings or self.env["stock.picking"]
+        if not pickings:
+            return self.env["stock.move"]
+
+        if "move_ids_without_package" in pickings._fields:
+            return pickings.mapped("move_ids_without_package")
+        if "move_ids" in pickings._fields:
+            return pickings.mapped("move_ids")
+        return self.env["stock.move"]
+
     def _workspace_direct_transfer_origin_prefix(self):
         self.ensure_one()
         return "Route Workspace / Direct Transfer"
@@ -968,12 +996,12 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_consignment_outlet_stock(self):
         self.ensure_one()
-        outlets = self.env["route.outlet"].search([
+        outlets = self.env["route.outlet"].sudo().search([
             ("outlet_operation_mode", "=", "consignment"),
             ("stock_location_id", "!=", False),
         ])
-        if outlets and hasattr(outlets, "_sync_stock_balances_from_quants"):
-            outlets._sync_stock_balances_from_quants()
+        if outlets:
+            outlets._sync_outlet_stock_balance_records()
         return self._prepare_action(
             "route_core.action_outlet_stock_balance",
             name="Consignment Outlets Stock",
