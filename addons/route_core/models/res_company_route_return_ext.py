@@ -86,6 +86,10 @@ class ResCompany(models.Model):
         "stock.warehouse",
         string="Default Source Warehouse",
         domain="[('company_id', 'in', [False, id])]",
+        compute="_compute_route_default_source_warehouse_id",
+        inverse="_inverse_route_default_source_warehouse_id",
+        readonly=False,
+        store=False,
         help="Default main warehouse used for Route Workspace stock screens, loading proposals, and manual vehicle transfers when the supervisor does not choose a different warehouse on the route plan.",
     )
 
@@ -105,6 +109,30 @@ class ResCompany(models.Model):
         self.env["ir.config_parameter"].sudo().set_param(
             self._route_feature_param_key(feature_name), "1" if enabled else "0"
         )
+
+
+    def _compute_route_default_source_warehouse_id(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        Warehouse = self.env["stock.warehouse"].sudo()
+        for company in self:
+            raw_value = icp.get_param(company._route_feature_param_key("default_source_warehouse_id"), default="")
+            warehouse = False
+            if raw_value:
+                try:
+                    warehouse = Warehouse.browse(int(raw_value)).exists()
+                except (TypeError, ValueError):
+                    warehouse = False
+            if warehouse and warehouse.company_id and warehouse.company_id != company:
+                warehouse = False
+            company.route_default_source_warehouse_id = warehouse
+
+    def _inverse_route_default_source_warehouse_id(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            icp.set_param(
+                company._route_feature_param_key("default_source_warehouse_id"),
+                str(company.route_default_source_warehouse_id.id or ""),
+            )
 
     def _compute_route_enable_lot_serial_tracking(self):
         for company in self:
