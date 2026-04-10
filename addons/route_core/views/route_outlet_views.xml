@@ -61,9 +61,11 @@
 <field name="near_expiry_product_count" string="Near Expiry" widget="badge" optional="hide" decoration-warning="near_expiry_product_count > 0" column_invisible="context.get('route_hide_near_expiry', False)"/>
 <field name="last_visit_date" string="Last Visit Date" optional="show"/>
 <field name="last_sale_order_id" string="Last Sale Order" optional="show"/>
+<field name="last_return_ref" string="Last Return Order" optional="show"/>
+<field name="last_transfer_ref" string="Last Transfer" optional="hide"/>
 <field name="visit_count" string="Visits" optional="show"/>
-<field name="phone" optional="hide"/>
-<field name="mobile" optional="hide"/>
+<field name="phone" optional="show"/>
+<field name="mobile" optional="show"/>
 <field name="active" optional="hide"/>
 </list>
 </field>
@@ -469,6 +471,12 @@
 <button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
 <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
 </button>
+<button name="action_view_return_orders" type="object" class="oe_stat_button" icon="fa-undo">
+<field name="return_order_count" string="Return Orders" widget="statinfo"/>
+</button>
+<button name="action_view_transfers" type="object" class="oe_stat_button" icon="fa-exchange" invisible="outlet_operation_mode != 'consignment'">
+<field name="transfer_count" string="Transfers" widget="statinfo"/>
+</button>
 <button name="action_view_stock_balances" type="object" class="oe_stat_button" icon="fa-cubes" invisible="outlet_operation_mode != 'consignment'">
 <field name="stock_balance_count" string="Stock" widget="statinfo"/>
 </button>
@@ -502,13 +510,15 @@
 <group string="Financial Snapshot" col="2">
 <group>
 <field name="current_due_amount" readonly="1"/>
-<field name="payment_count" readonly="1"/>
+<field name="total_collected_amount" readonly="1"/>
+<field name="open_promise_count" readonly="1"/>
 <field name="unpaid_visit_count" readonly="1"/>
 </group>
 <group>
 <field name="last_payment_id" readonly="1"/>
 <field name="last_payment_date" readonly="1"/>
-<field name="last_payment_amount" readonly="1"/>
+<field name="last_collected_amount" readonly="1"/>
+<field name="payment_count" readonly="1"/>
 </group>
 </group>
 <group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
@@ -528,6 +538,8 @@
 <group string="Latest References" col="2">
 <group>
 <field name="last_sale_order_id" readonly="1"/>
+<field name="last_return_ref" readonly="1"/>
+<field name="last_transfer_ref" readonly="1" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="last_payment_id" readonly="1"/>
 </group>
 <group>
