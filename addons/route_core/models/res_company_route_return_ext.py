@@ -93,6 +93,18 @@ class ResCompany(models.Model):
         help="Default main warehouse used for Route Workspace stock screens, loading proposals, and manual vehicle transfers when the supervisor does not choose a different warehouse on the route plan.",
     )
 
+
+    route_default_consignment_root_location_id = fields.Many2one(
+        "stock.location",
+        string="Default Consignment Root Location",
+        domain="[('usage', '=', 'view')]",
+        compute="_compute_route_default_consignment_root_location_id",
+        inverse="_inverse_route_default_consignment_root_location_id",
+        readonly=False,
+        store=False,
+        help="Default root location used to auto-create consignment outlet stock locations by City / Area / Outlet.",
+    )
+
     def _route_feature_param_key(self, feature_name):
         self.ensure_one()
         return f"route_core.{feature_name}.{self.id}"
@@ -132,6 +144,33 @@ class ResCompany(models.Model):
             icp.set_param(
                 company._route_feature_param_key("default_source_warehouse_id"),
                 str(company.route_default_source_warehouse_id.id or ""),
+            )
+
+
+
+    def _compute_route_default_consignment_root_location_id(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        Location = self.env["stock.location"].sudo()
+        for company in self:
+            raw_value = icp.get_param(company._route_feature_param_key("default_consignment_root_location_id"), default="")
+            location = False
+            if raw_value:
+                try:
+                    location = Location.browse(int(raw_value)).exists()
+                except (TypeError, ValueError):
+                    location = False
+            if location and location.company_id and location.company_id != company:
+                location = False
+            if location and location.usage != "view":
+                location = False
+            company.route_default_consignment_root_location_id = location
+
+    def _inverse_route_default_consignment_root_location_id(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        for company in self:
+            icp.set_param(
+                company._route_feature_param_key("default_consignment_root_location_id"),
+                str(company.route_default_consignment_root_location_id.id or ""),
             )
 
     def _compute_route_enable_lot_serial_tracking(self):
