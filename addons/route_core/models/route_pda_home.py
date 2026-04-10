@@ -553,7 +553,7 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_transfer_today_count = len(today_direct_transfers)
             rec.direct_transfer_today_qty = sum(
                 (getattr(move, "product_uom_qty", 0.0) or getattr(move, "quantity", 0.0) or 0.0)
-                for move in today_direct_transfers.mapped("move_ids_without_package")
+                for move in rec._get_picking_moves(today_direct_transfers)
             ) if today_direct_transfers else 0.0
             rec.direct_sale_today_amount = sum(today_direct_orders.mapped("amount_total")) if today_direct_orders else 0.0
             rec.direct_return_today_amount = sum(today_direct_returns.mapped("amount_total")) if today_direct_returns else 0.0
@@ -914,6 +914,18 @@ class RoutePdaHome(models.TransientModel):
         if location:
             title = f"Main Warehouse Products Stock - {location.display_name}"
         return self._open_quants_by_location(location, title)
+
+    def _get_picking_moves(self, pickings):
+        self.ensure_one()
+        pickings = pickings or self.env["stock.picking"]
+        if not pickings:
+            return self.env["stock.move"]
+
+        if "move_ids_without_package" in pickings._fields:
+            return pickings.mapped("move_ids_without_package")
+        if "move_ids" in pickings._fields:
+            return pickings.mapped("move_ids")
+        return self.env["stock.move"]
 
     def _workspace_direct_transfer_origin_prefix(self):
         self.ensure_one()
