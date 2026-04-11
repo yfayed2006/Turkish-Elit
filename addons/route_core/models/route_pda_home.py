@@ -415,25 +415,80 @@ class RoutePdaHome(models.TransientModel):
         )
         return warehouse.lot_stock_id if warehouse else False
 
-    def _open_quants_by_location(self, location, title):
+    def _get_route_stock_exclusion_location_ids(self, root_location):
         self.ensure_one()
-        list_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_list")
-        search_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search")
-        domain = [("quantity", ">", 0)]
-        if location:
-            domain.insert(0, ("location_id", "child_of", location.id))
-        else:
-            domain = [("id", "=", 0)]
+        if not root_location:
+            return []
+
+        location_ids_under_root = set(self.env["stock.location"].sudo().search([
+            ("id", "child_of", root_location.id),
+        ]).ids)
+        if not location_ids_under_root:
+            return []
+
+        vehicle_locations = self.env["route.vehicle"].sudo().search([
+            ("stock_location_id", "!=", False),
+        ]).mapped("stock_location_id")
+        outlet_locations = self.env["route.outlet"].sudo().search([
+            ("outlet_operation_mode", "=", "consignment"),
+            ("stock_location_id", "!=", False),
+        ]).mapped("stock_location_id")
+
+        excluded_root_ids = {
+            location.id
+            for location in (vehicle_locations | outlet_locations)
+            if location and location.id in location_ids_under_root and location.id != root_location.id
+        }
+        return sorted(excluded_root_ids)
+
+    def _get_quant_location_ids(self, location, exclude_route_locations=False):
+        self.ensure_one()
+        if not location:
+            return []
+
+        Location = self.env["stock.location"].sudo()
+        allowed_location_ids = set(Location.search([
+            ("id", "child_of", location.id),
+        ]).ids)
+        if not allowed_location_ids:
+            return []
+
+        if exclude_route_locations:
+            excluded_root_ids = self._get_route_stock_exclusion_location_ids(location)
+            if excluded_root_ids:
+                excluded_location_ids = set(Location.search([
+                    ("id", "child_of", excluded_root_ids),
+                ]).ids)
+                allowed_location_ids -= excluded_location_ids
+
+        return sorted(allowed_location_ids)
+
+    def _count_distinct_quant_products(self, domain):
+        groups = self.env["stock.quant"].read_group(domain, ["product_id"], ["product_id"], lazy=False)
+        return len([group for group in groups if group.get("product_id")])
+
+    def _open_quants_by_location(self, location, title, exclude_route_locations=False):
+        self.ensure_one()
+        kanban_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_list", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search", raise_if_not_found=False)
+        location_ids = self._get_quant_location_ids(location, exclude_route_locations=exclude_route_locations)
+        domain = [("quantity", ">", 0), ("location_id", "in", location_ids)] if location_ids else [("id", "=", 0)]
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
         return {
             "type": "ir.actions.act_window",
             "name": title,
             "res_model": "stock.quant",
-            "view_mode": "list,form",
-            "views": [(list_view.id, "list"), (False, "form")],
-            "search_view_id": search_view.id,
+            "view_mode": "kanban,list",
+            "views": views or [(False, "kanban"), (False, "list")],
+            "search_view_id": search_view.id if search_view else False,
             "domain": domain,
             "target": "current",
-            "context": {"search_default_filter_positive_qty": 1, "create": 0, "delete": 0},
+            "context": {"search_default_filter_positive_qty": 1, "create": 0, "edit": 0, "delete": 0},
         }
 
     @api.depends("user_id")
@@ -524,7 +579,10 @@ class RoutePdaHome(models.TransientModel):
             rec.shortage_count = len(open_shortages)
             rec.salesperson_shortage_count = len(salesperson_shortages)
             rec.outlet_count = Outlet.search_count([])
-            rec.outlet_balance_count = OutletBalance.search_count([])
+            rec.outlet_balance_count = OutletBalance.search_count([
+                ("outlet_id.outlet_operation_mode", "=", "consignment"),
+                ("qty", ">", 0),
+            ])
             rec.payment_count = len(today_payments)
             visit_collections = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "consignment_visit")
             direct_stop_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_stop")
@@ -546,8 +604,10 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_order_payment_count = len(direct_sale_order_targets)
             rec.direct_sale_payment_count = len(direct_stop_targets) + len(direct_sale_order_targets)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
-            rec.vehicle_product_count = Quant.search_count([("location_id", "child_of", vehicle.stock_location_id.id), ("quantity", ">", 0)]) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
-            rec.warehouse_product_count = Quant.search_count([("location_id", "child_of", warehouse_loc.id), ("quantity", ">", 0)]) if warehouse_loc else 0
+            vehicle_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(vehicle.stock_location_id))] if vehicle and getattr(vehicle, "stock_location_id", False) else [("id", "=", 0)]
+            warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
+            rec.vehicle_product_count = rec._count_distinct_quant_products(vehicle_quant_domain) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
+            rec.warehouse_product_count = rec._count_distinct_quant_products(warehouse_quant_domain) if warehouse_loc else 0
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
             rec.direct_transfer_today_count = len(today_direct_transfers)
@@ -899,7 +959,28 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_products(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_route_pda_products", name="All Products")
+        action = self._prepare_action(
+            "route_core.action_route_pda_products",
+            name="All Products",
+            context={"search_default_filter_to_sell": 1, "create": 0, "edit": 0, "delete": 0},
+        )
+        kanban_view = self.env.ref("route_core.view_route_pda_product_mobile_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_pda_product_mobile_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_pda_product_mobile_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_pda_product_mobile_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
 
     def action_open_vehicle_products(self):
         self.ensure_one()
@@ -913,7 +994,7 @@ class RoutePdaHome(models.TransientModel):
         title = "Main Warehouse Products Stock"
         if location:
             title = f"Main Warehouse Products Stock - {location.display_name}"
-        return self._open_quants_by_location(location, title)
+        return self._open_quants_by_location(location, title, exclude_route_locations=True)
 
     def _get_picking_moves(self, pickings):
         self.ensure_one()
@@ -1002,12 +1083,29 @@ class RoutePdaHome(models.TransientModel):
         ])
         if outlets:
             outlets._sync_outlet_stock_balance_records()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_outlet_stock_balance",
             name="Consignment Outlets Stock",
             domain=[("outlet_id.outlet_operation_mode", "=", "consignment"), ("qty", ">", 0)],
-            context={"group_by": "outlet_id", "search_default_filter_has_qty": 1},
+            context={"search_default_filter_has_qty": 1, "create": 0, "edit": 0, "delete": 0},
         )
+        kanban_view = self.env.ref("route_core.view_outlet_stock_balance_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_outlet_stock_balance_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_outlet_stock_balance_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_outlet_stock_balance_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
 
     def action_open_direct_sale_customers(self):
         self.ensure_one()
