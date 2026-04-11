@@ -1,19 +1,70 @@
 <odoo>
+<record id="view_route_vehicle_stock_snapshot_kanban" model="ir.ui.view">
+<field name="name">stock.quant.route.vehicle.snapshot.kanban</field>
+<field name="model">stock.quant</field>
+<field name="arch" type="xml">
+<kanban class="o_kanban_mobile" create="0" edit="0" delete="0">
+<field name="product_id"/>
+<field name="route_barcode"/>
+<field name="location_id"/>
+<field name="lot_id"/>
+<field name="route_expiry_date"/>
+<field name="quantity"/>
+<field name="available_quantity"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record">
+<div class="d-flex justify-content-between align-items-start mb-1">
+<div class="fw-bold">
+<field name="product_id"/>
+</div>
+<div class="text-end">
+<div class="fw-bold">
+<field name="quantity"/>
+</div>
+<div class="text-muted small">Qty</div>
+</div>
+</div>
+<div class="small text-muted" t-if="record.route_barcode.raw_value">
+Barcode:
+<field name="route_barcode"/>
+</div>
+<div class="small text-muted">
+Available:
+<field name="available_quantity"/>
+</div>
+<div class="small text-muted" t-if="record.location_id.raw_value">
+Location:
+<field name="location_id"/>
+</div>
+<div class="small text-muted" t-if="record.lot_id.raw_value">
+Lot:
+<field name="lot_id"/>
+</div>
+<div class="small text-muted" t-if="record.route_expiry_date.raw_value">
+Expiry:
+<field name="route_expiry_date"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_vehicle_stock_snapshot_list" model="ir.ui.view">
 <field name="name">stock.quant.route.vehicle.snapshot.list</field>
 <field name="model">stock.quant</field>
 <field name="arch" type="xml">
-<list string="Vehicle Stock Snapshot" create="0" edit="0" delete="0">
+<list string="Stock Snapshot" create="0" edit="0" delete="0" default_order="product_id, location_id, lot_id">
 <field name="product_id"/>
-<field name="route_barcode" optional="show"/>
-<field name="location_id"/>
-<field name="lot_id" optional="show"/>
-<field name="route_expiry_date" optional="show"/>
-<field name="route_alert_date" optional="hide"/>
 <field name="quantity"/>
-<field name="reserved_quantity" optional="show"/>
-<field name="available_quantity"/>
-<field name="in_date" optional="show"/>
+<field name="available_quantity" optional="show"/>
+<field name="route_barcode" optional="hide"/>
+<field name="lot_id" optional="hide"/>
+<field name="route_expiry_date" optional="hide"/>
+<field name="location_id" optional="hide"/>
+<field name="reserved_quantity" optional="hide"/>
+<field name="in_date" optional="hide"/>
 </list>
 </field>
 </record>
@@ -21,16 +72,21 @@
 <field name="name">stock.quant.route.vehicle.snapshot.search</field>
 <field name="model">stock.quant</field>
 <field name="arch" type="xml">
-<search string="Vehicle Stock Snapshot">
+<search string="Stock Snapshot">
 <field name="product_id"/>
 <field name="route_barcode"/>
 <field name="lot_id"/>
 <field name="location_id"/>
 <filter name="filter_positive_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
+<filter name="filter_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
+<filter name="filter_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <separator/>
 <filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<searchpanel>
+<field name="location_id" string="Location"/>
+</searchpanel>
 </search>
 </field>
 </record>
