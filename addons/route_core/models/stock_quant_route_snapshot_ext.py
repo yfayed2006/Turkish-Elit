@@ -19,3 +19,10 @@ class StockQuantRouteSnapshotExt(models.Model):
         related="lot_id.alert_date",
         readonly=True,
     )
+
+
+    route_product_image_128 = fields.Image(
+        string="Product Image",
+        related="product_id.image_128",
+        readonly=True,
+    )
