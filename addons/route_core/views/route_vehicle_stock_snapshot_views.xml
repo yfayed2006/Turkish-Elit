@@ -107,8 +107,8 @@ Expiry:
 <field name="lot_id"/>
 <field name="location_id"/>
 <filter name="filter_main_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
-<filter name="filter_main_reserved_qty" string="Reserved Qty" domain="[('reserved_quantity', '>', 0)]"/>
-<filter name="filter_main_available_less_than_qty" string="Available Less Than Qty" domain="[('available_quantity', '<', 0)]"/>
+<filter name="filter_main_reserved_qty" string="Reserved Qty" domain="[('route_has_reservation', '=', True)]"/>
+<filter name="filter_main_available_less_than_qty" string="Available Less Than Qty" domain="[('route_available_less_than_qty', '=', True)]"/>
 <filter name="filter_main_zero_available" string="Zero Available" domain="[('available_quantity', '=', 0)]"/>
 <filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
@@ -123,4 +123,4 @@ Expiry:
 </search>
 </field>
 </record>
-</odoo>
+</odo
