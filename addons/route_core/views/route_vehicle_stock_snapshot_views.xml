@@ -3,7 +3,7 @@
 <field name="name">stock.quant.route.vehicle.snapshot.kanban</field>
 <field name="model">stock.quant</field>
 <field name="arch" type="xml">
-<kanban class="o_kanban_mobile" create="0" edit="0" delete="0">
+<kanban class="route_pda_mobile_stock_kanban route_pda_mobile_stock_kanban_vehicle" create="0" edit="0" delete="0">
 <field name="product_id"/>
 <field name="route_barcode"/>
 <field name="location_id"/>
@@ -13,35 +13,38 @@
 <field name="available_quantity"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record">
-<div class="d-flex justify-content-between align-items-start mb-1">
-<div class="fw-bold">
-<field name="product_id"/>
+<div class="oe_kanban_global_click o_kanban_record route_pda_stock_card">
+<div class="route_pda_stock_card_top">
+<div class="route_pda_stock_thumb_wrap">
+<img t-att-src="kanban_image('product.product', 'image_128', record.product_id.raw_value)" class="route_pda_stock_thumb" alt="Product"/>
 </div>
-<div class="text-end">
-<div class="fw-bold">
+<div class="route_pda_stock_qty_wrap">
+<div class="route_pda_stock_qty">
 <field name="quantity"/>
 </div>
-<div class="text-muted small">Qty</div>
+<div class="route_pda_stock_qty_label">Qty</div>
 </div>
 </div>
-<div class="small text-muted" t-if="record.route_barcode.raw_value">
+<div class="route_pda_stock_name">
+<field name="product_id"/>
+</div>
+<div class="route_pda_stock_meta" t-if="record.route_barcode.raw_value">
 Barcode:
 <field name="route_barcode"/>
 </div>
-<div class="small text-muted">
+<div class="route_pda_stock_meta">
 Available:
 <field name="available_quantity"/>
 </div>
-<div class="small text-muted" t-if="record.location_id.raw_value">
+<div class="route_pda_stock_meta" t-if="record.location_id.raw_value">
 Location:
 <field name="location_id"/>
 </div>
-<div class="small text-muted" t-if="record.lot_id.raw_value">
+<div class="route_pda_stock_meta" t-if="record.lot_id.raw_value">
 Lot:
 <field name="lot_id"/>
 </div>
-<div class="small text-muted" t-if="record.route_expiry_date.raw_value">
+<div class="route_pda_stock_meta" t-if="record.route_expiry_date.raw_value">
 Expiry:
 <field name="route_expiry_date"/>
 </div>
