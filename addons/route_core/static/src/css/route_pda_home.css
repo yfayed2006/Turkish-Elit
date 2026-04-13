@@ -408,7 +408,7 @@
 .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped,
 .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: 12px;
     align-items: stretch;
 }
@@ -561,6 +561,57 @@
 
     .route_pda_stock_qty {
         font-size: 1rem;
+    }
+}
+
+
+@media (max-width: 768px) {
+    .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped,
+    .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_pda_catalog_card,
+    .route_pda_stock_card {
+        padding: 8px;
+        border-radius: 12px;
+    }
+
+    .route_pda_catalog_thumb_wrap {
+        margin-bottom: 8px;
+    }
+
+    .route_pda_stock_card_top {
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .route_pda_stock_thumb_wrap {
+        flex: 0 0 56px;
+        width: 56px;
+        height: 56px;
+    }
+
+    .route_pda_catalog_name,
+    .route_pda_stock_name {
+        font-size: 0.92rem;
+        min-height: 2.4em;
+    }
+
+    .route_pda_catalog_meta,
+    .route_pda_stock_meta,
+    .route_pda_catalog_price {
+        font-size: 0.76rem;
+        line-height: 1.3;
+    }
+
+    .route_pda_stock_qty {
+        font-size: 1rem;
+    }
+
+    .route_pda_stock_qty_label {
+        font-size: 0.72rem;
     }
 }
 
