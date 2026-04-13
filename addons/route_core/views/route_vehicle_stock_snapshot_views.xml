@@ -9,6 +9,7 @@
 <field name="location_id"/>
 <field name="lot_id"/>
 <field name="route_expiry_date"/>
+<field name="route_alert_date"/>
 <field name="quantity"/>
 <field name="available_quantity"/>
 <field name="route_product_image_128"/>
@@ -76,19 +77,48 @@ Expiry:
 <field name="name">stock.quant.route.vehicle.snapshot.search</field>
 <field name="model">stock.quant</field>
 <field name="arch" type="xml">
-<search string="Stock Snapshot">
+<search string="Vehicle Products Stock">
+<field name="product_id"/>
+<field name="route_barcode"/>
+<field name="lot_id"/>
+<field name="route_expiry_date"/>
+<field name="route_alert_date"/>
+<filter name="filter_vehicle_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
+<filter name="filter_vehicle_negative_available" string="Negative Available" domain="[('available_quantity', '<', 0)]"/>
+<filter name="filter_vehicle_zero_available" string="Zero Available" domain="[('available_quantity', '=', 0)]"/>
+<filter name="filter_vehicle_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
+<filter name="filter_vehicle_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
+<separator/>
+<filter name="group_vehicle_by_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_vehicle_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<searchpanel>
+<field name="product_id" string="Product"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="view_route_main_warehouse_stock_snapshot_search" model="ir.ui.view">
+<field name="name">stock.quant.route.main.warehouse.snapshot.search</field>
+<field name="model">stock.quant</field>
+<field name="arch" type="xml">
+<search string="Main Warehouse Products Stock">
 <field name="product_id"/>
 <field name="route_barcode"/>
 <field name="lot_id"/>
 <field name="location_id"/>
-<filter name="filter_positive_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
-<filter name="filter_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
-<filter name="filter_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
+<field name="route_expiry_date"/>
+<filter name="filter_main_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
+<filter name="filter_main_reserved_qty" string="Reserved Qty" domain="[('route_has_reservation', '=', True)]"/>
+<filter name="filter_main_partial_available" string="Available Less Than Qty" domain="[('route_available_less_than_qty', '=', True)]"/>
+<filter name="filter_main_zero_available" string="Zero Available" domain="[('available_quantity', '<=', 0)]"/>
+<filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
+<filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <separator/>
-<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<filter name="group_main_by_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_main_by_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_main_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <searchpanel>
+<field name="product_id" string="Product"/>
 <field name="location_id" string="Location"/>
 </searchpanel>
 </search>
