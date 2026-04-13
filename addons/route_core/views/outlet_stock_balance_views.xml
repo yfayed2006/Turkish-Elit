@@ -139,8 +139,6 @@ Expiry:
 <field name="last_visit_id"/>
 <filter name="filter_has_qty" string="Has Quantity" domain="[('qty', '>', 0)]"/>
 <filter name="filter_zero_qty" string="Zero Quantity" domain="[('qty', '=', 0)]"/>
-<filter name="filter_with_lot" string="With Lot / Serial" domain="[('lot_names', '!=', False)]"/>
-<filter name="filter_with_expiry" string="With Expiry Date" domain="[('nearest_expiry_date', '!=', False)]"/>
 <filter name="filter_with_last_visit" string="With Last Visit" domain="[('last_visit_id', '!=', False)]"/>
 <separator/>
 <filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
