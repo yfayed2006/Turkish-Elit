@@ -1,4 +1,4 @@
-<odoo><odoo>
+<odoo>
 <record id="view_route_pda_home_form" model="ir.ui.view">
 <field name="name">route.pda.home.form</field>
 <field name="model">route.pda.home</field>
