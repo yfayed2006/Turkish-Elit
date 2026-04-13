@@ -765,9 +765,14 @@
 <field name="categ_id"/>
 <field name="list_price"/>
 <field name="uom_id"/>
+<field name="image_128"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record">
+<div class="oe_kanban_global_click o_kanban_record d-flex gap-3 align-items-start">
+<div class="flex-shrink-0">
+<field name="image_128" widget="image" class="img img-fluid rounded" options="{'size': [72, 72], 'preview_image': 'image_128'}"/>
+</div>
+<div class="flex-grow-1 overflow-hidden">
 <div class="fw-bold mb-1">
 <field name="name"/>
 </div>
@@ -791,7 +796,7 @@ Price:
 <field name="uom_id"/>
 </span>
 </div>
-<div class="small text-muted" t-if="record.detailed_type.raw_value"> Type: </div>
+</div>
 </div>
 </t>
 </templates>
