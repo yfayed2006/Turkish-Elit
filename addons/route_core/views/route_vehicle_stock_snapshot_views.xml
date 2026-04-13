@@ -11,7 +11,6 @@
 <field name="route_expiry_date"/>
 <field name="quantity"/>
 <field name="available_quantity"/>
-<field name="reserved_quantity"/>
 <field name="route_product_image_128"/>
 <templates>
 <t t-name="card">
@@ -88,9 +87,9 @@ Expiry:
 <filter name="filter_vehicle_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_vehicle_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <separator/>
-<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<filter name="group_by_vehicle_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_by_vehicle_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_vehicle_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <searchpanel>
 <field name="product_id" string="Product"/>
 <field name="location_id" string="Location"/>
@@ -114,9 +113,9 @@ Expiry:
 <filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <separator/>
-<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<filter name="group_by_main_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_by_main_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_main_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <searchpanel>
 <field name="product_id" string="Product"/>
 <field name="location_id" string="Location"/>
