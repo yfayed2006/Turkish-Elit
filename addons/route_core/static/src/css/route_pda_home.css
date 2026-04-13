@@ -582,3 +582,33 @@
     }
 }
 
+
+
+.o_kanban_view.route_pda_mobile_stock_kanban_outlet .o_kanban_renderer.o_kanban_ungrouped {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+}
+
+.o_kanban_view.route_pda_mobile_stock_kanban_outlet .o_kanban_record {
+    min-height: 0 !important;
+    align-self: start;
+}
+
+.route_pda_mobile_stock_kanban_outlet .route_pda_stock_card {
+    height: auto;
+    min-height: 220px;
+}
+
+.route_pda_mobile_stock_kanban_outlet .route_pda_stock_name {
+    min-height: 2.56em;
+}
+
+@media (max-width: 768px) {
+    .o_kanban_view.route_pda_mobile_stock_kanban_outlet .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
+    }
+
+    .route_pda_mobile_stock_kanban_outlet .route_pda_stock_card {
+        min-height: 0;
+    }
+}
