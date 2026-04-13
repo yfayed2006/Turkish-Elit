@@ -758,7 +758,7 @@
 <field name="name">product.template.route.pda.mobile.kanban</field>
 <field name="model">product.template</field>
 <field name="arch" type="xml">
-<kanban class="route_pda_mobile_catalog_kanban route_pda_catalog_dense_kanban" create="0" edit="0" delete="0">
+<kanban class="route_pda_mobile_catalog_kanban" create="0" edit="0" delete="0">
 <field name="name"/>
 <field name="default_code"/>
 <field name="barcode"/>
@@ -768,27 +768,27 @@
 <field name="image_128"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_catalog_card route_pda_catalog_card_dense">
-<div class="route_pda_catalog_thumb_wrap route_pda_catalog_thumb_wrap_dense">
+<div class="oe_kanban_global_click o_kanban_record route_pda_catalog_card route_pda_catalog_card_compact">
+<div class="route_pda_catalog_thumb_wrap route_pda_catalog_thumb_wrap_compact">
 <field name="image_128" widget="image" class="route_pda_catalog_thumb" options="{'size': [128, 128], 'preview_image': 'image_128'}"/>
 </div>
-<div class="route_pda_catalog_body route_pda_catalog_body_dense">
-<div class="route_pda_catalog_name route_pda_catalog_name_dense">
+<div class="route_pda_catalog_body route_pda_catalog_body_compact">
+<div class="route_pda_catalog_name route_pda_catalog_name_compact" t-att-title="record.name.value">
 <field name="name"/>
 </div>
-<div class="route_pda_catalog_meta route_pda_catalog_meta_dense" t-if="record.default_code.raw_value">
+<div class="route_pda_catalog_meta route_pda_catalog_meta_compact" t-if="record.default_code.raw_value">
 Code:
 <field name="default_code"/>
 </div>
-<div class="route_pda_catalog_meta route_pda_catalog_meta_dense" t-if="record.barcode.raw_value">
+<div class="route_pda_catalog_meta route_pda_catalog_meta_compact route_pda_catalog_meta_secondary" t-if="record.barcode.raw_value">
 Barcode:
 <field name="barcode"/>
 </div>
-<div class="route_pda_catalog_meta route_pda_catalog_meta_dense route_pda_catalog_meta_secondary" t-if="record.categ_id.raw_value">
+<div class="route_pda_catalog_meta route_pda_catalog_meta_compact route_pda_catalog_meta_secondary" t-if="record.categ_id.raw_value">
 Category:
 <field name="categ_id"/>
 </div>
-<div class="route_pda_catalog_price route_pda_catalog_price_dense">
+<div class="route_pda_catalog_price route_pda_catalog_price_compact">
 Price:
 <field name="list_price"/>
 <span t-if="record.uom_id.raw_value">
