@@ -207,4 +207,3 @@ class OutletStockBalance(models.Model):
                 raise ValidationError("Quantity cannot be negative.")
             if rec.unit_price < 0:
                 raise ValidationError("Unit Price cannot be negative.")
-
