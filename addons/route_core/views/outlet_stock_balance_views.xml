@@ -3,7 +3,7 @@
 <field name="name">outlet.stock.balance.kanban</field>
 <field name="model">outlet.stock.balance</field>
 <field name="arch" type="xml">
-<kanban class="o_kanban_mobile" create="0" edit="0" delete="0">
+<kanban class="route_pda_mobile_stock_kanban route_pda_mobile_stock_kanban_outlet" create="0" edit="0" delete="0">
 <field name="outlet_id"/>
 <field name="outlet_code"/>
 <field name="route_city_id"/>
@@ -17,26 +17,29 @@
 <field name="last_updated_at"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record">
-<div class="d-flex justify-content-between align-items-start mb-1">
-<div class="fw-bold">
-<field name="product_id"/>
+<div class="oe_kanban_global_click o_kanban_record route_pda_stock_card">
+<div class="route_pda_stock_card_top">
+<div class="route_pda_stock_thumb_wrap">
+<img t-att-src="kanban_image('product.product', 'image_128', record.product_id.raw_value)" class="route_pda_stock_thumb" alt="Product"/>
 </div>
-<div class="text-end">
-<div class="fw-bold">
+<div class="route_pda_stock_qty_wrap">
+<div class="route_pda_stock_qty">
 <field name="qty"/>
 </div>
-<div class="text-muted small">Qty</div>
+<div class="route_pda_stock_qty_label">Qty</div>
 </div>
 </div>
-<div class="text-muted mb-1">
+<div class="route_pda_stock_name">
+<field name="product_id"/>
+</div>
+<div class="route_pda_stock_meta">
 <field name="outlet_id"/>
 <span t-if="record.outlet_code.raw_value">
 •
 <field name="outlet_code"/>
 </span>
 </div>
-<div class="small text-muted" t-if="record.route_city_id.raw_value or record.area_id.raw_value">
+<div class="route_pda_stock_meta" t-if="record.route_city_id.raw_value or record.area_id.raw_value">
 <span t-if="record.route_city_id.raw_value">
 <field name="route_city_id"/>
 </span>
@@ -45,15 +48,15 @@
 <field name="area_id"/>
 </span>
 </div>
-<div class="small text-muted" t-if="record.product_categ_id.raw_value">
+<div class="route_pda_stock_meta" t-if="record.product_categ_id.raw_value">
 Category:
 <field name="product_categ_id"/>
 </div>
-<div class="small text-muted" t-if="record.lot_names.raw_value">
+<div class="route_pda_stock_meta" t-if="record.lot_names.raw_value">
 Lot:
 <field name="lot_names"/>
 </div>
-<div class="small text-muted" t-if="record.nearest_expiry_date.raw_value">
+<div class="route_pda_stock_meta" t-if="record.nearest_expiry_date.raw_value">
 Expiry:
 <field name="nearest_expiry_date"/>
 </div>
