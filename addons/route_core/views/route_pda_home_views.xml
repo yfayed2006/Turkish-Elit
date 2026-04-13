@@ -1,4 +1,4 @@
-<odoo>
+<odoo><odoo>
 <record id="view_route_pda_home_form" model="ir.ui.view">
 <field name="name">route.pda.home.form</field>
 <field name="model">route.pda.home</field>
@@ -765,7 +765,6 @@
 <field name="categ_id"/>
 <field name="list_price"/>
 <field name="uom_id"/>
-<field name="detailed_type"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record">
@@ -792,10 +791,7 @@ Price:
 <field name="uom_id"/>
 </span>
 </div>
-<div class="small text-muted" t-if="record.detailed_type.raw_value">
-Type:
-<field name="detailed_type"/>
-</div>
+<div class="small text-muted" t-if="record.detailed_type.raw_value"> Type: </div>
 </div>
 </t>
 </templates>
@@ -813,7 +809,6 @@ Type:
 <field name="categ_id" optional="show"/>
 <field name="list_price" optional="show"/>
 <field name="uom_id" optional="hide"/>
-<field name="detailed_type" optional="hide"/>
 </list>
 </field>
 </record>
@@ -833,7 +828,6 @@ Type:
 <group string="Sales" col="1">
 <field name="list_price"/>
 <field name="uom_id"/>
-<field name="detailed_type"/>
 <field name="sale_ok"/>
 </group>
 </group>
@@ -854,7 +848,6 @@ Type:
 <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
 <separator/>
 <filter name="group_by_category" string="Category" context="{'group_by': 'categ_id'}"/>
-<filter name="group_by_type" string="Product Type" context="{'group_by': 'detailed_type'}"/>
 <searchpanel>
 <field name="categ_id" string="Category"/>
 </searchpanel>
