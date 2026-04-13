@@ -874,4 +874,3 @@ Price:
 <field name="code">action = env['route.pda.home'].action_open_dashboard()</field>
 </record>
 </odoo>
-</odoo>
