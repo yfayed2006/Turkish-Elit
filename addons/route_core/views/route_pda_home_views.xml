@@ -770,7 +770,7 @@
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_catalog_card">
 <div class="route_pda_catalog_thumb_wrap">
-<img t-att-src="kanban_image('product.template', 'image_128', record.id.raw_value)" class="route_pda_catalog_thumb" alt="Product"/>
+<field name="image_128" widget="image" class="route_pda_catalog_thumb" options="{'size': [128, 128], 'preview_image': 'image_128'}"/>
 </div>
 <div class="route_pda_catalog_body">
 <div class="route_pda_catalog_name">
@@ -873,4 +873,5 @@ Price:
 <field name="state">code</field>
 <field name="code">action = env['route.pda.home'].action_open_dashboard()</field>
 </record>
+</odoo>
 </odoo>
