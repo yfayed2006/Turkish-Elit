@@ -758,7 +758,7 @@
 <field name="name">product.template.route.pda.mobile.kanban</field>
 <field name="model">product.template</field>
 <field name="arch" type="xml">
-<kanban class="o_kanban_mobile" create="0" edit="0" delete="0">
+<kanban class="route_pda_mobile_catalog_kanban" create="0" edit="0" delete="0">
 <field name="name"/>
 <field name="default_code"/>
 <field name="barcode"/>
@@ -768,27 +768,27 @@
 <field name="image_128"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record d-flex gap-3 align-items-start">
-<div class="flex-shrink-0">
-<field name="image_128" widget="image" class="img img-fluid rounded" options="{'size': [72, 72], 'preview_image': 'image_128'}"/>
+<div class="oe_kanban_global_click o_kanban_record route_pda_catalog_card">
+<div class="route_pda_catalog_thumb_wrap">
+<img t-att-src="kanban_image('product.template', 'image_128', record.id.raw_value)" class="route_pda_catalog_thumb" alt="Product"/>
 </div>
-<div class="flex-grow-1 overflow-hidden">
-<div class="fw-bold mb-1">
+<div class="route_pda_catalog_body">
+<div class="route_pda_catalog_name">
 <field name="name"/>
 </div>
-<div class="small text-muted" t-if="record.default_code.raw_value">
+<div class="route_pda_catalog_meta" t-if="record.default_code.raw_value">
 Code:
 <field name="default_code"/>
 </div>
-<div class="small text-muted" t-if="record.barcode.raw_value">
+<div class="route_pda_catalog_meta" t-if="record.barcode.raw_value">
 Barcode:
 <field name="barcode"/>
 </div>
-<div class="small text-muted" t-if="record.categ_id.raw_value">
+<div class="route_pda_catalog_meta" t-if="record.categ_id.raw_value">
 Category:
 <field name="categ_id"/>
 </div>
-<div class="small text-muted">
+<div class="route_pda_catalog_price">
 Price:
 <field name="list_price"/>
 <span t-if="record.uom_id.raw_value">
