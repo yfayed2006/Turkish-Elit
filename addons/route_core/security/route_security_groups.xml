@@ -4,6 +4,7 @@
 <field name="description">Route Sales roles and security</field>
 <field name="sequence">35</field>
 </record>
+<data noupdate="1">
 <record id="group_route_salesperson" model="res.groups">
 <field name="name">Route Salesperson</field>
 <field name="comment">Field salesperson mobile/PDA operations.</field>
@@ -17,4 +18,5 @@
 <field name="implied_ids" eval="[(4, ref('route_core.group_route_supervisor'))]"/>
 <field name="comment">Management visibility across all route operations, including supervisor capabilities.</field>
 </record>
+</data>
 </odoo>
