@@ -31,34 +31,9 @@ class OutletStockBalance(models.Model):
         readonly=True,
     )
 
-    outlet_code = fields.Char(
-        string="Outlet Code",
-        related="outlet_id.code",
-        store=True,
-        readonly=True,
-    )
-
-    route_city_id = fields.Many2one(
-        "route.city",
-        string="City",
-        related="outlet_id.route_city_id",
-        store=True,
-        readonly=True,
-    )
-
-    area_id = fields.Many2one(
-        "route.area",
-        string="Area",
-        related="outlet_id.area_id",
-        store=True,
-        readonly=True,
-    )
-
-    product_categ_id = fields.Many2one(
-        "product.category",
-        string="Product Category",
-        related="product_id.categ_id",
-        store=True,
+    product_image_128 = fields.Image(
+        string="Product Image",
+        related="product_id.image_128",
         readonly=True,
     )
 
