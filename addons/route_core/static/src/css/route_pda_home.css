@@ -405,32 +405,40 @@
 }
 
 
+
 .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped,
 .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
-    align-items: stretch;
+    align-items: start;
 }
 
 .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_record,
 .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_record {
     width: auto !important;
     margin: 0 !important;
-    min-height: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: start;
 }
 
 .route_pda_catalog_card,
 .route_pda_stock_card {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: auto !important;
+    min-height: 0;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
     background: #ffffff;
     padding: 10px;
     box-shadow: none;
     overflow: hidden;
+}
+
+.route_pda_catalog_card_compact {
+    gap: 8px;
 }
 
 .route_pda_catalog_thumb_wrap,
@@ -443,9 +451,19 @@
     overflow: hidden;
 }
 
-.route_pda_catalog_thumb_wrap {
-    aspect-ratio: 1 / 1;
-    margin-bottom: 10px;
+.route_pda_catalog_thumb_wrap,
+.route_pda_catalog_thumb_wrap_compact {
+    height: 92px;
+    margin-bottom: 0;
+}
+
+.route_pda_catalog_thumb_wrap .o_field_widget,
+.route_pda_catalog_thumb_wrap img,
+.route_pda_stock_thumb_wrap .o_field_widget,
+.route_pda_stock_thumb_wrap img {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .route_pda_catalog_thumb,
@@ -455,7 +473,8 @@
     object-fit: contain;
 }
 
-.route_pda_catalog_body {
+.route_pda_catalog_body,
+.route_pda_catalog_body_compact {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -463,24 +482,35 @@
 }
 
 .route_pda_catalog_name,
-.route_pda_stock_name {
+.route_pda_stock_name,
+.route_pda_catalog_name_compact {
     font-size: 1rem;
     font-weight: 800;
-    line-height: 1.3;
+    line-height: 1.28;
     color: #111827;
     word-break: break-word;
-    min-height: 2.6em;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: 2.56em;
 }
 
 .route_pda_catalog_meta,
-.route_pda_stock_meta {
+.route_pda_stock_meta,
+.route_pda_catalog_meta_compact {
     font-size: 0.84rem;
     line-height: 1.35;
     color: #6b7280;
     word-break: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 }
 
-.route_pda_catalog_price {
+.route_pda_catalog_price,
+.route_pda_catalog_price_compact {
     margin-top: 2px;
     font-size: 0.9rem;
     font-weight: 700;
@@ -519,56 +549,21 @@
     color: #6b7280;
 }
 
-@media (max-width: 768px) {
-    .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped,
-    .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-    }
-
-    .route_pda_catalog_card,
-    .route_pda_stock_card {
-        padding: 8px;
-        border-radius: 12px;
-    }
-
-    .route_pda_catalog_thumb_wrap {
-        margin-bottom: 8px;
-    }
-
-    .route_pda_catalog_name,
-    .route_pda_stock_name {
-        font-size: 0.92rem;
-        min-height: 2.5em;
-    }
-
-    .route_pda_catalog_meta,
-    .route_pda_stock_meta,
-    .route_pda_catalog_price {
-        font-size: 0.78rem;
-    }
-
-    .route_pda_stock_thumb_wrap {
-        flex-basis: 56px;
-        width: 56px;
-        height: 56px;
-    }
-
-    .route_pda_stock_card_top {
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    .route_pda_stock_qty {
-        font-size: 1rem;
+@media (max-width: 1200px) {
+    .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
 }
 
-
 @media (max-width: 768px) {
-    .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped,
-    .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    .o_kanban_view.route_pda_mobile_catalog_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .o_kanban_view.route_pda_mobile_stock_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
         gap: 10px;
     }
 
@@ -578,13 +573,34 @@
         border-radius: 12px;
     }
 
-    .route_pda_catalog_thumb_wrap {
-        margin-bottom: 8px;
+    .route_pda_catalog_thumb_wrap,
+    .route_pda_catalog_thumb_wrap_compact {
+        height: 74px;
     }
 
-    .route_pda_stock_card_top {
-        gap: 8px;
-        margin-bottom: 8px;
+    .route_pda_catalog_name,
+    .route_pda_stock_name,
+    .route_pda_catalog_name_compact {
+        font-size: 0.9rem;
+        line-height: 1.24;
+        min-height: 2.48em;
+    }
+
+    .route_pda_catalog_meta,
+    .route_pda_stock_meta,
+    .route_pda_catalog_meta_compact {
+        font-size: 0.74rem;
+        line-height: 1.25;
+    }
+
+    .route_pda_catalog_meta_secondary {
+        display: none;
+    }
+
+    .route_pda_catalog_price,
+    .route_pda_catalog_price_compact {
+        font-size: 0.8rem;
+        margin-top: 0;
     }
 
     .route_pda_stock_thumb_wrap {
@@ -593,17 +609,9 @@
         height: 56px;
     }
 
-    .route_pda_catalog_name,
-    .route_pda_stock_name {
-        font-size: 0.92rem;
-        min-height: 2.4em;
-    }
-
-    .route_pda_catalog_meta,
-    .route_pda_stock_meta,
-    .route_pda_catalog_price {
-        font-size: 0.76rem;
-        line-height: 1.3;
+    .route_pda_stock_card_top {
+        gap: 8px;
+        margin-bottom: 8px;
     }
 
     .route_pda_stock_qty {
@@ -612,105 +620,5 @@
 
     .route_pda_stock_qty_label {
         font-size: 0.72rem;
-    }
-}
-
-
-
-/* Dense All Products catalog cards */
-.o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer,
-.o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer.o_kanban_ungrouped {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-    align-items: stretch;
-}
-
-.o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_record {
-    width: auto !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    height: auto !important;
-}
-
-.route_pda_catalog_card_dense {
-    padding: 10px;
-    gap: 8px;
-}
-
-.route_pda_catalog_thumb_wrap_dense {
-    height: 112px;
-    aspect-ratio: auto;
-    margin-bottom: 0;
-}
-
-.route_pda_catalog_body_dense {
-    gap: 4px;
-}
-
-.route_pda_catalog_name_dense {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 2.6em;
-}
-
-.route_pda_catalog_meta_dense {
-    font-size: 0.82rem;
-    line-height: 1.3;
-}
-
-.route_pda_catalog_price_dense {
-    margin-top: auto;
-    padding-top: 4px;
-    font-size: 0.92rem;
-    font-weight: 800;
-}
-
-@media (max-width: 1024px) {
-    .o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer,
-    .o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer.o_kanban_ungrouped {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 10px;
-    }
-
-    .route_pda_catalog_thumb_wrap_dense {
-        height: 96px;
-    }
-}
-
-@media (max-width: 768px) {
-    .o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer,
-    .o_kanban_view.route_pda_catalog_dense_kanban .o_kanban_renderer.o_kanban_ungrouped {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-    }
-
-    .route_pda_catalog_card_dense {
-        padding: 8px;
-        border-radius: 12px;
-    }
-
-    .route_pda_catalog_thumb_wrap_dense {
-        height: 72px;
-    }
-
-    .route_pda_catalog_name_dense {
-        font-size: 0.92rem;
-        min-height: 2.45em;
-    }
-
-    .route_pda_catalog_meta_dense {
-        font-size: 0.74rem;
-    }
-
-    .route_pda_catalog_meta_secondary {
-        display: none;
-    }
-
-    .route_pda_catalog_price_dense {
-        font-size: 0.84rem;
-        padding-top: 2px;
     }
 }
