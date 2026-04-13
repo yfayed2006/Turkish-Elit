@@ -475,11 +475,16 @@ class RoutePdaHome(models.TransientModel):
         groups = self.env["stock.quant"].read_group(domain, ["product_id"], ["product_id"], lazy=False)
         return len([group for group in groups if group.get("product_id")])
 
-    def _open_quants_by_location(self, location, title, exclude_route_locations=False):
+    def _open_quants_by_location(self, location, title, exclude_route_locations=False, stock_mode="vehicle"):
         self.ensure_one()
         kanban_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_list", raise_if_not_found=False)
-        search_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_search", raise_if_not_found=False)
+        search_view_xmlid = "route_core.view_route_vehicle_stock_snapshot_search"
+        default_search_flag = "search_default_filter_vehicle_has_qty"
+        if stock_mode == "warehouse":
+            search_view_xmlid = "route_core.view_route_main_warehouse_stock_snapshot_search"
+            default_search_flag = "search_default_filter_main_has_qty"
+        search_view = self.env.ref(search_view_xmlid, raise_if_not_found=False)
         location_ids = self._get_quant_location_ids(location, exclude_route_locations=exclude_route_locations)
         domain = [("quantity", ">", 0), ("location_id", "in", location_ids)] if location_ids else [("id", "=", 0)]
         views = []
@@ -487,6 +492,7 @@ class RoutePdaHome(models.TransientModel):
             views.append((kanban_view.id, "kanban"))
         if list_view:
             views.append((list_view.id, "list"))
+        context = {"create": 0, "edit": 0, "delete": 0, default_search_flag: 1}
         return {
             "type": "ir.actions.act_window",
             "name": title,
@@ -496,7 +502,7 @@ class RoutePdaHome(models.TransientModel):
             "search_view_id": search_view.id if search_view else False,
             "domain": domain,
             "target": "current",
-            "context": {"search_default_filter_positive_qty": 1, "create": 0, "edit": 0, "delete": 0},
+            "context": context,
         }
 
     @api.depends("user_id")
@@ -937,7 +943,33 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_outlet_balances(self):
         self.ensure_one()
-        return self._prepare_action("route_core.action_outlet_stock_balance", name="Outlet Stock Balances")
+        kanban_view = self.env.ref("route_core.view_outlet_stock_balance_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_outlet_stock_balance_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_outlet_stock_balance_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_outlet_stock_balance_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Consignment Outlets Stock",
+            "res_model": "outlet.stock.balance",
+            "view_mode": "kanban,list,form",
+            "views": views or [(False, "kanban"), (False, "list"), (False, "form")],
+            "search_view_id": search_view.id if search_view else False,
+            "domain": [("qty", ">", 0)],
+            "target": "current",
+            "context": {
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+                "search_default_filter_outlet_has_qty": 1,
+            },
+        }
 
     def action_open_visit_collections(self):
         self.ensure_one()
@@ -1021,7 +1053,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
-        return self._open_quants_by_location(location, "Vehicle Products Stock")
+        return self._open_quants_by_location(location, "Vehicle Products Stock", stock_mode="vehicle")
 
     def action_open_main_warehouse_products(self):
         self.ensure_one()
@@ -1029,7 +1061,7 @@ class RoutePdaHome(models.TransientModel):
         title = "Main Warehouse Products Stock"
         if location:
             title = f"Main Warehouse Products Stock - {location.display_name}"
-        return self._open_quants_by_location(location, title, exclude_route_locations=True)
+        return self._open_quants_by_location(location, title, exclude_route_locations=True, stock_mode="warehouse")
 
     def _get_picking_moves(self, pickings):
         self.ensure_one()
@@ -1224,4 +1256,5 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
+
 
