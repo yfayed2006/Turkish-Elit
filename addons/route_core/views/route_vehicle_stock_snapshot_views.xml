@@ -11,12 +11,13 @@
 <field name="route_expiry_date"/>
 <field name="quantity"/>
 <field name="available_quantity"/>
+<field name="route_product_image_128"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_stock_card">
 <div class="route_pda_stock_card_top">
 <div class="route_pda_stock_thumb_wrap">
-<img t-att-src="kanban_image('product.product', 'image_128', record.product_id.raw_value)" class="route_pda_stock_thumb" alt="Product"/>
+<field name="route_product_image_128" widget="image" class="route_pda_stock_thumb" options="{'size': [128, 128], 'preview_image': 'route_product_image_128'}"/>
 </div>
 <div class="route_pda_stock_qty_wrap">
 <div class="route_pda_stock_qty">
