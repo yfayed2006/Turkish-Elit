@@ -967,27 +967,54 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_products(self):
         self.ensure_one()
-        action = self._prepare_action(
-            "route_core.action_route_pda_products",
-            name="All Products",
-            context={"search_default_filter_to_sell": 1, "create": 0, "edit": 0, "delete": 0},
-        )
-        kanban_view = self.env.ref("route_core.view_route_pda_product_mobile_kanban", raise_if_not_found=False)
-        list_view = self.env.ref("route_core.view_route_pda_product_mobile_list", raise_if_not_found=False)
-        form_view = self.env.ref("route_core.view_route_pda_product_mobile_form", raise_if_not_found=False)
-        search_view = self.env.ref("route_core.view_route_pda_product_mobile_search", raise_if_not_found=False)
-        views = []
-        if kanban_view:
-            views.append((kanban_view.id, "kanban"))
-        if list_view:
-            views.append((list_view.id, "list"))
-        if form_view:
-            views.append((form_view.id, "form"))
-        if views:
-            action["views"] = views
-            action["view_mode"] = "kanban,list,form"
-        if search_view:
-            action["search_view_id"] = search_view.id
+
+        # Prefer the native Odoo product action so the salesperson sees the same
+        # responsive card/list behavior as standard Inventory/Product screens.
+        native_action = None
+        for xmlid in [
+            "product.product_template_action",
+            "product.product_normal_action_sell",
+            "stock.product_template_action_product",
+        ]:
+            try:
+                native_action = self.env["ir.actions.actions"]._for_xml_id(xmlid)
+                if native_action:
+                    break
+            except Exception:
+                native_action = None
+
+        if not native_action:
+            action = self._prepare_action(
+                "route_core.action_route_pda_products",
+                name="All Products",
+                context={"search_default_filter_to_sell": 1, "create": 0, "edit": 0, "delete": 0},
+            )
+            return action
+
+        action = dict(native_action)
+        action["name"] = "All Products"
+        action["target"] = "main"
+
+        domain = action.get("domain") or []
+        if isinstance(domain, str):
+            # Keep native string domains untouched and rely on our extra filter below.
+            pass
+        else:
+            domain = list(domain)
+            domain += [("sale_ok", "=", True), ("active", "=", True)]
+            action["domain"] = domain
+
+        context = dict(self.env.context)
+        native_context = action.get("context") or {}
+        if isinstance(native_context, dict):
+            context.update(native_context)
+        context.update({
+            "create": 0,
+            "edit": 0,
+            "delete": 0,
+            "search_default_filter_to_sell": 1,
+        })
+        action["context"] = context
         return action
 
     def action_open_vehicle_products(self):
