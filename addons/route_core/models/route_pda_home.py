@@ -433,10 +433,18 @@ class RoutePdaHome(models.TransientModel):
             ("outlet_operation_mode", "=", "consignment"),
             ("stock_location_id", "!=", False),
         ]).mapped("stock_location_id")
+        company_return_locations = self.env["stock.location"].browse([
+            location_id
+            for location_id in [
+                getattr(self.env.company.return_damaged_location_id, "id", False),
+                getattr(self.env.company.return_near_expiry_location_id, "id", False),
+            ]
+            if location_id
+        ])
 
         excluded_root_ids = {
             location.id
-            for location in (vehicle_locations | outlet_locations)
+            for location in (vehicle_locations | outlet_locations | company_return_locations)
             if location and location.id in location_ids_under_root and location.id != root_location.id
         }
         return sorted(excluded_root_ids)
