@@ -1,16 +1,16 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v7.workspace.hash",
-    workspaceUrl: "route_core.v7.workspace.url",
-    pendingButtonName: "route_core.v7.pending.button_name",
-    pendingButtonTs: "route_core.v7.pending.button_ts",
+    workspaceHash: "route_core.v8.workspace.hash",
+    workspaceUrl: "route_core.v8.workspace.url",
+    pendingButtonName: "route_core.v8.pending.button_name",
+    pendingButtonTs: "route_core.v8.pending.button_ts",
 };
 
-const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
-const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
+const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
+const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
 
-const PAGE_KINDS_WITH_INLINE_BACK = new Set([
+const PAGE_KINDS_WITH_BACK = new Set([
     "vehicle_stock",
     "warehouse_stock",
     "outlet_stock",
@@ -70,6 +70,11 @@ function findVisibleInRoot(root, selector) {
     return matches.length ? matches[matches.length - 1] : null;
 }
 
+function findVisibleAnywhere(selector) {
+    const matches = Array.from(document.querySelectorAll(selector)).filter(isElementVisible);
+    return matches.length ? matches[matches.length - 1] : null;
+}
+
 function findAnyButton(name) {
     const selector = `button[name="${name}"]`;
     const matches = Array.from(document.querySelectorAll(selector));
@@ -77,7 +82,7 @@ function findAnyButton(name) {
 }
 
 function hasVisibleButton(name) {
-    return !!findVisibleInRoot(getActiveRoot(), `button[name="${name}"]`);
+    return !!findVisibleAnywhere(`button[name="${name}"]`);
 }
 
 function hasAnyVisibleButton(names) {
@@ -86,7 +91,9 @@ function hasAnyVisibleButton(names) {
 
 function getVisibleText(selector) {
     const root = getActiveRoot();
-    const element = findVisibleInRoot(root, selector) || (isElementVisible(root) && root.matches?.(selector) ? root : null);
+    const element = findVisibleInRoot(root, selector)
+        || findVisibleAnywhere(selector)
+        || (isElementVisible(root) && root.matches?.(selector) ? root : null);
     return element ? element.textContent.trim() : "";
 }
 
@@ -95,8 +102,11 @@ function getRootText() {
     return normalizeText(root ? root.innerText : "");
 }
 
+function getPageText() {
+    return normalizeText(document.body ? document.body.innerText : "");
+}
+
 function findActionTitle() {
-    const root = getActiveRoot();
     const selectors = [
         ".o_control_panel .breadcrumb-item.active",
         ".o_control_panel .o_last_breadcrumb_item",
@@ -110,7 +120,7 @@ function findActionTitle() {
         ".o_last_breadcrumb_item",
     ];
     for (const selector of selectors) {
-        const element = findVisibleInRoot(root, selector);
+        const element = findVisibleAnywhere(selector);
         if (element) {
             return element.textContent.trim();
         }
@@ -119,9 +129,12 @@ function findActionTitle() {
 }
 
 function isRouteWorkspacePage() {
-    return hasVisibleButton("action_open_product_center_screen")
+    const pageText = getPageText();
+    return (
+        hasVisibleButton("action_open_product_center_screen")
         && hasVisibleButton("action_open_visit_collections_center_screen")
-        && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
+        && pageText.includes("route workspace")
+    );
 }
 
 function isProductCenterPage() {
@@ -154,24 +167,38 @@ function isDailySummaryPage() {
 function detectPageKind() {
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
+    const pageText = getPageText();
 
-    if (title.startsWith("vehicle products stock") || rootText.includes("vehicle products stock")) {
+    if (
+        title.includes("vehicle products stock")
+        || rootText.includes("vehicle products stock")
+        || pageText.includes("vehicle products stock")
+    ) {
         return "vehicle_stock";
     }
-    if (title.startsWith("main warehouse products stock") || rootText.includes("main warehouse products stock")) {
+
+    if (
+        title.includes("main warehouse products stock")
+        || rootText.includes("main warehouse products stock")
+        || pageText.includes("main warehouse products stock")
+    ) {
         return "warehouse_stock";
     }
+
     if (
-        title.startsWith("consignment outlets stock")
-        || title.startsWith("outlet stock balances")
+        title.includes("consignment outlets stock")
+        || title.includes("outlet stock balances")
         || rootText.includes("consignment outlets stock")
         || rootText.includes("outlet stock balances")
+        || pageText.includes("consignment outlets stock")
+        || pageText.includes("outlet stock balances")
     ) {
         return "outlet_stock";
     }
+
     if (
-        (title === "products" || title === "all products" || rootText.includes("all products"))
-        && (rootText.includes("barcode") || rootText.includes("price"))
+        (title === "products" || title === "all products" || rootText.includes("all products") || pageText.includes("all products"))
+        && (rootText.includes("barcode") || rootText.includes("price") || pageText.includes("barcode") || pageText.includes("price"))
     ) {
         return "all_products";
     }
@@ -284,7 +311,7 @@ function openServerButton(buttonName) {
         return false;
     }
     const button = findAnyButton(buttonName);
-    if (!button) {
+    if (!button || !isElementVisible(button)) {
         return false;
     }
     isInternalRedirect = true;
@@ -359,55 +386,54 @@ function maybeRunPendingButton() {
     clearPendingButton();
     window.setTimeout(() => {
         openServerButton(pendingButton);
-    }, 80);
+    }, 120);
 }
 
 function getBackLabel(pageKind) {
-    if (PAGE_KINDS_WITH_INLINE_BACK.has(pageKind)) {
+    if (PAGE_KINDS_WITH_BACK.has(pageKind)) {
         return "Back to Products and Stock";
     }
     return "Back";
 }
 
-function handleInlineBack(pageKind) {
+function handleFloatingBack(pageKind) {
     if (["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"].includes(pageKind)) {
         navigateViaWorkspace("action_open_product_center_screen");
     }
 }
 
-function removeInlineBackButton() {
-    const wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+function removeFloatingBackButton() {
+    const wrapper = document.getElementById(FLOATING_BACK_WRAPPER_ID);
     if (wrapper) {
         wrapper.remove();
     }
 }
 
-function findInlineBackHost() {
-    const root = getActiveRoot();
-    return findVisibleInRoot(root, ".o_view_controller") || root || null;
-}
-
-function buildInlineBackButton(pageKind) {
+function buildFloatingBackButton(pageKind) {
     const wrapper = document.createElement("div");
-    wrapper.id = INLINE_BACK_WRAPPER_ID;
-    wrapper.style.display = "block";
-    wrapper.style.margin = "12px 16px 8px 16px";
+    wrapper.id = FLOATING_BACK_WRAPPER_ID;
+    wrapper.style.position = "fixed";
+    wrapper.style.left = "12px";
+    wrapper.style.top = "110px";
+    wrapper.style.zIndex = "9999";
+    wrapper.style.pointerEvents = "auto";
 
     const button = document.createElement("button");
-    button.id = INLINE_BACK_BUTTON_ID;
+    button.id = FLOATING_BACK_BUTTON_ID;
     button.type = "button";
-    button.className = "btn btn-link";
-    button.style.padding = "0";
-    button.style.border = "0";
-    button.style.background = "transparent";
+    button.className = "btn btn-light";
+    button.style.border = "1px solid rgba(0,0,0,0.12)";
+    button.style.borderRadius = "999px";
+    button.style.background = "#ffffff";
+    button.style.padding = "8px 14px";
     button.style.fontWeight = "600";
-    button.style.fontSize = "16px";
-    button.style.textDecoration = "none";
-    button.style.boxShadow = "none";
+    button.style.fontSize = "14px";
+    button.style.boxShadow = "0 2px 10px rgba(0,0,0,0.08)";
     button.style.display = "inline-flex";
     button.style.alignItems = "center";
     button.style.gap = "6px";
     button.style.color = "inherit";
+    button.style.cursor = "pointer";
     button.dataset.pageKind = pageKind;
     button.title = getBackLabel(pageKind);
     button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${getBackLabel(pageKind)}</span>`;
@@ -415,29 +441,28 @@ function buildInlineBackButton(pageKind) {
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        handleInlineBack(button.dataset.pageKind || "");
+        handleFloatingBack(button.dataset.pageKind || "");
     });
 
     wrapper.appendChild(button);
     return wrapper;
 }
 
-function ensureInlineBackButton() {
+function ensureFloatingBackButton() {
     const pageKind = detectPageKind();
-    const host = findInlineBackHost();
 
-    if (!PAGE_KINDS_WITH_INLINE_BACK.has(pageKind) || !host) {
-        removeInlineBackButton();
+    if (!PAGE_KINDS_WITH_BACK.has(pageKind)) {
+        removeFloatingBackButton();
         return;
     }
 
-    let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    let wrapper = document.getElementById(FLOATING_BACK_WRAPPER_ID);
     if (!wrapper) {
-        wrapper = buildInlineBackButton(pageKind);
-        host.prepend(wrapper);
+        wrapper = buildFloatingBackButton(pageKind);
+        document.body.appendChild(wrapper);
     }
 
-    const button = document.getElementById(INLINE_BACK_BUTTON_ID);
+    const button = document.getElementById(FLOATING_BACK_BUTTON_ID);
     if (!button) {
         return;
     }
@@ -449,11 +474,6 @@ function ensureInlineBackButton() {
     if (labelSpan) {
         labelSpan.textContent = getBackLabel(pageKind);
     }
-
-    if (wrapper.parentElement !== host) {
-        wrapper.remove();
-        host.prepend(wrapper);
-    }
 }
 
 function handleBrowserBack() {
@@ -461,18 +481,18 @@ function handleBrowserBack() {
         return;
     }
     const pageKind = detectPageKind();
-    if (!PAGE_KINDS_WITH_INLINE_BACK.has(pageKind)) {
+    if (!PAGE_KINDS_WITH_BACK.has(pageKind)) {
         return;
     }
     window.setTimeout(() => {
-        handleInlineBack(pageKind);
+        handleFloatingBack(pageKind);
     }, 0);
 }
 
 function refreshNavigationUi() {
     rememberNavigationTargets();
     maybeRunPendingButton();
-    ensureInlineBackButton();
+    ensureFloatingBackButton();
 }
 
 function bootRouteWorkspaceNavigationGuard() {
@@ -509,4 +529,5 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
