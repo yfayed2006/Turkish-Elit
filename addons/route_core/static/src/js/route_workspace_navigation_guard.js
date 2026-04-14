@@ -7,8 +7,8 @@ const STORAGE_KEYS = {
     collectionsCenter: "route_core.collections_center.hash",
 };
 
-const BACK_BUTTON_ID = "route-workspace-inline-back-btn";
-const BACK_BUTTON_WRAPPER_ID = "route-workspace-inline-back-wrapper";
+const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
+const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -155,132 +155,110 @@ function getBackLabel(pageKind) {
 
 function navigateToHash(targetHash) {
     if (!targetHash) {
+        window.history.back();
         return;
     }
+
     const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
     if (window.location.hash === cleanHash) {
         return;
     }
 
     isInternalRedirect = true;
-    window.location.hash = cleanHash;
+    window.location.hash = cleanHash.slice(1);
 
     window.setTimeout(() => {
         isInternalRedirect = false;
     }, 250);
 }
 
-function removeBackButton() {
-    const wrapper = document.getElementById(BACK_BUTTON_WRAPPER_ID);
+function removeInlineBackButton() {
+    const wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (wrapper) {
         wrapper.remove();
     }
 }
 
-function getBackButtonMountPoint() {
-    const controlPanel = document.querySelector(".o_control_panel");
-    if (controlPanel && controlPanel.parentElement) {
-        return { mode: "after_control_panel", host: controlPanel };
-    }
-
-    const content = document.querySelector(".o_content");
-    if (content) {
-        return { mode: "content_prepend", host: content };
-    }
-
-    return null;
+function findInlineBackHost() {
+    return document.querySelector(".o_content")
+        || document.querySelector(".o_action_manager")
+        || document.querySelector(".o_web_client")
+        || null;
 }
 
-function styleWrapper(wrapper) {
+function buildInlineBackButton(pageKind, targetHash) {
+    const wrapper = document.createElement("div");
+    wrapper.id = INLINE_BACK_WRAPPER_ID;
     wrapper.style.display = "block";
-    wrapper.style.margin = "8px 16px 12px 16px";
-}
+    wrapper.style.margin = "12px 16px 8px 16px";
 
-function styleButton(button) {
+    const button = document.createElement("button");
+    button.id = INLINE_BACK_BUTTON_ID;
+    button.type = "button";
+    button.className = "btn btn-link";
+    button.dataset.targetHash = targetHash || "";
+    button.style.padding = "0";
+    button.style.border = "0";
+    button.style.background = "transparent";
+    button.style.fontWeight = "600";
+    button.style.fontSize = "16px";
+    button.style.textDecoration = "none";
+    button.style.boxShadow = "none";
     button.style.display = "inline-flex";
     button.style.alignItems = "center";
-    button.style.gap = "8px";
-    button.style.padding = "8px 14px";
-    button.style.borderRadius = "10px";
-    button.style.border = "1px solid #d8dadd";
-    button.style.background = "#ffffff";
-    button.style.color = "#1f2937";
-    button.style.fontWeight = "600";
-    button.style.cursor = "pointer";
-    button.style.boxShadow = "0 1px 2px rgba(0,0,0,0.04)";
-}
+    button.style.gap = "6px";
+    button.style.color = "inherit";
+    button.title = getBackLabel(pageKind);
+    button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${getBackLabel(pageKind)}</span>`;
 
-function mountWrapper(wrapper, mountPoint) {
-    if (!mountPoint || !mountPoint.host) {
-        return;
-    }
+    button.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        navigateToHash(button.dataset.targetHash || "");
+    });
 
-    if (mountPoint.mode === "after_control_panel") {
-        mountPoint.host.insertAdjacentElement("afterend", wrapper);
-        return;
-    }
-
-    if (mountPoint.mode === "content_prepend") {
-        mountPoint.host.prepend(wrapper);
-    }
+    wrapper.appendChild(button);
+    return wrapper;
 }
 
 function ensureInlineBackButton() {
     const pageKind = detectPageKind();
     const targetHash = getBackTargetForPage(pageKind);
-    const supportedPages = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products", "daily_summary"]);
-    const mountPoint = getBackButtonMountPoint();
+    const supportedPages = new Set([
+        "vehicle_stock",
+        "warehouse_stock",
+        "outlet_stock",
+        "all_products",
+        "daily_summary",
+    ]);
+    const host = findInlineBackHost();
 
-    if (!supportedPages.has(pageKind) || !targetHash || !mountPoint) {
-        removeBackButton();
+    if (!supportedPages.has(pageKind) || !host) {
+        removeInlineBackButton();
         return;
     }
 
-    let wrapper = document.getElementById(BACK_BUTTON_WRAPPER_ID);
+    let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper) {
-        wrapper = document.createElement("div");
-        wrapper.id = BACK_BUTTON_WRAPPER_ID;
-        wrapper.className = "route_workspace_inline_back_wrapper";
-        styleWrapper(wrapper);
-
-        const button = document.createElement("button");
-        button.id = BACK_BUTTON_ID;
-        button.type = "button";
-        button.className = "route_workspace_inline_back_btn";
-        styleButton(button);
-        button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back</span>';
-        button.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            navigateToHash(button.dataset.targetHash || "");
-        });
-
-        wrapper.appendChild(button);
-        mountWrapper(wrapper, mountPoint);
+        wrapper = buildInlineBackButton(pageKind, targetHash);
+        host.insertAdjacentElement("afterbegin", wrapper);
     }
 
-    const button = document.getElementById(BACK_BUTTON_ID);
+    const button = document.getElementById(INLINE_BACK_BUTTON_ID);
     if (!button) {
         return;
     }
 
-    styleWrapper(wrapper);
-    styleButton(button);
-    button.dataset.targetHash = targetHash;
+    button.dataset.targetHash = targetHash || "";
     button.title = getBackLabel(pageKind);
-
     const labelSpan = button.querySelector("span");
     if (labelSpan) {
         labelSpan.textContent = getBackLabel(pageKind);
     }
 
-    const parent = wrapper.parentElement;
-    if (
-        !parent
-        || (mountPoint.mode === "after_control_panel" && parent === mountPoint.host)
-        || (mountPoint.mode === "content_prepend" && parent !== mountPoint.host)
-    ) {
-        mountWrapper(wrapper, mountPoint);
+    if (wrapper.parentElement !== host || host.firstElementChild !== wrapper) {
+        wrapper.remove();
+        host.insertAdjacentElement("afterbegin", wrapper);
     }
 }
 
@@ -290,18 +268,21 @@ function handleBrowserBack() {
     }
 
     const pageKind = detectPageKind();
-    const protectedPages = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products", "daily_summary"]);
+    const protectedPages = new Set([
+        "vehicle_stock",
+        "warehouse_stock",
+        "outlet_stock",
+        "all_products",
+        "daily_summary",
+    ]);
+
     if (!protectedPages.has(pageKind)) {
         return;
     }
 
     const targetHash = getBackTargetForPage(pageKind);
-    if (!targetHash) {
-        return;
-    }
-
     window.setTimeout(() => {
-        navigateToHash(targetHash);
+        navigateToHash(targetHash || "");
     }, 0);
 }
 
@@ -337,3 +318,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
