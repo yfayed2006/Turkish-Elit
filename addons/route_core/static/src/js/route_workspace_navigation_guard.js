@@ -1,10 +1,10 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v9.workspace.hash",
-    workspaceUrl: "route_core.v9.workspace.url",
-    pendingButtonName: "route_core.v9.pending.button_name",
-    pendingButtonTs: "route_core.v9.pending.button_ts",
+    workspaceHash: "route_core.v10.workspace.hash",
+    workspaceUrl: "route_core.v10.workspace.url",
+    pendingButtonName: "route_core.v10.pending.button_name",
+    pendingButtonTs: "route_core.v10.pending.button_ts",
 };
 
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
@@ -222,6 +222,42 @@ function detectPageKind() {
     }
 
     return "";
+}
+
+function isSmallScreen() {
+    return window.matchMedia("(max-width: 767.98px)").matches;
+}
+
+function hasBackArrowIcon(element) {
+    if (!element) {
+        return false;
+    }
+    return !!element.querySelector(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
+}
+
+function looksLikeMobileHeaderBackControl(element) {
+    const clickable = element?.closest?.("a, button");
+    if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
+        return false;
+    }
+
+    const rect = clickable.getBoundingClientRect();
+    if (rect.top > 120 || rect.left > 220) {
+        return false;
+    }
+
+    const text = normalizeText(clickable.textContent);
+    const aria = normalizeText(clickable.getAttribute("aria-label") || clickable.getAttribute("title") || "");
+    const classes = normalizeText(clickable.className || "");
+    const parentClasses = normalizeText(clickable.parentElement?.className || "");
+
+    return (
+        hasBackArrowIcon(clickable)
+        || text === "back"
+        || aria.includes("back")
+        || classes.includes("back")
+        || parentClasses.includes("back")
+    );
 }
 
 function getCurrentHash() {
@@ -492,6 +528,29 @@ function handleBrowserBack() {
     }, 0);
 }
 
+function interceptMobileHeaderBack(event) {
+    if (isInternalRedirect || !isSmallScreen()) {
+        return;
+    }
+
+    const pageKind = detectPageKind();
+    if (!PAGE_KINDS_WITH_BACK.has(pageKind)) {
+        return;
+    }
+
+    if (!looksLikeMobileHeaderBackControl(event.target)) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+    }
+
+    handleFloatingBack(pageKind);
+}
+
 function refreshNavigationUi() {
     rememberNavigationTargets();
     maybeRunPendingButton();
@@ -519,6 +578,7 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
+    document.addEventListener("click", interceptMobileHeaderBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
