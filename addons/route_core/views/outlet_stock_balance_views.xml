@@ -152,10 +152,10 @@ Expiry:
 <filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
 <filter name="group_by_last_visit" string="Last Visit" context="{'group_by': 'last_visit_id'}"/>
 <searchpanel>
-<field name="route_city_id" string="City"/>
-<field name="area_id" string="Area"/>
-<field name="outlet_id" string="Outlet"/>
-<field name="product_categ_id" string="Category"/>
+<field name="route_city_id" string="City" icon="fa-building" select="multi"/>
+<field name="area_id" string="Area" icon="fa-map" select="multi"/>
+<field name="outlet_id" string="Outlet" icon="fa-store" select="multi"/>
+<field name="product_categ_id" string="Category" icon="fa-tags" select="multi"/>
 </searchpanel>
 </search>
 </field>
