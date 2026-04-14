@@ -477,33 +477,27 @@ class RoutePdaHome(models.TransientModel):
 
     def _open_quants_by_location(self, location, title, exclude_route_locations=False, stock_mode="vehicle"):
         self.ensure_one()
-        kanban_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_kanban", raise_if_not_found=False)
-        list_view = self.env.ref("route_core.view_route_vehicle_stock_snapshot_list", raise_if_not_found=False)
-        search_view_xmlid = "route_core.view_route_vehicle_stock_snapshot_search"
+        action_xmlid = "route_core.action_route_vehicle_stock_snapshot"
         default_search_flag = "search_default_filter_vehicle_has_qty"
         if stock_mode == "warehouse":
-            search_view_xmlid = "route_core.view_route_main_warehouse_stock_snapshot_search"
+            action_xmlid = "route_core.action_route_main_warehouse_stock_snapshot"
             default_search_flag = "search_default_filter_main_has_qty"
-        search_view = self.env.ref(search_view_xmlid, raise_if_not_found=False)
+
         location_ids = self._get_quant_location_ids(location, exclude_route_locations=exclude_route_locations)
         domain = [("quantity", ">", 0), ("location_id", "in", location_ids)] if location_ids else [("id", "=", 0)]
-        views = []
-        if kanban_view:
-            views.append((kanban_view.id, "kanban"))
-        if list_view:
-            views.append((list_view.id, "list"))
-        context = {"create": 0, "edit": 0, "delete": 0, default_search_flag: 1}
-        return {
-            "type": "ir.actions.act_window",
-            "name": title,
-            "res_model": "stock.quant",
-            "view_mode": "kanban,list",
-            "views": views or [(False, "kanban"), (False, "list")],
-            "search_view_id": search_view.id if search_view else False,
-            "domain": domain,
-            "target": "current",
-            "context": context,
-        }
+        action = self._prepare_action(
+            action_xmlid,
+            name=title,
+            domain=domain,
+            context={
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+                default_search_flag: 1,
+                "route_workspace_back": True,
+            },
+        )
+        return action
 
     @api.depends("user_id")
     def _compute_dashboard(self):
@@ -1256,5 +1250,4 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
-
 
