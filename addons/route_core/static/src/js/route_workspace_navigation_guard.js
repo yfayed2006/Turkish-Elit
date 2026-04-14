@@ -89,7 +89,7 @@ function detectPageKind() {
     if (title.startsWith("outlet stock balances") || bodyText.includes("outlet stock balances")) {
         return "outlet_stock";
     }
-    if ((title === "products" || bodyText.includes("\nproducts\n")) && bodyText.includes("price:")) {
+    if ((title === "products" || bodyText.includes("products")) && bodyText.includes("price:")) {
         return "all_products";
     }
     return "";
@@ -157,6 +157,7 @@ function navigateToHash(targetHash) {
     if (!targetHash) {
         return;
     }
+
     const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
     if (window.location.hash === cleanHash) {
         return;
@@ -177,18 +178,50 @@ function removeInlineBackButton() {
     }
 }
 
-function findInlineBackHost() {
-    return document.querySelector(".o_content .o_view_controller")
-        || document.querySelector(".o_content")
-        || document.querySelector(".o_action_manager")
+function findControlPanelAnchor() {
+    return document.querySelector(".o_content .o_control_panel")
+        || document.querySelector(".o_control_panel")
         || null;
+}
+
+function findFallbackContainer() {
+    return document.querySelector(".o_content .o_view_controller")
+        || document.querySelector(".o_action_manager")
+        || document.querySelector(".o_content")
+        || null;
+}
+
+function mountWrapperInVisiblePlace(wrapper) {
+    const controlPanel = findControlPanelAnchor();
+    const fallback = findFallbackContainer();
+
+    if (controlPanel && controlPanel.parentElement) {
+        const parent = controlPanel.parentElement;
+        const shouldMove = wrapper.parentElement !== parent || wrapper.previousElementSibling !== controlPanel;
+        if (shouldMove) {
+            wrapper.remove();
+            controlPanel.insertAdjacentElement("afterend", wrapper);
+        }
+        return true;
+    }
+
+    if (fallback) {
+        const shouldMove = wrapper.parentElement !== fallback || wrapper !== fallback.firstElementChild;
+        if (shouldMove) {
+            wrapper.remove();
+            fallback.prepend(wrapper);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 function buildInlineBackButton(pageKind, targetHash) {
     const wrapper = document.createElement("div");
     wrapper.id = INLINE_BACK_WRAPPER_ID;
     wrapper.style.display = "block";
-    wrapper.style.margin = "12px 16px 8px 16px";
+    wrapper.style.margin = "10px 16px 8px 16px";
 
     const button = document.createElement("button");
     button.id = INLINE_BACK_BUTTON_ID;
@@ -229,9 +262,8 @@ function ensureInlineBackButton() {
         "all_products",
         "daily_summary",
     ]);
-    const host = findInlineBackHost();
 
-    if (!supportedPages.has(pageKind) || !targetHash || !host) {
+    if (!supportedPages.has(pageKind) || !targetHash) {
         removeInlineBackButton();
         return;
     }
@@ -239,24 +271,25 @@ function ensureInlineBackButton() {
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper) {
         wrapper = buildInlineBackButton(pageKind, targetHash);
-        host.prepend(wrapper);
     }
 
-    const button = document.getElementById(INLINE_BACK_BUTTON_ID);
+    const button = wrapper.querySelector(`#${INLINE_BACK_BUTTON_ID}`);
     if (!button) {
+        removeInlineBackButton();
         return;
     }
 
     button.dataset.targetHash = targetHash;
     button.title = getBackLabel(pageKind);
+
     const labelSpan = button.querySelector("span");
     if (labelSpan) {
         labelSpan.textContent = getBackLabel(pageKind);
     }
 
-    if (wrapper.parentElement !== host) {
-        wrapper.remove();
-        host.prepend(wrapper);
+    const mounted = mountWrapperInVisiblePlace(wrapper);
+    if (!mounted) {
+        removeInlineBackButton();
     }
 }
 
@@ -303,7 +336,7 @@ function bootRouteWorkspaceNavigationGuard() {
     let refreshTimer = null;
     const scheduleRefresh = () => {
         window.clearTimeout(refreshTimer);
-        refreshTimer = window.setTimeout(refreshNavigationUi, 80);
+        refreshTimer = window.setTimeout(refreshNavigationUi, 100);
     };
 
     const observer = new MutationObserver(scheduleRefresh);
@@ -314,6 +347,7 @@ function bootRouteWorkspaceNavigationGuard() {
 
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
+    window.addEventListener("pageshow", scheduleRefresh);
     window.addEventListener("popstate", handleBrowserBack);
 
     refreshNavigationUi();
