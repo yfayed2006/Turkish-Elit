@@ -85,13 +85,16 @@ Expiry:
 <filter name="filter_vehicle_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
 <filter name="filter_vehicle_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_vehicle_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
+<filter name="filter_vehicle_has_reservation" string="Has Reservation" domain="[('route_has_reservation', '=', True)]"/>
 <separator/>
-<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<group expand="0" string="Group By">
+<filter name="group_by_vehicle_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_by_vehicle_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_vehicle_lot" string="Lot/Serial Number" context="{'group_by': 'lot_id'}"/>
+</group>
 <searchpanel>
-<field name="product_id" string="Product"/>
-<field name="location_id" string="Location"/>
+<field name="location_id" string="Location" icon="fa-map-marker" select="multi"/>
+<field name="lot_id" string="Lot/Serial Number" icon="fa-tags" select="multi"/>
 </searchpanel>
 </search>
 </field>
@@ -109,15 +112,32 @@ Expiry:
 <filter name="filter_main_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
 <filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
+<filter name="filter_main_has_reservation" string="Has Reservation" domain="[('route_has_reservation', '=', True)]"/>
 <separator/>
-<filter name="group_main_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_main_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_main_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<group expand="0" string="Group By">
+<filter name="group_by_main_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_by_main_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_main_lot" string="Lot/Serial Number" context="{'group_by': 'lot_id'}"/>
+</group>
 <searchpanel>
-<field name="product_id" string="Product"/>
-<field name="location_id" string="Location"/>
+<field name="location_id" string="Location" icon="fa-map-marker" select="multi"/>
+<field name="lot_id" string="Lot/Serial Number" icon="fa-tags" select="multi"/>
 </searchpanel>
 </search>
 </field>
+</record>
+<record id="action_route_vehicle_stock_snapshot" model="ir.actions.act_window">
+<field name="name">Vehicle Products Stock</field>
+<field name="res_model">stock.quant</field>
+<field name="view_mode">kanban,list</field>
+<field name="search_view_id" ref="view_route_vehicle_stock_snapshot_search"/>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0, 'search_default_filter_vehicle_has_qty': 1}</field>
+</record>
+<record id="action_route_main_warehouse_stock_snapshot" model="ir.actions.act_window">
+<field name="name">Main Warehouse Products Stock</field>
+<field name="res_model">stock.quant</field>
+<field name="view_mode">kanban,list</field>
+<field name="search_view_id" ref="view_route_main_warehouse_stock_snapshot_search"/>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0, 'search_default_filter_main_has_qty': 1}</field>
 </record>
 </odoo>
