@@ -18,8 +18,8 @@ function normalizeText(value) {
 }
 
 function getVisibleText(selector) {
-    const el = document.querySelector(selector);
-    return el ? el.textContent.trim() : "";
+    const element = document.querySelector(selector);
+    return element ? element.textContent.trim() : "";
 }
 
 function getBodyText() {
@@ -36,6 +36,8 @@ function findActionTitle() {
         ".route_pda_home_title",
         ".o_form_view .oe_title h1",
         ".o_content h1",
+        ".o_content .breadcrumb-item.active",
+        ".o_content .o_last_breadcrumb_item",
     ];
     for (const selector of selectors) {
         const value = getVisibleText(selector);
@@ -52,9 +54,10 @@ function isRouteWorkspacePage() {
 }
 
 function isProductCenterPage() {
-    return !!document.querySelector(".route_pda_center_grid")
-        && getBodyText().includes("vehicle products stock")
-        && getBodyText().includes("main warehouse products stock");
+    const bodyText = getBodyText();
+    return bodyText.includes("products and stock")
+        && bodyText.includes("vehicle products stock")
+        && bodyText.includes("main warehouse products stock");
 }
 
 function detectPageKind() {
@@ -77,16 +80,16 @@ function detectPageKind() {
     if (isRouteForm && title === "daily summary") {
         return "daily_summary";
     }
-    if (title.startsWith("vehicle products stock")) {
+    if (title.startsWith("vehicle products stock") || bodyText.includes("vehicle products stock")) {
         return "vehicle_stock";
     }
-    if (title.startsWith("main warehouse products stock")) {
+    if (title.startsWith("main warehouse products stock") || bodyText.includes("main warehouse products stock")) {
         return "warehouse_stock";
     }
-    if (title.startsWith("outlet stock balances")) {
+    if (title.startsWith("outlet stock balances") || bodyText.includes("outlet stock balances")) {
         return "outlet_stock";
     }
-    if (!isRouteForm && title === "products" && bodyText.includes("price:")) {
+    if ((title === "products" || bodyText.includes("\nproducts\n")) && bodyText.includes("price:")) {
         return "all_products";
     }
     return "";
@@ -130,14 +133,11 @@ function getBackTargetForPage(pageKind) {
         case "outlet_stock":
         case "all_products":
             return productCenterHash || workspaceHash;
-
         case "daily_summary":
             return collectionsCenterHash || snapshotCenterHash || workspaceHash;
-
         case "product_center":
         case "collections_center":
             return workspaceHash;
-
         default:
             return "";
     }
@@ -157,7 +157,6 @@ function navigateToHash(targetHash) {
     if (!targetHash) {
         return;
     }
-
     const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
     if (window.location.hash === cleanHash) {
         return;
@@ -172,15 +171,16 @@ function navigateToHash(targetHash) {
 }
 
 function removeInlineBackButton() {
-    const existing = document.getElementById(INLINE_BACK_WRAPPER_ID);
-    if (existing) {
-        existing.remove();
+    const wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    if (wrapper) {
+        wrapper.remove();
     }
 }
 
 function findInlineBackHost() {
     return document.querySelector(".o_content .o_view_controller")
         || document.querySelector(".o_content")
+        || document.querySelector(".o_action_manager")
         || null;
 }
 
@@ -229,7 +229,6 @@ function ensureInlineBackButton() {
         "all_products",
         "daily_summary",
     ]);
-
     const host = findInlineBackHost();
 
     if (!supportedPages.has(pageKind) || !targetHash || !host) {
@@ -237,27 +236,28 @@ function ensureInlineBackButton() {
         return;
     }
 
-    const existing = document.getElementById(INLINE_BACK_WRAPPER_ID);
-    if (existing) {
-        const button = existing.querySelector(`#${INLINE_BACK_BUTTON_ID}`);
-        if (button) {
-            button.dataset.targetHash = targetHash;
-            button.title = getBackLabel(pageKind);
-            const span = button.querySelector("span");
-            if (span) {
-                span.textContent = getBackLabel(pageKind);
-            }
-        }
+    let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    if (!wrapper) {
+        wrapper = buildInlineBackButton(pageKind, targetHash);
+        host.prepend(wrapper);
+    }
 
-        if (existing.parentElement !== host) {
-            existing.remove();
-            host.prepend(existing);
-        }
+    const button = document.getElementById(INLINE_BACK_BUTTON_ID);
+    if (!button) {
         return;
     }
 
-    const wrapper = buildInlineBackButton(pageKind, targetHash);
-    host.prepend(wrapper);
+    button.dataset.targetHash = targetHash;
+    button.title = getBackLabel(pageKind);
+    const labelSpan = button.querySelector("span");
+    if (labelSpan) {
+        labelSpan.textContent = getBackLabel(pageKind);
+    }
+
+    if (wrapper.parentElement !== host) {
+        wrapper.remove();
+        host.prepend(wrapper);
+    }
 }
 
 function handleBrowserBack() {
