@@ -1,14 +1,14 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.workspace.hash",
-    workspaceUrl: "route_core.workspace.url",
-    productCenterHash: "route_core.product_center.hash",
-    productCenterUrl: "route_core.product_center.url",
-    snapshotCenterHash: "route_core.snapshot_center.hash",
-    snapshotCenterUrl: "route_core.snapshot_center.url",
-    collectionsCenterHash: "route_core.collections_center.hash",
-    collectionsCenterUrl: "route_core.collections_center.url",
+    workspaceHash: "route_core.v2.workspace.hash",
+    workspaceUrl: "route_core.v2.workspace.url",
+    productCenterHash: "route_core.v2.product_center.hash",
+    productCenterUrl: "route_core.v2.product_center.url",
+    snapshotCenterHash: "route_core.v2.snapshot_center.hash",
+    snapshotCenterUrl: "route_core.v2.snapshot_center.url",
+    collectionsCenterHash: "route_core.v2.collections_center.hash",
+    collectionsCenterUrl: "route_core.v2.collections_center.url",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -58,10 +58,9 @@ function isRouteWorkspacePage() {
 }
 
 function isProductCenterPage() {
-    const bodyText = getBodyText();
-    return bodyText.includes("products and stock")
-        && bodyText.includes("vehicle products stock")
-        && bodyText.includes("main warehouse products stock");
+    return !!document.querySelector(".route_pda_center_grid")
+        && getBodyText().includes("vehicle products stock")
+        && getBodyText().includes("main warehouse products stock");
 }
 
 function detectPageKind() {
@@ -84,16 +83,16 @@ function detectPageKind() {
     if (isRouteForm && title === "daily summary") {
         return "daily_summary";
     }
-    if (title.startsWith("vehicle products stock") || bodyText.includes("vehicle products stock")) {
+    if (title.startsWith("vehicle products stock")) {
         return "vehicle_stock";
     }
-    if (title.startsWith("main warehouse products stock") || bodyText.includes("main warehouse products stock")) {
+    if (title.startsWith("main warehouse products stock")) {
         return "warehouse_stock";
     }
-    if (title.startsWith("outlet stock balances") || bodyText.includes("outlet stock balances")) {
+    if (title.startsWith("outlet stock balances")) {
         return "outlet_stock";
     }
-    if ((title === "products" || bodyText.includes("\nproducts\n")) && bodyText.includes("price:")) {
+    if (!isRouteForm && title === "products" && bodyText.includes("price:")) {
         return "all_products";
     }
     return "";
@@ -107,31 +106,30 @@ function getCurrentUrl() {
     return window.location.href || "";
 }
 
-function rememberKeyPair(hashKey, urlKey) {
-    const currentHash = getCurrentHash();
-    const currentUrl = getCurrentUrl();
-
-    if (currentHash) {
-        sessionStorage.setItem(hashKey, currentHash);
+function rememberPair(hashKey, urlKey) {
+    const hash = getCurrentHash();
+    const url = getCurrentUrl();
+    if (hash) {
+        sessionStorage.setItem(hashKey, hash);
     }
-    if (currentUrl) {
-        sessionStorage.setItem(urlKey, currentUrl);
+    if (url) {
+        sessionStorage.setItem(urlKey, url);
     }
 }
 
 function rememberNavigationTargets() {
     switch (detectPageKind()) {
         case "workspace":
-            rememberKeyPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+            rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
             break;
         case "product_center":
-            rememberKeyPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+            rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
             break;
         case "snapshot_center":
-            rememberKeyPair(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
+            rememberPair(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
             break;
         case "collections_center":
-            rememberKeyPair(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
+            rememberPair(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
             break;
     }
 }
@@ -187,19 +185,9 @@ function getBackLabel(pageKind) {
     return "Back to Route Workspace";
 }
 
-function navigateToTarget(targetHash, targetUrl) {
-    const cleanHash = targetHash
-        ? (targetHash.startsWith("#") ? targetHash : `#${targetHash}`)
-        : "";
-
-    if (cleanHash && window.location.hash !== cleanHash) {
-        isInternalRedirect = true;
-        window.location.hash = cleanHash.slice(1);
-        window.setTimeout(() => {
-            isInternalRedirect = false;
-        }, 250);
-        return;
-    }
+function navigateToTarget(target) {
+    const targetHash = target?.hash || "";
+    const targetUrl = target?.url || "";
 
     if (targetUrl && window.location.href !== targetUrl) {
         isInternalRedirect = true;
@@ -207,6 +195,18 @@ function navigateToTarget(targetHash, targetUrl) {
         window.setTimeout(() => {
             isInternalRedirect = false;
         }, 500);
+        return;
+    }
+
+    if (targetHash) {
+        const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
+        if (window.location.hash !== cleanHash) {
+            isInternalRedirect = true;
+            window.location.hash = cleanHash.slice(1);
+            window.setTimeout(() => {
+                isInternalRedirect = false;
+            }, 250);
+        }
     }
 }
 
@@ -253,7 +253,10 @@ function buildInlineBackButton(pageKind, target) {
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateToTarget(button.dataset.targetHash || "", button.dataset.targetUrl || "");
+        navigateToTarget({
+            hash: button.dataset.targetHash || "",
+            url: button.dataset.targetUrl || "",
+        });
     });
 
     wrapper.appendChild(button);
@@ -280,7 +283,7 @@ function ensureInlineBackButton() {
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper) {
         wrapper = buildInlineBackButton(pageKind, target);
-        host.insertAdjacentElement("afterbegin", wrapper);
+        host.prepend(wrapper);
     }
 
     const button = document.getElementById(INLINE_BACK_BUTTON_ID);
@@ -297,9 +300,9 @@ function ensureInlineBackButton() {
         labelSpan.textContent = getBackLabel(pageKind);
     }
 
-    if (wrapper.parentElement !== host || host.firstElementChild !== wrapper) {
+    if (wrapper.parentElement !== host) {
         wrapper.remove();
-        host.insertAdjacentElement("afterbegin", wrapper);
+        host.prepend(wrapper);
     }
 }
 
@@ -327,7 +330,7 @@ function handleBrowserBack() {
     }
 
     window.setTimeout(() => {
-        navigateToTarget(target.hash || "", target.url || "");
+        navigateToTarget(target);
     }, 0);
 }
 
@@ -340,6 +343,7 @@ function bootRouteWorkspaceNavigationGuard() {
     if (observerStarted || !document.body) {
         return;
     }
+
     observerStarted = true;
 
     let refreshTimer = null;
@@ -349,7 +353,10 @@ function bootRouteWorkspaceNavigationGuard() {
     };
 
     const observer = new MutationObserver(scheduleRefresh);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
@@ -363,4 +370,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
