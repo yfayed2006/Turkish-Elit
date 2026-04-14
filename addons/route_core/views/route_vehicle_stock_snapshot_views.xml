@@ -86,16 +86,6 @@ Expiry:
 <filter name="filter_vehicle_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_vehicle_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <filter name="filter_vehicle_has_reservation" string="Has Reservation" domain="[('route_has_reservation', '=', True)]"/>
-<separator/>
-<group expand="0" string="Group By">
-<filter name="group_by_vehicle_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_vehicle_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_vehicle_lot" string="Lot/Serial Number" context="{'group_by': 'lot_id'}"/>
-</group>
-<searchpanel>
-<field name="location_id" string="Location" icon="fa-map-marker" select="multi"/>
-<field name="lot_id" string="Lot/Serial Number" icon="fa-tags" select="multi"/>
-</searchpanel>
 </search>
 </field>
 </record>
@@ -113,16 +103,6 @@ Expiry:
 <filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <filter name="filter_main_has_reservation" string="Has Reservation" domain="[('route_has_reservation', '=', True)]"/>
-<separator/>
-<group expand="0" string="Group By">
-<filter name="group_by_main_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_main_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_main_lot" string="Lot/Serial Number" context="{'group_by': 'lot_id'}"/>
-</group>
-<searchpanel>
-<field name="location_id" string="Location" icon="fa-map-marker" select="multi"/>
-<field name="lot_id" string="Lot/Serial Number" icon="fa-tags" select="multi"/>
-</searchpanel>
 </search>
 </field>
 </record>
