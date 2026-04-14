@@ -1,10 +1,10 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v5.workspace.hash",
-    workspaceUrl: "route_core.v5.workspace.url",
-    pendingButtonName: "route_core.v5.pending.button_name",
-    pendingButtonTs: "route_core.v5.pending.button_ts",
+    workspaceHash: "route_core.v6.workspace.hash",
+    workspaceUrl: "route_core.v6.workspace.url",
+    pendingButtonName: "route_core.v6.pending.button_name",
+    pendingButtonTs: "route_core.v6.pending.button_ts",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -170,17 +170,29 @@ function detectPageKind() {
     if (isDailySummaryPage()) {
         return "daily_summary";
     }
-    if (title.startsWith("vehicle products stock")) {
-        return "vehicle_stock";
-    }
-    if (title.startsWith("main warehouse products stock")) {
-        return "warehouse_stock";
-    }
-    if (title.startsWith("consignment outlets stock") || title.startsWith("outlet stock balances")) {
-        return "outlet_stock";
-    }
-    if (!hasVisibleButton("action_back_home") && (title === "products" || title === "all products") && (rootText.includes("barcode") || rootText.includes("price"))) {
-        return "all_products";
+
+    const isCenterScreen = hasVisibleButton("action_back_home") || hasVisibleButton("action_back_to_consignment_mode");
+    if (!isCenterScreen) {
+        if (title.startsWith("vehicle products stock") || rootText.includes("vehicle products stock")) {
+            return "vehicle_stock";
+        }
+        if (title.startsWith("main warehouse products stock") || rootText.includes("main warehouse products stock")) {
+            return "warehouse_stock";
+        }
+        if (
+            title.startsWith("consignment outlets stock")
+            || title.startsWith("outlet stock balances")
+            || rootText.includes("consignment outlets stock")
+            || rootText.includes("outlet stock balances")
+        ) {
+            return "outlet_stock";
+        }
+        if (
+            (title === "products" || title === "all products" || rootText.includes("all products"))
+            && (rootText.includes("barcode") || rootText.includes("price"))
+        ) {
+            return "all_products";
+        }
     }
     return "";
 }
@@ -332,11 +344,11 @@ function navigateViaWorkspace(buttonName) {
         return;
     }
     setPendingButton(buttonName);
-    const workspaceTarget = getWorkspaceTarget();
-    if (navigateToTarget(workspaceTarget)) {
+    if (openWorkspaceMenuFallback()) {
         return;
     }
-    openWorkspaceMenuFallback();
+    const workspaceTarget = getWorkspaceTarget();
+    navigateToTarget(workspaceTarget);
 }
 
 function maybeRunPendingButton() {
