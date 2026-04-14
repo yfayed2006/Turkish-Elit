@@ -612,3 +612,29 @@
         min-height: 0;
     }
 }
+
+
+.route_workspace_inline_back_wrapper {
+    display: flex;
+    align-items: center;
+    margin-inline-end: 12px;
+}
+
+.route_workspace_inline_back_btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .route_workspace_inline_back_wrapper {
+        margin-bottom: 8px;
+        width: 100%;
+    }
+
+    .route_workspace_inline_back_btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
