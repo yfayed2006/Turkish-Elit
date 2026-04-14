@@ -1,14 +1,14 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v2.workspace.hash",
-    workspaceUrl: "route_core.v2.workspace.url",
-    productCenterHash: "route_core.v2.product_center.hash",
-    productCenterUrl: "route_core.v2.product_center.url",
-    snapshotCenterHash: "route_core.v2.snapshot_center.hash",
-    snapshotCenterUrl: "route_core.v2.snapshot_center.url",
-    collectionsCenterHash: "route_core.v2.collections_center.hash",
-    collectionsCenterUrl: "route_core.v2.collections_center.url",
+    workspaceHash: "route_core.v3.workspace.hash",
+    workspaceUrl: "route_core.v3.workspace.url",
+    productCenterHash: "route_core.v3.product_center.hash",
+    productCenterUrl: "route_core.v3.product_center.url",
+    snapshotCenterHash: "route_core.v3.snapshot_center.hash",
+    snapshotCenterUrl: "route_core.v3.snapshot_center.url",
+    collectionsCenterHash: "route_core.v3.collections_center.hash",
+    collectionsCenterUrl: "route_core.v3.collections_center.url",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -21,16 +21,65 @@ function normalizeText(value) {
     return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
+function isElementVisible(element) {
+    if (!element || !(element instanceof Element)) {
+        return false;
+    }
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+        return false;
+    }
+    if (element.closest(".o_invisible_modifier")) {
+        return false;
+    }
+    return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+}
+
+function getVisibleRoots() {
+    const selectors = [
+        ".o_action_manager .o_action",
+        ".o_action_manager .o_view_controller",
+        ".o_web_client .o_content .o_action",
+        ".o_web_client .o_content .o_view_controller",
+        ".o_web_client .o_content",
+    ];
+    const roots = [];
+    for (const selector of selectors) {
+        for (const element of document.querySelectorAll(selector)) {
+            if (isElementVisible(element) && !roots.includes(element)) {
+                roots.push(element);
+            }
+        }
+    }
+    return roots.length ? roots : [document.body];
+}
+
+function getActiveRoot() {
+    const roots = getVisibleRoots();
+    return roots[roots.length - 1] || document.body;
+}
+
+function findVisibleInRoot(root, selector) {
+    if (!root) {
+        return null;
+    }
+    const matches = Array.from(root.querySelectorAll(selector)).filter(isElementVisible);
+    return matches.length ? matches[matches.length - 1] : null;
+}
+
 function getVisibleText(selector) {
-    const element = document.querySelector(selector);
+    const root = getActiveRoot();
+    const element = findVisibleInRoot(root, selector) || (isElementVisible(root) && root.matches?.(selector) ? root : null);
     return element ? element.textContent.trim() : "";
 }
 
-function getBodyText() {
-    return normalizeText(document.body ? document.body.innerText : "");
+function getRootText() {
+    const root = getActiveRoot();
+    return normalizeText(root ? root.innerText : "");
 }
 
 function findActionTitle() {
+    const root = getActiveRoot();
     const selectors = [
         ".o_control_panel .breadcrumb-item.active",
         ".o_control_panel .o_last_breadcrumb_item",
@@ -39,34 +88,40 @@ function findActionTitle() {
         ".route_pda_detail_title",
         ".route_pda_home_title",
         ".o_form_view .oe_title h1",
-        ".o_content h1",
-        ".o_content .breadcrumb-item.active",
-        ".o_content .o_last_breadcrumb_item",
+        "h1",
+        ".breadcrumb-item.active",
+        ".o_last_breadcrumb_item",
     ];
     for (const selector of selectors) {
-        const value = getVisibleText(selector);
-        if (value) {
-            return value;
+        const element = findVisibleInRoot(root, selector);
+        if (element) {
+            return element.textContent.trim();
         }
     }
     return "";
 }
 
+function hasVisibleSelector(selector) {
+    const root = getActiveRoot();
+    return !!findVisibleInRoot(root, selector);
+}
+
 function isRouteWorkspacePage() {
-    return !!document.querySelector(".route_pda_home_title")
+    return hasVisibleSelector(".route_pda_home_title")
         && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
 }
 
 function isProductCenterPage() {
-    return !!document.querySelector(".route_pda_center_grid")
-        && getBodyText().includes("vehicle products stock")
-        && getBodyText().includes("main warehouse products stock");
+    return hasVisibleSelector(".route_pda_center_grid")
+        && getRootText().includes("vehicle products stock")
+        && getRootText().includes("main warehouse products stock")
+        && getRootText().includes("all products");
 }
 
 function detectPageKind() {
     const title = normalizeText(findActionTitle());
-    const bodyText = getBodyText();
-    const isRouteForm = !!document.querySelector(".route_pda_home_sheet");
+    const rootText = getRootText();
+    const isRouteForm = hasVisibleSelector(".route_pda_home_sheet");
 
     if (isRouteWorkspacePage()) {
         return "workspace";
@@ -92,7 +147,7 @@ function detectPageKind() {
     if (title.startsWith("outlet stock balances")) {
         return "outlet_stock";
     }
-    if (!isRouteForm && title === "products" && bodyText.includes("price:")) {
+    if (!isRouteForm && title === "products" && rootText.includes("price:")) {
         return "all_products";
     }
     return "";
@@ -134,6 +189,63 @@ function rememberNavigationTargets() {
     }
 }
 
+function rememberCurrentAs(targetName) {
+    switch (targetName) {
+        case "workspace":
+            rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+            break;
+        case "product_center":
+            rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+            break;
+        case "snapshot_center":
+            rememberPair(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
+            break;
+        case "collections_center":
+            rememberPair(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
+            break;
+    }
+}
+
+function rememberOriginFromClick(event) {
+    const button = event.target.closest("button[name]");
+    if (!button || !isElementVisible(button)) {
+        return;
+    }
+    const name = button.getAttribute("name") || "";
+
+    if ([
+        "action_open_vehicle_products",
+        "action_open_main_warehouse_products",
+        "action_open_products",
+        "action_open_consignment_outlet_stock",
+    ].includes(name)) {
+        rememberCurrentAs("product_center");
+        return;
+    }
+
+    if ([
+        "action_open_collections_snapshot_screen",
+    ].includes(name)) {
+        rememberCurrentAs("snapshot_center");
+        return;
+    }
+
+    if ([
+        "action_open_collections_snapshot_from_collections_center",
+    ].includes(name)) {
+        rememberCurrentAs("collections_center");
+        return;
+    }
+
+    if ([
+        "action_open_product_center_screen",
+        "action_open_snapshot_center_screen",
+        "action_open_visit_collections_center_screen",
+    ].includes(name)) {
+        rememberCurrentAs("workspace");
+    }
+}
+
 function getStoredTarget(hashKey, urlKey) {
     return {
         hash: sessionStorage.getItem(hashKey) || "",
@@ -163,15 +275,13 @@ function getBackTargetForPage(pageKind) {
             };
         case "product_center":
         case "collections_center":
+        case "snapshot_center":
             return {
                 hash: workspace.hash,
                 url: workspace.url,
             };
         default:
-            return {
-                hash: "",
-                url: "",
-            };
+            return { hash: "", url: "" };
     }
 }
 
@@ -182,7 +292,10 @@ function getBackLabel(pageKind) {
     if (pageKind === "daily_summary") {
         return "Back";
     }
-    return "Back to Route Workspace";
+    if (["product_center", "snapshot_center", "collections_center"].includes(pageKind)) {
+        return "Back to Route Workspace";
+    }
+    return "Back";
 }
 
 function navigateToTarget(target) {
@@ -194,7 +307,7 @@ function navigateToTarget(target) {
         window.location.assign(targetUrl);
         window.setTimeout(() => {
             isInternalRedirect = false;
-        }, 500);
+        }, 700);
         return;
     }
 
@@ -205,7 +318,7 @@ function navigateToTarget(target) {
             window.location.hash = cleanHash.slice(1);
             window.setTimeout(() => {
                 isInternalRedirect = false;
-            }, 250);
+            }, 350);
         }
     }
 }
@@ -218,10 +331,8 @@ function removeInlineBackButton() {
 }
 
 function findInlineBackHost() {
-    return document.querySelector(".o_content .o_view_controller")
-        || document.querySelector(".o_content")
-        || document.querySelector(".o_action_manager")
-        || null;
+    const root = getActiveRoot();
+    return findVisibleInRoot(root, ".o_view_controller") || root || null;
 }
 
 function buildInlineBackButton(pageKind, target) {
@@ -356,8 +467,11 @@ function bootRouteWorkspaceNavigationGuard() {
     observer.observe(document.body, {
         childList: true,
         subtree: true,
+        attributes: true,
+        attributeFilter: ["class", "style"],
     });
 
+    document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
     window.addEventListener("popstate", handleBrowserBack);
@@ -370,3 +484,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
