@@ -90,8 +90,8 @@ Expiry:
 <filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
 <filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <searchpanel>
-<field name="location_id" string="Location"/>
 <field name="product_id" string="Product"/>
+<field name="location_id" string="Location"/>
 </searchpanel>
 </search>
 </field>
@@ -107,16 +107,15 @@ Expiry:
 <field name="location_id"/>
 <field name="route_expiry_date"/>
 <filter name="filter_main_has_qty" string="Has Quantity" domain="[('quantity', '>', 0)]"/>
-<filter name="filter_main_zero_available" string="Zero Available" domain="[('available_quantity', '=', 0)]"/>
 <filter name="filter_main_with_lot" string="With Lot / Serial" domain="[('lot_id', '!=', False)]"/>
 <filter name="filter_main_with_expiry" string="With Expiry Date" domain="[('route_expiry_date', '!=', False)]"/>
 <separator/>
-<filter name="group_by_product" string="Product" context="{'group_by': 'product_id'}"/>
-<filter name="group_by_location" string="Location" context="{'group_by': 'location_id'}"/>
-<filter name="group_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
+<filter name="group_main_by_product" string="Product" context="{'group_by': 'product_id'}"/>
+<filter name="group_main_by_location" string="Location" context="{'group_by': 'location_id'}"/>
+<filter name="group_main_by_lot" string="Lot" context="{'group_by': 'lot_id'}"/>
 <searchpanel>
-<field name="location_id" string="Location"/>
 <field name="product_id" string="Product"/>
+<field name="location_id" string="Location"/>
 </searchpanel>
 </search>
 </field>
