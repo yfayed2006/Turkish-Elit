@@ -1,57 +1,21 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v4.workspace.hash",
-    workspaceUrl: "route_core.v4.workspace.url",
-    productCenterHash: "route_core.v4.product_center.hash",
-    productCenterUrl: "route_core.v4.product_center.url",
-    snapshotCenterHash: "route_core.v4.snapshot_center.hash",
-    snapshotCenterUrl: "route_core.v4.snapshot_center.url",
-    collectionsCenterHash: "route_core.v4.collections_center.hash",
-    collectionsCenterUrl: "route_core.v4.collections_center.url",
+    workspaceHash: "route_core.v5.workspace.hash",
+    workspaceUrl: "route_core.v5.workspace.url",
+    pendingButtonName: "route_core.v5.pending.button_name",
+    pendingButtonTs: "route_core.v5.pending.button_ts",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 
-const PAGE_SIGNATURES = [
-    {
-        kind: "workspace",
-        buttonNames: [
-            "action_open_product_center_screen",
-            "action_open_visit_collections_center_screen",
-        ],
-    },
-    {
-        kind: "product_center",
-        buttonNames: [
-            "action_open_vehicle_products",
-            "action_open_main_warehouse_products",
-            "action_open_products",
-        ],
-    },
-    {
-        kind: "snapshot_center",
-        buttonNames: [
-            "action_open_today_overview_screen",
-            "action_open_collections_snapshot_screen",
-        ],
-    },
-    {
-        kind: "collections_center",
-        buttonNames: [
-            "action_open_collections_snapshot_from_collections_center",
-            "action_open_visit_collections",
-        ],
-    },
-    {
-        kind: "daily_summary",
-        buttonNames: [
-            "action_back_from_collections_snapshot",
-            "action_open_current_visit_statement_of_account",
-        ],
-    },
-];
+const PAGE_KINDS_WITH_INLINE_BACK = new Set([
+    "vehicle_stock",
+    "warehouse_stock",
+    "outlet_stock",
+    "all_products",
+]);
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -93,6 +57,11 @@ function getVisibleRoots() {
     return roots.length ? roots : [document.body];
 }
 
+function getActiveRoot() {
+    const roots = getVisibleRoots();
+    return roots[roots.length - 1] || document.body;
+}
+
 function findVisibleInRoot(root, selector) {
     if (!root) {
         return null;
@@ -101,34 +70,33 @@ function findVisibleInRoot(root, selector) {
     return matches.length ? matches[matches.length - 1] : null;
 }
 
-function findVisibleAnywhere(selector) {
-    const matches = Array.from(document.querySelectorAll(selector)).filter(isElementVisible);
+function findAnyButton(name) {
+    const selector = `button[name="${name}"]`;
+    const matches = Array.from(document.querySelectorAll(selector));
     return matches.length ? matches[matches.length - 1] : null;
 }
 
-function hasVisibleButtonInRoot(root, buttonName) {
-    return !!findVisibleInRoot(root, `button[name="${buttonName}"]`);
+function hasVisibleButton(name) {
+    return !!findVisibleInRoot(getActiveRoot(), `button[name="${name}"]`);
 }
 
-function rootHasAllButtons(root, buttonNames) {
-    return buttonNames.every((buttonName) => hasVisibleButtonInRoot(root, buttonName));
+function hasAnyVisibleButton(names) {
+    return names.some((name) => hasVisibleButton(name));
 }
 
-function getVisibleText(selector, root = null) {
-    const searchRoot = root || getActiveRoot();
-    const element = findVisibleInRoot(searchRoot, selector)
-        || (isElementVisible(searchRoot) && searchRoot.matches?.(selector) ? searchRoot : null)
-        || findVisibleAnywhere(selector);
+function getVisibleText(selector) {
+    const root = getActiveRoot();
+    const element = findVisibleInRoot(root, selector) || (isElementVisible(root) && root.matches?.(selector) ? root : null);
     return element ? element.textContent.trim() : "";
 }
 
-function getRootText(root = null) {
-    const searchRoot = root || getActiveRoot();
-    return normalizeText(searchRoot ? searchRoot.innerText : "");
+function getRootText() {
+    const root = getActiveRoot();
+    return normalizeText(root ? root.innerText : "");
 }
 
-function findActionTitle(root = null) {
-    const searchRoot = root || getActiveRoot();
+function findActionTitle() {
+    const root = getActiveRoot();
     const selectors = [
         ".o_control_panel .breadcrumb-item.active",
         ".o_control_panel .o_last_breadcrumb_item",
@@ -142,7 +110,7 @@ function findActionTitle(root = null) {
         ".o_last_breadcrumb_item",
     ];
     for (const selector of selectors) {
-        const element = findVisibleInRoot(searchRoot, selector) || findVisibleAnywhere(selector);
+        const element = findVisibleInRoot(root, selector);
         if (element) {
             return element.textContent.trim();
         }
@@ -150,13 +118,57 @@ function findActionTitle(root = null) {
     return "";
 }
 
-function detectListPageKind(root) {
-    const title = normalizeText(findActionTitle(root));
-    const rootText = getRootText(root);
-    const isRouteForm = !!findVisibleInRoot(root, ".route_pda_home_sheet");
+function isRouteWorkspacePage() {
+    return hasVisibleButton("action_open_product_center_screen")
+        && hasVisibleButton("action_open_visit_collections_center_screen")
+        && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
+}
 
-    if (isRouteForm) {
-        return "";
+function isProductCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_vehicle_products",
+        "action_open_main_warehouse_products",
+        "action_open_products",
+    ]);
+}
+
+function isSnapshotCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_today_overview_screen",
+        "action_open_collections_snapshot_screen",
+    ]);
+}
+
+function isCollectionsCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_collections_snapshot_from_collections_center",
+        "action_open_visit_collections",
+    ]);
+}
+
+function isDailySummaryPage() {
+    return hasVisibleButton("action_back_from_collections_snapshot")
+        && hasVisibleButton("action_open_current_visit_statement_of_account");
+}
+
+function detectPageKind() {
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+
+    if (isRouteWorkspacePage()) {
+        return "workspace";
+    }
+    if (isProductCenterPage()) {
+        return "product_center";
+    }
+    if (isSnapshotCenterPage()) {
+        return "snapshot_center";
+    }
+    if (isCollectionsCenterPage()) {
+        return "collections_center";
+    }
+    if (isDailySummaryPage()) {
+        return "daily_summary";
     }
     if (title.startsWith("vehicle products stock")) {
         return "vehicle_stock";
@@ -164,49 +176,13 @@ function detectListPageKind(root) {
     if (title.startsWith("main warehouse products stock")) {
         return "warehouse_stock";
     }
-    if (title.startsWith("outlet stock balances")) {
+    if (title.startsWith("consignment outlets stock") || title.startsWith("outlet stock balances")) {
         return "outlet_stock";
     }
-    if (title === "products" && rootText.includes("price:")) {
+    if (!hasVisibleButton("action_back_home") && (title === "products" || title === "all products") && (rootText.includes("barcode") || rootText.includes("price"))) {
         return "all_products";
     }
     return "";
-}
-
-function getPageDescriptor() {
-    const roots = getVisibleRoots();
-
-    for (const signature of PAGE_SIGNATURES) {
-        for (let index = roots.length - 1; index >= 0; index -= 1) {
-            const root = roots[index];
-            if (rootHasAllButtons(root, signature.buttonNames)) {
-                return { kind: signature.kind, root };
-            }
-        }
-    }
-
-    for (let index = roots.length - 1; index >= 0; index -= 1) {
-        const root = roots[index];
-        const kind = detectListPageKind(root);
-        if (kind) {
-            return { kind, root };
-        }
-    }
-
-    return { kind: "", root: roots[roots.length - 1] || document.body };
-}
-
-function getActiveRoot() {
-    return getPageDescriptor().root || document.body;
-}
-
-function hasVisibleSelector(selector) {
-    const root = getActiveRoot();
-    return !!findVisibleInRoot(root, selector);
-}
-
-function detectPageKind() {
-    return getPageDescriptor().kind;
 }
 
 function getCurrentHash() {
@@ -229,129 +205,99 @@ function rememberPair(hashKey, urlKey) {
 }
 
 function rememberNavigationTargets() {
-    switch (detectPageKind()) {
-        case "workspace":
-            rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
-            break;
-        case "product_center":
-            rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
-            break;
-        case "snapshot_center":
-            rememberPair(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
-            break;
-        case "collections_center":
-            rememberPair(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
-            break;
-    }
-}
-
-function rememberCurrentAs(targetName) {
-    switch (targetName) {
-        case "workspace":
-            rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
-            break;
-        case "product_center":
-            rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
-            break;
-        case "snapshot_center":
-            rememberPair(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
-            break;
-        case "collections_center":
-            rememberPair(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
-            break;
+    if (detectPageKind() === "workspace") {
+        rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
     }
 }
 
 function rememberOriginFromClick(event) {
     const button = event.target.closest("button[name]");
-    if (!button || !isElementVisible(button)) {
+    if (!button) {
         return;
     }
     const name = button.getAttribute("name") || "";
-
-    if ([
-        "action_open_vehicle_products",
-        "action_open_main_warehouse_products",
-        "action_open_products",
-        "action_open_consignment_outlet_stock",
-    ].includes(name)) {
-        rememberCurrentAs("product_center");
-        return;
-    }
-
-    if ([
-        "action_open_collections_snapshot_screen",
-    ].includes(name)) {
-        rememberCurrentAs("snapshot_center");
-        return;
-    }
-
-    if ([
-        "action_open_collections_snapshot_from_collections_center",
-    ].includes(name)) {
-        rememberCurrentAs("collections_center");
-        return;
-    }
-
     if ([
         "action_open_product_center_screen",
         "action_open_snapshot_center_screen",
         "action_open_visit_collections_center_screen",
     ].includes(name)) {
-        rememberCurrentAs("workspace");
+        rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
     }
 }
 
-function getStoredTarget(hashKey, urlKey) {
+function getWorkspaceTarget() {
     return {
-        hash: sessionStorage.getItem(hashKey) || "",
-        url: sessionStorage.getItem(urlKey) || "",
+        hash: sessionStorage.getItem(STORAGE_KEYS.workspaceHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.workspaceUrl) || "",
     };
 }
 
-function getBackTargetForPage(pageKind) {
-    const workspace = getStoredTarget(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
-    const productCenter = getStoredTarget(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
-    const snapshotCenter = getStoredTarget(STORAGE_KEYS.snapshotCenterHash, STORAGE_KEYS.snapshotCenterUrl);
-    const collectionsCenter = getStoredTarget(STORAGE_KEYS.collectionsCenterHash, STORAGE_KEYS.collectionsCenterUrl);
-
-    switch (pageKind) {
-        case "vehicle_stock":
-        case "warehouse_stock":
-        case "outlet_stock":
-        case "all_products":
-            return {
-                hash: productCenter.hash || workspace.hash,
-                url: productCenter.url || workspace.url,
-            };
-        case "daily_summary":
-            return {
-                hash: collectionsCenter.hash || snapshotCenter.hash || workspace.hash,
-                url: collectionsCenter.url || snapshotCenter.url || workspace.url,
-            };
-        case "product_center":
-        case "collections_center":
-        case "snapshot_center":
-            return {
-                hash: workspace.hash,
-                url: workspace.url,
-            };
-        default:
-            return { hash: "", url: "" };
+function setPendingButton(buttonName) {
+    if (!buttonName) {
+        return;
     }
+    sessionStorage.setItem(STORAGE_KEYS.pendingButtonName, buttonName);
+    sessionStorage.setItem(STORAGE_KEYS.pendingButtonTs, String(Date.now()));
 }
 
-function getBackLabel(pageKind) {
-    if (["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"].includes(pageKind)) {
-        return "Back to Products and Stock";
+function clearPendingButton() {
+    sessionStorage.removeItem(STORAGE_KEYS.pendingButtonName);
+    sessionStorage.removeItem(STORAGE_KEYS.pendingButtonTs);
+}
+
+function getPendingButton() {
+    const buttonName = sessionStorage.getItem(STORAGE_KEYS.pendingButtonName) || "";
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.pendingButtonTs) || "0", 10);
+    if (!buttonName) {
+        return "";
     }
-    if (pageKind === "daily_summary") {
-        return "Back";
+    if (timestamp && Date.now() - timestamp > 10000) {
+        clearPendingButton();
+        return "";
     }
-    if (["product_center", "snapshot_center", "collections_center"].includes(pageKind)) {
-        return "Back to Route Workspace";
+    return buttonName;
+}
+
+function dispatchClick(element) {
+    if (!element) {
+        return false;
     }
-    return "Back";
+    element.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+    }));
+    return true;
+}
+
+function openServerButton(buttonName) {
+    if (!buttonName) {
+        return false;
+    }
+    const button = findAnyButton(buttonName);
+    if (!button) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(button);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function openWorkspaceMenuFallback() {
+    const candidates = Array.from(document.querySelectorAll("a, button"));
+    const link = candidates.find((element) => isElementVisible(element) && normalizeText(element.textContent) === "route workspace");
+    if (!link) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(link);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
 }
 
 function navigateToTarget(target) {
@@ -363,8 +309,8 @@ function navigateToTarget(target) {
         window.location.assign(targetUrl);
         window.setTimeout(() => {
             isInternalRedirect = false;
-        }, 700);
-        return;
+        }, 1000);
+        return true;
     }
 
     if (targetHash) {
@@ -374,8 +320,49 @@ function navigateToTarget(target) {
             window.location.hash = cleanHash.slice(1);
             window.setTimeout(() => {
                 isInternalRedirect = false;
-            }, 350);
+            }, 700);
+            return true;
         }
+    }
+    return false;
+}
+
+function navigateViaWorkspace(buttonName) {
+    if (openServerButton(buttonName)) {
+        return;
+    }
+    setPendingButton(buttonName);
+    const workspaceTarget = getWorkspaceTarget();
+    if (navigateToTarget(workspaceTarget)) {
+        return;
+    }
+    openWorkspaceMenuFallback();
+}
+
+function maybeRunPendingButton() {
+    const pendingButton = getPendingButton();
+    if (!pendingButton) {
+        return;
+    }
+    if (detectPageKind() !== "workspace") {
+        return;
+    }
+    clearPendingButton();
+    window.setTimeout(() => {
+        openServerButton(pendingButton);
+    }, 80);
+}
+
+function getBackLabel(pageKind) {
+    if (PAGE_KINDS_WITH_INLINE_BACK.has(pageKind)) {
+        return "Back to Products and Stock";
+    }
+    return "Back";
+}
+
+function handleInlineBack(pageKind) {
+    if (["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"].includes(pageKind)) {
+        navigateViaWorkspace("action_open_product_center_screen");
     }
 }
 
@@ -391,7 +378,7 @@ function findInlineBackHost() {
     return findVisibleInRoot(root, ".o_view_controller") || root || null;
 }
 
-function buildInlineBackButton(pageKind, target) {
+function buildInlineBackButton(pageKind) {
     const wrapper = document.createElement("div");
     wrapper.id = INLINE_BACK_WRAPPER_ID;
     wrapper.style.display = "block";
@@ -401,8 +388,6 @@ function buildInlineBackButton(pageKind, target) {
     button.id = INLINE_BACK_BUTTON_ID;
     button.type = "button";
     button.className = "btn btn-link";
-    button.dataset.targetHash = target.hash || "";
-    button.dataset.targetUrl = target.url || "";
     button.style.padding = "0";
     button.style.border = "0";
     button.style.background = "transparent";
@@ -414,16 +399,14 @@ function buildInlineBackButton(pageKind, target) {
     button.style.alignItems = "center";
     button.style.gap = "6px";
     button.style.color = "inherit";
+    button.dataset.pageKind = pageKind;
     button.title = getBackLabel(pageKind);
     button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${getBackLabel(pageKind)}</span>`;
 
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateToTarget({
-            hash: button.dataset.targetHash || "",
-            url: button.dataset.targetUrl || "",
-        });
+        handleInlineBack(button.dataset.pageKind || "");
     });
 
     wrapper.appendChild(button);
@@ -432,24 +415,16 @@ function buildInlineBackButton(pageKind, target) {
 
 function ensureInlineBackButton() {
     const pageKind = detectPageKind();
-    const target = getBackTargetForPage(pageKind);
-    const supportedPages = new Set([
-        "vehicle_stock",
-        "warehouse_stock",
-        "outlet_stock",
-        "all_products",
-        "daily_summary",
-    ]);
     const host = findInlineBackHost();
 
-    if (!supportedPages.has(pageKind) || !host || (!target.hash && !target.url)) {
+    if (!PAGE_KINDS_WITH_INLINE_BACK.has(pageKind) || !host) {
         removeInlineBackButton();
         return;
     }
 
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper) {
-        wrapper = buildInlineBackButton(pageKind, target);
+        wrapper = buildInlineBackButton(pageKind);
         host.prepend(wrapper);
     }
 
@@ -458,8 +433,7 @@ function ensureInlineBackButton() {
         return;
     }
 
-    button.dataset.targetHash = target.hash || "";
-    button.dataset.targetUrl = target.url || "";
+    button.dataset.pageKind = pageKind;
     button.title = getBackLabel(pageKind);
 
     const labelSpan = button.querySelector("span");
@@ -477,32 +451,18 @@ function handleBrowserBack() {
     if (isInternalRedirect) {
         return;
     }
-
     const pageKind = detectPageKind();
-    const protectedPages = new Set([
-        "vehicle_stock",
-        "warehouse_stock",
-        "outlet_stock",
-        "all_products",
-        "daily_summary",
-    ]);
-
-    if (!protectedPages.has(pageKind)) {
+    if (!PAGE_KINDS_WITH_INLINE_BACK.has(pageKind)) {
         return;
     }
-
-    const target = getBackTargetForPage(pageKind);
-    if (!target.hash && !target.url) {
-        return;
-    }
-
     window.setTimeout(() => {
-        navigateToTarget(target);
+        handleInlineBack(pageKind);
     }, 0);
 }
 
 function refreshNavigationUi() {
     rememberNavigationTargets();
+    maybeRunPendingButton();
     ensureInlineBackButton();
 }
 
