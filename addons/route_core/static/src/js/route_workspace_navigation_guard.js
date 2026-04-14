@@ -89,7 +89,7 @@ function detectPageKind() {
     if (title.startsWith("outlet stock balances") || bodyText.includes("outlet stock balances")) {
         return "outlet_stock";
     }
-    if ((title === "products" || bodyText.includes("products")) && bodyText.includes("price:")) {
+    if ((title === "products" || bodyText.includes("\nproducts\n")) && bodyText.includes("price:")) {
         return "all_products";
     }
     return "";
