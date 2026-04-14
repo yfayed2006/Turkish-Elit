@@ -1,18 +1,57 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v3.workspace.hash",
-    workspaceUrl: "route_core.v3.workspace.url",
-    productCenterHash: "route_core.v3.product_center.hash",
-    productCenterUrl: "route_core.v3.product_center.url",
-    snapshotCenterHash: "route_core.v3.snapshot_center.hash",
-    snapshotCenterUrl: "route_core.v3.snapshot_center.url",
-    collectionsCenterHash: "route_core.v3.collections_center.hash",
-    collectionsCenterUrl: "route_core.v3.collections_center.url",
+    workspaceHash: "route_core.v4.workspace.hash",
+    workspaceUrl: "route_core.v4.workspace.url",
+    productCenterHash: "route_core.v4.product_center.hash",
+    productCenterUrl: "route_core.v4.product_center.url",
+    snapshotCenterHash: "route_core.v4.snapshot_center.hash",
+    snapshotCenterUrl: "route_core.v4.snapshot_center.url",
+    collectionsCenterHash: "route_core.v4.collections_center.hash",
+    collectionsCenterUrl: "route_core.v4.collections_center.url",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
+
+const PAGE_SIGNATURES = [
+    {
+        kind: "workspace",
+        buttonNames: [
+            "action_open_product_center_screen",
+            "action_open_visit_collections_center_screen",
+        ],
+    },
+    {
+        kind: "product_center",
+        buttonNames: [
+            "action_open_vehicle_products",
+            "action_open_main_warehouse_products",
+            "action_open_products",
+        ],
+    },
+    {
+        kind: "snapshot_center",
+        buttonNames: [
+            "action_open_today_overview_screen",
+            "action_open_collections_snapshot_screen",
+        ],
+    },
+    {
+        kind: "collections_center",
+        buttonNames: [
+            "action_open_collections_snapshot_from_collections_center",
+            "action_open_visit_collections",
+        ],
+    },
+    {
+        kind: "daily_summary",
+        buttonNames: [
+            "action_back_from_collections_snapshot",
+            "action_open_current_visit_statement_of_account",
+        ],
+    },
+];
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -54,11 +93,6 @@ function getVisibleRoots() {
     return roots.length ? roots : [document.body];
 }
 
-function getActiveRoot() {
-    const roots = getVisibleRoots();
-    return roots[roots.length - 1] || document.body;
-}
-
 function findVisibleInRoot(root, selector) {
     if (!root) {
         return null;
@@ -67,19 +101,34 @@ function findVisibleInRoot(root, selector) {
     return matches.length ? matches[matches.length - 1] : null;
 }
 
-function getVisibleText(selector) {
-    const root = getActiveRoot();
-    const element = findVisibleInRoot(root, selector) || (isElementVisible(root) && root.matches?.(selector) ? root : null);
+function findVisibleAnywhere(selector) {
+    const matches = Array.from(document.querySelectorAll(selector)).filter(isElementVisible);
+    return matches.length ? matches[matches.length - 1] : null;
+}
+
+function hasVisibleButtonInRoot(root, buttonName) {
+    return !!findVisibleInRoot(root, `button[name="${buttonName}"]`);
+}
+
+function rootHasAllButtons(root, buttonNames) {
+    return buttonNames.every((buttonName) => hasVisibleButtonInRoot(root, buttonName));
+}
+
+function getVisibleText(selector, root = null) {
+    const searchRoot = root || getActiveRoot();
+    const element = findVisibleInRoot(searchRoot, selector)
+        || (isElementVisible(searchRoot) && searchRoot.matches?.(selector) ? searchRoot : null)
+        || findVisibleAnywhere(selector);
     return element ? element.textContent.trim() : "";
 }
 
-function getRootText() {
-    const root = getActiveRoot();
-    return normalizeText(root ? root.innerText : "");
+function getRootText(root = null) {
+    const searchRoot = root || getActiveRoot();
+    return normalizeText(searchRoot ? searchRoot.innerText : "");
 }
 
-function findActionTitle() {
-    const root = getActiveRoot();
+function findActionTitle(root = null) {
+    const searchRoot = root || getActiveRoot();
     const selectors = [
         ".o_control_panel .breadcrumb-item.active",
         ".o_control_panel .o_last_breadcrumb_item",
@@ -93,7 +142,7 @@ function findActionTitle() {
         ".o_last_breadcrumb_item",
     ];
     for (const selector of selectors) {
-        const element = findVisibleInRoot(root, selector);
+        const element = findVisibleInRoot(searchRoot, selector) || findVisibleAnywhere(selector);
         if (element) {
             return element.textContent.trim();
         }
@@ -101,42 +150,13 @@ function findActionTitle() {
     return "";
 }
 
-function hasVisibleSelector(selector) {
-    const root = getActiveRoot();
-    return !!findVisibleInRoot(root, selector);
-}
+function detectListPageKind(root) {
+    const title = normalizeText(findActionTitle(root));
+    const rootText = getRootText(root);
+    const isRouteForm = !!findVisibleInRoot(root, ".route_pda_home_sheet");
 
-function isRouteWorkspacePage() {
-    return hasVisibleSelector(".route_pda_home_title")
-        && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
-}
-
-function isProductCenterPage() {
-    return hasVisibleSelector(".route_pda_center_grid")
-        && getRootText().includes("vehicle products stock")
-        && getRootText().includes("main warehouse products stock")
-        && getRootText().includes("all products");
-}
-
-function detectPageKind() {
-    const title = normalizeText(findActionTitle());
-    const rootText = getRootText();
-    const isRouteForm = hasVisibleSelector(".route_pda_home_sheet");
-
-    if (isRouteWorkspacePage()) {
-        return "workspace";
-    }
-    if (isProductCenterPage()) {
-        return "product_center";
-    }
-    if (isRouteForm && (title === "stock and lot snapshot" || title === "snapshot center")) {
-        return "snapshot_center";
-    }
-    if (isRouteForm && title === "visit collections") {
-        return "collections_center";
-    }
-    if (isRouteForm && title === "daily summary") {
-        return "daily_summary";
+    if (isRouteForm) {
+        return "";
     }
     if (title.startsWith("vehicle products stock")) {
         return "vehicle_stock";
@@ -147,10 +167,46 @@ function detectPageKind() {
     if (title.startsWith("outlet stock balances")) {
         return "outlet_stock";
     }
-    if (!isRouteForm && title === "products" && rootText.includes("price:")) {
+    if (title === "products" && rootText.includes("price:")) {
         return "all_products";
     }
     return "";
+}
+
+function getPageDescriptor() {
+    const roots = getVisibleRoots();
+
+    for (const signature of PAGE_SIGNATURES) {
+        for (let index = roots.length - 1; index >= 0; index -= 1) {
+            const root = roots[index];
+            if (rootHasAllButtons(root, signature.buttonNames)) {
+                return { kind: signature.kind, root };
+            }
+        }
+    }
+
+    for (let index = roots.length - 1; index >= 0; index -= 1) {
+        const root = roots[index];
+        const kind = detectListPageKind(root);
+        if (kind) {
+            return { kind, root };
+        }
+    }
+
+    return { kind: "", root: roots[roots.length - 1] || document.body };
+}
+
+function getActiveRoot() {
+    return getPageDescriptor().root || document.body;
+}
+
+function hasVisibleSelector(selector) {
+    const root = getActiveRoot();
+    return !!findVisibleInRoot(root, selector);
+}
+
+function detectPageKind() {
+    return getPageDescriptor().kind;
 }
 
 function getCurrentHash() {
