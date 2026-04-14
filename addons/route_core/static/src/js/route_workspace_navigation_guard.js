@@ -7,8 +7,8 @@ const STORAGE_KEYS = {
     collectionsCenter: "route_core.collections_center.hash",
 };
 
-const BACK_BUTTON_ID = "route-workspace-inline-back-btn";
-const BACK_BUTTON_WRAPPER_ID = "route-workspace-inline-back-wrapper";
+const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
+const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -18,8 +18,8 @@ function normalizeText(value) {
 }
 
 function getVisibleText(selector) {
-    const element = document.querySelector(selector);
-    return element ? element.textContent.trim() : "";
+    const el = document.querySelector(selector);
+    return el ? el.textContent.trim() : "";
 }
 
 function getBodyText() {
@@ -47,7 +47,8 @@ function findActionTitle() {
 }
 
 function isRouteWorkspacePage() {
-    return !!document.querySelector(".route_pda_home_title") && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
+    return !!document.querySelector(".route_pda_home_title")
+        && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
 }
 
 function isProductCenterPage() {
@@ -100,6 +101,7 @@ function rememberNavigationHashes() {
     if (!hash) {
         return;
     }
+
     switch (detectPageKind()) {
         case "workspace":
             sessionStorage.setItem(STORAGE_KEYS.workspace, hash);
@@ -128,11 +130,14 @@ function getBackTargetForPage(pageKind) {
         case "outlet_stock":
         case "all_products":
             return productCenterHash || workspaceHash;
+
         case "daily_summary":
             return collectionsCenterHash || snapshotCenterHash || workspaceHash;
+
         case "product_center":
         case "collections_center":
             return workspaceHash;
+
         default:
             return "";
     }
@@ -148,99 +153,137 @@ function getBackLabel(pageKind) {
     return "Back to Route Workspace";
 }
 
-function findControlPanelHost() {
-    return document.querySelector(".o_control_panel .o_cp_top_left")
-        || document.querySelector(".o_control_panel .o_cp_top")
-        || document.querySelector(".o_control_panel")
-        || null;
-}
-
 function navigateToHash(targetHash) {
     if (!targetHash) {
         return;
     }
+
     const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
     if (window.location.hash === cleanHash) {
         return;
     }
+
     isInternalRedirect = true;
     window.location.hash = cleanHash.slice(1);
+
     window.setTimeout(() => {
         isInternalRedirect = false;
     }, 250);
 }
 
-function removeBackButton() {
-    const wrapper = document.getElementById(BACK_BUTTON_WRAPPER_ID);
-    if (wrapper) {
-        wrapper.remove();
+function removeInlineBackButton() {
+    const existing = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    if (existing) {
+        existing.remove();
     }
+}
+
+function findInlineBackHost() {
+    return document.querySelector(".o_content .o_view_controller")
+        || document.querySelector(".o_content")
+        || null;
+}
+
+function buildInlineBackButton(pageKind, targetHash) {
+    const wrapper = document.createElement("div");
+    wrapper.id = INLINE_BACK_WRAPPER_ID;
+    wrapper.style.display = "block";
+    wrapper.style.margin = "12px 16px 8px 16px";
+
+    const button = document.createElement("button");
+    button.id = INLINE_BACK_BUTTON_ID;
+    button.type = "button";
+    button.className = "btn btn-link";
+    button.dataset.targetHash = targetHash;
+    button.style.padding = "0";
+    button.style.border = "0";
+    button.style.background = "transparent";
+    button.style.fontWeight = "600";
+    button.style.fontSize = "16px";
+    button.style.textDecoration = "none";
+    button.style.boxShadow = "none";
+    button.style.display = "inline-flex";
+    button.style.alignItems = "center";
+    button.style.gap = "6px";
+    button.style.color = "inherit";
+    button.title = getBackLabel(pageKind);
+    button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${getBackLabel(pageKind)}</span>`;
+
+    button.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        navigateToHash(button.dataset.targetHash || "");
+    });
+
+    wrapper.appendChild(button);
+    return wrapper;
 }
 
 function ensureInlineBackButton() {
     const pageKind = detectPageKind();
     const targetHash = getBackTargetForPage(pageKind);
-    const supportedPages = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
-    const host = findControlPanelHost();
+    const supportedPages = new Set([
+        "vehicle_stock",
+        "warehouse_stock",
+        "outlet_stock",
+        "all_products",
+        "daily_summary",
+    ]);
+
+    const host = findInlineBackHost();
 
     if (!supportedPages.has(pageKind) || !targetHash || !host) {
-        removeBackButton();
+        removeInlineBackButton();
         return;
     }
 
-    let wrapper = document.getElementById(BACK_BUTTON_WRAPPER_ID);
-    if (!wrapper) {
-        wrapper = document.createElement("div");
-        wrapper.id = BACK_BUTTON_WRAPPER_ID;
-        wrapper.className = "route_workspace_inline_back_wrapper";
+    const existing = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    if (existing) {
+        const button = existing.querySelector(`#${INLINE_BACK_BUTTON_ID}`);
+        if (button) {
+            button.dataset.targetHash = targetHash;
+            button.title = getBackLabel(pageKind);
+            const span = button.querySelector("span");
+            if (span) {
+                span.textContent = getBackLabel(pageKind);
+            }
+        }
 
-        const button = document.createElement("button");
-        button.id = BACK_BUTTON_ID;
-        button.type = "button";
-        button.className = "btn btn-secondary route_workspace_inline_back_btn";
-        button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back</span>' ;
-        button.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            navigateToHash(button.dataset.targetHash || "");
-        });
-
-        wrapper.appendChild(button);
-        host.prepend(wrapper);
-    }
-
-    const button = document.getElementById(BACK_BUTTON_ID);
-    if (!button) {
+        if (existing.parentElement !== host) {
+            existing.remove();
+            host.prepend(existing);
+        }
         return;
     }
-    button.dataset.targetHash = targetHash;
-    button.title = getBackLabel(pageKind);
-    const labelSpan = button.querySelector("span");
-    if (labelSpan) {
-        labelSpan.textContent = getBackLabel(pageKind);
-    }
 
-    if (wrapper.parentElement !== host) {
-        host.prepend(wrapper);
-    }
+    const wrapper = buildInlineBackButton(pageKind, targetHash);
+    host.prepend(wrapper);
 }
 
 function handleBrowserBack() {
     if (isInternalRedirect) {
         return;
     }
+
     const pageKind = detectPageKind();
-    const protectedPages = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products", "daily_summary"]);
+    const protectedPages = new Set([
+        "vehicle_stock",
+        "warehouse_stock",
+        "outlet_stock",
+        "all_products",
+        "daily_summary",
+    ]);
+
     if (!protectedPages.has(pageKind)) {
         return;
     }
+
     const targetHash = getBackTargetForPage(pageKind);
     if (!targetHash) {
         return;
     }
+
     window.setTimeout(() => {
-        // If the browser back navigation would keep the user inside the wrong cached SPA state,
-        // force a clean return to the logical parent screen that we memorized earlier.
         navigateToHash(targetHash);
     }, 0);
 }
@@ -254,16 +297,20 @@ function bootRouteWorkspaceNavigationGuard() {
     if (observerStarted || !document.body) {
         return;
     }
+
     observerStarted = true;
 
     let refreshTimer = null;
     const scheduleRefresh = () => {
         window.clearTimeout(refreshTimer);
-        refreshTimer = window.setTimeout(refreshNavigationUi, 60);
+        refreshTimer = window.setTimeout(refreshNavigationUi, 80);
     };
 
     const observer = new MutationObserver(scheduleRefresh);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
