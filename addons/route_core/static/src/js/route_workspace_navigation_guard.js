@@ -1,10 +1,12 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v10.workspace.hash",
-    workspaceUrl: "route_core.v10.workspace.url",
-    pendingButtonName: "route_core.v10.pending.button_name",
-    pendingButtonTs: "route_core.v10.pending.button_ts",
+    workspaceHash: "route_core.v11.workspace.hash",
+    workspaceUrl: "route_core.v11.workspace.url",
+    productCenterHash: "route_core.v11.product_center.hash",
+    productCenterUrl: "route_core.v11.product_center.url",
+    pendingButtonName: "route_core.v11.pending.button_name",
+    pendingButtonTs: "route_core.v11.pending.button_ts",
 };
 
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
@@ -89,14 +91,6 @@ function hasAnyVisibleButton(names) {
     return names.some((name) => hasVisibleButton(name));
 }
 
-function getVisibleText(selector) {
-    const root = getActiveRoot();
-    const element = findVisibleInRoot(root, selector)
-        || findVisibleAnywhere(selector)
-        || (isElementVisible(root) && root.matches?.(selector) ? root : null);
-    return element ? element.textContent.trim() : "";
-}
-
 function getRootText() {
     const root = getActiveRoot();
     return normalizeText(root ? root.innerText : "");
@@ -169,8 +163,6 @@ function detectPageKind() {
     const rootText = getRootText();
     const pageText = getPageText();
 
-    // Detect center/workspace screens first so card titles inside those screens
-    // do not get mistaken for the detailed stock pages.
     if (isRouteWorkspacePage()) {
         return "workspace";
     }
@@ -242,7 +234,7 @@ function looksLikeMobileHeaderBackControl(element) {
     }
 
     const rect = clickable.getBoundingClientRect();
-    if (rect.top > 120 || rect.left > 220) {
+    if (rect.top > 120 || rect.left > 260) {
         return false;
     }
 
@@ -280,8 +272,12 @@ function rememberPair(hashKey, urlKey) {
 }
 
 function rememberNavigationTargets() {
-    if (detectPageKind() === "workspace") {
+    const pageKind = detectPageKind();
+    if (pageKind === "workspace") {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+    if (pageKind === "product_center") {
+        rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
     }
 }
 
@@ -298,12 +294,27 @@ function rememberOriginFromClick(event) {
     ].includes(name)) {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
     }
+    if ([
+        "action_open_vehicle_products",
+        "action_open_main_warehouse_products",
+        "action_open_products",
+        "action_open_consignment_outlet_stock",
+    ].includes(name)) {
+        rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+    }
 }
 
 function getWorkspaceTarget() {
     return {
         hash: sessionStorage.getItem(STORAGE_KEYS.workspaceHash) || "",
         url: sessionStorage.getItem(STORAGE_KEYS.workspaceUrl) || "",
+    };
+}
+
+function getProductCenterTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.productCenterHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.productCenterUrl) || "",
     };
 }
 
@@ -345,12 +356,15 @@ function dispatchClick(element) {
     return true;
 }
 
-function openServerButton(buttonName) {
+function openServerButton(buttonName, visibleOnly = true) {
     if (!buttonName) {
         return false;
     }
     const button = findAnyButton(buttonName);
-    if (!button || !isElementVisible(button)) {
+    if (!button) {
+        return false;
+    }
+    if (visibleOnly && !isElementVisible(button)) {
         return false;
     }
     isInternalRedirect = true;
@@ -402,16 +416,32 @@ function navigateToTarget(target) {
     return false;
 }
 
-function navigateViaWorkspace(buttonName) {
-    if (openServerButton(buttonName)) {
+function navigateBackToProductCenter() {
+    if (openServerButton("action_open_product_center_screen", false)) {
         return;
     }
-    setPendingButton(buttonName);
+
+    const productCenterTarget = getProductCenterTarget();
+    if (isSmallScreen() && (productCenterTarget.hash || productCenterTarget.url)) {
+        if (navigateToTarget(productCenterTarget)) {
+            return;
+        }
+    }
+
+    setPendingButton("action_open_product_center_screen");
+
     if (openWorkspaceMenuFallback()) {
         return;
     }
+
     const workspaceTarget = getWorkspaceTarget();
-    navigateToTarget(workspaceTarget);
+    if (navigateToTarget(workspaceTarget)) {
+        return;
+    }
+
+    if (productCenterTarget.hash || productCenterTarget.url) {
+        navigateToTarget(productCenterTarget);
+    }
 }
 
 function maybeRunPendingButton() {
@@ -424,7 +454,7 @@ function maybeRunPendingButton() {
     }
     clearPendingButton();
     window.setTimeout(() => {
-        openServerButton(pendingButton);
+        openServerButton(pendingButton, false);
     }, 120);
 }
 
@@ -436,8 +466,8 @@ function getBackLabel(pageKind) {
 }
 
 function handleFloatingBack(pageKind) {
-    if (["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"].includes(pageKind)) {
-        navigateViaWorkspace("action_open_product_center_screen");
+    if (PAGE_KINDS_WITH_BACK.has(pageKind)) {
+        navigateBackToProductCenter();
     }
 }
 
@@ -453,7 +483,7 @@ function buildFloatingBackButton(pageKind) {
     wrapper.id = FLOATING_BACK_WRAPPER_ID;
     wrapper.style.position = "fixed";
     wrapper.style.left = "12px";
-    wrapper.style.top = "110px";
+    wrapper.style.top = isSmallScreen() ? "96px" : "110px";
     wrapper.style.zIndex = "9999";
     wrapper.style.pointerEvents = "auto";
 
@@ -466,7 +496,7 @@ function buildFloatingBackButton(pageKind) {
     button.style.background = "#ffffff";
     button.style.padding = "8px 14px";
     button.style.fontWeight = "600";
-    button.style.fontSize = "14px";
+    button.style.fontSize = isSmallScreen() ? "16px" : "14px";
     button.style.boxShadow = "0 2px 10px rgba(0,0,0,0.08)";
     button.style.display = "inline-flex";
     button.style.alignItems = "center";
@@ -501,6 +531,8 @@ function ensureFloatingBackButton() {
         document.body.appendChild(wrapper);
     }
 
+    wrapper.style.top = isSmallScreen() ? "96px" : "110px";
+
     const button = document.getElementById(FLOATING_BACK_BUTTON_ID);
     if (!button) {
         return;
@@ -508,6 +540,7 @@ function ensureFloatingBackButton() {
 
     button.dataset.pageKind = pageKind;
     button.title = getBackLabel(pageKind);
+    button.style.fontSize = isSmallScreen() ? "16px" : "14px";
 
     const labelSpan = button.querySelector("span");
     if (labelSpan) {
@@ -528,26 +561,20 @@ function handleBrowserBack() {
     }, 0);
 }
 
-function interceptMobileHeaderBack(event) {
-    if (isInternalRedirect || !isSmallScreen()) {
+function maybeInterceptMobileHeaderBack(event) {
+    if (!isSmallScreen() || isInternalRedirect) {
         return;
     }
-
     const pageKind = detectPageKind();
     if (!PAGE_KINDS_WITH_BACK.has(pageKind)) {
         return;
     }
-
     if (!looksLikeMobileHeaderBackControl(event.target)) {
         return;
     }
-
     event.preventDefault();
     event.stopPropagation();
-    if (typeof event.stopImmediatePropagation === "function") {
-        event.stopImmediatePropagation();
-    }
-
+    event.stopImmediatePropagation();
     handleFloatingBack(pageKind);
 }
 
@@ -578,10 +605,11 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
-    document.addEventListener("click", interceptMobileHeaderBack, true);
+    document.addEventListener("click", maybeInterceptMobileHeaderBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
+    window.addEventListener("resize", scheduleRefresh);
     window.addEventListener("popstate", handleBrowserBack);
 
     refreshNavigationUi();
