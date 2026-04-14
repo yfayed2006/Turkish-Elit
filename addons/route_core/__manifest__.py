@@ -1,180 +1,82 @@
-/** @odoo-module **/
-
-const STORAGE_KEYS = {
-    workspaceHash: "route_core.v6.workspace.hash",
-    workspaceUrl: "route_core.v6.workspace.url",
-    pendingButtonName: "route_core.v6.pending.button_name",
-    pendingButtonTs: "route_core.v6.pending.button_ts",
-};
-
-const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
-const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
-
-const PAGE_KINDS_WITH_INLINE_BACK = new Set([
-    "vehicle_stock",
-    "warehouse_stock",
-    "outlet_stock",
-    "all_products",
-]);
-
-let isInternalRedirect = false;
-let observerStarted = false;
-
-function normalizeText(value) {
-    return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+{
+    "name": "Route Core",
+    "version": "19.0.1.0.43",
+    "summary": "Sales representative route visits",
+    "author": "Yasser Fayed",
+    "license": "LGPL-3",
+    "depends": ["base", "sale", "mail", "stock", "contacts"],
+    "data": [
+        "security/route_security_groups.xml",
+        "security/ir.model.access.csv",
+        "security/route_record_rules.xml",
+        "security/route_vehicle_closing_pending_visit_security.xml",
+        "security/route_plan_skip_visit_security.xml",
+        "security/route_plan_pending_visit_review_security.xml",
+        "data/route_visit_sequence.xml",
+        "data/route_outlet_sequence.xml",
+        "data/route_vehicle_sequence.xml",
+        "data/route_plan_sequence.xml",
+        "data/route_refill_backorder_sequence.xml",
+        "data/route_shortage_sequence.xml",
+        "data/route_loading_proposal_sequence.xml",
+        "data/route_vehicle_closing_sequence.xml",
+        "data/route_salesperson_shortage_sequence.xml",
+        "data/route_salesperson_deduction_sequence.xml",
+        "data/route_direct_return_sequence.xml",
+        "views/route_city_views.xml",
+        "views/route_area_views.xml",
+        "views/route_outlet_views.xml",
+        "views/route_plan_views.xml",
+        "views/route_vehicle_views.xml",
+        "views/route_return_settings_views.xml",
+        "views/route_visit_views.xml",
+        "views/route_visit_payment_views.xml",
+        "views/route_visit_workflow_ux_views.xml",
+        "views/route_visit_payment_ux_views.xml",
+        "views/outlet_stock_balance_views.xml",
+        "views/route_location_link_views.xml",
+        "views/route_product_barcode_views.xml",
+        "views/route_shortage_views.xml",
+        "views/route_loading_proposal_views.xml",
+        "views/route_vehicle_stock_snapshot_views.xml",
+        "views/route_vehicle_closing_views.xml",
+        "views/route_salesperson_deduction_views.xml",
+        "reports/route_salesperson_shortage_report.xml",
+        "reports/route_visit_settlement_receipt_report.xml",
+        "reports/route_visit_statement_report.xml",
+        "views/route_salesperson_shortage_views.xml",
+        "views/route_visit_document_links_views.xml",
+        "views/route_direct_return_views.xml",
+        "views/route_supervisor_assignment_views.xml",
+        "views/route_pda_home_views.xml",
+        "views/sale_order_direct_sale_views.xml",
+        "views/route_role_actions_menus.xml",
+        "views/route_role_ui_security_views.xml",
+        "wizard/route_visit_end_wizard_views.xml",
+        "wizard/route_plan_add_area_outlets_wizard_views.xml",
+        "wizard/route_plan_skip_visit_wizard_views.xml",
+        "wizard/route_visit_scan_wizard_views.xml",
+        "wizard/route_visit_return_scan_wizard_views.xml",
+        "wizard/route_visit_collect_payment_wizard_views.xml",
+        "wizard/route_visit_statement_wizard_views.xml",
+        "wizard/route_visit_finish_summary_wizard_views.xml",
+        "wizard/route_visit_missing_lot_wizard_views.xml",
+        "wizard/route_loading_source_wizard_views.xml",
+        "wizard/route_vehicle_closing_scan_wizard_views.xml",
+        "wizard/route_vehicle_closing_pending_visit_wizard_views.xml",
+        "wizard/route_plan_pending_visit_review_wizard_views.xml",
+    ],
+    "assets": {
+        "web.assets_backend": [
+            "route_core/static/src/js/route_visit_scan_focus.js",
+            "route_core/static/src/js/route_workspace_navigation_guard.js",
+            "route_core/static/src/css/route_pda_home.css",
+        ],
+    },
+    "installable": True,
+    "application": True,
 }
-
-function isElementVisible(element) {
-    if (!element || !(element instanceof Element)) {
-        return false;
-    }
-    const style = window.getComputedStyle(element);
-    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
-        return false;
-    }
-    if (element.closest(".o_invisible_modifier")) {
-        return false;
-    }
-    return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
-}
-
-function getVisibleRoots() {
-    const selectors = [
-        ".o_action_manager .o_action",
-        ".o_action_manager .o_view_controller",
-        ".o_web_client .o_content .o_action",
-        ".o_web_client .o_content .o_view_controller",
-        ".o_web_client .o_content",
-    ];
-    const roots = [];
-    for (const selector of selectors) {
-        for (const element of document.querySelectorAll(selector)) {
-            if (isElementVisible(element) && !roots.includes(element)) {
-                roots.push(element);
-            }
-        }
-    }
-    return roots.length ? roots : [document.body];
-}
-
-function getActiveRoot() {
-    const roots = getVisibleRoots();
-    return roots[roots.length - 1] || document.body;
-}
-
-function findVisibleInRoot(root, selector) {
-    if (!root) {
-        return null;
-    }
-    const matches = Array.from(root.querySelectorAll(selector)).filter(isElementVisible);
-    return matches.length ? matches[matches.length - 1] : null;
-}
-
-function findAnyButton(name) {
-    const selector = `button[name="${name}"]`;
-    const matches = Array.from(document.querySelectorAll(selector));
-    return matches.length ? matches[matches.length - 1] : null;
-}
-
-function hasVisibleButton(name) {
-    return !!findVisibleInRoot(getActiveRoot(), `button[name="${name}"]`);
-}
-
-function hasAnyVisibleButton(names) {
-    return names.some((name) => hasVisibleButton(name));
-}
-
-function getVisibleText(selector) {
-    const root = getActiveRoot();
-    const element = findVisibleInRoot(root, selector) || (isElementVisible(root) && root.matches?.(selector) ? root : null);
-    return element ? element.textContent.trim() : "";
-}
-
-function getRootText() {
-    const root = getActiveRoot();
-    return normalizeText(root ? root.innerText : "");
-}
-
-function findActionTitle() {
-    const root = getActiveRoot();
-    const selectors = [
-        ".o_control_panel .breadcrumb-item.active",
-        ".o_control_panel .o_last_breadcrumb_item",
-        ".o_control_panel .o_breadcrumb .active",
-        ".o_control_panel .o_control_panel_breadcrumbs .active",
-        ".route_pda_detail_title",
-        ".route_pda_home_title",
-        ".o_form_view .oe_title h1",
-        "h1",
-        ".breadcrumb-item.active",
-        ".o_last_breadcrumb_item",
-    ];
-    for (const selector of selectors) {
-        const element = findVisibleInRoot(root, selector);
-        if (element) {
-            return element.textContent.trim();
-        }
-    }
-    return "";
-}
-
-function isRouteWorkspacePage() {
-    return hasVisibleButton("action_open_product_center_screen")
-        && hasVisibleButton("action_open_visit_collections_center_screen")
-        && normalizeText(getVisibleText(".route_pda_home_title")) === "route workspace";
-}
-
-function isProductCenterPage() {
-    return hasAnyVisibleButton([
-        "action_open_vehicle_products",
-        "action_open_main_warehouse_products",
-        "action_open_products",
-    ]);
-}
-
-function isSnapshotCenterPage() {
-    return hasAnyVisibleButton([
-        "action_open_today_overview_screen",
-        "action_open_collections_snapshot_screen",
-    ]);
-}
-
-function isCollectionsCenterPage() {
-    return hasAnyVisibleButton([
-        "action_open_collections_snapshot_from_collections_center",
-        "action_open_visit_collections",
-    ]);
-}
-
-function isDailySummaryPage() {
-    return hasVisibleButton("action_back_from_collections_snapshot")
-        && hasVisibleButton("action_open_current_visit_statement_of_account");
-}
-
-function detectPageKind() {
-    const title = normalizeText(findActionTitle());
-    const rootText = getRootText();
-
-    if (isRouteWorkspacePage()) {
-        return "workspace";
-    }
-    if (isProductCenterPage()) {
-        return "product_center";
-    }
-    if (isSnapshotCenterPage()) {
-        return "snapshot_center";
-    }
-    if (isCollectionsCenterPage()) {
-        return "collections_center";
-    }
-    if (isDailySummaryPage()) {
-        return "daily_summary";
-    }
-
-    const isCenterScreen = hasVisibleButton("action_back_home") || hasVisibleButton("action_back_to_consignment_mode");
-    if (!isCenterScreen) {
-        if (title.startsWith("vehicle products stock") || rootText.includes("vehicle products stock")) {
-            return "vehicle_stock";
+"vehicle_stock";
         }
         if (title.startsWith("main warehouse products stock") || rootText.includes("main warehouse products stock")) {
             return "warehouse_stock";
