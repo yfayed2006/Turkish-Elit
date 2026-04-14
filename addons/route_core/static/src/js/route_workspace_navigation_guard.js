@@ -1,10 +1,10 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v8.workspace.hash",
-    workspaceUrl: "route_core.v8.workspace.url",
-    pendingButtonName: "route_core.v8.pending.button_name",
-    pendingButtonTs: "route_core.v8.pending.button_ts",
+    workspaceHash: "route_core.v9.workspace.hash",
+    workspaceUrl: "route_core.v9.workspace.url",
+    pendingButtonName: "route_core.v9.pending.button_name",
+    pendingButtonTs: "route_core.v9.pending.button_ts",
 };
 
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
@@ -169,6 +169,24 @@ function detectPageKind() {
     const rootText = getRootText();
     const pageText = getPageText();
 
+    // Detect center/workspace screens first so card titles inside those screens
+    // do not get mistaken for the detailed stock pages.
+    if (isRouteWorkspacePage()) {
+        return "workspace";
+    }
+    if (isProductCenterPage()) {
+        return "product_center";
+    }
+    if (isSnapshotCenterPage()) {
+        return "snapshot_center";
+    }
+    if (isCollectionsCenterPage()) {
+        return "collections_center";
+    }
+    if (isDailySummaryPage()) {
+        return "daily_summary";
+    }
+
     if (
         title.includes("vehicle products stock")
         || rootText.includes("vehicle products stock")
@@ -203,21 +221,6 @@ function detectPageKind() {
         return "all_products";
     }
 
-    if (isRouteWorkspacePage()) {
-        return "workspace";
-    }
-    if (isProductCenterPage()) {
-        return "product_center";
-    }
-    if (isSnapshotCenterPage()) {
-        return "snapshot_center";
-    }
-    if (isCollectionsCenterPage()) {
-        return "collections_center";
-    }
-    if (isDailySummaryPage()) {
-        return "daily_summary";
-    }
     return "";
 }
 
@@ -529,5 +532,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
 
