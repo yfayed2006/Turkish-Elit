@@ -334,9 +334,32 @@ function openServerButton(buttonName) {
     return true;
 }
 
-function openWorkspaceMenuFallback() {
+function findWorkspaceMenuCandidate({ allowHidden = false } = {}) {
     const candidates = Array.from(document.querySelectorAll("a, button"));
-    const link = candidates.find((element) => isElementVisible(element) && normalizeText(element.textContent) === "route workspace");
+    return candidates.find((element) => {
+        const text = normalizeText(element.textContent);
+        if (text !== "route workspace") {
+            return false;
+        }
+        return allowHidden || isElementVisible(element);
+    }) || null;
+}
+
+function openWorkspaceMenuFallback() {
+    const link = findWorkspaceMenuCandidate({ allowHidden: false });
+    if (!link) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(link);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function openWorkspaceMenuHiddenFallback() {
+    const link = findWorkspaceMenuCandidate({ allowHidden: true });
     if (!link) {
         return false;
     }
@@ -382,6 +405,9 @@ function navigateViaWorkspace(buttonName) {
     }
     setPendingButton(buttonName);
     if (openWorkspaceMenuFallback()) {
+        return;
+    }
+    if (isSmallScreen() && openWorkspaceMenuHiddenFallback()) {
         return;
     }
     const workspaceTarget = getWorkspaceTarget();
@@ -635,4 +661,5 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
