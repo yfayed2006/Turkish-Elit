@@ -1012,13 +1012,13 @@ class RoutePdaHome(models.TransientModel):
         if not native_action:
             action = self._prepare_action(
                 "route_core.action_route_pda_products",
-                name="All Products",
+                name="Product Catalog",
                 context={"search_default_filter_to_sell": 1, "create": 0, "edit": 0, "delete": 0},
             )
             return action
 
         action = dict(native_action)
-        action["name"] = "All Products"
+        action["name"] = "Product Catalog"
         action["target"] = "main"
 
         domain = action.get("domain") or []
@@ -1047,14 +1047,14 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
         location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
-        return self._open_quants_by_location(location, "Vehicle Products Stock", stock_mode="vehicle")
+        return self._open_quants_by_location(location, "Vehicle Stock", stock_mode="vehicle")
 
     def action_open_main_warehouse_products(self):
         self.ensure_one()
         location = self._get_main_warehouse_location()
-        title = "Main Warehouse Products Stock"
+        title = "Warehouse Stock"
         if location:
-            title = f"Main Warehouse Products Stock - {location.display_name}"
+            title = f"Warehouse Stock - {location.display_name}"
         return self._open_quants_by_location(location, title, exclude_route_locations=True, stock_mode="warehouse")
 
     def _get_picking_moves(self, pickings):
@@ -1146,7 +1146,7 @@ class RoutePdaHome(models.TransientModel):
             outlets._sync_outlet_stock_balance_records()
         action = self._prepare_action(
             "route_core.action_outlet_stock_balance",
-            name="Consignment Outlets Stock",
+            name="Outlet Stock",
             domain=[("outlet_id.outlet_operation_mode", "=", "consignment"), ("qty", ">", 0)],
             context={"search_default_filter_has_qty": 1, "create": 0, "edit": 0, "delete": 0},
         )
