@@ -14,6 +14,7 @@ const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
+const MOBILE_PRODUCT_CENTER_DIRECT_URL = "/route_core/pda/product_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
 
 let isInternalRedirect = false;
@@ -280,6 +281,18 @@ function getProductCenterTarget() {
     };
 }
 
+function openDirectMobileProductCenter() {
+    if (!isSmallScreen()) {
+        return false;
+    }
+    isInternalRedirect = true;
+    window.location.assign(MOBILE_PRODUCT_CENTER_DIRECT_URL);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1500);
+    return true;
+}
+
 function setPendingButton(buttonName) {
     if (!buttonName) {
         return;
@@ -446,13 +459,8 @@ function reloadWorkspaceThenOpenProductCenter() {
 }
 
 function navigateBackToProductCenter() {
-    if (isSmallScreen()) {
-        if (reloadWorkspaceThenOpenProductCenter()) {
-            return;
-        }
-        if (openServerButton(PRODUCT_CENTER_BUTTON)) {
-            return;
-        }
+    if (isSmallScreen() && openDirectMobileProductCenter()) {
+        return;
     }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
@@ -655,7 +663,7 @@ function interceptMobileHeaderBack(event) {
     if (typeof event.stopImmediatePropagation === "function") {
         event.stopImmediatePropagation();
     }
-    navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+    navigateBackToProductCenter();
 }
 
 function refreshNavigationUi() {
