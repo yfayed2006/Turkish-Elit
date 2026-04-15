@@ -46,6 +46,9 @@ class RoutePdaHome(models.TransientModel):
     product_count = fields.Integer(string="Products", compute="_compute_dashboard")
     vehicle_product_count = fields.Integer(string="Vehicle Products", compute="_compute_dashboard")
     warehouse_product_count = fields.Integer(string="Main Warehouse Products", compute="_compute_dashboard")
+    direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
+    consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
+    active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
     direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
@@ -588,6 +591,12 @@ class RoutePdaHome(models.TransientModel):
             rec.shortage_count = len(open_shortages)
             rec.salesperson_shortage_count = len(salesperson_shortages)
             rec.outlet_count = Outlet.search_count([])
+            active_outlets = Outlet.search([("active", "=", True)])
+            direct_sale_customers = active_outlets.filtered(lambda o: o.outlet_operation_mode == "direct_sale" and o.partner_id)
+            consignment_customers = active_outlets.filtered(lambda o: o.outlet_operation_mode == "consignment" and o.partner_id)
+            rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
+            rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
+            rec.active_outlet_count = len(active_outlets)
             rec.outlet_balance_count = OutletBalance.search_count([
                 ("outlet_id.outlet_operation_mode", "=", "consignment"),
                 ("qty", ">", 0),
