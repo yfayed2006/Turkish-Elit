@@ -14,7 +14,6 @@ const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
-const MOBILE_PRODUCT_CENTER_DIRECT_URL = "/route_core/pda/product_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
 
 let isInternalRedirect = false;
@@ -160,6 +159,26 @@ function isDailySummaryPage() {
         && hasVisibleButton("action_open_current_visit_statement_of_account");
 }
 
+
+
+function findRouteSalesAppTile() {
+    const candidates = Array.from(document.querySelectorAll("a, button, .o_app, .o_app_switcher_item"));
+    return candidates.find((element) => {
+        if (!isElementVisible(element)) {
+            return false;
+        }
+        const text = normalizeText(element.textContent || "");
+        return text === "route sales" || text.includes("route sales");
+    }) || null;
+}
+
+function isAppsHomePage() {
+    if (isRouteWorkspacePage()) {
+        return false;
+    }
+    return !!findRouteSalesAppTile() && !hasVisibleButton(PRODUCT_CENTER_BUTTON);
+}
+
 function detectPageKind() {
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
@@ -279,18 +298,6 @@ function getProductCenterTarget() {
         hash: sessionStorage.getItem(STORAGE_KEYS.productCenterHash) || "",
         url: sessionStorage.getItem(STORAGE_KEYS.productCenterUrl) || "",
     };
-}
-
-function openDirectMobileProductCenter() {
-    if (!isSmallScreen()) {
-        return false;
-    }
-    isInternalRedirect = true;
-    window.location.assign(MOBILE_PRODUCT_CENTER_DIRECT_URL);
-    window.setTimeout(() => {
-        isInternalRedirect = false;
-    }, 1500);
-    return true;
 }
 
 function setPendingButton(buttonName) {
@@ -459,10 +466,38 @@ function reloadWorkspaceThenOpenProductCenter() {
 }
 
 function navigateBackToProductCenter() {
-    if (isSmallScreen() && openDirectMobileProductCenter()) {
-        return;
+    if (isSmallScreen()) {
+        if (reloadWorkspaceThenOpenProductCenter()) {
+            return;
+        }
+        if (openServerButton(PRODUCT_CENTER_BUTTON)) {
+            return;
+        }
     }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+}
+
+
+
+function maybeRunPendingFromAppsHome() {
+    const pendingButton = getPendingButton();
+    if (!pendingButton) {
+        return;
+    }
+    if (!isAppsHomePage()) {
+        return;
+    }
+    const routeSalesTile = findRouteSalesAppTile();
+    if (!routeSalesTile) {
+        return;
+    }
+    window.setTimeout(() => {
+        isInternalRedirect = true;
+        dispatchClick(routeSalesTile);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1200);
+    }, 150);
 }
 
 function maybeRunPendingButton() {
@@ -663,12 +698,13 @@ function interceptMobileHeaderBack(event) {
     if (typeof event.stopImmediatePropagation === "function") {
         event.stopImmediatePropagation();
     }
-    navigateBackToProductCenter();
+    navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
 
 function refreshNavigationUi() {
     rememberVisibleActionButtons();
     rememberNavigationTargets();
+    maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
     ensureBackButton();
 }
@@ -708,3 +744,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
