@@ -867,6 +867,14 @@ Price:
 <field name="search_view_id" ref="view_route_pda_product_mobile_search"/>
 <field name="context">{"search_default_filter_to_sell": 1, "create": 0, "edit": 0, "delete": 0}</field>
 </record>
+<record id="action_route_pda_product_center_direct" model="ir.actions.act_window">
+<field name="name">Products and Stock</field>
+<field name="res_model">route.pda.home</field>
+<field name="view_mode">form</field>
+<field name="view_id" ref="view_route_pda_product_center_form"/>
+<field name="target">main</field>
+<field name="context">{"create": 0, "edit": 0, "delete": 0}</field>
+</record>
 <record id="server_action_open_route_pda_home" model="ir.actions.server">
 <field name="name">Open Route Workspace</field>
 <field name="model_id" ref="model_route_pda_home"/>
