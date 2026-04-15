@@ -244,14 +244,6 @@ class ProductProduct(models.Model):
 
     @api.model
     def _route_domain_contains_unsupported_relational_operator(self, domain):
-        """Avoid GS1/domain preprocessing on core ORM operators like any!/not any!.
-
-        Some internal stock scheduler queries pass advanced relational operators inside
-        the domain (for example ``('product_tmpl_id', 'any!', [...])``). The enterprise
-        stock_barcode override preprocesses the domain through ``Domain(domain)`` and
-        crashes on these items before the normal ORM search can run. For those cases we
-        bypass the barcode-specific parent override and fall back to the base ORM search.
-        """
         domain = list(domain or [])
         for item in domain:
             if isinstance(item, (list, tuple)) and len(item) >= 2:
@@ -269,27 +261,20 @@ class ProductProduct(models.Model):
     def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, count=False, **kwargs):
         domain = self._route_apply_source_available_domain(domain)
 
+        # Some internal stock scheduler domains use advanced relational operators
+        # like `any!`. The enterprise stock_barcode override preprocesses the
+        # domain through GS1 parsing and crashes on those operators. In that case,
+        # bypass the barcode-specific parent override and fall back to the base ORM
+        # search path. Keep the call signature conservative because the upstream
+        # BaseModel._search in this stack does not accept access_rights_uid.
         if self._route_domain_contains_unsupported_relational_operator(domain):
-            return models.Model._search(
-                self,
-                domain,
-                offset=offset,
-                limit=limit,
-                order=order,
-                access_rights_uid=access_rights_uid,
-                count=count,
-                **kwargs,
-            )
+            if count:
+                return len(models.Model._search(self, domain, offset=0, limit=None, order=None))
+            return models.Model._search(self, domain, offset=offset, limit=limit, order=order)
 
-        return super()._search(
-            domain,
-            offset=offset,
-            limit=limit,
-            order=order,
-            access_rights_uid=access_rights_uid,
-            count=count,
-            **kwargs,
-        )
+        if count:
+            return len(super()._search(domain, offset=0, limit=None, order=None))
+        return super()._search(domain, offset=offset, limit=limit, order=order)
 
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
