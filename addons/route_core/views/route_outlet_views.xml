@@ -39,6 +39,8 @@
 <field name="phone"/>
 <field name="mobile"/>
 <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="filter_direct_sale" string="Direct Sale" domain="[('outlet_operation_mode', '=', 'direct_sale')]"/>
+<filter name="filter_consignment" string="Consignment" domain="[('outlet_operation_mode', '=', 'consignment')]"/>
 <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
 <filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
@@ -51,17 +53,17 @@
 <field name="arch" type="xml">
 <list string="Outlets" create="0" edit="0" delete="0">
 <field name="code" string="Outlet Code" optional="show"/>
-<field name="barcode" string="Barcode" optional="show" column_invisible="context.get('route_show_barcode', False) == False"/>
 <field name="name" string="Outlet"/>
 <field name="outlet_operation_mode" string="Mode" widget="badge" optional="show" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
-<field name="route_city_id" string="City" optional="show"/>
-<field name="route_area_name" string="Area" optional="show"/>
 <field name="summary_alert_level" string="Status" widget="badge" optional="show" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
 <field name="current_due_amount" string="Current Due" sum="Total Due" optional="show"/>
-<field name="near_expiry_product_count" string="Near Expiry" widget="badge" optional="hide" decoration-warning="near_expiry_product_count > 0" column_invisible="context.get('route_hide_near_expiry', False)"/>
 <field name="last_visit_date" string="Last Visit Date" optional="show"/>
-<field name="last_sale_order_id" string="Last Sale Order" optional="show"/>
-<field name="visit_count" string="Visits" optional="show"/>
+<field name="barcode" string="Barcode" optional="hide" column_invisible="context.get('route_show_barcode', False) == False"/>
+<field name="route_city_id" string="City" optional="hide"/>
+<field name="route_area_name" string="Area" optional="hide"/>
+<field name="near_expiry_product_count" string="Near Expiry" widget="badge" optional="hide" decoration-warning="near_expiry_product_count > 0" column_invisible="context.get('route_hide_near_expiry', False)"/>
+<field name="last_sale_order_id" string="Last Sale Order" optional="hide"/>
+<field name="visit_count" string="Visits" optional="hide"/>
 <field name="phone" optional="hide"/>
 <field name="mobile" optional="hide"/>
 <field name="active" optional="hide"/>
