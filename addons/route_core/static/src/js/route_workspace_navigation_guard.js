@@ -430,9 +430,29 @@ function openAnyServerButton(buttonName) {
     return true;
 }
 
+function reloadWorkspaceThenOpenProductCenter() {
+    setPendingButton(PRODUCT_CENTER_BUTTON);
+    const workspaceTarget = getWorkspaceTarget();
+    const workspaceUrl = workspaceTarget?.url || "";
+    if (workspaceUrl) {
+        isInternalRedirect = true;
+        window.location.assign(workspaceUrl);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1500);
+        return true;
+    }
+    return false;
+}
+
 function navigateBackToProductCenter() {
-    if (isSmallScreen() && openAnyServerButton(PRODUCT_CENTER_BUTTON)) {
-        return;
+    if (isSmallScreen()) {
+        if (reloadWorkspaceThenOpenProductCenter()) {
+            return;
+        }
+        if (openServerButton(PRODUCT_CENTER_BUTTON)) {
+            return;
+        }
     }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
@@ -680,4 +700,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
