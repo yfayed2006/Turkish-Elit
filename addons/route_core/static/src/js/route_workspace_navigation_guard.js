@@ -1,12 +1,12 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v14.workspace.hash",
-    workspaceUrl: "route_core.v14.workspace.url",
-    productCenterHash: "route_core.v14.product_center.hash",
-    productCenterUrl: "route_core.v14.product_center.url",
-    pendingButtonName: "route_core.v14.pending.button_name",
-    pendingButtonTs: "route_core.v14.pending.button_ts",
+    workspaceHash: "route_core.v15.workspace.hash",
+    workspaceUrl: "route_core.v15.workspace.url",
+    productCenterHash: "route_core.v15.product_center.hash",
+    productCenterUrl: "route_core.v15.product_center.url",
+    pendingButtonName: "route_core.v15.pending.button_name",
+    pendingButtonTs: "route_core.v15.pending.button_ts",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -389,10 +389,6 @@ function navigateViaWorkspace(buttonName) {
 }
 
 function navigateBackToProductCenter() {
-    const productCenterTarget = getProductCenterTarget();
-    if (navigateToWorkspaceTarget(productCenterTarget)) {
-        return;
-    }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
 
