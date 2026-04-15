@@ -657,3 +657,102 @@
         justify-content: center;
     }
 }
+
+
+.route_pda_product_context_row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.route_pda_product_context_card {
+    min-height: 88px;
+}
+
+.route_pda_product_center_vehicle_value .o_input,
+.route_pda_product_center_source_value .o_input {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #111827;
+    text-align: left;
+}
+
+.route_pda_product_center_note {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+.route_pda_product_center_btn {
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    min-height: 124px;
+    padding: 16px !important;
+}
+
+.route_pda_product_center_btn .route_pda_app_icon {
+    font-size: 1.35rem;
+}
+
+.route_pda_product_center_btn .route_pda_app_label,
+.route_pda_product_center_btn .route_pda_app_hint,
+.route_pda_product_center_btn .route_pda_app_hint_value {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.route_pda_product_center_btn .route_pda_app_label {
+    font-size: 1.05rem;
+}
+
+.route_pda_product_center_btn .route_pda_app_hint {
+    font-size: 0.84rem;
+}
+
+.route_pda_product_center_btn .route_pda_app_hint_value {
+    width: auto;
+    min-width: 40px;
+    margin-top: 2px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+}
+
+.route_pda_product_center_btn .route_pda_app_hint_value .o_input {
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.route_pda_product_center_btn.route_pda_app_btn_primary .route_pda_app_hint_value {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.route_pda_product_center_btn.route_pda_app_btn_primary .route_pda_app_hint,
+.route_pda_product_center_btn.route_pda_app_btn_primary .route_pda_app_hint_value .o_input,
+.route_pda_product_center_btn.route_pda_app_btn_primary .route_pda_app_kicker {
+    color: #ffffff;
+}
+
+.route_pda_app_kicker {
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.88;
+}
+
+@media (max-width: 768px) {
+    .route_pda_product_context_row,
+    .route_pda_product_center_grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .route_pda_product_context_card,
+    .route_pda_product_center_btn {
+        min-height: auto;
+    }
+}
