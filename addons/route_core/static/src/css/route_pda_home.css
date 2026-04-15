@@ -215,6 +215,25 @@
     border-color: #ddd6fe;
 }
 
+.route_pda_product_center_intro {
+    margin-bottom: 16px;
+}
+
+.route_pda_product_center_vehicle_value .o_input {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #111827;
+    text-align: left;
+}
+
+.route_pda_product_center_note {
+    margin-top: 6px;
+}
+
+.route_pda_product_center_group {
+    margin-top: 18px;
+}
+
 .route_pda_info_label {
     font-size: 0.92rem;
     color: #6b7280;
