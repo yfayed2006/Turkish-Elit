@@ -1,14 +1,24 @@
 /** @odoo-module **/
 
+const STORAGE_KEYS = {
+    workspaceHash: "route_core.v15.workspace.hash",
+    workspaceUrl: "route_core.v15.workspace.url",
+    productCenterHash: "route_core.v15.product_center.hash",
+    productCenterUrl: "route_core.v15.product_center.url",
+    pendingButtonName: "route_core.v15.pending.button_name",
+    pendingButtonTs: "route_core.v15.pending.button_ts",
+};
+
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
-const PRODUCT_CENTER_ROUTE = "/route_core/pda/product_center";
+const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
+const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
 
-let observerStarted = false;
 let isInternalRedirect = false;
+let observerStarted = false;
 
 function normalizeText(value) {
     return (value || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -77,6 +87,11 @@ function hasAnyVisibleButton(names) {
     return names.some((name) => hasVisibleButton(name));
 }
 
+function findAnyButton(name) {
+    const matches = Array.from(document.querySelectorAll(`button[name="${name}"]`));
+    return matches.length ? matches[matches.length - 1] : null;
+}
+
 function getRootText() {
     const root = getActiveRoot();
     return normalizeText(root ? root.innerText : "");
@@ -111,7 +126,11 @@ function findActionTitle() {
 
 function isRouteWorkspacePage() {
     const pageText = getPageText();
-    return hasVisibleButton("action_open_product_center_screen") && pageText.includes("route workspace");
+    return (
+        hasVisibleButton("action_open_product_center_screen")
+        && hasVisibleButton("action_open_visit_collections_center_screen")
+        && pageText.includes("route workspace")
+    );
 }
 
 function isProductCenterPage() {
@@ -120,6 +139,45 @@ function isProductCenterPage() {
         "action_open_main_warehouse_products",
         "action_open_products",
     ]);
+}
+
+function isSnapshotCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_today_overview_screen",
+        "action_open_collections_snapshot_screen",
+    ]);
+}
+
+function isCollectionsCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_collections_snapshot_from_collections_center",
+        "action_open_visit_collections",
+    ]);
+}
+
+function isDailySummaryPage() {
+    return hasVisibleButton("action_back_from_collections_snapshot")
+        && hasVisibleButton("action_open_current_visit_statement_of_account");
+}
+
+
+
+function findRouteSalesAppTile() {
+    const candidates = Array.from(document.querySelectorAll("a, button, .o_app, .o_app_switcher_item"));
+    return candidates.find((element) => {
+        if (!isElementVisible(element)) {
+            return false;
+        }
+        const text = normalizeText(element.textContent || "");
+        return text === "route sales" || text.includes("route sales");
+    }) || null;
+}
+
+function isAppsHomePage() {
+    if (isRouteWorkspacePage()) {
+        return false;
+    }
+    return !!findRouteSalesAppTile() && !hasVisibleButton(PRODUCT_CENTER_BUTTON);
 }
 
 function detectPageKind() {
@@ -133,25 +191,336 @@ function detectPageKind() {
     if (isProductCenterPage()) {
         return "product_center";
     }
+    if (isSnapshotCenterPage()) {
+        return "snapshot_center";
+    }
+    if (isCollectionsCenterPage()) {
+        return "collections_center";
+    }
+    if (isDailySummaryPage()) {
+        return "daily_summary";
+    }
 
-    if (title.includes("vehicle products stock") || rootText.includes("vehicle products stock") || pageText.includes("vehicle products stock")) {
+    if (
+        title.includes("vehicle products stock")
+        || rootText.includes("vehicle products stock")
+        || pageText.includes("vehicle products stock")
+    ) {
         return "vehicle_stock";
     }
-    if (title.includes("main warehouse products stock") || rootText.includes("main warehouse products stock") || pageText.includes("main warehouse products stock")) {
+
+    if (
+        title.includes("main warehouse products stock")
+        || rootText.includes("main warehouse products stock")
+        || pageText.includes("main warehouse products stock")
+    ) {
         return "warehouse_stock";
     }
-    if (title.includes("consignment outlets stock") || title.includes("outlet stock balances") || rootText.includes("consignment outlets stock") || rootText.includes("outlet stock balances") || pageText.includes("consignment outlets stock") || pageText.includes("outlet stock balances")) {
+
+    if (
+        title.includes("consignment outlets stock")
+        || title.includes("outlet stock balances")
+        || rootText.includes("consignment outlets stock")
+        || rootText.includes("outlet stock balances")
+        || pageText.includes("consignment outlets stock")
+        || pageText.includes("outlet stock balances")
+    ) {
         return "outlet_stock";
     }
-    if ((title === "products" || title === "all products" || rootText.includes("all products") || pageText.includes("all products"))
-        && (rootText.includes("barcode") || rootText.includes("price") || pageText.includes("barcode") || pageText.includes("price"))) {
+
+    if (
+        (title === "products" || title === "all products" || rootText.includes("all products") || pageText.includes("all products"))
+        && (rootText.includes("barcode") || rootText.includes("price") || pageText.includes("barcode") || pageText.includes("price"))
+    ) {
         return "all_products";
     }
+
     return "";
 }
 
+function getCurrentHash() {
+    return window.location.hash || "";
+}
+
+function getCurrentUrl() {
+    return window.location.href || "";
+}
+
+function rememberPair(hashKey, urlKey) {
+    const hash = getCurrentHash();
+    const url = getCurrentUrl();
+    if (hash) {
+        sessionStorage.setItem(hashKey, hash);
+    }
+    if (url) {
+        sessionStorage.setItem(urlKey, url);
+    }
+}
+
+function rememberVisibleActionButtons() {
+    // Compatibility hook kept intentionally. Some deployed bundles may still
+    // call this helper during refreshNavigationUi.
+}
+
+function rememberNavigationTargets() {
+    const pageKind = detectPageKind();
+    if (pageKind === "workspace") {
+        rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+    if (pageKind === "product_center") {
+        rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+    }
+}
+
+function rememberOriginFromClick(event) {
+    const button = event.target.closest("button[name]");
+    if (!button) {
+        return;
+    }
+    const name = button.getAttribute("name") || "";
+    if ([
+        "action_open_product_center_screen",
+        "action_open_snapshot_center_screen",
+        "action_open_visit_collections_center_screen",
+    ].includes(name)) {
+        rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+}
+
+function getWorkspaceTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.workspaceHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.workspaceUrl) || "",
+    };
+}
+
+function getProductCenterTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.productCenterHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.productCenterUrl) || "",
+    };
+}
+
+function setPendingButton(buttonName) {
+    if (!buttonName) {
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.pendingButtonName, buttonName);
+    sessionStorage.setItem(STORAGE_KEYS.pendingButtonTs, String(Date.now()));
+}
+
+function clearPendingButton() {
+    sessionStorage.removeItem(STORAGE_KEYS.pendingButtonName);
+    sessionStorage.removeItem(STORAGE_KEYS.pendingButtonTs);
+}
+
+function getPendingButton() {
+    const buttonName = sessionStorage.getItem(STORAGE_KEYS.pendingButtonName) || "";
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.pendingButtonTs) || "0", 10);
+    if (!buttonName) {
+        return "";
+    }
+    if (timestamp && Date.now() - timestamp > 12000) {
+        clearPendingButton();
+        return "";
+    }
+    return buttonName;
+}
+
+function dispatchClick(element) {
+    if (!element) {
+        return false;
+    }
+    element.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+    }));
+    return true;
+}
+
+function openServerButton(buttonName) {
+    if (!buttonName) {
+        return false;
+    }
+    const button = findAnyButton(buttonName);
+    if (!button || !isElementVisible(button)) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(button);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function findWorkspaceMenuCandidate({ allowHidden = false } = {}) {
+    const candidates = Array.from(document.querySelectorAll("a, button"));
+    return candidates.find((element) => {
+        const text = normalizeText(element.textContent);
+        if (text !== "route workspace") {
+            return false;
+        }
+        return allowHidden || isElementVisible(element);
+    }) || null;
+}
+
+function openWorkspaceMenuFallback() {
+    const link = findWorkspaceMenuCandidate({ allowHidden: false });
+    if (!link) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(link);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function openWorkspaceMenuHiddenFallback() {
+    const link = findWorkspaceMenuCandidate({ allowHidden: true });
+    if (!link) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(link);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function navigateToWorkspaceTarget(target) {
+    const targetUrl = target?.url || "";
+    const targetHash = target?.hash || "";
+
+    if (targetUrl && window.location.href !== targetUrl) {
+        isInternalRedirect = true;
+        window.location.assign(targetUrl);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1000);
+        return true;
+    }
+
+    if (targetHash) {
+        const cleanHash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
+        if (window.location.hash !== cleanHash) {
+            isInternalRedirect = true;
+            window.location.hash = cleanHash.slice(1);
+            window.setTimeout(() => {
+                isInternalRedirect = false;
+            }, 700);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function navigateViaWorkspace(buttonName) {
+    if (openServerButton(buttonName)) {
+        return;
+    }
+    setPendingButton(buttonName);
+    if (openWorkspaceMenuFallback()) {
+        return;
+    }
+    if (isSmallScreen() && openWorkspaceMenuHiddenFallback()) {
+        return;
+    }
+    const workspaceTarget = getWorkspaceTarget();
+    navigateToWorkspaceTarget(workspaceTarget);
+}
+
+function openAnyServerButton(buttonName) {
+    if (!buttonName) {
+        return false;
+    }
+    const button = findAnyButton(buttonName);
+    if (!button) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(button);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
+function reloadWorkspaceThenOpenProductCenter() {
+    setPendingButton(PRODUCT_CENTER_BUTTON);
+    const workspaceTarget = getWorkspaceTarget();
+    const workspaceUrl = workspaceTarget?.url || "";
+    if (workspaceUrl) {
+        isInternalRedirect = true;
+        window.location.assign(workspaceUrl);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1500);
+        return true;
+    }
+    return false;
+}
+
+
+function navigateDirectToProductCenter() {
+    isInternalRedirect = true;
+    window.location.assign(PRODUCT_CENTER_DIRECT_ROUTE);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1200);
+}
+
+function navigateBackToProductCenter() {
+    navigateDirectToProductCenter();
+}
+
+
+
+function maybeRunPendingFromAppsHome() {
+    const pendingButton = getPendingButton();
+    if (!pendingButton) {
+        return;
+    }
+    if (!isAppsHomePage()) {
+        return;
+    }
+    const routeSalesTile = findRouteSalesAppTile();
+    if (!routeSalesTile) {
+        return;
+    }
+    window.setTimeout(() => {
+        isInternalRedirect = true;
+        dispatchClick(routeSalesTile);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1200);
+    }, 150);
+}
+
+function maybeRunPendingButton() {
+    const pendingButton = getPendingButton();
+    if (!pendingButton) {
+        return;
+    }
+    if (detectPageKind() !== "workspace") {
+        return;
+    }
+    clearPendingButton();
+    window.setTimeout(() => {
+        openServerButton(pendingButton);
+    }, 150);
+}
+
 function hasBackArrowIcon(element) {
-    return !!element?.querySelector?.(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
+    if (!element) {
+        return false;
+    }
+    return !!element.querySelector(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
 }
 
 function looksLikeMobileHeaderBackControl(element) {
@@ -159,31 +528,38 @@ function looksLikeMobileHeaderBackControl(element) {
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
         return false;
     }
+
     const rect = clickable.getBoundingClientRect();
     if (rect.top > 120 || rect.left > 220) {
         return false;
     }
+
     const text = normalizeText(clickable.textContent);
     const aria = normalizeText(clickable.getAttribute("aria-label") || clickable.getAttribute("title") || "");
     const classes = normalizeText(clickable.className || "");
     const parentClasses = normalizeText(clickable.parentElement?.className || "");
-    return hasBackArrowIcon(clickable) || text === "back" || aria.includes("back") || classes.includes("back") || parentClasses.includes("back");
-}
 
-function goToProductCenter() {
-    if (isInternalRedirect) {
-        return;
-    }
-    isInternalRedirect = true;
-    window.location.assign(PRODUCT_CENTER_ROUTE);
+    return (
+        hasBackArrowIcon(clickable)
+        || text === "back"
+        || aria.includes("back")
+        || classes.includes("back")
+        || parentClasses.includes("back")
+    );
 }
 
 function removeInlineBackButton() {
-    document.getElementById(INLINE_BACK_WRAPPER_ID)?.remove();
+    const wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+    if (wrapper) {
+        wrapper.remove();
+    }
 }
 
 function removeFloatingBackButton() {
-    document.getElementById(FLOATING_BACK_WRAPPER_ID)?.remove();
+    const wrapper = document.getElementById(FLOATING_BACK_WRAPPER_ID);
+    if (wrapper) {
+        wrapper.remove();
+    }
 }
 
 function getDesktopBackHost() {
@@ -212,11 +588,12 @@ function buildInlineBackButton() {
     button.style.alignItems = "center";
     button.style.gap = "6px";
     button.style.color = "inherit";
-    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Products and Stock</span>';
+    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back to Products and Stock</span>';
+
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        goToProductCenter();
+        navigateBackToProductCenter();
     });
 
     wrapper.appendChild(button);
@@ -248,12 +625,13 @@ function buildFloatingBackButton() {
     button.style.gap = "6px";
     button.style.color = "inherit";
     button.style.cursor = "pointer";
-    button.title = "Products and Stock";
-    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Products and Stock</span>';
+    button.title = "Back to Products and Stock";
+    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back to Products and Stock</span>';
+
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        goToProductCenter();
+        navigateBackToProductCenter();
     });
 
     wrapper.appendChild(button);
@@ -267,6 +645,7 @@ function ensureBackButton() {
         removeFloatingBackButton();
         return;
     }
+
     if (isSmallScreen()) {
         removeInlineBackButton();
         if (!document.getElementById(FLOATING_BACK_BUTTON_ID)) {
@@ -274,6 +653,7 @@ function ensureBackButton() {
         }
         return;
     }
+
     removeFloatingBackButton();
     const host = getDesktopBackHost();
     if (!host) {
@@ -290,25 +670,44 @@ function ensureBackButton() {
     }
 }
 
-function interceptMobileHeaderBack(event) {
-    if (!isSmallScreen() || isInternalRedirect) {
+function handleBrowserBack() {
+    if (isInternalRedirect) {
         return;
     }
-    if (!STOCK_PAGE_KINDS.has(detectPageKind())) {
+    const pageKind = detectPageKind();
+    if (!STOCK_PAGE_KINDS.has(pageKind)) {
+        return;
+    }
+    window.setTimeout(() => {
+        navigateBackToProductCenter();
+    }, 0);
+}
+
+function interceptMobileHeaderBack(event) {
+    if (isInternalRedirect || !isSmallScreen()) {
+        return;
+    }
+    const pageKind = detectPageKind();
+    if (!STOCK_PAGE_KINDS.has(pageKind)) {
         return;
     }
     if (!looksLikeMobileHeaderBackControl(event.target)) {
         return;
     }
+
     event.preventDefault();
     event.stopPropagation();
     if (typeof event.stopImmediatePropagation === "function") {
         event.stopImmediatePropagation();
     }
-    goToProductCenter();
+    navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
 
 function refreshNavigationUi() {
+    rememberVisibleActionButtons();
+    rememberNavigationTargets();
+    maybeRunPendingFromAppsHome();
+    maybeRunPendingButton();
     ensureBackButton();
 }
 
@@ -316,6 +715,7 @@ function bootRouteWorkspaceNavigationGuard() {
     if (observerStarted || !document.body) {
         return;
     }
+
     observerStarted = true;
 
     let refreshTimer = null;
@@ -333,8 +733,10 @@ function bootRouteWorkspaceNavigationGuard() {
     });
 
     document.addEventListener("click", interceptMobileHeaderBack, true);
+    document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
+    window.addEventListener("popstate", handleBrowserBack);
 
     refreshNavigationUi();
 }
@@ -344,5 +746,6 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
 
