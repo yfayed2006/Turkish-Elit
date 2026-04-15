@@ -58,6 +58,7 @@ class RoutePdaHome(models.TransientModel):
     current_visit_name = fields.Char(string="Current Visit", compute="_compute_dashboard")
     current_visit_outlet_name = fields.Char(string="Current Outlet", compute="_compute_dashboard")
     current_vehicle_name = fields.Char(string="Vehicle", compute="_compute_dashboard")
+    current_source_name = fields.Char(string="Source Warehouse", compute="_compute_dashboard")
     current_visit_customer_name = fields.Char(string="Customer", compute="_compute_dashboard")
     current_visit_area_name = fields.Char(string="Area", compute="_compute_dashboard")
     current_visit_execution_mode_label = fields.Char(string="Execution Mode", compute="_compute_dashboard")
@@ -651,6 +652,8 @@ class RoutePdaHome(models.TransientModel):
                 rec.current_vehicle_name = today_plans[:1].vehicle_id.display_name
             else:
                 rec.current_vehicle_name = "-"
+
+            rec.current_source_name = warehouse_loc.display_name if warehouse_loc else "-"
 
             rec.cash_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
             rec.bank_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
