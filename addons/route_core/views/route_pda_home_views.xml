@@ -395,6 +395,9 @@
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
+<field name="direct_sale_customer_count" invisible="1"/>
+<field name="consignment_customer_count" invisible="1"/>
+<field name="active_outlet_count" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
@@ -402,19 +405,40 @@
 </button>
 <h2 class="route_pda_detail_title">Customer and Outlets</h2>
 </div>
-<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
-<button type="object" name="action_open_direct_sale_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_direct_sale_tools == False">
+<div class="route_pda_info_hint_inline route_pda_product_center_note">Use customer views for faster follow-up. Open All Outlets when you need the full outlet directory.</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Customer Views</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
+<button type="object" name="action_open_direct_sale_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="route_show_direct_sale_tools == False">
 <i class="fa fa-users route_pda_app_icon"/>
 <span class="route_pda_app_label">Direct Sale Customers</span>
+<span class="route_pda_app_hint">Grouped customer accounts</span>
+<span class="route_pda_app_hint_value">
+<field name="direct_sale_customer_count" readonly="1" nolabel="1"/>
+</span>
 </button>
-<button type="object" name="action_open_consignment_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_consignment_tools == False">
+<button type="object" name="action_open_consignment_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="route_show_consignment_tools == False">
 <i class="fa fa-users route_pda_app_icon"/>
 <span class="route_pda_app_label">Consignment Customers</span>
+<span class="route_pda_app_hint">Shelf-route customer groups</span>
+<span class="route_pda_app_hint_value">
+<field name="consignment_customer_count" readonly="1" nolabel="1"/>
+</span>
 </button>
-<button type="object" name="action_open_all_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Outlet Views</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
+<button type="object" name="action_open_all_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
 <i class="fa fa-building route_pda_app_icon"/>
 <span class="route_pda_app_label">All Outlets</span>
+<span class="route_pda_app_hint">Full outlet directory</span>
+<span class="route_pda_app_hint_value">
+<field name="active_outlet_count" readonly="1" nolabel="1"/>
+</span>
 </button>
+</div>
 </div>
 </sheet>
 </form>
