@@ -14,6 +14,7 @@ const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
+const PRODUCT_CENTER_DIRECT_URL = "/route_core/pda/product_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
 
 let isInternalRedirect = false;
@@ -465,14 +466,19 @@ function reloadWorkspaceThenOpenProductCenter() {
     return false;
 }
 
+function openProductCenterDirect() {
+    clearPendingButton();
+    isInternalRedirect = true;
+    window.location.assign(PRODUCT_CENTER_DIRECT_URL);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1500);
+}
+
 function navigateBackToProductCenter() {
     if (isSmallScreen()) {
-        if (reloadWorkspaceThenOpenProductCenter()) {
-            return;
-        }
-        if (openServerButton(PRODUCT_CENTER_BUTTON)) {
-            return;
-        }
+        openProductCenterDirect();
+        return;
     }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
@@ -485,6 +491,10 @@ function maybeRunPendingFromAppsHome() {
         return;
     }
     if (!isAppsHomePage()) {
+        return;
+    }
+    if (isSmallScreen() && pendingButton === PRODUCT_CENTER_BUTTON) {
+        clearPendingButton();
         return;
     }
     const routeSalesTile = findRouteSalesAppTile();
@@ -744,4 +754,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
