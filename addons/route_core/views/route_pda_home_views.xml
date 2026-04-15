@@ -240,39 +240,54 @@
 </button>
 <h2 class="route_pda_detail_title">Products and Stock</h2>
 </div>
-<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid">
-<button type="object" name="action_open_vehicle_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<div class="route_pda_info_card route_pda_info_card_emphasis route_pda_product_center_intro">
+<div class="route_pda_info_label">Current vehicle</div>
+<div class="route_pda_info_value route_pda_product_center_vehicle_value">
+<field name="current_vehicle_name" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_info_hint_inline route_pda_product_center_note">Start with Vehicle Stock during the route. Use Warehouse Stock only when you need source availability.</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Daily Use</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
+<button type="object" name="action_open_vehicle_products" class="btn route_pda_app_btn route_pda_app_btn_primary route_pda_app_btn_catalog">
 <i class="fa fa-truck route_pda_app_icon"/>
-<span class="route_pda_app_label">Vehicle Products Stock</span>
-<span class="route_pda_app_hint">Distinct products in vehicle</span>
+<span class="route_pda_app_label">Vehicle Stock</span>
+<span class="route_pda_app_hint">Products now in vehicle</span>
 <span class="route_pda_app_hint_value">
 <field name="vehicle_product_count" readonly="1" nolabel="1"/>
 </span>
 </button>
-<button type="object" name="action_open_main_warehouse_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
-<i class="fa fa-home route_pda_app_icon"/>
-<span class="route_pda_app_label">Main Warehouse Products Stock</span>
-<span class="route_pda_app_hint">Main warehouse only</span>
-<span class="route_pda_app_hint_value">
-<field name="warehouse_product_count" readonly="1" nolabel="1"/>
-</span>
-</button>
 <button type="object" name="action_open_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-tags route_pda_app_icon"/>
-<span class="route_pda_app_label">All Products</span>
-<span class="route_pda_app_hint">Saleable catalog</span>
+<span class="route_pda_app_label">Product Catalog</span>
+<span class="route_pda_app_hint">All saleable products</span>
 <span class="route_pda_app_hint_value">
 <field name="product_count" readonly="1" nolabel="1"/>
 </span>
 </button>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Stock Views</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
 <button type="object" name="action_open_consignment_outlet_stock" class="btn route_pda_app_btn route_pda_app_btn_catalog" invisible="route_show_consignment_tools == False">
 <i class="fa fa-cubes route_pda_app_icon"/>
-<span class="route_pda_app_label">Consignment Outlets Stock</span>
-<span class="route_pda_app_hint">Positive stock rows</span>
+<span class="route_pda_app_label">Outlet Stock</span>
+<span class="route_pda_app_hint">Consignment stock rows</span>
 <span class="route_pda_app_hint_value">
 <field name="outlet_balance_count" readonly="1" nolabel="1"/>
 </span>
 </button>
+<button type="object" name="action_open_main_warehouse_products" class="btn route_pda_app_btn route_pda_app_btn_catalog">
+<i class="fa fa-home route_pda_app_icon"/>
+<span class="route_pda_app_label">Warehouse Stock</span>
+<span class="route_pda_app_hint">Selected source warehouse</span>
+<span class="route_pda_app_hint_value">
+<field name="warehouse_product_count" readonly="1" nolabel="1"/>
+</span>
+</button>
+</div>
 </div>
 </sheet>
 </form>
