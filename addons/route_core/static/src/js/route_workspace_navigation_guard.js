@@ -1,10 +1,12 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v13.workspace.hash",
-    workspaceUrl: "route_core.v13.workspace.url",
-    pendingButtonName: "route_core.v13.pending.button_name",
-    pendingButtonTs: "route_core.v13.pending.button_ts",
+    workspaceHash: "route_core.v14.workspace.hash",
+    workspaceUrl: "route_core.v14.workspace.url",
+    productCenterHash: "route_core.v14.product_center.hash",
+    productCenterUrl: "route_core.v14.product_center.url",
+    pendingButtonName: "route_core.v14.pending.button_name",
+    pendingButtonTs: "route_core.v14.pending.button_ts",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -240,8 +242,12 @@ function rememberVisibleActionButtons() {
 }
 
 function rememberNavigationTargets() {
-    if (detectPageKind() === "workspace") {
+    const pageKind = detectPageKind();
+    if (pageKind === "workspace") {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+    if (pageKind === "product_center") {
+        rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
     }
 }
 
@@ -264,6 +270,13 @@ function getWorkspaceTarget() {
     return {
         hash: sessionStorage.getItem(STORAGE_KEYS.workspaceHash) || "",
         url: sessionStorage.getItem(STORAGE_KEYS.workspaceUrl) || "",
+    };
+}
+
+function getProductCenterTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.productCenterHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.productCenterUrl) || "",
     };
 }
 
@@ -375,6 +388,14 @@ function navigateViaWorkspace(buttonName) {
     navigateToWorkspaceTarget(workspaceTarget);
 }
 
+function navigateBackToProductCenter() {
+    const productCenterTarget = getProductCenterTarget();
+    if (navigateToWorkspaceTarget(productCenterTarget)) {
+        return;
+    }
+    navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+}
+
 function maybeRunPendingButton() {
     const pendingButton = getPendingButton();
     if (!pendingButton) {
@@ -466,7 +487,7 @@ function buildInlineBackButton() {
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+        navigateBackToProductCenter();
     });
 
     wrapper.appendChild(button);
@@ -504,7 +525,7 @@ function buildFloatingBackButton() {
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+        navigateBackToProductCenter();
     });
 
     wrapper.appendChild(button);
@@ -552,7 +573,7 @@ function handleBrowserBack() {
         return;
     }
     window.setTimeout(() => {
-        navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+        navigateBackToProductCenter();
     }, 0);
 }
 
@@ -618,5 +639,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
 
