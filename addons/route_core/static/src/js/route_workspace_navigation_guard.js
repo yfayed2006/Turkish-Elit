@@ -156,6 +156,13 @@ function isSnapshotCenterPage() {
     ]);
 }
 
+function isCollectionsCenterPage() {
+    return hasAnyVisibleButton([
+        "action_open_collections_snapshot_from_collections_center",
+        "action_open_visit_collections",
+    ]);
+}
+
 function isOutletCenterPage() {
     return hasAnyVisibleButton(Array.from(OUTLET_WORKSPACE_ENTRY_BUTTONS));
 }
@@ -538,6 +545,10 @@ function navigateDirectToProductCenter() {
     window.setTimeout(() => {
         isInternalRedirect = false;
     }, 1200);
+}
+
+function navigateBackToProductCenter() {
+    navigateDirectToProductCenter();
 }
 
 function navigateBackToOutletCenter() {
