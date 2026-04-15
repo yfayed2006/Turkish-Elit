@@ -414,7 +414,26 @@ function navigateViaWorkspace(buttonName) {
     navigateToWorkspaceTarget(workspaceTarget);
 }
 
+function openAnyServerButton(buttonName) {
+    if (!buttonName) {
+        return false;
+    }
+    const button = findAnyButton(buttonName);
+    if (!button) {
+        return false;
+    }
+    isInternalRedirect = true;
+    dispatchClick(button);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+    return true;
+}
+
 function navigateBackToProductCenter() {
+    if (isSmallScreen() && openAnyServerButton(PRODUCT_CENTER_BUTTON)) {
+        return;
+    }
     navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
 }
 
@@ -661,5 +680,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
 
