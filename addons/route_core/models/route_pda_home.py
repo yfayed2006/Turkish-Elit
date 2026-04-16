@@ -591,12 +591,6 @@ class RoutePdaHome(models.TransientModel):
             rec.shortage_count = len(open_shortages)
             rec.salesperson_shortage_count = len(salesperson_shortages)
             rec.outlet_count = Outlet.search_count([])
-            active_outlets = Outlet.search([("active", "=", True)])
-            direct_sale_customers = active_outlets.filtered(lambda o: o.outlet_operation_mode == "direct_sale" and o.partner_id)
-            consignment_customers = active_outlets.filtered(lambda o: o.outlet_operation_mode == "consignment" and o.partner_id)
-            rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
-            rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
-            rec.active_outlet_count = len(active_outlets)
             rec.outlet_balance_count = OutletBalance.search_count([
                 ("outlet_id.outlet_operation_mode", "=", "consignment"),
                 ("qty", ">", 0),
@@ -626,6 +620,12 @@ class RoutePdaHome(models.TransientModel):
             warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
             rec.vehicle_product_count = rec._count_distinct_quant_products(vehicle_quant_domain) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = rec._count_distinct_quant_products(warehouse_quant_domain) if warehouse_loc else 0
+            active_outlets = Outlet.search([("active", "=", True)])
+            direct_sale_customers = active_outlets.filtered(lambda outlet: outlet.outlet_operation_mode == "direct_sale")
+            consignment_customers = active_outlets.filtered(lambda outlet: outlet.outlet_operation_mode == "consignment")
+            rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
+            rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
+            rec.active_outlet_count = len(active_outlets)
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
             rec.direct_transfer_today_count = len(today_direct_transfers)
@@ -1133,17 +1133,20 @@ class RoutePdaHome(models.TransientModel):
                 **(context or {}),
             },
         )
+        kanban_view = self.env.ref("route_core.view_route_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_route_outlet_pda_list", raise_if_not_found=False)
         form_view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
         search_view = self.env.ref("route_core.view_route_outlet_pda_search", raise_if_not_found=False)
         views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
         if list_view:
             views.append((list_view.id, "list"))
         if form_view:
             views.append((form_view.id, "form"))
         if views:
             action["views"] = views
-            action["view_mode"] = "list,form"
+            action["view_mode"] = "kanban,list,form"
         if search_view:
             action["search_view_id"] = search_view.id
         return action
@@ -1262,4 +1265,3 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
-
