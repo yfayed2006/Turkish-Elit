@@ -1944,7 +1944,26 @@ class RouteOutlet(models.Model):
             action = self.env.ref("route_core.action_route_direct_return").read()[0]
             action["name"] = _("Return Orders")
             action["domain"] = [("outlet_id", "=", self.id), ("state", "!=", "cancel")]
-            action["context"] = dict(self.env.context, default_outlet_id=self.id, create=0)
+            action["context"] = self._get_pda_clean_action_context(
+                default_outlet_id=self.id,
+                route_outlet_back_id=self.id,
+            )
+            search_view = self.env.ref("route_core.view_route_direct_return_pda_search", raise_if_not_found=False)
+            kanban_view = self.env.ref("route_core.view_route_direct_return_pda_kanban", raise_if_not_found=False)
+            list_view = self.env.ref("route_core.view_route_direct_return_pda_list", raise_if_not_found=False)
+            form_view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
+            views = []
+            if kanban_view:
+                views.append((kanban_view.id, "kanban"))
+            if list_view:
+                views.append((list_view.id, "list"))
+            if form_view:
+                views.append((form_view.id, "form"))
+            if views:
+                action["views"] = views
+                action["view_mode"] = "kanban,list,form"
+            if search_view:
+                action["search_view_id"] = search_view.id
             return action
 
         pickings = self._get_consignment_transfer_pickings()
@@ -1953,7 +1972,23 @@ class RouteOutlet(models.Model):
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = _("Return Orders")
         action["domain"] = [("id", "in", pickings.ids)]
-        action["context"] = dict(self.env.context, create=0)
+        action["context"] = self._get_pda_clean_action_context(route_outlet_back_id=self.id)
+        kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_stock_picking_outlet_pda_list", raise_if_not_found=False)
+        form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_stock_picking_outlet_return_pda_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_transfers(self):
@@ -1965,7 +2000,23 @@ class RouteOutlet(models.Model):
             action["domain"] = [("id", "in", pickings.ids)]
         else:
             action["domain"] = [("id", "=", 0)]
-        action["context"] = dict(self.env.context, create=0)
+        action["context"] = self._get_pda_clean_action_context(route_outlet_back_id=self.id)
+        kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_stock_picking_outlet_pda_list", raise_if_not_found=False)
+        form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_stock_picking_outlet_transfer_pda_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_open_shortages(self):
@@ -2108,3 +2159,4 @@ class RouteOutlet(models.Model):
             create=0,
         )
         return action
+
