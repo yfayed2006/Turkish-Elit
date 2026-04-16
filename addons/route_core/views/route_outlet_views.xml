@@ -83,11 +83,13 @@
 <field name="current_due_amount"/>
 <field name="last_visit_date"/>
 <field name="visit_count"/>
+<field name="return_order_count"/>
+<field name="transfer_count"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_outlet_card">
+<div t-attf-class="oe_kanban_global_click o_kanban_record route_pda_outlet_card route_pda_outlet_card_mode_#{record.outlet_operation_mode.raw_value or 'unknown'}">
 <div class="route_pda_outlet_card_head">
-<div class="route_pda_outlet_title">
+<div t-attf-class="route_pda_outlet_title route_pda_outlet_title_mode_#{record.outlet_operation_mode.raw_value or 'unknown'}">
 <field name="name"/>
 </div>
 <div class="route_pda_outlet_code">
@@ -541,6 +543,12 @@
 <button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
 <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
 </button>
+<button name="action_view_return_orders" type="object" class="oe_stat_button" icon="fa-undo">
+<field name="return_order_count" string="Returns" widget="statinfo"/>
+</button>
+<button name="action_view_transfers" type="object" class="oe_stat_button" icon="fa-exchange" invisible="outlet_operation_mode != 'consignment'">
+<field name="transfer_count" string="Transfers" widget="statinfo"/>
+</button>
 <button name="action_view_stock_balances" type="object" class="oe_stat_button" icon="fa-cubes" invisible="outlet_operation_mode != 'consignment'">
 <field name="stock_balance_count" string="Stock" widget="statinfo"/>
 </button>
@@ -577,7 +585,9 @@
 <field name="last_sale_order_id" readonly="1"/>
 <field name="visit_count" readonly="1"/>
 <field name="in_progress_visit_id" readonly="1"/>
-<field name="last_payment_id" readonly="1"/>
+<field name="last_payment_date" readonly="1"/>
+<field name="last_return_ref" readonly="1" invisible="not last_return_ref"/>
+<field name="last_transfer_ref" readonly="1" invisible="outlet_operation_mode != 'consignment' or not last_transfer_ref"/>
 </group>
 </group>
 </page>
@@ -774,6 +784,65 @@
 <field name="invoice_status" string="Invoice Status" optional="show"/>
 <field name="state" string="Status" optional="hide"/>
 </list>
+</field>
+</record>
+<record id="view_sale_order_outlet_pda_form" model="ir.ui.view">
+<field name="name">sale.order.outlet.pda.form</field>
+<field name="model">sale.order</field>
+<field name="arch" type="xml">
+<form string="Outlet Sales Order" create="0" edit="0" delete="0">
+<header>
+<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not route_outlet_id and not context.get('route_outlet_back_id')"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,sent,sale,done,cancel"/>
+</header>
+<sheet class="route_pda_outlet_sheet route_pda_sale_order_sheet">
+<field name="route_order_mode" invisible="1"/>
+<field name="route_outlet_id" invisible="1"/>
+<field name="route_source_location_id" invisible="1"/>
+<field name="route_payment_mode" invisible="1"/>
+<field name="route_payment_due_date" invisible="1"/>
+<group string="Order Snapshot" col="2">
+<group>
+<field name="name" readonly="1"/>
+<field name="date_order" readonly="1"/>
+<field name="partner_id" readonly="1"/>
+<field name="user_id" readonly="1"/>
+</group>
+<group>
+<field name="route_outlet_id" readonly="1" invisible="not route_outlet_id"/>
+<field name="invoice_status" readonly="1"/>
+<field name="route_payment_mode" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
+<field name="route_payment_due_date" readonly="1" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'"/>
+</group>
+</group>
+<notebook>
+<page string="Summary">
+<group string="Amounts" col="2">
+<group>
+<field name="amount_untaxed" readonly="1"/>
+<field name="amount_tax" readonly="1"/>
+<field name="amount_total" readonly="1"/>
+</group>
+<group>
+<field name="direct_sale_collected_amount" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
+<field name="direct_sale_remaining_due" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
+<field name="direct_sale_payment_count" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
+</group>
+</group>
+</page>
+<page string="Lines">
+<field name="order_line" readonly="1">
+<list create="0" delete="0" edit="0">
+<field name="product_template_id" string="Product"/>
+<field name="product_uom_qty" string="Qty"/>
+<field name="price_unit"/>
+<field name="price_subtotal" string="Subtotal"/>
+</list>
+</field>
+</page>
+</notebook>
+</sheet>
+</form>
 </field>
 </record>
 <record id="action_route_outlet" model="ir.actions.act_window">
