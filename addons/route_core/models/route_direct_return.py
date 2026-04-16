@@ -91,6 +91,24 @@ class RouteDirectReturn(models.Model):
         for rec in self:
             rec.amount_total = sum(rec.line_ids.mapped("estimated_amount"))
 
+    def action_back_to_outlet_form(self):
+        self.ensure_one()
+        outlet = self.outlet_id
+        if not outlet:
+            outlet_id = self.env.context.get("route_outlet_back_id") or self.env.context.get("default_outlet_id")
+            outlet = self.env["route.outlet"].browse(outlet_id).exists()
+        if outlet:
+            return {
+                "type": "ir.actions.act_url",
+                "url": f"/route_core/pda/outlet/{outlet.id}",
+                "target": "self",
+            }
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/route_core/pda/outlet_center",
+            "target": "self",
+        }
+
     def _ensure_direct_return_enabled(self):
         for rec in self:
             if not rec.company_id.route_enable_direct_return:
