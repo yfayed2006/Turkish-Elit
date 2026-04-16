@@ -1,9 +1,9 @@
 <odoo>
-<record id="view_route_direct_return_tree" model="ir.ui.view">
-<field name="name">route.direct.return.tree</field>
+<record id="view_route_direct_return_pda_list" model="ir.ui.view">
+<field name="name">route.direct.return.pda.list</field>
 <field name="model">route.direct.return</field>
 <field name="arch" type="xml">
-<list string="Direct Returns" create="0" delete="0">
+<list string="Direct Returns" create="0" delete="0" edit="0">
 <field name="name"/>
 <field name="return_date"/>
 <field name="outlet_id"/>
@@ -15,12 +15,81 @@
 </list>
 </field>
 </record>
+<record id="view_route_direct_return_pda_kanban" model="ir.ui.view">
+<field name="name">route.direct.return.pda.kanban</field>
+<field name="model">route.direct.return</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="return_date"/>
+<field name="amount_total"/>
+<field name="state"/>
+<field name="picking_count"/>
+<field name="sale_order_id"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="route_pda_payment_head">
+<div class="route_pda_payment_title">
+<field name="name"/>
+</div>
+<div class="route_pda_payment_date">
+<field name="return_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges">
+<span class="route_pda_payment_badge">
+<t t-esc="record.state.value or ''"/>
+</span>
+<span class="route_pda_payment_badge" t-if="record.sale_order_id.value">
+<t t-esc="record.sale_order_id.value"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Estimated Value</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount_total"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Pickings</span>
+<span class="route_pda_payment_metric_value">
+<field name="picking_count"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_direct_return_pda_search" model="ir.ui.view">
+<field name="name">route.direct.return.pda.search</field>
+<field name="model">route.direct.return</field>
+<field name="arch" type="xml">
+<search string="Direct Returns">
+<field name="name" string="Reference"/>
+<field name="return_date"/>
+<field name="outlet_id"/>
+<field name="sale_order_id"/>
+<field name="state"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<separator/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+</search>
+</field>
+</record>
 <record id="view_route_direct_return_form" model="ir.ui.view">
 <field name="name">route.direct.return.form</field>
 <field name="model">route.direct.return</field>
 <field name="arch" type="xml">
 <form string="Create Direct Return" create="0" delete="0">
 <header>
+<button name="action_back_to_outlet_form" type="object" string="Back to Outlet" class="btn-secondary" invisible="not outlet_id and not context.get('route_outlet_back_id')"/>
 <button name="action_create_pickings" type="object" string="Create Return Pickings" class="btn-primary" invisible="state != 'draft' or route_enable_direct_return == False"/>
 <button name="action_view_pickings" type="object" string="View Pickings" class="btn-secondary" invisible="picking_count == 0"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
@@ -72,8 +141,9 @@
 <record id="action_route_direct_return" model="ir.actions.act_window">
 <field name="name">Direct Returns</field>
 <field name="res_model">route.direct.return</field>
-<field name="view_mode">list,form</field>
-<field name="views" eval="[(ref('route_core.view_route_direct_return_tree'), 'list'), (ref('route_core.view_route_direct_return_form'), 'form')]"/>
+<field name="view_mode">kanban,list,form</field>
+<field name="search_view_id" ref="view_route_direct_return_pda_search"/>
+<field name="views" eval="[(ref('route_core.view_route_direct_return_pda_kanban'), 'kanban'), (ref('route_core.view_route_direct_return_pda_list'), 'list'), (ref('route_core.view_route_direct_return_form'), 'form')]"/>
 <field name="context">{}</field>
 </record>
 <record id="view_stock_picking_form_direct_return_price" model="ir.ui.view">
@@ -88,4 +158,4 @@
 </xpath>
 </field>
 </record>
-</odoo>
+</odo
