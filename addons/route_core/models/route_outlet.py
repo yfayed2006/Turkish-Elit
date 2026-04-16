@@ -1815,8 +1815,34 @@ class RouteOutlet(models.Model):
             ):
                 context.pop(key, None)
         context.update({"create": 0, "edit": 0, "delete": 0})
+        context.setdefault("route_outlet_back_id", self.id)
         context.update(extra)
         return context
+
+    def _get_pda_home_record(self):
+        home = self.env["route.pda.home"].create({})
+        home._refresh_dashboard_snapshot()
+        return home
+
+    def action_open_pda_form(self):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": self.display_name,
+            "res_model": "route.outlet",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "main",
+            "context": self._get_pda_clean_action_context(route_outlet_back_id=self.id),
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def action_back_to_customer_and_outlets(self):
+        self.ensure_one()
+        return self._get_pda_home_record().action_open_outlet_center_screen()
 
     def action_view_visits(self):
         self.ensure_one()
@@ -1837,19 +1863,23 @@ class RouteOutlet(models.Model):
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = self._get_pda_clean_action_context(
             default_outlet_id=self.id,
+            route_outlet_back_id=self.id,
             search_default_filter_my_payments=0,
             search_default_filter_confirmed=0,
         )
+        kanban_view = self.env.ref("route_core.view_route_visit_payment_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_route_visit_payment_outlet_pda_list", raise_if_not_found=False)
         form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
         search_view = self.env.ref("route_core.view_route_visit_payment_outlet_pda_search", raise_if_not_found=False)
-        if list_view or form_view:
+        if kanban_view or list_view or form_view:
             action["views"] = []
+            if kanban_view:
+                action["views"].append((kanban_view.id, "kanban"))
             if list_view:
                 action["views"].append((list_view.id, "list"))
             if form_view:
                 action["views"].append((form_view.id, "form"))
-            action["view_mode"] = "list,form"
+            action["view_mode"] = "kanban,list,form"
         if search_view:
             action["search_view_id"] = search_view.id
         return action
@@ -1862,6 +1892,7 @@ class RouteOutlet(models.Model):
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = self._get_pda_clean_action_context(
             default_outlet_id=self.id,
+            route_outlet_back_id=self.id,
             search_default_filter_has_qty=0,
         )
         return action
@@ -1875,7 +1906,7 @@ class RouteOutlet(models.Model):
             "type": "ir.actions.act_window",
             "name": _("Outlet Sales Orders"),
             "res_model": "sale.order",
-            "view_mode": "list,form",
+            "view_mode": "kanban,list,form",
         }
         try:
             action = self.env["ir.actions.actions"]._for_xml_id("sale.action_orders")
@@ -1886,16 +1917,20 @@ class RouteOutlet(models.Model):
         action["domain"] = [("id", "in", sale_orders.ids)]
         action["context"] = self._get_pda_clean_action_context(
             default_partner_id=self.partner_id.id if self.partner_id else False,
+            route_outlet_back_id=self.id,
         )
+        kanban_view = self.env.ref("route_core.view_sale_order_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_sale_order_outlet_pda_list", raise_if_not_found=False)
         form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
-        if list_view or form_view:
+        if kanban_view or list_view or form_view:
             action["views"] = []
+            if kanban_view:
+                action["views"].append((kanban_view.id, "kanban"))
             if list_view:
                 action["views"].append((list_view.id, "list"))
             if form_view:
                 action["views"].append((form_view.id, "form"))
-            action["view_mode"] = "list,form"
+            action["view_mode"] = "kanban,list,form"
         return action
 
 
