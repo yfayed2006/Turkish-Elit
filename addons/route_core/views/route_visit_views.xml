@@ -413,7 +413,7 @@
 <separator string="Visit Command Header" class="route_pda_visit_command_header_title"/>
 <group col="4" class="route_pda_visit_command_header_block">
 <group>
-<field name="outlet_id" readonly="1"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 <field name="name" readonly="1"/>
 <field name="start_datetime" readonly="1"/>
 <field name="end_datetime" readonly="1"/>
