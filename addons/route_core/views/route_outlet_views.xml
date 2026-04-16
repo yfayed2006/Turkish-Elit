@@ -41,8 +41,6 @@
 <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
 <filter name="filter_direct_sale" string="Direct Sale" domain="[('outlet_operation_mode', '=', 'direct_sale')]"/>
 <filter name="filter_consignment" string="Consignment" domain="[('outlet_operation_mode', '=', 'consignment')]"/>
-<filter name="filter_needs_follow_up" string="Needs Follow-up" domain="[('summary_alert_level', '=', 'warning')]"/>
-<filter name="filter_critical" string="Critical" domain="[('summary_alert_level', '=', 'critical')]"/>
 <filter name="filter_due" string="Due > 0" domain="[('current_due_amount', '>', 0)]"/>
 <filter name="filter_in_progress" string="Visit in Progress" domain="[('in_progress_visit_id', '!=', False)]"/>
 <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
