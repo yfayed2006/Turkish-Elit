@@ -33,6 +33,8 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_visits",
     "action_view_payments",
     "action_view_sale_orders",
+    "action_view_return_orders",
+    "action_view_transfers",
     "action_view_stock_balances",
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
@@ -288,6 +290,13 @@ function isOutletSaleOrdersPage() {
     return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer"]);
 }
 
+function isOutletReturnsPage() {
+    return isOutletRelatedSubpage(["return orders", "returns", "direct returns"], ["return", "estimated value", "pickings", "source document"]);
+}
+
+function isOutletTransfersPage() {
+    return isOutletRelatedSubpage(["transfers", "transfer orders"], ["from", "to", "scheduled date", "source document"]);
+}
 
 function isOutletStockFromOutletPage() {
     if (!isOutletWorkspaceActive()) {
@@ -358,6 +367,12 @@ function detectPageKind() {
     }
     if (isOutletSaleOrdersPage()) {
         return "outlet_sales_orders";
+    }
+    if (isOutletReturnsPage()) {
+        return "outlet_returns";
+    }
+    if (isOutletTransfersPage()) {
+        return "outlet_transfers";
     }
     if (isOutletStockFromOutletPage()) {
         return "outlet_stock_from_outlet";
@@ -449,7 +464,7 @@ function rememberNavigationTargets() {
         clearOutletWorkspaceActive();
         rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
     }
-    if (pageKind === "outlet_center" || pageKind === "outlet_workspace" || pageKind === "outlet_form" || pageKind === "outlet_visits" || pageKind === "outlet_payments" || pageKind === "outlet_sales_orders" || pageKind === "outlet_stock_from_outlet") {
+    if (["outlet_center", "outlet_workspace", "outlet_form", "outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_returns", "outlet_transfers", "outlet_stock_from_outlet"].includes(pageKind)) {
         markOutletWorkspaceActive();
     }
     if (pageKind === "outlet_center") {
@@ -792,7 +807,7 @@ function getBackConfig(pageKind) {
             interceptMobileHeader: true,
         };
     }
-    if (["outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_stock_from_outlet"].includes(pageKind)) {
+    if (["outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_returns", "outlet_transfers", "outlet_stock_from_outlet"].includes(pageKind)) {
         return {
             label: "Back to Outlet",
             onClick: navigateBackToOutletForm,
