@@ -756,3 +756,185 @@
         min-height: auto;
     }
 }
+
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_renderer.o_kanban_grouped {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group {
+    flex: 1 1 360px;
+    min-width: 320px;
+}
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_record {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.route_pda_outlet_card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 14px;
+    box-shadow: none;
+}
+
+.route_pda_outlet_card_head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.route_pda_outlet_title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.28;
+}
+
+.route_pda_outlet_code {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.route_pda_outlet_customer {
+    font-size: 0.88rem;
+    color: #4b5563;
+    min-height: 1.2em;
+}
+
+.route_pda_outlet_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.route_pda_outlet_metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.route_pda_outlet_metric {
+    border: 1px solid #eef2f7;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.route_pda_outlet_metric_label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.route_pda_outlet_metric_value {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+.route_pda_outlet_metric_value .o_field_widget {
+    display: inline-flex;
+}
+
+.route_pda_outlet_metric_value .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+.route_pda_outlet_footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+    border-top: 1px solid #eef2f7;
+    font-size: 0.84rem;
+}
+
+.route_pda_outlet_footer_label {
+    font-weight: 700;
+    color: #6b7280;
+}
+
+.route_pda_outlet_footer_value {
+    font-weight: 800;
+    color: #111827;
+}
+
+.route_pda_outlet_sheet .route_pda_outlet_button_box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    float: none;
+    margin-bottom: 16px;
+}
+
+.route_pda_outlet_sheet .route_pda_outlet_button_box .oe_stat_button {
+    flex: 1 1 160px;
+    min-width: 150px;
+    border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+    .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_renderer.o_kanban_grouped {
+        display: block;
+    }
+
+    .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group {
+        min-width: 0;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .route_pda_outlet_card {
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .route_pda_outlet_title {
+        font-size: 1rem;
+    }
+
+    .route_pda_outlet_metrics {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .route_pda_outlet_sheet .route_pda_outlet_button_box .oe_stat_button {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+    }
+}
