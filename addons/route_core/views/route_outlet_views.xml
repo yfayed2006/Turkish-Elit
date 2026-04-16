@@ -561,7 +561,6 @@
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
-<field name="barcode" readonly="1"/>
 <field name="partner_id" string="Customer" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
@@ -572,9 +571,7 @@
 <field name="last_sale_order_id" readonly="1"/>
 <field name="visit_count" readonly="1"/>
 <field name="in_progress_visit_id" readonly="1"/>
-<field name="next_route_plan_id" readonly="1"/>
 <field name="last_payment_id" readonly="1"/>
-<field name="last_payment_date" readonly="1"/>
 </group>
 </group>
 <group string="Financial Snapshot" col="2">
@@ -585,7 +582,6 @@
 </group>
 <group>
 <field name="sales_lifetime_total" readonly="1"/>
-<field name="last_no_sale_reason" readonly="1"/>
 </group>
 </group>
 <group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
@@ -602,18 +598,35 @@
 <field name="last_stock_update_at" readonly="1"/>
 </group>
 </group>
-<group string="Latest References" col="2">
-<group>
-<field name="last_sale_order_id" readonly="1"/>
-<field name="last_payment_id" readonly="1"/>
-</group>
-<group>
-<field name="in_progress_visit_id" readonly="1"/>
-<field name="next_route_plan_id" readonly="1"/>
-</group>
-</group>
 </sheet>
 </form>
+</field>
+</record>
+<record id="view_route_visit_payment_outlet_pda_search" model="ir.ui.view">
+<field name="name">route.visit.payment.outlet.pda.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Outlet Payments">
+<field name="payment_date" string="Payment Date"/>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="payment_mode" string="Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="source_document_ref" string="Document"/>
+<field name="state" string="Status"/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_deferred" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<separator/>
+<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_mode" string="Payment Mode" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+</search>
 </field>
 </record>
 <record id="view_route_visit_payment_outlet_pda_list" model="ir.ui.view">
