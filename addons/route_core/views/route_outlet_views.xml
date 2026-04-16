@@ -525,6 +525,12 @@
 <sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
+<div class="route_workspace_inline_back_wrapper route_pda_mobile_only">
+<button name="action_back_to_customer_and_outlets" type="object" class="btn route_workspace_inline_back_btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Customer and Outlets</span>
+</button>
+</div>
 <div class="oe_button_box route_pda_outlet_button_box" name="button_box" invisible="not id">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="visit_count" string="Visits" widget="statinfo"/>
@@ -558,14 +564,14 @@
 <field name="last_visit_date" readonly="1"/>
 </group>
 </group>
+<notebook class="route_pda_outlet_notebook">
+<page string="Summary">
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
 <field name="partner_id" string="Customer" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
-<field name="phone" readonly="1"/>
-<field name="mobile" readonly="1"/>
 </group>
 <group>
 <field name="last_sale_order_id" readonly="1"/>
@@ -574,6 +580,17 @@
 <field name="last_payment_id" readonly="1"/>
 </group>
 </group>
+</page>
+<page string="Details">
+<group string="Outlet Details" col="2">
+<group>
+<field name="phone" readonly="1"/>
+<field name="mobile" readonly="1"/>
+</group>
+<group/>
+</group>
+</page>
+<page string="Finance">
 <group string="Financial Snapshot" col="2">
 <group>
 <field name="payment_count" readonly="1"/>
@@ -584,7 +601,9 @@
 <field name="sales_lifetime_total" readonly="1"/>
 </group>
 </group>
-<group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
+</page>
+<page string="Stock" invisible="outlet_operation_mode != 'consignment'">
+<group string="Consignment Stock Snapshot" col="2">
 <group>
 <field name="stock_balance_count" readonly="1"/>
 <field name="stock_total_qty" readonly="1"/>
@@ -598,8 +617,65 @@
 <field name="last_stock_update_at" readonly="1"/>
 </group>
 </group>
+</page>
+</notebook>
 </sheet>
 </form>
+</field>
+</record>
+<record id="view_route_visit_payment_outlet_pda_kanban" model="ir.ui.view">
+<field name="name">route.visit.payment.outlet.pda.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="source_document_ref"/>
+<field name="amount"/>
+<field name="remaining_due_amount"/>
+<field name="promise_status"/>
+<field name="state"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="route_pda_payment_head">
+<div class="route_pda_payment_title">
+<t t-esc="record.source_document_ref.value or 'Payment'"/>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges">
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
+<t t-esc="record.payment_mode.value or ''"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_collection">
+<t t-esc="record.collection_type.value or ''"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
+<t t-esc="record.promise_status.value or 'No Promise'"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Open Due</span>
+<span class="route_pda_payment_metric_value">
+<field name="remaining_due_amount"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </record>
 <record id="view_route_visit_payment_outlet_pda_search" model="ir.ui.view">
@@ -643,6 +719,46 @@
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" optional="show"/>
 <field name="state" string="Status" optional="hide"/>
 </list>
+</field>
+</record>
+<record id="view_sale_order_outlet_pda_kanban" model="ir.ui.view">
+<field name="name">sale.order.outlet.pda.kanban</field>
+<field name="model">sale.order</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_sale_order_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="date_order"/>
+<field name="amount_total"/>
+<field name="invoice_status"/>
+<field name="state"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_sale_order_card">
+<div class="route_pda_sale_order_head">
+<div class="route_pda_sale_order_title">
+<field name="name"/>
+</div>
+<div class="route_pda_sale_order_date">
+<field name="date_order"/>
+</div>
+</div>
+<div class="route_pda_sale_order_badges">
+<span t-attf-class="route_pda_payment_badge route_pda_sale_order_badge route_pda_sale_order_invoice_#{(record.invoice_status.raw_value or 'none').replace(' ', '_')}">
+<t t-esc="record.invoice_status.value or ''"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric route_pda_payment_metric_single">
+<span class="route_pda_payment_metric_label">Total</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount_total"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </record>
 <record id="view_sale_order_outlet_pda_list" model="ir.ui.view">
