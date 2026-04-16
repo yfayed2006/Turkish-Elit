@@ -41,6 +41,10 @@
 <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
 <filter name="filter_direct_sale" string="Direct Sale" domain="[('outlet_operation_mode', '=', 'direct_sale')]"/>
 <filter name="filter_consignment" string="Consignment" domain="[('outlet_operation_mode', '=', 'consignment')]"/>
+<filter name="filter_needs_follow_up" string="Needs Follow-up" domain="[('summary_alert_level', '=', 'warning')]"/>
+<filter name="filter_critical" string="Critical" domain="[('summary_alert_level', '=', 'critical')]"/>
+<filter name="filter_due" string="Due > 0" domain="[('current_due_amount', '>', 0)]"/>
+<filter name="filter_in_progress" string="Visit in Progress" domain="[('in_progress_visit_id', '!=', False)]"/>
 <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
 <filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
@@ -68,6 +72,67 @@
 <field name="mobile" optional="hide"/>
 <field name="active" optional="hide"/>
 </list>
+</field>
+</record>
+<record id="view_route_outlet_pda_kanban" model="ir.ui.view">
+<field name="name">route.outlet.pda.kanban</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_mobile_outlet_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="code"/>
+<field name="partner_id"/>
+<field name="outlet_operation_mode"/>
+<field name="summary_alert_level"/>
+<field name="current_due_amount"/>
+<field name="last_visit_date"/>
+<field name="visit_count"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_outlet_card">
+<div class="route_pda_outlet_card_head">
+<div class="route_pda_outlet_title">
+<field name="name"/>
+</div>
+<div class="route_pda_outlet_code">
+<field name="code"/>
+</div>
+</div>
+<div class="route_pda_outlet_customer">
+<field name="partner_id"/>
+</div>
+<div class="route_pda_outlet_badges">
+<span class="route_pda_outlet_badge route_pda_outlet_badge_mode">
+<field name="outlet_operation_mode" widget="badge"/>
+</span>
+<span class="route_pda_outlet_badge route_pda_outlet_badge_status">
+<field name="summary_alert_level" widget="badge"/>
+</span>
+</div>
+<div class="route_pda_outlet_metrics">
+<div class="route_pda_outlet_metric">
+<span class="route_pda_outlet_metric_label">Current Due</span>
+<span class="route_pda_outlet_metric_value">
+<field name="current_due_amount"/>
+</span>
+</div>
+<div class="route_pda_outlet_metric">
+<span class="route_pda_outlet_metric_label">Last Visit</span>
+<span class="route_pda_outlet_metric_value">
+<field name="last_visit_date"/>
+</span>
+</div>
+</div>
+<div class="route_pda_outlet_footer">
+<span class="route_pda_outlet_footer_label">Visits</span>
+<span class="route_pda_outlet_footer_value">
+<field name="visit_count"/>
+</span>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </record>
 <record id="view_route_outlet_form" model="ir.ui.view">
@@ -461,10 +526,10 @@
 <field name="model">route.outlet</field>
 <field name="arch" type="xml">
 <form string="Outlet" create="0" edit="0" delete="0">
-<sheet>
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
-<div class="oe_button_box" name="button_box" invisible="not id">
+<div class="oe_button_box route_pda_outlet_button_box" name="button_box" invisible="not id">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="visit_count" string="Visits" widget="statinfo"/>
 </button>
@@ -483,37 +548,49 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
+<group string="Quick Snapshot" col="4">
+<group>
+<field name="outlet_operation_mode" string="Mode" readonly="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
+</group>
+<group>
+<field name="summary_alert_level" string="Status" readonly="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+</group>
+<group>
+<field name="current_due_amount" readonly="1"/>
+</group>
+<group>
+<field name="last_visit_date" readonly="1"/>
+</group>
+</group>
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
 <field name="barcode" readonly="1"/>
 <field name="partner_id" string="Customer" readonly="1"/>
-<field name="outlet_operation_mode" readonly="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 <field name="phone" readonly="1"/>
 <field name="mobile" readonly="1"/>
 </group>
 <group>
-<field name="summary_alert_level" string="Status" readonly="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
-<field name="last_visit_id" readonly="1"/>
-<field name="last_visit_date" readonly="1"/>
 <field name="last_sale_order_id" readonly="1"/>
 <field name="visit_count" readonly="1"/>
 <field name="in_progress_visit_id" readonly="1"/>
 <field name="next_route_plan_id" readonly="1"/>
+<field name="last_payment_id" readonly="1"/>
+<field name="last_payment_date" readonly="1"/>
 </group>
 </group>
 <group string="Financial Snapshot" col="2">
 <group>
-<field name="current_due_amount" readonly="1"/>
 <field name="payment_count" readonly="1"/>
 <field name="unpaid_visit_count" readonly="1"/>
+<field name="last_payment_amount" readonly="1"/>
 </group>
 <group>
-<field name="last_payment_id" readonly="1"/>
-<field name="last_payment_date" readonly="1"/>
-<field name="last_payment_amount" readonly="1"/>
+<field name="sales_lifetime_total" readonly="1"/>
+<field name="collections_lifetime_total" readonly="1"/>
+<field name="last_no_sale_reason" readonly="1"/>
 </group>
 </group>
 <group string="Consignment Stock Snapshot" col="2" invisible="outlet_operation_mode != 'consignment'">
@@ -542,6 +619,37 @@
 </group>
 </sheet>
 </form>
+</field>
+</record>
+<record id="view_route_visit_payment_outlet_pda_list" model="ir.ui.view">
+<field name="name">route.visit.payment.outlet.pda.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list string="Outlet Payments" create="0" edit="0" delete="0">
+<field name="payment_date" string="Payment Date"/>
+<field name="payment_mode" string="Mode"/>
+<field name="collection_type" string="Collection"/>
+<field name="source_document_ref" string="Document" optional="show"/>
+<field name="amount" string="Collected" sum="Total Collected"/>
+<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" optional="show"/>
+<field name="state" string="Status" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="view_sale_order_outlet_pda_list" model="ir.ui.view">
+<field name="name">sale.order.outlet.pda.list</field>
+<field name="model">sale.order</field>
+<field name="arch" type="xml">
+<list string="Outlet Sales Orders" create="0" edit="0" delete="0">
+<field name="name" string="Number"/>
+<field name="date_order" string="Order Date"/>
+<field name="partner_id" string="Customer" optional="hide"/>
+<field name="user_id" string="Salesperson" optional="hide"/>
+<field name="amount_total" string="Total" sum="Total"/>
+<field name="invoice_status" string="Invoice Status" optional="show"/>
+<field name="state" string="Status" optional="hide"/>
+</list>
 </field>
 </record>
 <record id="action_route_outlet" model="ir.actions.act_window">
