@@ -1842,7 +1842,11 @@ class RouteOutlet(models.Model):
 
     def action_back_to_customer_and_outlets(self):
         self.ensure_one()
-        return self._get_pda_home_record().action_open_outlet_center_screen()
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/route_core/pda/outlet_center",
+            "target": "self",
+        }
 
     def action_view_visits(self):
         self.ensure_one()
@@ -1921,7 +1925,7 @@ class RouteOutlet(models.Model):
         )
         kanban_view = self.env.ref("route_core.view_sale_order_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_sale_order_outlet_pda_list", raise_if_not_found=False)
-        form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_sale_order_outlet_pda_form", raise_if_not_found=False)
         if kanban_view or list_view or form_view:
             action["views"] = []
             if kanban_view:
