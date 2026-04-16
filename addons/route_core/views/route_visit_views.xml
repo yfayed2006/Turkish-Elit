@@ -349,7 +349,7 @@
 <field name="model">route.visit</field>
 <field name="priority" eval="90"/>
 <field name="arch" type="xml">
-<form string="Route Visit" create="0" delete="0">
+<form string="Route Visit" create="0" delete="0" class="route_pda_visit_form">
 <header>
 <button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
 <button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
@@ -410,8 +410,8 @@
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
 </div>
 </div>
-<separator string="Visit Command Header"/>
-<group col="4">
+<separator string="Visit Command Header" class="route_pda_visit_command_header_title"/>
+<group col="4" class="route_pda_visit_command_header_block">
 <group>
 <field name="outlet_id" readonly="1"/>
 <field name="name" readonly="1"/>
@@ -521,7 +521,7 @@
 <field name="end_datetime" readonly="1" invisible="1"/>
 </group>
 </group>
-<notebook>
+<notebook class="route_pda_visit_notebook">
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
 <list editable="bottom">
