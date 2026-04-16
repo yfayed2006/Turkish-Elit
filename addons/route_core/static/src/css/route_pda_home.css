@@ -773,8 +773,11 @@
 }
 
 .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group {
-    flex: 1 1 360px;
-    min-width: 320px;
+    flex: 1 1 320px;
+    min-width: 300px;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
 }
 
 .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_record {
@@ -917,6 +920,9 @@
         min-width: 0;
         width: 100%;
         margin-bottom: 10px;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
 
     .route_pda_outlet_card {
@@ -938,3 +944,38 @@
         min-width: 0;
     }
 }
+
+
+.o_kanban_view.route_pda_visit_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+.o_kanban_view.route_pda_visit_kanban .o_kanban_record {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.o_kanban_view.route_pda_visit_kanban .route_pda_visit_card {
+    max-width: none;
+    width: 100%;
+}
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_renderer,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_records,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_quick_create {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+    .o_kanban_view.route_pda_visit_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
