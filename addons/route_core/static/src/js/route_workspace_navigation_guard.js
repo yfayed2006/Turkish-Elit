@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
     pendingButtonName: "route_core.v15.pending.button_name",
     pendingButtonTs: "route_core.v15.pending.button_ts",
     outletWorkspaceActiveTs: "route_core.v15.outlet_workspace.active_ts",
+    browserGuardSignature: "route_core.v15.browser_guard_signature",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -889,8 +890,12 @@ function handleBrowserBack() {
     if (!backConfig || !backConfig.interceptBrowser) {
         return;
     }
+    isInternalRedirect = true;
     window.setTimeout(() => {
         backConfig.onClick();
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 900);
     }, 0);
 }
 
@@ -915,12 +920,31 @@ function interceptMobileHeaderBack(event) {
     backConfig.onClick();
 }
 
+function ensureBrowserGuard(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig || !backConfig.interceptBrowser) {
+        sessionStorage.removeItem(STORAGE_KEYS.browserGuardSignature);
+        return;
+    }
+    const signature = `${pageKind}|${window.location.pathname}|${window.location.search}|${window.location.hash}`;
+    if (sessionStorage.getItem(STORAGE_KEYS.browserGuardSignature) === signature) {
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.browserGuardSignature, signature);
+    try {
+        window.history.pushState({ ...(window.history.state || {}), routeWorkspaceGuard: signature }, "", window.location.href);
+    } catch (_error) {
+        // ignore pushState edge cases
+    }
+}
+
 function refreshNavigationUi() {
     rememberVisibleActionButtons();
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
     ensureBackButton();
+    ensureBrowserGuard(detectPageKind());
 }
 
 function bootRouteWorkspaceNavigationGuard() {
