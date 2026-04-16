@@ -253,9 +253,16 @@ class RouteVisitPayment(models.Model):
             outlet_id = self.env.context.get("route_outlet_back_id") or self.env.context.get("default_outlet_id")
             outlet = self.env["route.outlet"].browse(outlet_id).exists()
         if outlet:
-            return outlet.action_open_pda_form()
-        home = self.env["route.pda.home"].create({})
-        return home.action_open_outlet_center_screen()
+            return {
+                "type": "ir.actions.act_url",
+                "url": f"/route_core/pda/outlet/{outlet.id}",
+                "target": "self",
+            }
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/route_core/pda/outlet_center",
+            "target": "self",
+        }
 
     def _get_target_model(self):
         self.ensure_one()
