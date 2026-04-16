@@ -1,5 +1,5 @@
 <odoo>
-<!--         Admin / all payments         -->
+<!--          Admin / all payments          -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--         Tailored visit list         -->
+<!--          Tailored visit list          -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--         Tailored direct sale list         -->
+<!--          Tailored direct sale list          -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -96,7 +96,7 @@
 <field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'"/>
 <field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'"/>
 <field name="source_document_ref" readonly="1" string="Source Document"/>
-<field name="outlet_id" readonly="1"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 <field name="area_id" readonly="1"/>
 <field name="salesperson_id" readonly="1"/>
 <field name="payment_business_flow" readonly="1"/>
@@ -130,7 +130,7 @@
 </form>
 </field>
 </record>
-<!--         Admin / all payments search         -->
+<!--          Admin / all payments search          -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -192,7 +192,7 @@
 </search>
 </field>
 </record>
-<!--         Visit collections search         -->
+<!--          Visit collections search          -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -245,7 +245,7 @@
 </search>
 </field>
 </record>
-<!--         Direct sale payments search         -->
+<!--          Direct sale payments search          -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
