@@ -1804,25 +1804,44 @@ class RouteOutlet(models.Model):
 
     def action_view_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit").read()[0]
+        action = self.env.ref("route_core.action_route_visit_pda").read()[0]
+        action["name"] = _("Outlet Visits")
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = dict(
             self.env.context,
             default_outlet_id=self.id,
             default_area_id=self.area_id.id,
             default_partner_id=self.partner_id.id if self.partner_id else False,
+            create=0,
+            edit=0,
+            delete=0,
         )
         return action
 
     def action_view_payments(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit_payment").read()[0]
+        action["name"] = _("Outlet Payments")
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = dict(
             self.env.context,
             default_outlet_id=self.id,
             create=0,
+            edit=0,
+            delete=0,
         )
+        list_view = self.env.ref("route_core.view_route_visit_payment_outlet_pda_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_visit_payment_search", raise_if_not_found=False)
+        if list_view or form_view:
+            action["views"] = []
+            if list_view:
+                action["views"].append((list_view.id, "list"))
+            if form_view:
+                action["views"].append((form_view.id, "form"))
+            action["view_mode"] = "list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_stock_balances(self):
@@ -1842,7 +1861,7 @@ class RouteOutlet(models.Model):
             sale_orders |= self._get_direct_sale_orders()
         action = {
             "type": "ir.actions.act_window",
-            "name": _("Sale Orders"),
+            "name": _("Outlet Sales Orders"),
             "res_model": "sale.order",
             "view_mode": "list,form",
         }
@@ -1851,12 +1870,24 @@ class RouteOutlet(models.Model):
         except Exception:
             pass
 
+        action["name"] = _("Outlet Sales Orders")
         action["domain"] = [("id", "in", sale_orders.ids)]
         action["context"] = dict(
             self.env.context,
             default_partner_id=self.partner_id.id if self.partner_id else False,
             create=0,
+            edit=0,
+            delete=0,
         )
+        list_view = self.env.ref("route_core.view_sale_order_outlet_pda_list", raise_if_not_found=False)
+        form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        if list_view or form_view:
+            action["views"] = []
+            if list_view:
+                action["views"].append((list_view.id, "list"))
+            if form_view:
+                action["views"].append((form_view.id, "form"))
+            action["view_mode"] = "list,form"
         return action
 
 
