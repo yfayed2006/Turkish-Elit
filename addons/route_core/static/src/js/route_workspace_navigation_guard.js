@@ -5,6 +5,8 @@ const STORAGE_KEYS = {
     workspaceUrl: "route_core.v15.workspace.url",
     productCenterHash: "route_core.v15.product_center.hash",
     productCenterUrl: "route_core.v15.product_center.url",
+    outletCenterHash: "route_core.v15.outlet_center.hash",
+    outletCenterUrl: "route_core.v15.outlet_center.url",
     outletFormHash: "route_core.v15.outlet_form.hash",
     outletFormUrl: "route_core.v15.outlet_form.url",
     pendingButtonName: "route_core.v15.pending.button_name",
@@ -29,6 +31,7 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_visits",
     "action_view_payments",
     "action_view_sale_orders",
+    "action_view_stock_balances",
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
 
@@ -273,6 +276,25 @@ function isOutletSaleOrdersPage() {
     return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders"], ["invoice status", "order date", "salesperson", "customer"]);
 }
 
+
+function isOutletStockFromOutletPage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const breadcrumbText = getBreadcrumbText();
+    if (!(breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets"))) {
+        return false;
+    }
+    return (
+        title.includes("outlet stock")
+        || title.includes("stock balances")
+        || rootText.includes("outlet stock")
+        || rootText.includes("stock balances")
+    );
+}
+
 function isDailySummaryPage() {
     return hasVisibleButton("action_back_from_collections_snapshot")
         && hasVisibleButton("action_open_current_visit_statement_of_account");
@@ -324,6 +346,9 @@ function detectPageKind() {
     }
     if (isOutletSaleOrdersPage()) {
         return "outlet_sales_orders";
+    }
+    if (isOutletStockFromOutletPage()) {
+        return "outlet_stock_from_outlet";
     }
     if (isSnapshotCenterPage()) {
         return "snapshot_center";
@@ -412,8 +437,11 @@ function rememberNavigationTargets() {
         clearOutletWorkspaceActive();
         rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
     }
-    if (pageKind === "outlet_center" || pageKind === "outlet_workspace" || pageKind === "outlet_form" || pageKind === "outlet_visits" || pageKind === "outlet_payments" || pageKind === "outlet_sales_orders") {
+    if (pageKind === "outlet_center" || pageKind === "outlet_workspace" || pageKind === "outlet_form" || pageKind === "outlet_visits" || pageKind === "outlet_payments" || pageKind === "outlet_sales_orders" || pageKind === "outlet_stock_from_outlet") {
         markOutletWorkspaceActive();
+    }
+    if (pageKind === "outlet_center") {
+        rememberPair(STORAGE_KEYS.outletCenterHash, STORAGE_KEYS.outletCenterUrl);
     }
     if (pageKind === "outlet_form") {
         rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
@@ -453,6 +481,13 @@ function getProductCenterTarget() {
     return {
         hash: sessionStorage.getItem(STORAGE_KEYS.productCenterHash) || "",
         url: sessionStorage.getItem(STORAGE_KEYS.productCenterUrl) || "",
+    };
+}
+
+function getOutletCenterTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.outletCenterHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.outletCenterUrl) || "",
     };
 }
 
@@ -610,6 +645,10 @@ function navigateBackToProductCenter() {
 }
 
 function navigateBackToOutletCenter() {
+    const outletCenterTarget = getOutletCenterTarget();
+    if (navigateToStoredTarget(outletCenterTarget)) {
+        return;
+    }
     navigateViaWorkspace(OUTLET_CENTER_BUTTON);
 }
 
@@ -720,15 +759,15 @@ function getBackConfig(pageKind) {
         return {
             label: "Back to Customer and Outlets",
             onClick: navigateBackToOutletCenter,
-            interceptBrowser: false,
+            interceptBrowser: true,
             interceptMobileHeader: true,
         };
     }
-    if (["outlet_visits", "outlet_payments", "outlet_sales_orders"].includes(pageKind)) {
+    if (["outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_stock_from_outlet"].includes(pageKind)) {
         return {
             label: "Back to Outlet",
             onClick: navigateBackToOutletForm,
-            interceptBrowser: false,
+            interceptBrowser: true,
             interceptMobileHeader: true,
         };
     }
@@ -819,11 +858,7 @@ function ensureBackButton() {
 
     if (isSmallScreen()) {
         removeInlineBackButton();
-        let wrapper = document.getElementById(FLOATING_BACK_WRAPPER_ID);
-        if (!wrapper || wrapper.dataset.backKind !== pageKind) {
-            removeFloatingBackButton();
-            document.body.appendChild(buildFloatingBackButton(backConfig, pageKind));
-        }
+        removeFloatingBackButton();
         return;
     }
 
@@ -923,4 +958,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
