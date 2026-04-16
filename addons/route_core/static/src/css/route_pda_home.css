@@ -770,11 +770,21 @@
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-start;
+    overflow: visible !important;
 }
 
 .o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group {
     flex: 1 1 320px;
     min-width: 300px;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_header,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_records,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_renderer,
+.o_kanban_view.route_pda_mobile_outlet_kanban .o_kanban_group .o_kanban_quick_create {
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -987,6 +997,24 @@
     color: #0f766e;
 }
 
+.route_pda_outlet_card_mode_direct_sale {
+    border-color: #dbeafe;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 26%);
+}
+
+.route_pda_outlet_card_mode_consignment {
+    border-color: #d1fae5;
+    background: linear-gradient(180deg, #f6fffb 0%, #ffffff 26%);
+}
+
+.route_pda_outlet_title_mode_direct_sale {
+    color: #1d4ed8;
+}
+
+.route_pda_outlet_title_mode_consignment {
+    color: #0f766e;
+}
+
 .route_pda_mobile_only {
     display: none;
 }
@@ -1128,17 +1156,23 @@
         width: 100%;
     }
 
-    .route_pda_outlet_sheet .o_notebook .nav-tabs {
+    .route_pda_outlet_sheet .o_notebook .nav-tabs,
+    .route_pda_visit_form .o_notebook .nav-tabs {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
     }
 
-    .route_pda_outlet_sheet .o_notebook .nav-link {
+    .route_pda_outlet_sheet .o_notebook .nav-link,
+    .route_pda_visit_form .o_notebook .nav-link {
         border-radius: 10px;
         padding: 8px 10px;
         text-align: center;
         background: #f8fafc;
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped,
@@ -1155,6 +1189,31 @@
 
     .route_pda_payment_metrics {
         grid-template-columns: 1fr;
+    }
+}
+
+
+
+.route_pda_visit_form .route_pda_visit_command_header_block,
+.route_pda_visit_form .route_pda_visit_command_header_title {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .route_pda_visit_form .route_pda_visit_command_header_block,
+    .route_pda_visit_form .route_pda_visit_command_header_title {
+        display: none !important;
+    }
+
+    .route_pda_visit_form .o_notebook .nav-tabs {
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 390px) {
+    .route_pda_outlet_sheet .o_notebook .nav-tabs,
+    .route_pda_visit_form .o_notebook .nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
