@@ -22,6 +22,7 @@ const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
 const OUTLET_CENTER_BUTTON = "action_open_outlet_center_screen";
 const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
+const OUTLET_CENTER_DIRECT_ROUTE = "/route_core/pda/outlet_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
 const OUTLET_WORKSPACE_ENTRY_BUTTONS = new Set([
     "action_open_direct_sale_customers",
@@ -245,8 +246,18 @@ function isOutletFormPage() {
     if (!isOutletWorkspaceActive()) {
         return false;
     }
+    const title = normalizeText(findActionTitle());
     const rootText = getRootText();
-    return rootText.includes("outlet summary") && rootText.includes("financial snapshot");
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletButtons = hasAnyVisibleButton(Array.from(OUTLET_FORM_ENTRY_BUTTONS));
+    const hasOutletTabs = rootText.includes("outlet summary") || rootText.includes("outlet details") || rootText.includes("financial snapshot") || rootText.includes("consignment stock snapshot");
+    const hasQuickSnapshot = rootText.includes("quick snapshot") && rootText.includes("current due") && rootText.includes("last visit date");
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    return !!(
+        (hasOutletButtons && hasQuickSnapshot)
+        || (hasOutletTrail && hasOutletTabs)
+        || (title && title !== "outlets" && title !== "customer and outlets" && hasQuickSnapshot)
+    );
 }
 
 function isOutletRelatedSubpage(pageNames, requiredHints = []) {
@@ -266,15 +277,15 @@ function isOutletRelatedSubpage(pageNames, requiredHints = []) {
 }
 
 function isOutletVisitsPage() {
-    return isOutletRelatedSubpage(["outlet visits", "visits"], ["process", "visit", "outlet"]);
+    return isOutletRelatedSubpage(["outlet visits", "visits", "my visits"], ["process", "visit", "outlet"]);
 }
 
 function isOutletPaymentsPage() {
-    return isOutletRelatedSubpage(["outlet payments", "payments"], ["payment", "collected", "open due", "promise"]);
+    return isOutletRelatedSubpage(["outlet payments", "payments", "all payments"], ["payment", "collected", "open due", "promise"]);
 }
 
 function isOutletSaleOrdersPage() {
-    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders"], ["invoice status", "order date", "salesperson", "customer"]);
+    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer"]);
 }
 
 
@@ -650,12 +661,29 @@ function navigateBackToOutletCenter() {
     if (navigateToStoredTarget(outletCenterTarget)) {
         return;
     }
-    navigateViaWorkspace(OUTLET_CENTER_BUTTON);
+    if (openServerButton(OUTLET_CENTER_BUTTON)) {
+        return;
+    }
+    isInternalRedirect = true;
+    window.location.assign(OUTLET_CENTER_DIRECT_ROUTE);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1200);
 }
 
 function navigateBackToOutletForm() {
     const outletTarget = getOutletFormTarget();
     if (navigateToStoredTarget(outletTarget)) {
+        return;
+    }
+    const targetUrl = outletTarget?.url || "";
+    const match = targetUrl.match(/[?#&]id=(\d+)(?:&|$)/);
+    if (match && match[1]) {
+        isInternalRedirect = true;
+        window.location.assign(`/route_core/pda/outlet/${match[1]}`);
+        window.setTimeout(() => {
+            isInternalRedirect = false;
+        }, 1200);
         return;
     }
     navigateBackToOutletCenter();
@@ -982,3 +1010,4 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
