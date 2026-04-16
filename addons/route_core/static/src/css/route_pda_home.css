@@ -979,3 +979,182 @@
     }
 }
 
+
+
+.route_pda_outlet_title,
+.route_pda_sale_order_title,
+.route_pda_payment_title {
+    color: #0f766e;
+}
+
+.route_pda_mobile_only {
+    display: none;
+}
+
+.route_pda_outlet_sheet .o_notebook .nav-tabs {
+    margin-top: 10px;
+}
+
+.route_pda_outlet_sheet .o_notebook .nav-link {
+    font-weight: 700;
+}
+
+.o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped,
+.o_kanban_view.route_pda_sale_order_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.o_kanban_view.route_pda_payment_kanban .o_kanban_record,
+.o_kanban_view.route_pda_sale_order_kanban .o_kanban_record {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.route_pda_payment_card,
+.route_pda_sale_order_card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 14px;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.route_pda_payment_head,
+.route_pda_sale_order_head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.route_pda_payment_title,
+.route_pda_sale_order_title {
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.route_pda_payment_date,
+.route_pda_sale_order_date {
+    color: #6b7280;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.route_pda_payment_badges,
+.route_pda_sale_order_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.route_pda_payment_badge,
+.route_pda_sale_order_badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.route_pda_payment_mode_cash { background: #dcfce7; color: #166534; }
+.route_pda_payment_mode_bank { background: #dbeafe; color: #1d4ed8; }
+.route_pda_payment_mode_pos { background: #ede9fe; color: #6d28d9; }
+.route_pda_payment_mode_deferred { background: #fef3c7; color: #92400e; }
+.route_pda_payment_status_open { background: #dbeafe; color: #1d4ed8; }
+.route_pda_payment_status_due_today { background: #fde68a; color: #92400e; }
+.route_pda_payment_status_overdue { background: #fecaca; color: #b91c1c; }
+.route_pda_payment_status_closed { background: #dcfce7; color: #166534; }
+.route_pda_sale_order_invoice_invoiced { background: #dcfce7; color: #166534; }
+.route_pda_sale_order_invoice_to_invoice { background: #fde68a; color: #92400e; }
+.route_pda_sale_order_invoice_no { background: #e5e7eb; color: #374151; }
+.route_pda_sale_order_invoice_none { background: #e5e7eb; color: #374151; }
+
+.route_pda_payment_metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.route_pda_payment_metric {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.route_pda_payment_metric_single {
+    grid-column: 1 / -1;
+}
+
+.route_pda_payment_metric_label {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.route_pda_payment_metric_value {
+    color: #111827;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .route_pda_mobile_only {
+        display: block;
+        margin: 10px 0 4px 0;
+    }
+
+    .route_pda_outlet_sheet .oe_title h1 {
+        color: #0f766e;
+        font-size: 2rem;
+    }
+
+    .route_pda_outlet_sheet .o_group .o_field_widget {
+        width: 100%;
+    }
+
+    .route_pda_outlet_sheet .o_notebook .nav-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .route_pda_outlet_sheet .o_notebook .nav-link {
+        border-radius: 10px;
+        padding: 8px 10px;
+        text-align: center;
+        background: #f8fafc;
+    }
+
+    .o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped,
+    .o_kanban_view.route_pda_sale_order_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .route_pda_payment_card,
+    .route_pda_sale_order_card {
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    .route_pda_payment_metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
