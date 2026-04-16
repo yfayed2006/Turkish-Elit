@@ -32,6 +32,29 @@ class StockPicking(models.Model):
             outlets._sync_outlet_stock_balance_records()
         return True
 
+
+    def action_back_to_outlet_form(self):
+        self.ensure_one()
+        outlet = False
+        outlet_id = self.env.context.get("route_outlet_back_id") or self.env.context.get("default_outlet_id")
+        if outlet_id:
+            outlet = self.env["route.outlet"].browse(outlet_id).exists()
+        if not outlet and getattr(self, "route_direct_return_id", False) and self.route_direct_return_id.outlet_id:
+            outlet = self.route_direct_return_id.outlet_id
+        if not outlet and getattr(self, "route_visit_id", False) and self.route_visit_id.outlet_id:
+            outlet = self.route_visit_id.outlet_id
+        if outlet:
+            return {
+                "type": "ir.actions.act_url",
+                "url": f"/route_core/pda/outlet/{outlet.id}",
+                "target": "self",
+            }
+        return {
+            "type": "ir.actions.act_url",
+            "url": "/route_core/pda/outlet_center",
+            "target": "self",
+        }
+
     def button_validate(self):
         result = super().button_validate()
         self.filtered(lambda p: p.state == "done")._sync_related_consignment_outlet_balances()
