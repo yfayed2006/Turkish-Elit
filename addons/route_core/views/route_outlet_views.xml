@@ -193,7 +193,7 @@
 <field name="last_settlement_date" readonly="1"/>
 </group>
 <group>
-<field name="last_sale_order_id" readonly="1"/>
+<field name="last_sale_order_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 <field name="last_payment_id" readonly="1"/>
 <field name="total_shortage_count" readonly="1"/>
 </group>
@@ -227,8 +227,8 @@
 <group>
 <field name="partner_id" readonly="1"/>
 <field name="route_country_id" readonly="1"/>
-<field name="route_city_id" readonly="1"/>
-<field name="area_id" readonly="1"/>
+<field name="route_city_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
+<field name="area_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 <field name="phone" readonly="1"/>
 <field name="mobile" readonly="1"/>
 <field name="commission_rate" readonly="1"/>
@@ -247,7 +247,7 @@
 <group>
 <field name="last_visit_id" readonly="1"/>
 <field name="last_visit_date" readonly="1"/>
-<field name="in_progress_visit_id" readonly="1"/>
+<field name="in_progress_visit_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 </group>
 <group>
 <field name="next_route_plan_id" readonly="1"/>
@@ -577,7 +577,7 @@
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
-<field name="partner_id" string="Customer" readonly="1"/>
+<field name="partner_id" string="Customer" readonly="1" options="{'no_open': True, 'no_create': True}"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 </group>
@@ -809,7 +809,7 @@
 <field name="user_id" readonly="1"/>
 </group>
 <group>
-<field name="route_outlet_id" readonly="1" invisible="not route_outlet_id"/>
+<field name="route_outlet_id" readonly="1" invisible="not route_outlet_id" options="{'no_open': True, 'no_create': True}"/>
 <field name="invoice_status" readonly="1"/>
 <field name="route_payment_mode" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
 <field name="route_payment_due_date" readonly="1" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'"/>
@@ -845,10 +845,142 @@
 </form>
 </field>
 </record>
+<record id="view_stock_picking_outlet_pda_kanban" model="ir.ui.view">
+<field name="name">stock.picking.outlet.pda.kanban</field>
+<field name="model">stock.picking</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="scheduled_date"/>
+<field name="location_id"/>
+<field name="location_dest_id"/>
+<field name="origin"/>
+<field name="state"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="route_pda_payment_head">
+<div class="route_pda_payment_title">
+<field name="name"/>
+</div>
+<div class="route_pda_payment_date">
+<field name="scheduled_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges">
+<span class="route_pda_payment_badge">
+<t t-esc="record.state.value or ''"/>
+</span>
+<span class="route_pda_payment_badge" t-if="record.origin.value">
+<t t-esc="record.origin.value"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">From</span>
+<span class="route_pda_payment_metric_value">
+<field name="location_id"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">To</span>
+<span class="route_pda_payment_metric_value">
+<field name="location_dest_id"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_stock_picking_outlet_pda_list" model="ir.ui.view">
+<field name="name">stock.picking.outlet.pda.list</field>
+<field name="model">stock.picking</field>
+<field name="arch" type="xml">
+<list string="Outlet Transfers" create="0" edit="0" delete="0">
+<field name="name" string="Reference"/>
+<field name="location_id" string="From"/>
+<field name="location_dest_id" string="To"/>
+<field name="scheduled_date" string="Scheduled Date"/>
+<field name="origin" string="Source Document" optional="show"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'assigned'" decoration-warning="state in ('draft', 'confirmed', 'waiting')" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+</list>
+</field>
+</record>
+<record id="view_stock_picking_outlet_return_pda_search" model="ir.ui.view">
+<field name="name">stock.picking.outlet.return.pda.search</field>
+<field name="model">stock.picking</field>
+<field name="arch" type="xml">
+<search string="Return Orders">
+<field name="name" string="Reference"/>
+<field name="origin" string="Source Document"/>
+<field name="location_id" string="From"/>
+<field name="location_dest_id" string="To"/>
+<field name="scheduled_date" string="Scheduled Date"/>
+<field name="state" string="Status"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_open" string="Open" domain="[('state', 'in', ['draft', 'confirmed', 'waiting', 'assigned'])]"/>
+<separator/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_source" string="Source" context="{'group_by': 'origin'}"/>
+</search>
+</field>
+</record>
+<record id="view_stock_picking_outlet_transfer_pda_search" model="ir.ui.view">
+<field name="name">stock.picking.outlet.transfer.pda.search</field>
+<field name="model">stock.picking</field>
+<field name="arch" type="xml">
+<search string="Transfers">
+<field name="name" string="Reference"/>
+<field name="origin" string="Source Document"/>
+<field name="location_id" string="From"/>
+<field name="location_dest_id" string="To"/>
+<field name="scheduled_date" string="Scheduled Date"/>
+<field name="state" string="Status"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_open" string="Open" domain="[('state', 'in', ['draft', 'confirmed', 'waiting', 'assigned'])]"/>
+<separator/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_from" string="From" context="{'group_by': 'location_id'}"/>
+<filter name="group_by_to" string="To" context="{'group_by': 'location_dest_id'}"/>
+</search>
+</field>
+</record>
+<record id="view_stock_picking_form_outlet_back" model="ir.ui.view">
+<field name="name">stock.picking.form.outlet.back</field>
+<field name="model">stock.picking</field>
+<field name="inherit_id" ref="stock.view_picking_form"/>
+<field name="arch" type="xml">
+<xpath expr="//form/header" position="inside">
+<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not context.get('route_outlet_back_id')"/>
+</xpath>
+</field>
+</record>
 <record id="action_route_outlet" model="ir.actions.act_window">
 <field name="name">Outlets</field>
 <field name="res_model">route.outlet</field>
-<field name="view_mode">list,form</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="search_view_id" ref="view_route_outlet_pda_search"/>
+</record>
+<record id="action_route_outlet_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="view_route_outlet_pda_kanban"/>
+<field name="act_window_id" ref="action_route_outlet"/>
+</record>
+<record id="action_route_outlet_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="view_route_outlet_pda_list"/>
+<field name="act_window_id" ref="action_route_outlet"/>
+</record>
+<record id="action_route_outlet_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="view_route_outlet_pda_form"/>
+<field name="act_window_id" ref="action_route_outlet"/>
 </record>
 <menuitem id="menu_route_outlet" name="Outlets" parent="menu_route_visit_root" action="action_route_outlet" sequence="30"/>
 </odoo>
