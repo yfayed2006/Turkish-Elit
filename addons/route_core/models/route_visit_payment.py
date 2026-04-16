@@ -246,6 +246,17 @@ class RouteVisitPayment(models.Model):
             rec.settlement_document_ref = settlement_ref
             rec.payment_business_flow = business_flow
 
+    def action_back_to_outlet_form(self):
+        self.ensure_one()
+        outlet = self.outlet_id
+        if not outlet:
+            outlet_id = self.env.context.get("route_outlet_back_id") or self.env.context.get("default_outlet_id")
+            outlet = self.env["route.outlet"].browse(outlet_id).exists()
+        if outlet:
+            return outlet.action_open_pda_form()
+        home = self.env["route.pda.home"].create({})
+        return home.action_open_outlet_center_screen()
+
     def _get_target_model(self):
         self.ensure_one()
         if self.source_type == "direct_sale":
@@ -617,4 +628,5 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
+
 
