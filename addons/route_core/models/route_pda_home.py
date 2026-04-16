@@ -1163,7 +1163,15 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_outlet_stock_balance",
             name="Outlet Stock",
             domain=[("outlet_id.outlet_operation_mode", "=", "consignment"), ("qty", ">", 0)],
-            context={"search_default_filter_has_qty": 1, "create": 0, "edit": 0, "delete": 0},
+            context={
+                "search_default_filter_has_qty": 1,
+                "search_default_filter_zero_qty": 0,
+                "group_by": False,
+                "group_by_no_leaf": False,
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+            },
         )
         kanban_view = self.env.ref("route_core.view_outlet_stock_balance_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_outlet_stock_balance_list", raise_if_not_found=False)
