@@ -1,28 +1,46 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v15.workspace.hash",
-    workspaceUrl: "route_core.v15.workspace.url",
-    productCenterHash: "route_core.v15.product_center.hash",
-    productCenterUrl: "route_core.v15.product_center.url",
-    outletCenterHash: "route_core.v15.outlet_center.hash",
-    outletCenterUrl: "route_core.v15.outlet_center.url",
-    outletListHash: "route_core.v15.outlet_list.hash",
-    outletListUrl: "route_core.v15.outlet_list.url",
-    pendingButtonName: "route_core.v15.pending.button_name",
-    pendingButtonTs: "route_core.v15.pending.button_ts",
+    workspaceHash: "route_core.v16.workspace.hash",
+    workspaceUrl: "route_core.v16.workspace.url",
+    productCenterHash: "route_core.v16.product_center.hash",
+    productCenterUrl: "route_core.v16.product_center.url",
+    outletCenterHash: "route_core.v16.outlet_center.hash",
+    outletCenterUrl: "route_core.v16.outlet_center.url",
+    outletFormHash: "route_core.v16.outlet_form.hash",
+    outletFormUrl: "route_core.v16.outlet_form.url",
+    outletSubpageButton: "route_core.v16.outlet_subpage.button",
+    outletSubpageTs: "route_core.v16.outlet_subpage.ts",
+    pendingButtonName: "route_core.v16.pending.button_name",
+    pendingButtonTs: "route_core.v16.pending.button_ts",
+    outletWorkspaceActiveTs: "route_core.v16.outlet_workspace.active_ts",
+    browserGuardSignature: "route_core.v16.browser_guard_signature",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
-const NATIVE_NAVBAR_BACK_SELECTOR = ".o_navbar_breadcrumbs .o_back_button, .o_navbar .o_back_button";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
+const OUTLET_CENTER_BUTTON = "action_open_outlet_center_screen";
 const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
+const OUTLET_CENTER_DIRECT_ROUTE = "/route_core/pda/outlet_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
-const OUTLET_NAVIGATION_PAGE_KINDS = new Set(["outlet_center", "outlet_list", "outlet_detail"]);
-const MOBILE_GUARDED_PAGE_KINDS = new Set([...STOCK_PAGE_KINDS, ...OUTLET_NAVIGATION_PAGE_KINDS]);
+const OUTLET_WORKSPACE_ENTRY_BUTTONS = new Set([
+    "action_open_direct_sale_customers",
+    "action_open_consignment_customers",
+    "action_open_all_outlets",
+]);
+const OUTLET_FORM_ENTRY_BUTTONS = new Set([
+    "action_view_visits",
+    "action_view_payments",
+    "action_view_sale_orders",
+    "action_view_return_orders",
+    "action_view_transfers",
+    "action_view_stock_balances",
+]);
+const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
+const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -108,6 +126,28 @@ function getPageText() {
     return normalizeText(document.body ? document.body.innerText : "");
 }
 
+function getBreadcrumbText() {
+    const texts = [];
+    const selectors = [
+        ".o_control_panel .breadcrumb-item",
+        ".o_control_panel .o_breadcrumb li",
+        ".o_control_panel_breadcrumbs .breadcrumb-item",
+        ".breadcrumb-item",
+    ];
+    for (const selector of selectors) {
+        for (const element of document.querySelectorAll(selector)) {
+            if (!isElementVisible(element)) {
+                continue;
+            }
+            const text = normalizeText(element.textContent || "");
+            if (text && !texts.includes(text)) {
+                texts.push(text);
+            }
+        }
+    }
+    return texts.join(" / ");
+}
+
 function findActionTitle() {
     const root = getActiveRoot();
     const selectors = [
@@ -162,32 +202,203 @@ function isCollectionsCenterPage() {
     ]);
 }
 
-function isDailySummaryPage() {
-    return hasVisibleButton("action_back_from_collections_snapshot")
-        && hasVisibleButton("action_open_current_visit_statement_of_account");
-}
-
 function isOutletCenterPage() {
-    return hasVisibleButton("action_open_all_outlets")
-        && (hasVisibleButton("action_open_direct_sale_customers") || hasVisibleButton("action_open_consignment_customers"));
+    return hasAnyVisibleButton(Array.from(OUTLET_WORKSPACE_ENTRY_BUTTONS));
 }
 
-function isOutletListPage() {
+function isOutletWorkspaceActive() {
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.outletWorkspaceActiveTs) || "0", 10);
+    if (!timestamp) {
+        return false;
+    }
+    if (Date.now() - timestamp > OUTLET_WORKSPACE_FLAG_TTL) {
+        clearOutletWorkspaceActive();
+        return false;
+    }
+    return true;
+}
+
+function markOutletWorkspaceActive() {
+    sessionStorage.setItem(STORAGE_KEYS.outletWorkspaceActiveTs, String(Date.now()));
+}
+
+function clearOutletWorkspaceActive() {
+    sessionStorage.removeItem(STORAGE_KEYS.outletWorkspaceActiveTs);
+}
+
+function setRecentOutletSubpage(buttonName) {
+    if (!buttonName) {
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.outletSubpageButton, buttonName);
+    sessionStorage.setItem(STORAGE_KEYS.outletSubpageTs, String(Date.now()));
+}
+
+function clearRecentOutletSubpage() {
+    sessionStorage.removeItem(STORAGE_KEYS.outletSubpageButton);
+    sessionStorage.removeItem(STORAGE_KEYS.outletSubpageTs);
+}
+
+function getRecentOutletSubpage() {
+    const buttonName = sessionStorage.getItem(STORAGE_KEYS.outletSubpageButton) || "";
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.outletSubpageTs) || "0", 10);
+    if (!buttonName) {
+        return "";
+    }
+    if (timestamp && Date.now() - timestamp > OUTLET_SUBPAGE_FLAG_TTL) {
+        clearRecentOutletSubpage();
+        return "";
+    }
+    return buttonName;
+}
+
+function recentOutletSubpageIs(buttonNames) {
+    const buttonName = getRecentOutletSubpage();
+    return !!buttonName && buttonNames.includes(buttonName);
+}
+
+function isOutletWorkspacePage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
     const pageText = getPageText();
-    const titleLooksRight = ["outlets", "all outlets", "direct sale customers", "consignment customers"].includes(title);
-    const hasOutletCards = (rootText.includes("current due") || pageText.includes("current due"))
-        && (rootText.includes("last visit") || pageText.includes("last visit"))
-        && (rootText.includes("visits") || pageText.includes("visits"));
-    return titleLooksRight && hasOutletCards;
+    const breadcrumbText = getBreadcrumbText();
+    const listLike = (
+        ["outlets", "direct sale customers", "consignment customers", "all outlets"].includes(title)
+        || breadcrumbText.includes("outlets")
+        || pageText.includes("customer and outlets")
+    ) && (
+        rootText.includes("outlet code")
+        || rootText.includes("current due")
+        || rootText.includes("last visit")
+        || pageText.includes("outlet code")
+    );
+    return listLike;
 }
 
-function isOutletDetailPage() {
+function isOutletFormPage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletButtons = hasAnyVisibleButton(Array.from(OUTLET_FORM_ENTRY_BUTTONS));
+    const hasOutletTabs = rootText.includes("outlet summary") || rootText.includes("outlet details") || rootText.includes("financial snapshot") || rootText.includes("consignment stock snapshot");
+    const hasQuickSnapshot = rootText.includes("quick snapshot") && rootText.includes("current due") && rootText.includes("last visit date");
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    return !!(
+        (hasOutletButtons && hasQuickSnapshot)
+        || (hasOutletTrail && hasOutletTabs)
+        || (title && title !== "outlets" && title !== "customer and outlets" && hasQuickSnapshot)
+    );
+}
+
+function isOutletRelatedSubpage(pageNames, requiredHints = [], originButtons = []) {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
     const rootText = getRootText();
     const pageText = getPageText();
-    return (rootText.includes("back to customer and outlets") || pageText.includes("back to customer and outlets"))
-        && (rootText.includes("quick snapshot") || pageText.includes("quick snapshot"));
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    const hasRecentOrigin = originButtons.length ? recentOutletSubpageIs(originButtons) : false;
+    if (!pageNames.includes(title)) {
+        return false;
+    }
+    if (!(hasOutletTrail || hasRecentOrigin)) {
+        return false;
+    }
+    return requiredHints.length
+        ? requiredHints.some((hint) => rootText.includes(hint) || pageText.includes(hint))
+        : true;
+}
+
+function isOutletVisitsPage() {
+    return isOutletRelatedSubpage(["outlet visits", "visits", "my visits"], ["process", "visit", "outlet"], ["action_view_visits"]);
+}
+
+function isOutletPaymentsPage() {
+    return isOutletRelatedSubpage(["outlet payments", "payments", "all payments"], ["payment", "collected", "open due", "promise"], ["action_view_payments"]);
+}
+
+function isOutletSaleOrdersPage() {
+    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer", "order snapshot"], ["action_view_sale_orders"]);
+}
+
+function isOutletReturnsPage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_return_orders"]);
+    if (!hasOutletTrail) {
+        return false;
+    }
+    return (
+        title.includes("return")
+        || title.includes("returns")
+        || rootText.includes("return date")
+        || rootText.includes("create return pickings")
+        || pageText.includes("vehicle return")
+        || pageText.includes("damaged return")
+        || pageText.includes("near expiry return")
+    );
+}
+
+function isOutletTransfersPage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_transfers"]);
+    if (!hasOutletTrail) {
+        return false;
+    }
+    return (
+        title.includes("transfer")
+        || title.includes("transfers")
+        || pageText.includes("from")
+        || pageText.includes("to vehicle")
+        || pageText.includes("mus/stock")
+        || rootText.includes("from")
+    );
+}
+
+function isOutletStockFromOutletPage() {
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_stock_balances"]);
+    if (!hasOutletTrail) {
+        return false;
+    }
+    return (
+        title.includes("outlet stock")
+        || title.includes("stock balances")
+        || rootText.includes("outlet stock")
+        || rootText.includes("stock balances")
+        || pageText.includes("outlet stock")
+        || pageText.includes("stock balances")
+    );
+}
+
+function isDailySummaryPage() {
+    return hasVisibleButton("action_back_from_collections_snapshot")
+        && hasVisibleButton("action_open_current_visit_statement_of_account");
 }
 
 function findRouteSalesAppTile() {
@@ -219,6 +430,33 @@ function detectPageKind() {
     if (isProductCenterPage()) {
         return "product_center";
     }
+    if (isOutletCenterPage()) {
+        return "outlet_center";
+    }
+    if (isOutletWorkspacePage()) {
+        return "outlet_workspace";
+    }
+    if (isOutletFormPage()) {
+        return "outlet_form";
+    }
+    if (isOutletVisitsPage()) {
+        return "outlet_visits";
+    }
+    if (isOutletPaymentsPage()) {
+        return "outlet_payments";
+    }
+    if (isOutletSaleOrdersPage()) {
+        return "outlet_sales_orders";
+    }
+    if (isOutletReturnsPage()) {
+        return "outlet_returns";
+    }
+    if (isOutletTransfersPage()) {
+        return "outlet_transfers";
+    }
+    if (isOutletStockFromOutletPage()) {
+        return "outlet_stock_from_outlet";
+    }
     if (isSnapshotCenterPage()) {
         return "snapshot_center";
     }
@@ -228,45 +466,43 @@ function detectPageKind() {
     if (isDailySummaryPage()) {
         return "daily_summary";
     }
-    if (isOutletCenterPage()) {
-        return "outlet_center";
-    }
-    if (isOutletListPage()) {
-        return "outlet_list";
-    }
-    if (isOutletDetailPage()) {
-        return "outlet_detail";
-    }
 
     if (
-        title.includes("vehicle products stock")
+        title.includes("vehicle stock")
+        || title.includes("vehicle products stock")
+        || rootText.includes("vehicle stock")
         || rootText.includes("vehicle products stock")
+        || pageText.includes("vehicle stock")
         || pageText.includes("vehicle products stock")
     ) {
         return "vehicle_stock";
     }
 
     if (
-        title.includes("main warehouse products stock")
+        title.includes("warehouse stock")
+        || title.includes("main warehouse products stock")
+        || rootText.includes("warehouse stock")
         || rootText.includes("main warehouse products stock")
+        || pageText.includes("warehouse stock")
         || pageText.includes("main warehouse products stock")
     ) {
         return "warehouse_stock";
     }
 
     if (
-        title.includes("consignment outlets stock")
+        title.includes("outlet stock")
+        || title.includes("consignment outlets stock")
         || title.includes("outlet stock balances")
-        || rootText.includes("consignment outlets stock")
+        || rootText.includes("outlet stock")
         || rootText.includes("outlet stock balances")
-        || pageText.includes("consignment outlets stock")
+        || pageText.includes("outlet stock")
         || pageText.includes("outlet stock balances")
     ) {
         return "outlet_stock";
     }
 
     if (
-        (title === "products" || title === "all products" || rootText.includes("all products") || pageText.includes("all products"))
+        (title === "products" || title === "all products" || title === "product catalog" || rootText.includes("all products") || pageText.includes("all products"))
         && (rootText.includes("barcode") || rootText.includes("price") || pageText.includes("barcode") || pageText.includes("price"))
     ) {
         return "all_products";
@@ -295,23 +531,32 @@ function rememberPair(hashKey, urlKey) {
 }
 
 function rememberVisibleActionButtons() {
-    // Compatibility hook kept intentionally. Some deployed bundles may still
-    // call this helper during refreshNavigationUi.
+    // Compatibility hook kept intentionally.
 }
 
 function rememberNavigationTargets() {
     const pageKind = detectPageKind();
     if (pageKind === "workspace") {
+        clearOutletWorkspaceActive();
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
     }
     if (pageKind === "product_center") {
+        clearOutletWorkspaceActive();
         rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+    }
+    if (["outlet_center", "outlet_workspace", "outlet_form", "outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_returns", "outlet_transfers", "outlet_stock_from_outlet"].includes(pageKind)) {
+        markOutletWorkspaceActive();
     }
     if (pageKind === "outlet_center") {
         rememberPair(STORAGE_KEYS.outletCenterHash, STORAGE_KEYS.outletCenterUrl);
+        clearRecentOutletSubpage();
     }
-    if (pageKind === "outlet_list") {
-        rememberPair(STORAGE_KEYS.outletListHash, STORAGE_KEYS.outletListUrl);
+    if (pageKind === "outlet_form") {
+        rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
+    }
+    if (["workspace", "product_center", "snapshot_center", "collections_center", "daily_summary"].includes(pageKind) || isAppsHomePage()) {
+        clearOutletWorkspaceActive();
+        clearRecentOutletSubpage();
     }
 }
 
@@ -325,8 +570,18 @@ function rememberOriginFromClick(event) {
         "action_open_product_center_screen",
         "action_open_snapshot_center_screen",
         "action_open_visit_collections_center_screen",
+        "action_open_outlet_center_screen",
     ].includes(name)) {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+    if (OUTLET_WORKSPACE_ENTRY_BUTTONS.has(name)) {
+        markOutletWorkspaceActive();
+        clearRecentOutletSubpage();
+    }
+    if (OUTLET_FORM_ENTRY_BUTTONS.has(name)) {
+        rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
+        markOutletWorkspaceActive();
+        setRecentOutletSubpage(name);
     }
 }
 
@@ -351,11 +606,34 @@ function getOutletCenterTarget() {
     };
 }
 
-function getOutletListTarget() {
+function getOutletFormTarget() {
     return {
-        hash: sessionStorage.getItem(STORAGE_KEYS.outletListHash) || "",
-        url: sessionStorage.getItem(STORAGE_KEYS.outletListUrl) || "",
+        hash: sessionStorage.getItem(STORAGE_KEYS.outletFormHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.outletFormUrl) || "",
     };
+}
+
+function getProductCenterHref() {
+    return PRODUCT_CENTER_DIRECT_ROUTE;
+}
+
+function getOutletCenterHref() {
+    return OUTLET_CENTER_DIRECT_ROUTE;
+}
+
+function getOutletFormHref() {
+    const outletTarget = getOutletFormTarget();
+    const targetUrl = outletTarget?.url || "";
+    const match = targetUrl.match(/[?#&]id=(\d+)(?:&|$)/);
+    if (match && match[1]) {
+        return `/route_core/pda/outlet/${match[1]}`;
+    }
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const currentMatch = currentUrl.match(/[?#&]id=(\d+)(?:&|$)/);
+    if (currentMatch && currentMatch[1]) {
+        return `/route_core/pda/outlet/${currentMatch[1]}`;
+    }
+    return getOutletCenterHref();
 }
 
 function setPendingButton(buttonName) {
@@ -449,7 +727,7 @@ function openWorkspaceMenuHiddenFallback() {
     return true;
 }
 
-function navigateToWorkspaceTarget(target) {
+function navigateToStoredTarget(target) {
     const targetUrl = target?.url || "";
     const targetHash = target?.hash || "";
 
@@ -489,40 +767,8 @@ function navigateViaWorkspace(buttonName) {
         return;
     }
     const workspaceTarget = getWorkspaceTarget();
-    navigateToWorkspaceTarget(workspaceTarget);
+    navigateToStoredTarget(workspaceTarget);
 }
-
-function openAnyServerButton(buttonName) {
-    if (!buttonName) {
-        return false;
-    }
-    const button = findAnyButton(buttonName);
-    if (!button) {
-        return false;
-    }
-    isInternalRedirect = true;
-    dispatchClick(button);
-    window.setTimeout(() => {
-        isInternalRedirect = false;
-    }, 900);
-    return true;
-}
-
-function reloadWorkspaceThenOpenProductCenter() {
-    setPendingButton(PRODUCT_CENTER_BUTTON);
-    const workspaceTarget = getWorkspaceTarget();
-    const workspaceUrl = workspaceTarget?.url || "";
-    if (workspaceUrl) {
-        isInternalRedirect = true;
-        window.location.assign(workspaceUrl);
-        window.setTimeout(() => {
-            isInternalRedirect = false;
-        }, 1500);
-        return true;
-    }
-    return false;
-}
-
 
 function navigateDirectToProductCenter() {
     isInternalRedirect = true;
@@ -536,20 +782,21 @@ function navigateBackToProductCenter() {
     navigateDirectToProductCenter();
 }
 
-function navigateBackFromOutletPage(pageKind) {
-    if (pageKind === "outlet_detail") {
-        const listTarget = getOutletListTarget();
-        if (navigateToWorkspaceTarget(listTarget)) {
-            return true;
-        }
-        const centerTarget = getOutletCenterTarget();
-        return navigateToWorkspaceTarget(centerTarget);
-    }
-    if (pageKind === "outlet_list") {
-        const centerTarget = getOutletCenterTarget();
-        return navigateToWorkspaceTarget(centerTarget);
-    }
-    return false;
+function navigateBackToOutletCenter() {
+    isInternalRedirect = true;
+    window.location.assign(getOutletCenterHref());
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1200);
+}
+
+function navigateBackToOutletForm() {
+    const targetHref = getOutletFormHref();
+    isInternalRedirect = true;
+    window.location.assign(targetHref);
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 1200);
 }
 
 function maybeRunPendingFromAppsHome() {
@@ -594,14 +841,62 @@ function hasBackArrowIcon(element) {
     return !!element.querySelector(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
 }
 
+function getEventPoint(event) {
+    const touch = event?.touches?.[0] || event?.changedTouches?.[0] || null;
+    if (touch) {
+        return { x: touch.clientX, y: touch.clientY };
+    }
+    if (typeof event?.clientX === "number" && typeof event?.clientY === "number") {
+        return { x: event.clientX, y: event.clientY };
+    }
+    return { x: -1, y: -1 };
+}
+
+function isTopHeaderBackZone(event) {
+    const point = getEventPoint(event);
+    if (point.x < 44 || point.x > 320) {
+        return false;
+    }
+    if (point.y < 0 || point.y > 110) {
+        return false;
+    }
+    const target = event?.target;
+    if (!target || !(target instanceof Element)) {
+        return false;
+    }
+    if (target.closest(`#${INLINE_BACK_BUTTON_ID}, #${FLOATING_BACK_BUTTON_ID}, .route_pda_back_btn`)) {
+        return false;
+    }
+    if (target.closest(".o_menu_toggle, .o_menu_brand, .o_main_navbar .dropdown, .o_main_navbar .o_menu_sections, .o_main_navbar .o_navbar_apps_menu")) {
+        return false;
+    }
+    return true;
+}
+
+function getHeaderBackCandidate(element) {
+    if (!(element instanceof Element)) {
+        return null;
+    }
+    const selectors = [
+        "a",
+        "button",
+        "[role='button']",
+        ".breadcrumb-item",
+        ".o_breadcrumb li",
+        ".o_control_panel_breadcrumbs *",
+        ".o_cp_action_menus .breadcrumb-item",
+    ].join(", ");
+    return element.closest(selectors);
+}
+
 function looksLikeMobileHeaderBackControl(element) {
-    const clickable = element?.closest?.("a, button");
+    const clickable = getHeaderBackCandidate(element);
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
         return false;
     }
 
     const rect = clickable.getBoundingClientRect();
-    if (rect.top > 120 || rect.left > 220) {
+    if (rect.top > 120 || rect.left > 260) {
         return false;
     }
 
@@ -609,6 +904,7 @@ function looksLikeMobileHeaderBackControl(element) {
     const aria = normalizeText(clickable.getAttribute("aria-label") || clickable.getAttribute("title") || "");
     const classes = normalizeText(clickable.className || "");
     const parentClasses = normalizeText(clickable.parentElement?.className || "");
+    const title = normalizeText(findActionTitle());
 
     return (
         hasBackArrowIcon(clickable)
@@ -616,7 +912,18 @@ function looksLikeMobileHeaderBackControl(element) {
         || aria.includes("back")
         || classes.includes("back")
         || parentClasses.includes("back")
+        || (title && text && (text === title || text.includes(title) || title.includes(text)))
+        || text.includes("outlet")
+        || text.includes("customer")
+        || text.includes("product")
+        || text.includes("stock")
+        || text.includes("transfer")
+        || text.includes("return")
     );
+}
+
+function isLikelyTopHeaderBackGesture(event) {
+    return isTopHeaderBackZone(event) && looksLikeMobileHeaderBackControl(event.target);
 }
 
 function removeInlineBackButton() {
@@ -633,45 +940,28 @@ function removeFloatingBackButton() {
     }
 }
 
-function hideNativeNavbarBackButtons(pageKind) {
-    const shouldHide = STOCK_PAGE_KINDS.has(pageKind) || OUTLET_NAVIGATION_PAGE_KINDS.has(pageKind);
-    for (const button of document.querySelectorAll(NATIVE_NAVBAR_BACK_SELECTOR)) {
-        if (shouldHide) {
-            if (button.dataset.routeGuardHidden !== "1") {
-                button.dataset.routeGuardHidden = "1";
-                button.dataset.routeGuardPrevDisplay = button.style.display || "";
-            }
-            button.style.setProperty("display", "none", "important");
-            button.style.setProperty("pointer-events", "none", "important");
-            button.setAttribute("aria-hidden", "true");
-            button.setAttribute("tabindex", "-1");
-        } else if (button.dataset.routeGuardHidden === "1") {
-            button.style.display = button.dataset.routeGuardPrevDisplay || "";
-            button.style.pointerEvents = "";
-            button.removeAttribute("aria-hidden");
-            button.removeAttribute("tabindex");
-            delete button.dataset.routeGuardHidden;
-            delete button.dataset.routeGuardPrevDisplay;
-        }
-    }
+function hasVisiblePageBackButton() {
+    const buttons = Array.from(document.querySelectorAll(`.route_pda_back_btn, #${INLINE_BACK_BUTTON_ID}, #${FLOATING_BACK_BUTTON_ID}`));
+    return buttons.some((element) => isElementVisible(element));
 }
 
-function getCustomBackConfig(pageKind) {
-    if (STOCK_PAGE_KINDS.has(pageKind)) {
-        return {
-            label: "Back to Products and Stock",
-            title: "Back to Products and Stock",
-            handler: navigateBackToProductCenter,
-        };
+function syncNativeNavbarBreadcrumbVisibility(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    const shouldHide = !!(isSmallScreen() && backConfig && backConfig.interceptMobileHeader);
+    for (const element of document.querySelectorAll('.o_navbar_breadcrumbs')) {
+        if (!(element instanceof HTMLElement)) {
+            continue;
+        }
+        if (shouldHide) {
+            if (!Object.prototype.hasOwnProperty.call(element.dataset, 'routePrevDisplay')) {
+                element.dataset.routePrevDisplay = element.style.display || '';
+            }
+            element.style.display = 'none';
+        } else if (Object.prototype.hasOwnProperty.call(element.dataset, 'routePrevDisplay')) {
+            element.style.display = element.dataset.routePrevDisplay;
+            delete element.dataset.routePrevDisplay;
+        }
     }
-    if (pageKind === "outlet_list") {
-        return {
-            label: "Back to Customer and Outlets",
-            title: "Back to Customer and Outlets",
-            handler: () => navigateBackFromOutletPage("outlet_list"),
-        };
-    }
-    return null;
 }
 
 function getDesktopBackHost() {
@@ -679,15 +969,52 @@ function getDesktopBackHost() {
     return findVisibleInRoot(root, ".o_view_controller") || root || null;
 }
 
-function buildInlineBackButton(config) {
+function getBackConfig(pageKind) {
+    if (STOCK_PAGE_KINDS.has(pageKind)) {
+        return {
+            label: "Back to Products and Stock",
+            href: getProductCenterHref(),
+            onClick: navigateBackToProductCenter,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
+    if (["outlet_workspace", "outlet_form"].includes(pageKind)) {
+        return {
+            label: "Back to Customer and Outlets",
+            href: getOutletCenterHref(),
+            onClick: navigateBackToOutletCenter,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
+    if (["outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_returns", "outlet_transfers", "outlet_stock_from_outlet"].includes(pageKind)) {
+        return {
+            label: "Back to Outlet",
+            href: getOutletFormHref(),
+            onClick: navigateBackToOutletForm,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
+    return null;
+}
+
+function buildInlineBackButton(config, pageKind) {
     const wrapper = document.createElement("div");
     wrapper.id = INLINE_BACK_WRAPPER_ID;
     wrapper.style.display = "block";
     wrapper.style.margin = "12px 16px 8px 16px";
+    wrapper.dataset.backKind = pageKind;
 
-    const button = document.createElement("button");
+    const button = document.createElement(config.href ? "a" : "button");
     button.id = INLINE_BACK_BUTTON_ID;
-    button.type = "button";
+    if (config.href) {
+        button.href = config.href;
+        button.setAttribute("role", "button");
+    } else {
+        button.type = "button";
+    }
     button.className = "btn btn-link";
     button.style.padding = "0";
     button.style.border = "0";
@@ -700,20 +1027,20 @@ function buildInlineBackButton(config) {
     button.style.alignItems = "center";
     button.style.gap = "6px";
     button.style.color = "inherit";
-    button.title = config.title;
+    button.dataset.routeBackHref = config.href || "";
     button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
 
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        config.handler();
+        config.onClick();
     });
 
     wrapper.appendChild(button);
     return wrapper;
 }
 
-function buildFloatingBackButton(config) {
+function buildFloatingBackButton(config, pageKind) {
     const wrapper = document.createElement("div");
     wrapper.id = FLOATING_BACK_WRAPPER_ID;
     wrapper.style.position = "fixed";
@@ -721,10 +1048,16 @@ function buildFloatingBackButton(config) {
     wrapper.style.top = "110px";
     wrapper.style.zIndex = "9999";
     wrapper.style.pointerEvents = "auto";
+    wrapper.dataset.backKind = pageKind;
 
-    const button = document.createElement("button");
+    const button = document.createElement(config.href ? "a" : "button");
     button.id = FLOATING_BACK_BUTTON_ID;
-    button.type = "button";
+    if (config.href) {
+        button.href = config.href;
+        button.setAttribute("role", "button");
+    } else {
+        button.type = "button";
+    }
     button.className = "btn btn-light";
     button.style.border = "1px solid rgba(0,0,0,0.12)";
     button.style.borderRadius = "999px";
@@ -738,13 +1071,14 @@ function buildFloatingBackButton(config) {
     button.style.gap = "6px";
     button.style.color = "inherit";
     button.style.cursor = "pointer";
-    button.title = config.title;
+    button.title = config.label;
+    button.dataset.routeBackHref = config.href || "";
     button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
 
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        config.handler();
+        config.onClick();
     });
 
     wrapper.appendChild(button);
@@ -753,38 +1087,49 @@ function buildFloatingBackButton(config) {
 
 function ensureBackButton() {
     const pageKind = detectPageKind();
-    const config = getCustomBackConfig(pageKind);
-    if (!config) {
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig) {
         removeInlineBackButton();
         removeFloatingBackButton();
         return;
     }
 
-    if (isSmallScreen()) {
-        removeInlineBackButton();
-        removeFloatingBackButton();
-        document.body.appendChild(buildFloatingBackButton(config));
-        return;
-    }
-
-    removeFloatingBackButton();
     const host = getDesktopBackHost();
     if (!host) {
         return;
     }
+
+    if (isSmallScreen()) {
+        removeFloatingBackButton();
+        if (hasVisiblePageBackButton()) {
+            removeInlineBackButton();
+            return;
+        }
+        let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
+        if (!wrapper || wrapper.dataset.backKind !== pageKind) {
+            removeInlineBackButton();
+            wrapper = buildInlineBackButton(backConfig, pageKind);
+            host.prepend(wrapper);
+            return;
+        }
+        if (wrapper.parentElement !== host) {
+            wrapper.remove();
+            host.prepend(wrapper);
+        }
+        return;
+    }
+
+    removeFloatingBackButton();
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
-    if (!wrapper) {
-        wrapper = buildInlineBackButton(config);
+    if (!wrapper || wrapper.dataset.backKind !== pageKind) {
+        removeInlineBackButton();
+        wrapper = buildInlineBackButton(backConfig, pageKind);
         host.prepend(wrapper);
+        return;
     }
     if (wrapper.parentElement !== host) {
         wrapper.remove();
         host.prepend(wrapper);
-    }
-    const button = wrapper.querySelector(`#${INLINE_BACK_BUTTON_ID}`);
-    if (button) {
-        button.title = config.title;
-        button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
     }
 }
 
@@ -793,17 +1138,17 @@ function handleBrowserBack() {
         return;
     }
     const pageKind = detectPageKind();
-    if (STOCK_PAGE_KINDS.has(pageKind)) {
-        window.setTimeout(() => {
-            navigateBackToProductCenter();
-        }, 0);
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig || !backConfig.interceptBrowser) {
         return;
     }
-    if (OUTLET_NAVIGATION_PAGE_KINDS.has(pageKind)) {
+    isInternalRedirect = true;
+    window.setTimeout(() => {
+        backConfig.onClick();
         window.setTimeout(() => {
-            navigateBackFromOutletPage(pageKind);
-        }, 0);
-    }
+            isInternalRedirect = false;
+        }, 900);
+    }, 0);
 }
 
 function interceptMobileHeaderBack(event) {
@@ -811,10 +1156,11 @@ function interceptMobileHeaderBack(event) {
         return;
     }
     const pageKind = detectPageKind();
-    if (!MOBILE_GUARDED_PAGE_KINDS.has(pageKind)) {
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig || !backConfig.interceptMobileHeader) {
         return;
     }
-    if (!looksLikeMobileHeaderBackControl(event.target)) {
+    if (!isLikelyTopHeaderBackGesture(event)) {
         return;
     }
 
@@ -823,26 +1169,73 @@ function interceptMobileHeaderBack(event) {
     if (typeof event.stopImmediatePropagation === "function") {
         event.stopImmediatePropagation();
     }
+    backConfig.onClick();
+}
 
-    if (event.type !== "click") {
+function interceptBreadcrumbBack(event) {
+    if (isInternalRedirect) {
+        return;
+    }
+    const pageKind = detectPageKind();
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig) {
+        return;
+    }
+    const breadcrumb = event.target.closest(
+        ".o_control_panel .breadcrumb-item a, .o_control_panel .breadcrumb-item, .o_control_panel .o_breadcrumb li a, .o_control_panel .o_breadcrumb li, .o_control_panel_breadcrumbs .breadcrumb-item a, .o_control_panel_breadcrumbs .breadcrumb-item, .breadcrumb-item a, .breadcrumb-item, .o_navbar_breadcrumbs ._o_back_button, .o_navbar_breadcrumbs ._o_back_button *, .o_navbar_breadcrumbs .o_breadcrumb, .o_navbar_breadcrumbs .o_breadcrumb *, .o_navbar_breadcrumbs .min-w-0, .o_navbar_breadcrumbs .min-w-0 *"
+    );
+    if (!breadcrumb || !isElementVisible(breadcrumb)) {
+        return;
+    }
+    const rect = breadcrumb.getBoundingClientRect();
+    if (rect.top > 160) {
+        return;
+    }
+    const text = normalizeText(breadcrumb.textContent || "");
+    const title = normalizeText(findActionTitle());
+    const inTopLeftZone = rect.left < (isSmallScreen() ? 280 : 420);
+    if (!inTopLeftZone) {
+        return;
+    }
+    if (!(text && (text !== title || rect.left < 120 || text.includes("outlet") || text.includes("customer") || text.includes("products") || text.includes("stock") || text.includes("transfer") || text.includes("return")))) {
         return;
     }
 
-    if (STOCK_PAGE_KINDS.has(pageKind)) {
-        navigateViaWorkspace(PRODUCT_CENTER_BUTTON);
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+    }
+    backConfig.onClick();
+}
+
+function ensureBrowserGuard(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig || !backConfig.interceptBrowser) {
+        sessionStorage.removeItem(STORAGE_KEYS.browserGuardSignature);
         return;
     }
-    navigateBackFromOutletPage(pageKind);
+    const signature = `${pageKind}|${window.location.pathname}|${window.location.search}|${window.location.hash}`;
+    if (sessionStorage.getItem(STORAGE_KEYS.browserGuardSignature) === signature) {
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.browserGuardSignature, signature);
+    try {
+        window.history.pushState({ ...(window.history.state || {}), routeWorkspaceGuard: signature }, "", window.location.href);
+    } catch (_error) {
+        // ignore pushState edge cases
+    }
 }
 
 function refreshNavigationUi() {
-    const pageKind = detectPageKind();
     rememberVisibleActionButtons();
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
-    hideNativeNavbarBackButtons(pageKind);
+    const pageKind = detectPageKind();
+    syncNativeNavbarBreadcrumbVisibility(pageKind);
     ensureBackButton();
+    ensureBrowserGuard(pageKind);
 }
 
 function bootRouteWorkspaceNavigationGuard() {
@@ -866,11 +1259,10 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
-    document.addEventListener("touchstart", interceptMobileHeaderBack, true);
-    document.addEventListener("mousedown", interceptMobileHeaderBack, true);
     document.addEventListener("pointerdown", interceptMobileHeaderBack, true);
-    document.addEventListener("pointerup", interceptMobileHeaderBack, true);
+    document.addEventListener("touchstart", interceptMobileHeaderBack, { capture: true, passive: false });
     document.addEventListener("click", interceptMobileHeaderBack, true);
+    document.addEventListener("click", interceptBreadcrumbBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
