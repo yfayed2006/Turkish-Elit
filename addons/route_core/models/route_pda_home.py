@@ -86,6 +86,10 @@ class RoutePdaHome(models.TransientModel):
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
     deferred_payment_count = fields.Integer(string="Deferred / Promise Entries Today", compute="_compute_dashboard")
+    confirmed_collection_count = fields.Integer(string="Confirmed Collections", compute="_compute_dashboard")
+    collection_followup_count = fields.Integer(string="Collections Needing Follow-up", compute="_compute_dashboard")
+    open_promise_entry_count = fields.Integer(string="Open Promise Entries", compute="_compute_dashboard")
+    overdue_promise_entry_count = fields.Integer(string="Overdue Promise Entries", compute="_compute_dashboard")
 
     direct_sale_cash_today_amount = fields.Monetary(string="Direct Sale Cash Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_bank_today_amount = fields.Monetary(string="Direct Sale Bank Transfer Today", currency_field="currency_id", compute="_compute_dashboard")
@@ -606,6 +610,15 @@ class RoutePdaHome(models.TransientModel):
             direct_sales_due_today_promises = direct_sales_all_confirmed_payments.filtered(
                 lambda p: rec._get_payment_snapshot_promise_status(p) == "due_today"
             )
+            open_promise_entries = all_confirmed_payments.filtered(
+                lambda p: rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+            )
+            overdue_promise_entries = open_promise_entries.filtered(
+                lambda p: rec._get_payment_snapshot_promise_status(p) == "overdue"
+            )
+            followup_collections = all_confirmed_payments.filtered(
+                lambda p: (p.remaining_due_amount or 0.0) > 0.0 or rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+            )
 
             visit_collection_targets = set(visit_collections.mapped("visit_id").ids)
             direct_stop_targets = set((direct_stop_payments.mapped("settlement_visit_id") or direct_stop_payments.mapped("visit_id")).ids)
@@ -615,6 +628,10 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_stop_payment_count = len(direct_stop_targets)
             rec.direct_sale_order_payment_count = len(direct_sale_order_targets)
             rec.direct_sale_payment_count = len(direct_stop_targets) + len(direct_sale_order_targets)
+            rec.confirmed_collection_count = len(all_confirmed_payments)
+            rec.collection_followup_count = len(followup_collections)
+            rec.open_promise_entry_count = len(open_promise_entries)
+            rec.overdue_promise_entry_count = len(overdue_promise_entries)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
             vehicle_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(vehicle.stock_location_id))] if vehicle and getattr(vehicle, "stock_location_id", False) else [("id", "=", 0)]
             warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
