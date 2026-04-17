@@ -21,6 +21,8 @@ const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
+const MANAGED_NAVBAR_BACK_BUTTON_ID = "route-workspace-managed-navbar-back-btn";
+const MANAGED_NAVBAR_TITLE_ATTR = "data-route-workspace-managed-title";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
 const OUTLET_CENTER_BUTTON = "action_open_outlet_center_screen";
 const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
@@ -747,19 +749,6 @@ function navigateViaWorkspace(buttonName) {
     navigateToStoredTarget(workspaceTarget);
 }
 
-function navigateBackToWorkspace() {
-    const workspaceTarget = getWorkspaceTarget();
-    if (navigateToStoredTarget(workspaceTarget)) {
-        return;
-    }
-    if (openWorkspaceMenuFallback()) {
-        return;
-    }
-    if (isSmallScreen() && openWorkspaceMenuHiddenFallback()) {
-        return;
-    }
-}
-
 function navigateDirectToProductCenter() {
     isInternalRedirect = true;
     window.location.assign(PRODUCT_CENTER_DIRECT_ROUTE);
@@ -860,7 +849,8 @@ function getEventPoint(event) {
 
 function isTopHeaderBackZone(event) {
     const point = getEventPoint(event);
-    if (point.x < 44 || point.x > 320) {
+    const maxX = Math.min(window.innerWidth * 0.78, 420);
+    if (point.x < 20 || point.x > maxX) {
         return false;
     }
     if (point.y < 0 || point.y > 110) {
@@ -889,6 +879,9 @@ function getHeaderBackCandidate(element) {
         "[role='button']",
         ".breadcrumb-item",
         ".o_breadcrumb li",
+        ".o_last_breadcrumb_item",
+        ".o_navbar_breadcrumbs .o_last_breadcrumb_item",
+        ".o_navbar_breadcrumbs .o_breadcrumb",
         ".o_control_panel_breadcrumbs *",
         ".o_cp_action_menus .breadcrumb-item",
     ].join(", ");
@@ -899,9 +892,6 @@ function looksLikeMobileHeaderBackControl(element) {
     const clickable = getHeaderBackCandidate(element);
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
         return false;
-    }
-    if (clickable.classList && clickable.classList.contains("o_back_button")) {
-        return true;
     }
 
     const rect = clickable.getBoundingClientRect();
@@ -959,14 +949,6 @@ function getBackConfig(pageKind) {
         return {
             label: "Back to Products and Stock",
             onClick: navigateBackToProductCenter,
-            interceptBrowser: true,
-            interceptMobileHeader: true,
-        };
-    }
-    if (pageKind === "outlet_center") {
-        return {
-            label: "Back to Route Workspace",
-            onClick: navigateBackToWorkspace,
             interceptBrowser: true,
             interceptMobileHeader: true,
         };
@@ -1063,89 +1045,26 @@ function buildFloatingBackButton(config, pageKind) {
     return wrapper;
 }
 
-function getInlineBackHost() {
-    const root = getActiveRoot();
-    const selectors = [
-        ".o_form_view .o_form_sheet_bg .o_form_sheet",
-        ".o_form_view .o_form_sheet",
-        ".o_form_view .o_form_sheet_bg",
-        ".o_kanban_view .o_kanban_renderer",
-        ".o_list_view .o_list_renderer",
-        ".o_content",
-    ];
-    for (const selector of selectors) {
-        const element = findVisibleInRoot(root, selector) || findVisibleAnywhere(selector);
-        if (element) {
-            return element;
-        }
-    }
-    return root || document.body;
-}
-
-function hasVisibleManagedBackButton() {
-    const selectors = [
-        ".route_pda_back_btn",
-        `#${INLINE_BACK_BUTTON_ID}`,
-        `#${FLOATING_BACK_BUTTON_ID}`,
-    ].join(", ");
-    return Array.from(document.querySelectorAll(selectors)).some((element) => {
-        if (!isElementVisible(element)) {
-            return false;
-        }
-        return !(element.classList && element.classList.contains("o_back_button"));
-    });
-}
-
-function setNavbarBackVisibility(hidden) {
-    for (const button of document.querySelectorAll(".o_main_navbar .o_back_button")) {
-        if (!(button instanceof HTMLElement)) {
-            continue;
-        }
-        if (hidden) {
-            if (!button.dataset.routeCoreOriginalDisplay) {
-                button.dataset.routeCoreOriginalDisplay = button.style.display || "";
-            }
-            button.style.display = "none";
-            button.style.pointerEvents = "none";
-            button.setAttribute("aria-hidden", "true");
-            button.tabIndex = -1;
-        } else if (button.dataset.routeCoreOriginalDisplay !== undefined) {
-            button.style.display = button.dataset.routeCoreOriginalDisplay;
-            button.style.pointerEvents = "";
-            button.removeAttribute("aria-hidden");
-            button.removeAttribute("tabindex");
-            delete button.dataset.routeCoreOriginalDisplay;
-        }
-    }
-}
-
-function syncNativeNavbarBack(pageKind) {
-    const backConfig = getBackConfig(pageKind);
-    setNavbarBackVisibility(!!(backConfig && isSmallScreen()));
-}
-
 function ensureBackButton() {
     const pageKind = detectPageKind();
     const backConfig = getBackConfig(pageKind);
-    syncNativeNavbarBack(pageKind);
     if (!backConfig) {
         removeInlineBackButton();
         removeFloatingBackButton();
         return;
     }
 
-    removeFloatingBackButton();
+    if (isSmallScreen()) {
+        removeInlineBackButton();
+        removeFloatingBackButton();
+        return;
+    }
 
-    const host = isSmallScreen() ? getInlineBackHost() : getDesktopBackHost();
+    removeFloatingBackButton();
+    const host = getDesktopBackHost();
     if (!host) {
         return;
     }
-
-    if (isSmallScreen() && hasVisibleManagedBackButton()) {
-        removeInlineBackButton();
-        return;
-    }
-
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper || wrapper.dataset.backKind !== pageKind) {
         removeInlineBackButton();
@@ -1177,6 +1096,85 @@ function handleBrowserBack() {
     }, 0);
 }
 
+function getNavbarBackButton() {
+    return findVisibleAnywhere(`#${MANAGED_NAVBAR_BACK_BUTTON_ID}`) || findVisibleAnywhere(".o_navbar_breadcrumbs .o_back_button");
+}
+
+function getNavbarTitleElement() {
+    return findVisibleAnywhere(".o_navbar_breadcrumbs .o_last_breadcrumb_item") || findVisibleAnywhere(".o_navbar_breadcrumbs .o_breadcrumb .d-flex.gap-1.text-truncate");
+}
+
+function shouldManageNavbarBack(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    return !!(isSmallScreen() && backConfig && backConfig.interceptMobileHeader);
+}
+
+function runManagedBack(event, backConfig) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+        }
+    }
+    backConfig.onClick();
+}
+
+function syncManagedNavbarBack(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    const navbarBackButton = getNavbarBackButton();
+    const titleElement = getNavbarTitleElement();
+
+    if (titleElement instanceof Element) {
+        if (shouldManageNavbarBack(pageKind)) {
+            titleElement.setAttribute(MANAGED_NAVBAR_TITLE_ATTR, "1");
+        } else {
+            titleElement.removeAttribute(MANAGED_NAVBAR_TITLE_ATTR);
+        }
+    }
+
+    if (!(navbarBackButton instanceof Element)) {
+        return;
+    }
+
+    if (!shouldManageNavbarBack(pageKind)) {
+        if (navbarBackButton.id === MANAGED_NAVBAR_BACK_BUTTON_ID) {
+            const fallback = navbarBackButton.cloneNode(true);
+            fallback.id = MANAGED_NAVBAR_BACK_BUTTON_ID;
+            fallback.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === "function") {
+                    event.stopImmediatePropagation();
+                }
+                window.history.back();
+            }, true);
+            navbarBackButton.replaceWith(fallback);
+        }
+        return;
+    }
+
+    let managedButton = navbarBackButton;
+    if (managedButton.id !== MANAGED_NAVBAR_BACK_BUTTON_ID) {
+        const clone = managedButton.cloneNode(true);
+        clone.id = MANAGED_NAVBAR_BACK_BUTTON_ID;
+        managedButton.replaceWith(clone);
+        managedButton = clone;
+    }
+
+    if (managedButton.dataset.routeWorkspaceBackKind === pageKind) {
+        return;
+    }
+
+    const fresh = managedButton.cloneNode(true);
+    fresh.id = MANAGED_NAVBAR_BACK_BUTTON_ID;
+    fresh.dataset.routeWorkspaceBackKind = pageKind;
+    fresh.setAttribute("title", backConfig.label);
+    fresh.setAttribute("aria-label", backConfig.label);
+    fresh.addEventListener("click", (event) => runManagedBack(event, backConfig), true);
+    managedButton.replaceWith(fresh);
+}
+
 function interceptMobileHeaderBack(event) {
     if (isInternalRedirect || !isSmallScreen()) {
         return;
@@ -1186,16 +1184,16 @@ function interceptMobileHeaderBack(event) {
     if (!backConfig || !backConfig.interceptMobileHeader) {
         return;
     }
-    if (!isLikelyTopHeaderBackGesture(event)) {
+
+    const target = event?.target instanceof Element ? event.target : null;
+    const inManagedTitle = !!target?.closest(`[${MANAGED_NAVBAR_TITLE_ATTR}="1"]`);
+    const inNavbarBack = !!target?.closest(`#${MANAGED_NAVBAR_BACK_BUTTON_ID}, .o_navbar_breadcrumbs .o_back_button`);
+
+    if (!(inManagedTitle || inNavbarBack || isLikelyTopHeaderBackGesture(event))) {
         return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-    if (typeof event.stopImmediatePropagation === "function") {
-        event.stopImmediatePropagation();
-    }
-    backConfig.onClick();
+    runManagedBack(event, backConfig);
 }
 
 function interceptBreadcrumbBack(event) {
@@ -1258,8 +1256,10 @@ function refreshNavigationUi() {
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
+    const pageKind = detectPageKind();
+    syncManagedNavbarBack(pageKind);
     ensureBackButton();
-    ensureBrowserGuard(detectPageKind());
+    ensureBrowserGuard(pageKind);
 }
 
 function bootRouteWorkspaceNavigationGuard() {
