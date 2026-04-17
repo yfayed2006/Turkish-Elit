@@ -76,3 +76,4 @@
     "installable": True,
     "application": True,
 }
+
