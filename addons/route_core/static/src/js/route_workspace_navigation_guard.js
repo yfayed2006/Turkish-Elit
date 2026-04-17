@@ -1,20 +1,20 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v15.workspace.hash",
-    workspaceUrl: "route_core.v15.workspace.url",
-    productCenterHash: "route_core.v15.product_center.hash",
-    productCenterUrl: "route_core.v15.product_center.url",
-    outletCenterHash: "route_core.v15.outlet_center.hash",
-    outletCenterUrl: "route_core.v15.outlet_center.url",
-    outletFormHash: "route_core.v15.outlet_form.hash",
-    outletFormUrl: "route_core.v15.outlet_form.url",
-    outletSubpageButton: "route_core.v15.outlet_subpage.button",
-    outletSubpageTs: "route_core.v15.outlet_subpage.ts",
-    pendingButtonName: "route_core.v15.pending.button_name",
-    pendingButtonTs: "route_core.v15.pending.button_ts",
-    outletWorkspaceActiveTs: "route_core.v15.outlet_workspace.active_ts",
-    browserGuardSignature: "route_core.v15.browser_guard_signature",
+    workspaceHash: "route_core.v16.workspace.hash",
+    workspaceUrl: "route_core.v16.workspace.url",
+    productCenterHash: "route_core.v16.product_center.hash",
+    productCenterUrl: "route_core.v16.product_center.url",
+    outletCenterHash: "route_core.v16.outlet_center.hash",
+    outletCenterUrl: "route_core.v16.outlet_center.url",
+    outletFormHash: "route_core.v16.outlet_form.hash",
+    outletFormUrl: "route_core.v16.outlet_form.url",
+    outletSubpageButton: "route_core.v16.outlet_subpage.button",
+    outletSubpageTs: "route_core.v16.outlet_subpage.ts",
+    pendingButtonName: "route_core.v16.pending.button_name",
+    pendingButtonTs: "route_core.v16.pending.button_ts",
+    outletWorkspaceActiveTs: "route_core.v16.outlet_workspace.active_ts",
+    browserGuardSignature: "route_core.v16.browser_guard_signature",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -41,15 +41,6 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
 const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
-const MOBILE_SUPPRESSED_BREADCRUMB_PAGE_KINDS = new Set([
-    "outlet_form",
-    "outlet_visits",
-    "outlet_payments",
-    "outlet_sales_orders",
-    "outlet_returns",
-    "outlet_transfers",
-    "outlet_stock_from_outlet",
-]);
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -843,14 +834,62 @@ function hasBackArrowIcon(element) {
     return !!element.querySelector(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
 }
 
+function getEventPoint(event) {
+    const touch = event?.touches?.[0] || event?.changedTouches?.[0] || null;
+    if (touch) {
+        return { x: touch.clientX, y: touch.clientY };
+    }
+    if (typeof event?.clientX === "number" && typeof event?.clientY === "number") {
+        return { x: event.clientX, y: event.clientY };
+    }
+    return { x: -1, y: -1 };
+}
+
+function isTopHeaderBackZone(event) {
+    const point = getEventPoint(event);
+    if (point.x < 44 || point.x > 320) {
+        return false;
+    }
+    if (point.y < 0 || point.y > 110) {
+        return false;
+    }
+    const target = event?.target;
+    if (!target || !(target instanceof Element)) {
+        return false;
+    }
+    if (target.closest(`#${INLINE_BACK_BUTTON_ID}, #${FLOATING_BACK_BUTTON_ID}, .route_pda_back_btn`)) {
+        return false;
+    }
+    if (target.closest(".o_menu_toggle, .o_menu_brand, .o_main_navbar .dropdown, .o_main_navbar .o_menu_sections, .o_main_navbar .o_navbar_apps_menu")) {
+        return false;
+    }
+    return true;
+}
+
+function getHeaderBackCandidate(element) {
+    if (!(element instanceof Element)) {
+        return null;
+    }
+    const selectors = [
+        "a",
+        "button",
+        "[role='button']",
+        ".breadcrumb-item",
+        ".o_breadcrumb li",
+        ".o_control_panel_breadcrumbs *",
+        ".o_cp_action_menus .breadcrumb-item",
+    ].join(", ");
+    return element.closest(selectors);
+}
+
 function looksLikeMobileHeaderBackControl(element) {
-    const clickable = element?.closest?.("a, button");
+    const clickable = getHeaderBackCandidate(element);
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
         return false;
     }
 
     const rect = clickable.getBoundingClientRect();
-    if (rect.top > 120 || rect.left > 220) {
+    if (rect.top > 120 || rect.left > 260) {
         return false;
     }
 
@@ -858,6 +897,7 @@ function looksLikeMobileHeaderBackControl(element) {
     const aria = normalizeText(clickable.getAttribute("aria-label") || clickable.getAttribute("title") || "");
     const classes = normalizeText(clickable.className || "");
     const parentClasses = normalizeText(clickable.parentElement?.className || "");
+    const title = normalizeText(findActionTitle());
 
     return (
         hasBackArrowIcon(clickable)
@@ -865,7 +905,18 @@ function looksLikeMobileHeaderBackControl(element) {
         || aria.includes("back")
         || classes.includes("back")
         || parentClasses.includes("back")
+        || (title && text && (text === title || text.includes(title) || title.includes(text)))
+        || text.includes("outlet")
+        || text.includes("customer")
+        || text.includes("product")
+        || text.includes("stock")
+        || text.includes("transfer")
+        || text.includes("return")
     );
+}
+
+function isLikelyTopHeaderBackGesture(event) {
+    return isTopHeaderBackZone(event) && looksLikeMobileHeaderBackControl(event.target);
 }
 
 function removeInlineBackButton() {
@@ -988,59 +1039,6 @@ function buildFloatingBackButton(config, pageKind) {
     return wrapper;
 }
 
-function getSuppressedMobileBreadcrumbElements() {
-    const selectors = [
-        ".o_control_panel .o_back_button",
-        ".o_control_panel .o_breadcrumb",
-        ".o_control_panel .breadcrumb",
-        ".o_control_panel .o_control_panel_breadcrumbs",
-        ".o_control_panel .breadcrumb-item",
-        ".o_control_panel .o_breadcrumb_full",
-        ".o_control_panel .o_last_breadcrumb_item",
-    ];
-    const elements = [];
-    for (const selector of selectors) {
-        for (const element of document.querySelectorAll(selector)) {
-            if (!elements.includes(element)) {
-                elements.push(element);
-            }
-        }
-    }
-    return elements;
-}
-
-function restoreSuppressedMobileBreadcrumbs() {
-    for (const element of document.querySelectorAll('[data-route-mobile-breadcrumb-hidden="1"]')) {
-        if (element.dataset.routeMobileBreadcrumbDisplay !== undefined) {
-            element.style.display = element.dataset.routeMobileBreadcrumbDisplay;
-        } else {
-            element.style.removeProperty("display");
-        }
-        if (element.dataset.routeMobileBreadcrumbVisibility !== undefined) {
-            element.style.visibility = element.dataset.routeMobileBreadcrumbVisibility;
-        } else {
-            element.style.removeProperty("visibility");
-        }
-        element.removeAttribute("data-route-mobile-breadcrumb-hidden");
-        delete element.dataset.routeMobileBreadcrumbDisplay;
-        delete element.dataset.routeMobileBreadcrumbVisibility;
-    }
-}
-
-function ensureMobileBreadcrumbSuppressed(pageKind) {
-    restoreSuppressedMobileBreadcrumbs();
-    if (!isSmallScreen() || !MOBILE_SUPPRESSED_BREADCRUMB_PAGE_KINDS.has(pageKind)) {
-        return;
-    }
-    for (const element of getSuppressedMobileBreadcrumbElements()) {
-        element.dataset.routeMobileBreadcrumbDisplay = element.style.display || "";
-        element.dataset.routeMobileBreadcrumbVisibility = element.style.visibility || "";
-        element.setAttribute("data-route-mobile-breadcrumb-hidden", "1");
-        element.style.display = "none";
-        element.style.visibility = "hidden";
-    }
-}
-
 function ensureBackButton() {
     const pageKind = detectPageKind();
     const backConfig = getBackConfig(pageKind);
@@ -1101,7 +1099,7 @@ function interceptMobileHeaderBack(event) {
     if (!backConfig || !backConfig.interceptMobileHeader) {
         return;
     }
-    if (!looksLikeMobileHeaderBackControl(event.target)) {
+    if (!isLikelyTopHeaderBackGesture(event)) {
         return;
     }
 
@@ -1173,10 +1171,8 @@ function refreshNavigationUi() {
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
-    const pageKind = detectPageKind();
     ensureBackButton();
-    ensureMobileBreadcrumbSuppressed(pageKind);
-    ensureBrowserGuard(pageKind);
+    ensureBrowserGuard(detectPageKind());
 }
 
 function bootRouteWorkspaceNavigationGuard() {
@@ -1200,6 +1196,8 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
+    document.addEventListener("pointerdown", interceptMobileHeaderBack, true);
+    document.addEventListener("touchstart", interceptMobileHeaderBack, { capture: true, passive: false });
     document.addEventListener("click", interceptMobileHeaderBack, true);
     document.addEventListener("click", interceptBreadcrumbBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
@@ -1215,5 +1213,6 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
 
