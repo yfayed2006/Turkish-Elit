@@ -6,6 +6,7 @@ class RouteVisitPayment(models.Model):
     _name = "route.visit.payment"
     _description = "Route Visit Payment"
     _order = "payment_date desc, id desc"
+    _rec_name = "source_document_ref"
 
     source_type = fields.Selection(
         [
@@ -197,6 +198,17 @@ class RouteVisitPayment(models.Model):
         compute="_compute_visit_remaining_due",
         store=False,
     )
+
+    def name_get(self):
+        result = []
+        flow_labels = dict(self._fields["payment_business_flow"].selection)
+        for rec in self:
+            title = rec.source_document_ref or rec.settlement_document_ref or rec.reference or _("Payment")
+            flow = flow_labels.get(rec.payment_business_flow)
+            if flow and title != flow:
+                title = f"{title} - {flow}"
+            result.append((rec.id, title))
+        return result
 
     @api.depends(
         "source_type",
