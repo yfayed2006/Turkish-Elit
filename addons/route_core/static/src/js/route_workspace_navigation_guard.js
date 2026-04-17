@@ -1,20 +1,20 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v15.workspace.hash",
-    workspaceUrl: "route_core.v15.workspace.url",
-    productCenterHash: "route_core.v15.product_center.hash",
-    productCenterUrl: "route_core.v15.product_center.url",
-    outletCenterHash: "route_core.v15.outlet_center.hash",
-    outletCenterUrl: "route_core.v15.outlet_center.url",
-    outletFormHash: "route_core.v15.outlet_form.hash",
-    outletFormUrl: "route_core.v15.outlet_form.url",
-    outletSubpageButton: "route_core.v15.outlet_subpage.button",
-    outletSubpageTs: "route_core.v15.outlet_subpage.ts",
-    pendingButtonName: "route_core.v15.pending.button_name",
-    pendingButtonTs: "route_core.v15.pending.button_ts",
-    outletWorkspaceActiveTs: "route_core.v15.outlet_workspace.active_ts",
-    browserGuardSignature: "route_core.v15.browser_guard_signature",
+    workspaceHash: "route_core.v16.workspace.hash",
+    workspaceUrl: "route_core.v16.workspace.url",
+    productCenterHash: "route_core.v16.product_center.hash",
+    productCenterUrl: "route_core.v16.product_center.url",
+    outletCenterHash: "route_core.v16.outlet_center.hash",
+    outletCenterUrl: "route_core.v16.outlet_center.url",
+    outletFormHash: "route_core.v16.outlet_form.hash",
+    outletFormUrl: "route_core.v16.outlet_form.url",
+    outletSubpageButton: "route_core.v16.outlet_subpage.button",
+    outletSubpageTs: "route_core.v16.outlet_subpage.ts",
+    pendingButtonName: "route_core.v16.pending.button_name",
+    pendingButtonTs: "route_core.v16.pending.button_ts",
+    outletWorkspaceActiveTs: "route_core.v16.outlet_workspace.active_ts",
+    browserGuardSignature: "route_core.v16.browser_guard_signature",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -859,6 +859,72 @@ function looksLikeMobileHeaderBackControl(element) {
     );
 }
 
+function findTopLeftNavigationCandidate(element) {
+    if (!element?.closest) {
+        return null;
+    }
+    const selectors = [
+        ".o_control_panel .breadcrumb-item a",
+        ".o_control_panel .breadcrumb-item",
+        ".o_control_panel .o_breadcrumb li a",
+        ".o_control_panel .o_breadcrumb li",
+        ".o_control_panel_breadcrumbs .breadcrumb-item a",
+        ".o_control_panel_breadcrumbs .breadcrumb-item",
+        ".breadcrumb-item a",
+        ".breadcrumb-item",
+        ".o_control_panel a",
+        ".o_control_panel button",
+        "a",
+        "button",
+    ];
+    for (const selector of selectors) {
+        const match = element.closest(selector);
+        if (match && isElementVisible(match)) {
+            return match;
+        }
+    }
+    return null;
+}
+
+function isOutletFormMobileTopNavClick(element, pageKind) {
+    if (pageKind !== "outlet_form" || !isSmallScreen()) {
+        return false;
+    }
+    const candidate = findTopLeftNavigationCandidate(element);
+    if (!candidate || candidate.id === FLOATING_BACK_BUTTON_ID || candidate.id === INLINE_BACK_BUTTON_ID) {
+        return false;
+    }
+
+    const rect = candidate.getBoundingClientRect();
+    if (rect.top > 150 || rect.left > 320) {
+        return false;
+    }
+
+    const text = normalizeText(candidate.textContent || "");
+    const title = normalizeText(findActionTitle());
+    if (!text) {
+        return false;
+    }
+
+    const titleLooksLikeOutletName = !!title && title !== "outlets" && title !== "customer and outlets";
+    const matchesOutletTrail = (
+        text === "outlets"
+        || text === "customer and outlets"
+        || text.includes("outlet")
+        || text.includes("customer")
+        || (titleLooksLikeOutletName && text === title)
+    );
+    if (!matchesOutletTrail) {
+        return false;
+    }
+
+    const classes = normalizeText(`${candidate.className || ""} ${candidate.parentElement?.className || ""}`);
+    if (classes.includes("menu") || classes.includes("user") || classes.includes("dropdown") || classes.includes("search")) {
+        return false;
+    }
+    return true;
+}
+
 function removeInlineBackButton() {
     const wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (wrapper) {
@@ -1039,7 +1105,7 @@ function interceptMobileHeaderBack(event) {
     if (!backConfig || !backConfig.interceptMobileHeader) {
         return;
     }
-    if (!looksLikeMobileHeaderBackControl(event.target)) {
+    if (!(looksLikeMobileHeaderBackControl(event.target) || isOutletFormMobileTopNavClick(event.target, pageKind))) {
         return;
     }
 
@@ -1060,9 +1126,7 @@ function interceptBreadcrumbBack(event) {
     if (!backConfig) {
         return;
     }
-    const breadcrumb = event.target.closest(
-        ".o_control_panel .breadcrumb-item a, .o_control_panel .breadcrumb-item, .o_control_panel .o_breadcrumb li a, .o_control_panel .o_breadcrumb li, .o_control_panel_breadcrumbs .breadcrumb-item a, .o_control_panel_breadcrumbs .breadcrumb-item, .breadcrumb-item a, .breadcrumb-item"
-    );
+    const breadcrumb = findTopLeftNavigationCandidate(event.target);
     if (!breadcrumb || !isElementVisible(breadcrumb)) {
         return;
     }
@@ -1072,11 +1136,23 @@ function interceptBreadcrumbBack(event) {
     }
     const text = normalizeText(breadcrumb.textContent || "");
     const title = normalizeText(findActionTitle());
-    const inTopLeftZone = rect.left < (isSmallScreen() ? 280 : 420);
+    const inTopLeftZone = rect.left < (isSmallScreen() ? 320 : 420);
     if (!inTopLeftZone) {
         return;
     }
-    if (!(text && (text !== title || rect.left < 120 || text.includes("outlet") || text.includes("customer") || text.includes("products") || text.includes("stock") || text.includes("transfer") || text.includes("return")))) {
+
+    const shouldForceOutletMobileBack = isOutletFormMobileTopNavClick(event.target, pageKind);
+    const looksLikeRegularBreadcrumbBack = text && (
+        text !== title
+        || rect.left < 120
+        || text.includes("outlet")
+        || text.includes("customer")
+        || text.includes("products")
+        || text.includes("stock")
+        || text.includes("transfer")
+        || text.includes("return")
+    );
+    if (!(shouldForceOutletMobileBack || looksLikeRegularBreadcrumbBack)) {
         return;
     }
 
@@ -1151,4 +1227,5 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
