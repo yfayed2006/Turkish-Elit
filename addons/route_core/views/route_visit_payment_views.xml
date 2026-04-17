@@ -1,5 +1,5 @@
 <odoo>
-<!--          Admin / all payments          -->
+<!--           Admin / all payments           -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,76 @@
 </list>
 </field>
 </record>
-<!--          Tailored visit list          -->
+<!--           Tailored visit list           -->
+<record id="view_route_visit_collection_kanban" model="ir.ui.view">
+<field name="name">route.visit.collection.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<field name="payment_business_flow"/>
+<field name="source_document_ref"/>
+<field name="settlement_document_ref"/>
+<field name="outlet_id"/>
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="amount"/>
+<field name="remaining_due_amount"/>
+<field name="promise_status"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="route_pda_payment_head">
+<div>
+<div class="route_pda_payment_title">
+<t t-esc="record.source_document_ref.value or 'Collection'"/>
+</div>
+<div class="route_pda_payment_date" t-if="record.outlet_id.raw_value">
+<field name="outlet_id"/>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges">
+<span class="route_pda_payment_badge route_pda_payment_badge_collection">
+<t t-esc="record.payment_business_flow.value or ''"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
+<t t-esc="record.payment_mode.value or ''"/>
+</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_collection">
+<t t-esc="record.collection_type.value or ''"/>
+</span>
+<span t-if="record.promise_status.raw_value" t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
+<t t-esc="record.promise_status.value or ''"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Open Due</span>
+<span class="route_pda_payment_metric_value">
+<field name="remaining_due_amount"/>
+</span>
+</div>
+</div>
+<div class="route_pda_payment_date" t-if="record.settlement_document_ref.raw_value">
+Settlement:
+<t t-esc="record.settlement_document_ref.value"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -42,15 +111,15 @@
 <field name="payment_date"/>
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Collection"/>
-<field name="source_document_ref" string="Source Document" optional="show"/>
-<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount" string="Collected"/>
 <field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
+<field name="state" string="Status" optional="hide"/>
 </list>
 </field>
 </record>
-<!--          Tailored direct sale list          -->
+<!--           Tailored direct sale list           -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -90,31 +159,31 @@
 <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
 </header>
 <sheet>
-<group string="Payment Financial Status" col="2">
+<group string="Collection Snapshot" col="2">
 <group>
 <field name="source_type" invisible="1"/>
 <field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'"/>
 <field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'"/>
-<field name="source_document_ref" readonly="1" string="Source Document"/>
+<field name="source_document_ref" readonly="1" string="Document"/>
 <field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
-<field name="area_id" readonly="1"/>
-<field name="salesperson_id" readonly="1"/>
-<field name="payment_business_flow" readonly="1"/>
-<field name="settlement_document_ref" readonly="1" invisible="not settlement_document_ref"/>
-<field name="visit_remaining_due" readonly="1" string="Current Open Due"/>
-</group>
-<group>
 <field name="payment_date" readonly="state != 'draft'"/>
 <field name="payment_mode" readonly="state != 'draft'"/>
+</group>
+<group>
+<field name="payment_business_flow" readonly="1"/>
+<field name="settlement_document_ref" readonly="1" invisible="not settlement_document_ref"/>
+<field name="amount" readonly="state != 'draft'" string="Collected" invisible="collection_type in ('defer_date', 'next_visit')"/>
+<field name="remaining_due_amount" readonly="1" string="Open Due"/>
+<field name="visit_remaining_due" readonly="1" string="Current Open Due"/>
 </group>
 </group>
 <group string="Collection Decision" col="2">
 <group>
 <field name="collection_type" readonly="state != 'draft'"/>
-<field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
 <field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
 <field name="promise_date" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
-<field name="promise_amount" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
+<field name="promise_amount" readonly="state != 'draft'" invisible="collection_type == 'full' or state != 'draft'"/>
+<field name="effective_promise_amount" string="Promise Amount" readonly="1" invisible="collection_type == 'full' or state == 'draft'"/>
 <field name="promise_status" readonly="1" invisible="collection_type == 'full'"/>
 </group>
 <group>
@@ -126,11 +195,20 @@
 <group>
 <field name="note" readonly="state != 'draft'"/>
 </group>
+<group string="Reference Details" col="2">
+<group>
+<field name="area_id" readonly="1"/>
+<field name="salesperson_id" readonly="1"/>
+</group>
+<group>
+<field name="state" readonly="1"/>
+</group>
+</group>
 </sheet>
 </form>
 </field>
 </record>
-<!--          Admin / all payments search          -->
+<!--           Admin / all payments search           -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -192,7 +270,7 @@
 </search>
 </field>
 </record>
-<!--          Visit collections search          -->
+<!--           Visit collections search           -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -245,7 +323,7 @@
 </search>
 </field>
 </record>
-<!--          Direct sale payments search          -->
+<!--           Direct sale payments search           -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -305,11 +383,11 @@
 <record id="action_route_visit_collection" model="ir.actions.act_window">
 <field name="name">My Visit Collections</field>
 <field name="res_model">route.visit.payment</field>
-<field name="view_mode">list,form</field>
-<field name="view_id" ref="view_route_visit_collection_list"/>
+<field name="view_mode">kanban,list,form</field>
 <field name="search_view_id" ref="view_route_visit_collection_search"/>
 <field name="domain">[('salesperson_id', '=', uid), ('state', '=', 'confirmed')]</field>
 <field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1}</field>
+<field name="views" eval="[(ref('route_core.view_route_visit_collection_kanban'), 'kanban'), (ref('route_core.view_route_visit_collection_list'), 'list'), (ref('route_core.view_route_visit_payment_form'), 'form')]"/>
 </record>
 <record id="action_route_direct_sale_payment" model="ir.actions.act_window">
 <field name="name">My Direct Sale Payments</field>
