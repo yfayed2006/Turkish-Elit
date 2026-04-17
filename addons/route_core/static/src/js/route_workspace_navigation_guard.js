@@ -1,27 +1,26 @@
 /** @odoo-module **/
 
 const STORAGE_KEYS = {
-    workspaceHash: "route_core.v16.workspace.hash",
-    workspaceUrl: "route_core.v16.workspace.url",
-    productCenterHash: "route_core.v16.product_center.hash",
-    productCenterUrl: "route_core.v16.product_center.url",
-    outletCenterHash: "route_core.v16.outlet_center.hash",
-    outletCenterUrl: "route_core.v16.outlet_center.url",
-    outletFormHash: "route_core.v16.outlet_form.hash",
-    outletFormUrl: "route_core.v16.outlet_form.url",
-    outletSubpageButton: "route_core.v16.outlet_subpage.button",
-    outletSubpageTs: "route_core.v16.outlet_subpage.ts",
-    pendingButtonName: "route_core.v16.pending.button_name",
-    pendingButtonTs: "route_core.v16.pending.button_ts",
-    outletWorkspaceActiveTs: "route_core.v16.outlet_workspace.active_ts",
-    browserGuardSignature: "route_core.v16.browser_guard_signature",
+    workspaceHash: "route_core.v15.workspace.hash",
+    workspaceUrl: "route_core.v15.workspace.url",
+    productCenterHash: "route_core.v15.product_center.hash",
+    productCenterUrl: "route_core.v15.product_center.url",
+    outletCenterHash: "route_core.v15.outlet_center.hash",
+    outletCenterUrl: "route_core.v15.outlet_center.url",
+    outletFormHash: "route_core.v15.outlet_form.hash",
+    outletFormUrl: "route_core.v15.outlet_form.url",
+    outletSubpageButton: "route_core.v15.outlet_subpage.button",
+    outletSubpageTs: "route_core.v15.outlet_subpage.ts",
+    pendingButtonName: "route_core.v15.pending.button_name",
+    pendingButtonTs: "route_core.v15.pending.button_ts",
+    outletWorkspaceActiveTs: "route_core.v15.outlet_workspace.active_ts",
+    browserGuardSignature: "route_core.v15.browser_guard_signature",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
-const MOBILE_HEADER_BACK_OVERLAY_ID = "route-workspace-mobile-header-back-overlay";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
 const OUTLET_CENTER_BUTTON = "action_open_outlet_center_screen";
 const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
@@ -41,7 +40,16 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_stock_balances",
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
-const OUTLET_SUBPAGE_FLAG_TTL = 30 * 60 * 1000;
+const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
+const MOBILE_SUPPRESSED_BREADCRUMB_PAGE_KINDS = new Set([
+    "outlet_form",
+    "outlet_visits",
+    "outlet_payments",
+    "outlet_sales_orders",
+    "outlet_returns",
+    "outlet_transfers",
+    "outlet_stock_from_outlet",
+]);
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -835,75 +843,6 @@ function hasBackArrowIcon(element) {
     return !!element.querySelector(".fa-arrow-left, .fa-chevron-left, .oi-arrow-left, .oi-chevron-left");
 }
 
-function getEventPoint(event) {
-    if (!event) {
-        return { x: 0, y: 0 };
-    }
-    const touch = event.touches?.[0] || event.changedTouches?.[0];
-    if (touch) {
-        return { x: touch.clientX || 0, y: touch.clientY || 0 };
-    }
-    return { x: event.clientX || 0, y: event.clientY || 0 };
-}
-
-function removeMobileHeaderBackOverlay() {
-    const overlay = document.getElementById(MOBILE_HEADER_BACK_OVERLAY_ID);
-    if (overlay) {
-        overlay.remove();
-    }
-}
-
-function buildMobileHeaderBackOverlay(config, pageKind) {
-    const overlay = document.createElement("button");
-    overlay.id = MOBILE_HEADER_BACK_OVERLAY_ID;
-    overlay.type = "button";
-    overlay.dataset.backKind = pageKind;
-    overlay.setAttribute("aria-label", config.label);
-    overlay.title = config.label;
-    overlay.style.position = "fixed";
-    overlay.style.left = "52px";
-    overlay.style.top = "46px";
-    overlay.style.width = "min(72vw, 300px)";
-    overlay.style.height = "52px";
-    overlay.style.zIndex = "9998";
-    overlay.style.border = "0";
-    overlay.style.padding = "0";
-    overlay.style.margin = "0";
-    overlay.style.background = "transparent";
-    overlay.style.opacity = "0";
-    overlay.style.cursor = "pointer";
-    overlay.style.pointerEvents = "auto";
-    overlay.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        config.onClick();
-    });
-    return overlay;
-}
-
-function looksLikeMobileHeaderZoneEvent(event) {
-    if (!isSmallScreen()) {
-        return false;
-    }
-    const point = getEventPoint(event);
-    if (!point.x && !point.y) {
-        return false;
-    }
-    const inHeaderStrip = point.y >= 36 && point.y <= 122;
-    const inBackTitleStrip = point.x >= 46 && point.x <= Math.min(window.innerWidth - 120, 360);
-    if (!(inHeaderStrip && inBackTitleStrip)) {
-        return false;
-    }
-    const target = event.target instanceof Element ? event.target : null;
-    if (!target) {
-        return true;
-    }
-    if (target.closest(`#${INLINE_BACK_WRAPPER_ID}, #${FLOATING_BACK_WRAPPER_ID}, #${MOBILE_HEADER_BACK_OVERLAY_ID}`)) {
-        return false;
-    }
-    return true;
-}
-
 function looksLikeMobileHeaderBackControl(element) {
     const clickable = element?.closest?.("a, button");
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
@@ -1049,30 +988,74 @@ function buildFloatingBackButton(config, pageKind) {
     return wrapper;
 }
 
+function getSuppressedMobileBreadcrumbElements() {
+    const selectors = [
+        ".o_control_panel .o_back_button",
+        ".o_control_panel .o_breadcrumb",
+        ".o_control_panel .breadcrumb",
+        ".o_control_panel .o_control_panel_breadcrumbs",
+        ".o_control_panel .breadcrumb-item",
+        ".o_control_panel .o_breadcrumb_full",
+        ".o_control_panel .o_last_breadcrumb_item",
+    ];
+    const elements = [];
+    for (const selector of selectors) {
+        for (const element of document.querySelectorAll(selector)) {
+            if (!elements.includes(element)) {
+                elements.push(element);
+            }
+        }
+    }
+    return elements;
+}
+
+function restoreSuppressedMobileBreadcrumbs() {
+    for (const element of document.querySelectorAll('[data-route-mobile-breadcrumb-hidden="1"]')) {
+        if (element.dataset.routeMobileBreadcrumbDisplay !== undefined) {
+            element.style.display = element.dataset.routeMobileBreadcrumbDisplay;
+        } else {
+            element.style.removeProperty("display");
+        }
+        if (element.dataset.routeMobileBreadcrumbVisibility !== undefined) {
+            element.style.visibility = element.dataset.routeMobileBreadcrumbVisibility;
+        } else {
+            element.style.removeProperty("visibility");
+        }
+        element.removeAttribute("data-route-mobile-breadcrumb-hidden");
+        delete element.dataset.routeMobileBreadcrumbDisplay;
+        delete element.dataset.routeMobileBreadcrumbVisibility;
+    }
+}
+
+function ensureMobileBreadcrumbSuppressed(pageKind) {
+    restoreSuppressedMobileBreadcrumbs();
+    if (!isSmallScreen() || !MOBILE_SUPPRESSED_BREADCRUMB_PAGE_KINDS.has(pageKind)) {
+        return;
+    }
+    for (const element of getSuppressedMobileBreadcrumbElements()) {
+        element.dataset.routeMobileBreadcrumbDisplay = element.style.display || "";
+        element.dataset.routeMobileBreadcrumbVisibility = element.style.visibility || "";
+        element.setAttribute("data-route-mobile-breadcrumb-hidden", "1");
+        element.style.display = "none";
+        element.style.visibility = "hidden";
+    }
+}
+
 function ensureBackButton() {
     const pageKind = detectPageKind();
     const backConfig = getBackConfig(pageKind);
     if (!backConfig) {
         removeInlineBackButton();
         removeFloatingBackButton();
-        removeMobileHeaderBackOverlay();
         return;
     }
 
     if (isSmallScreen()) {
         removeInlineBackButton();
         removeFloatingBackButton();
-        let overlay = document.getElementById(MOBILE_HEADER_BACK_OVERLAY_ID);
-        if (!overlay || overlay.dataset.backKind !== pageKind) {
-            removeMobileHeaderBackOverlay();
-            overlay = buildMobileHeaderBackOverlay(backConfig, pageKind);
-            document.body.appendChild(overlay);
-            return;
-        }
         return;
     }
 
-    removeMobileHeaderBackOverlay();
     removeFloatingBackButton();
     const host = getDesktopBackHost();
     if (!host) {
@@ -1118,9 +1101,7 @@ function interceptMobileHeaderBack(event) {
     if (!backConfig || !backConfig.interceptMobileHeader) {
         return;
     }
-    const targetLooksLikeBack = looksLikeMobileHeaderBackControl(event.target);
-    const targetInBackZone = looksLikeMobileHeaderZoneEvent(event);
-    if (!(targetLooksLikeBack || targetInBackZone)) {
+    if (!looksLikeMobileHeaderBackControl(event.target)) {
         return;
     }
 
@@ -1192,8 +1173,10 @@ function refreshNavigationUi() {
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
+    const pageKind = detectPageKind();
     ensureBackButton();
-    ensureBrowserGuard(detectPageKind());
+    ensureMobileBreadcrumbSuppressed(pageKind);
+    ensureBrowserGuard(pageKind);
 }
 
 function bootRouteWorkspaceNavigationGuard() {
@@ -1217,11 +1200,7 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
-    document.addEventListener("pointerdown", interceptMobileHeaderBack, { capture: true, passive: false });
-    document.addEventListener("touchstart", interceptMobileHeaderBack, { capture: true, passive: false });
     document.addEventListener("click", interceptMobileHeaderBack, true);
-    document.addEventListener("pointerdown", interceptBreadcrumbBack, { capture: true, passive: false });
-    document.addEventListener("touchstart", interceptBreadcrumbBack, { capture: true, passive: false });
     document.addEventListener("click", interceptBreadcrumbBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
@@ -1236,4 +1215,5 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
