@@ -747,6 +747,19 @@ function navigateViaWorkspace(buttonName) {
     navigateToStoredTarget(workspaceTarget);
 }
 
+function navigateBackToWorkspace() {
+    const workspaceTarget = getWorkspaceTarget();
+    if (navigateToStoredTarget(workspaceTarget)) {
+        return;
+    }
+    if (openWorkspaceMenuFallback()) {
+        return;
+    }
+    if (isSmallScreen() && openWorkspaceMenuHiddenFallback()) {
+        return;
+    }
+}
+
 function navigateDirectToProductCenter() {
     isInternalRedirect = true;
     window.location.assign(PRODUCT_CENTER_DIRECT_ROUTE);
@@ -887,6 +900,9 @@ function looksLikeMobileHeaderBackControl(element) {
     if (!clickable || clickable.id === FLOATING_BACK_BUTTON_ID || !isElementVisible(clickable)) {
         return false;
     }
+    if (clickable.classList && clickable.classList.contains("o_back_button")) {
+        return true;
+    }
 
     const rect = clickable.getBoundingClientRect();
     if (rect.top > 120 || rect.left > 260) {
@@ -943,6 +959,14 @@ function getBackConfig(pageKind) {
         return {
             label: "Back to Products and Stock",
             onClick: navigateBackToProductCenter,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
+    if (pageKind === "outlet_center") {
+        return {
+            label: "Back to Route Workspace",
+            onClick: navigateBackToWorkspace,
             interceptBrowser: true,
             interceptMobileHeader: true,
         };
@@ -1039,26 +1063,89 @@ function buildFloatingBackButton(config, pageKind) {
     return wrapper;
 }
 
+function getInlineBackHost() {
+    const root = getActiveRoot();
+    const selectors = [
+        ".o_form_view .o_form_sheet_bg .o_form_sheet",
+        ".o_form_view .o_form_sheet",
+        ".o_form_view .o_form_sheet_bg",
+        ".o_kanban_view .o_kanban_renderer",
+        ".o_list_view .o_list_renderer",
+        ".o_content",
+    ];
+    for (const selector of selectors) {
+        const element = findVisibleInRoot(root, selector) || findVisibleAnywhere(selector);
+        if (element) {
+            return element;
+        }
+    }
+    return root || document.body;
+}
+
+function hasVisibleManagedBackButton() {
+    const selectors = [
+        ".route_pda_back_btn",
+        `#${INLINE_BACK_BUTTON_ID}`,
+        `#${FLOATING_BACK_BUTTON_ID}`,
+    ].join(", ");
+    return Array.from(document.querySelectorAll(selectors)).some((element) => {
+        if (!isElementVisible(element)) {
+            return false;
+        }
+        return !(element.classList && element.classList.contains("o_back_button"));
+    });
+}
+
+function setNavbarBackVisibility(hidden) {
+    for (const button of document.querySelectorAll(".o_main_navbar .o_back_button")) {
+        if (!(button instanceof HTMLElement)) {
+            continue;
+        }
+        if (hidden) {
+            if (!button.dataset.routeCoreOriginalDisplay) {
+                button.dataset.routeCoreOriginalDisplay = button.style.display || "";
+            }
+            button.style.display = "none";
+            button.style.pointerEvents = "none";
+            button.setAttribute("aria-hidden", "true");
+            button.tabIndex = -1;
+        } else if (button.dataset.routeCoreOriginalDisplay !== undefined) {
+            button.style.display = button.dataset.routeCoreOriginalDisplay;
+            button.style.pointerEvents = "";
+            button.removeAttribute("aria-hidden");
+            button.removeAttribute("tabindex");
+            delete button.dataset.routeCoreOriginalDisplay;
+        }
+    }
+}
+
+function syncNativeNavbarBack(pageKind) {
+    const backConfig = getBackConfig(pageKind);
+    setNavbarBackVisibility(!!(backConfig && isSmallScreen()));
+}
+
 function ensureBackButton() {
     const pageKind = detectPageKind();
     const backConfig = getBackConfig(pageKind);
+    syncNativeNavbarBack(pageKind);
     if (!backConfig) {
         removeInlineBackButton();
         removeFloatingBackButton();
         return;
     }
 
-    if (isSmallScreen()) {
-        removeInlineBackButton();
-        removeFloatingBackButton();
-        return;
-    }
-
     removeFloatingBackButton();
-    const host = getDesktopBackHost();
+
+    const host = isSmallScreen() ? getInlineBackHost() : getDesktopBackHost();
     if (!host) {
         return;
     }
+
+    if (isSmallScreen() && hasVisibleManagedBackButton()) {
+        removeInlineBackButton();
+        return;
+    }
+
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper || wrapper.dataset.backKind !== pageKind) {
         removeInlineBackButton();
@@ -1213,6 +1300,7 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
 
 
