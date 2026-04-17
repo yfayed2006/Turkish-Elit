@@ -17,6 +17,7 @@ const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
 const INLINE_BACK_BUTTON_ID = "route-workspace-inline-back-btn";
 const FLOATING_BACK_WRAPPER_ID = "route-workspace-floating-back-wrapper";
 const FLOATING_BACK_BUTTON_ID = "route-workspace-floating-back-btn";
+const NATIVE_NAVBAR_BACK_SELECTOR = ".o_navbar_breadcrumbs .o_back_button, .o_navbar .o_back_button";
 const PRODUCT_CENTER_BUTTON = "action_open_product_center_screen";
 const PRODUCT_CENTER_DIRECT_ROUTE = "/route_core/pda/product_center";
 const STOCK_PAGE_KINDS = new Set(["vehicle_stock", "warehouse_stock", "outlet_stock", "all_products"]);
@@ -632,12 +633,53 @@ function removeFloatingBackButton() {
     }
 }
 
+function hideNativeNavbarBackButtons(pageKind) {
+    const shouldHide = STOCK_PAGE_KINDS.has(pageKind) || OUTLET_NAVIGATION_PAGE_KINDS.has(pageKind);
+    for (const button of document.querySelectorAll(NATIVE_NAVBAR_BACK_SELECTOR)) {
+        if (shouldHide) {
+            if (button.dataset.routeGuardHidden !== "1") {
+                button.dataset.routeGuardHidden = "1";
+                button.dataset.routeGuardPrevDisplay = button.style.display || "";
+            }
+            button.style.setProperty("display", "none", "important");
+            button.style.setProperty("pointer-events", "none", "important");
+            button.setAttribute("aria-hidden", "true");
+            button.setAttribute("tabindex", "-1");
+        } else if (button.dataset.routeGuardHidden === "1") {
+            button.style.display = button.dataset.routeGuardPrevDisplay || "";
+            button.style.pointerEvents = "";
+            button.removeAttribute("aria-hidden");
+            button.removeAttribute("tabindex");
+            delete button.dataset.routeGuardHidden;
+            delete button.dataset.routeGuardPrevDisplay;
+        }
+    }
+}
+
+function getCustomBackConfig(pageKind) {
+    if (STOCK_PAGE_KINDS.has(pageKind)) {
+        return {
+            label: "Back to Products and Stock",
+            title: "Back to Products and Stock",
+            handler: navigateBackToProductCenter,
+        };
+    }
+    if (pageKind === "outlet_list") {
+        return {
+            label: "Back to Customer and Outlets",
+            title: "Back to Customer and Outlets",
+            handler: () => navigateBackFromOutletPage("outlet_list"),
+        };
+    }
+    return null;
+}
+
 function getDesktopBackHost() {
     const root = getActiveRoot();
     return findVisibleInRoot(root, ".o_view_controller") || root || null;
 }
 
-function buildInlineBackButton() {
+function buildInlineBackButton(config) {
     const wrapper = document.createElement("div");
     wrapper.id = INLINE_BACK_WRAPPER_ID;
     wrapper.style.display = "block";
@@ -658,19 +700,20 @@ function buildInlineBackButton() {
     button.style.alignItems = "center";
     button.style.gap = "6px";
     button.style.color = "inherit";
-    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back to Products and Stock</span>';
+    button.title = config.title;
+    button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
 
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateBackToProductCenter();
+        config.handler();
     });
 
     wrapper.appendChild(button);
     return wrapper;
 }
 
-function buildFloatingBackButton() {
+function buildFloatingBackButton(config) {
     const wrapper = document.createElement("div");
     wrapper.id = FLOATING_BACK_WRAPPER_ID;
     wrapper.style.position = "fixed";
@@ -695,13 +738,13 @@ function buildFloatingBackButton() {
     button.style.gap = "6px";
     button.style.color = "inherit";
     button.style.cursor = "pointer";
-    button.title = "Back to Products and Stock";
-    button.innerHTML = '<i class="fa fa-arrow-left"></i><span>Back to Products and Stock</span>';
+    button.title = config.title;
+    button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
 
     button.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        navigateBackToProductCenter();
+        config.handler();
     });
 
     wrapper.appendChild(button);
@@ -710,7 +753,8 @@ function buildFloatingBackButton() {
 
 function ensureBackButton() {
     const pageKind = detectPageKind();
-    if (!STOCK_PAGE_KINDS.has(pageKind)) {
+    const config = getCustomBackConfig(pageKind);
+    if (!config) {
         removeInlineBackButton();
         removeFloatingBackButton();
         return;
@@ -718,9 +762,8 @@ function ensureBackButton() {
 
     if (isSmallScreen()) {
         removeInlineBackButton();
-        if (!document.getElementById(FLOATING_BACK_BUTTON_ID)) {
-            document.body.appendChild(buildFloatingBackButton());
-        }
+        removeFloatingBackButton();
+        document.body.appendChild(buildFloatingBackButton(config));
         return;
     }
 
@@ -731,12 +774,17 @@ function ensureBackButton() {
     }
     let wrapper = document.getElementById(INLINE_BACK_WRAPPER_ID);
     if (!wrapper) {
-        wrapper = buildInlineBackButton();
+        wrapper = buildInlineBackButton(config);
         host.prepend(wrapper);
     }
     if (wrapper.parentElement !== host) {
         wrapper.remove();
         host.prepend(wrapper);
+    }
+    const button = wrapper.querySelector(`#${INLINE_BACK_BUTTON_ID}`);
+    if (button) {
+        button.title = config.title;
+        button.innerHTML = `<i class="fa fa-arrow-left"></i><span>${config.label}</span>`;
     }
 }
 
@@ -788,10 +836,12 @@ function interceptMobileHeaderBack(event) {
 }
 
 function refreshNavigationUi() {
+    const pageKind = detectPageKind();
     rememberVisibleActionButtons();
     rememberNavigationTargets();
     maybeRunPendingFromAppsHome();
     maybeRunPendingButton();
+    hideNativeNavbarBackButtons(pageKind);
     ensureBackButton();
 }
 
@@ -818,6 +868,8 @@ function bootRouteWorkspaceNavigationGuard() {
 
     document.addEventListener("touchstart", interceptMobileHeaderBack, true);
     document.addEventListener("mousedown", interceptMobileHeaderBack, true);
+    document.addEventListener("pointerdown", interceptMobileHeaderBack, true);
+    document.addEventListener("pointerup", interceptMobileHeaderBack, true);
     document.addEventListener("click", interceptMobileHeaderBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
