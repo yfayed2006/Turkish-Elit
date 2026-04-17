@@ -942,7 +942,19 @@ function removeFloatingBackButton() {
 
 function hasVisiblePageBackButton() {
     const buttons = Array.from(document.querySelectorAll(`.route_pda_back_btn, #${INLINE_BACK_BUTTON_ID}, #${FLOATING_BACK_BUTTON_ID}`));
-    return buttons.some((element) => isElementVisible(element));
+    return buttons.some((element) => {
+        if (!isElementVisible(element)) {
+            return false;
+        }
+        if (element.id === INLINE_BACK_BUTTON_ID || element.id === FLOATING_BACK_BUTTON_ID) {
+            return false;
+        }
+        const wrapper = element.closest(`#${INLINE_BACK_WRAPPER_ID}, #${FLOATING_BACK_WRAPPER_ID}`);
+        if (wrapper) {
+            return false;
+        }
+        return true;
+    });
 }
 
 function syncNativeNavbarBreadcrumbVisibility(pageKind) {
