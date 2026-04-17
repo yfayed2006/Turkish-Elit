@@ -9,6 +9,8 @@ const STORAGE_KEYS = {
     outletCenterUrl: "route_core.v15.outlet_center.url",
     outletFormHash: "route_core.v15.outlet_form.hash",
     outletFormUrl: "route_core.v15.outlet_form.url",
+    outletSubpageButton: "route_core.v15.outlet_subpage.button",
+    outletSubpageTs: "route_core.v15.outlet_subpage.ts",
     pendingButtonName: "route_core.v15.pending.button_name",
     pendingButtonTs: "route_core.v15.pending.button_ts",
     outletWorkspaceActiveTs: "route_core.v15.outlet_workspace.active_ts",
@@ -38,6 +40,7 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_stock_balances",
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
+const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -223,6 +226,37 @@ function clearOutletWorkspaceActive() {
     sessionStorage.removeItem(STORAGE_KEYS.outletWorkspaceActiveTs);
 }
 
+function setRecentOutletSubpage(buttonName) {
+    if (!buttonName) {
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.outletSubpageButton, buttonName);
+    sessionStorage.setItem(STORAGE_KEYS.outletSubpageTs, String(Date.now()));
+}
+
+function clearRecentOutletSubpage() {
+    sessionStorage.removeItem(STORAGE_KEYS.outletSubpageButton);
+    sessionStorage.removeItem(STORAGE_KEYS.outletSubpageTs);
+}
+
+function getRecentOutletSubpage() {
+    const buttonName = sessionStorage.getItem(STORAGE_KEYS.outletSubpageButton) || "";
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.outletSubpageTs) || "0", 10);
+    if (!buttonName) {
+        return "";
+    }
+    if (timestamp && Date.now() - timestamp > OUTLET_SUBPAGE_FLAG_TTL) {
+        clearRecentOutletSubpage();
+        return "";
+    }
+    return buttonName;
+}
+
+function recentOutletSubpageIs(buttonNames) {
+    const buttonName = getRecentOutletSubpage();
+    return !!buttonName && buttonNames.includes(buttonName);
+}
+
 function isOutletWorkspacePage() {
     if (!isOutletWorkspaceActive()) {
         return false;
@@ -262,40 +296,82 @@ function isOutletFormPage() {
     );
 }
 
-function isOutletRelatedSubpage(pageNames, requiredHints = []) {
+function isOutletRelatedSubpage(pageNames, requiredHints = [], originButtons = []) {
     if (!isOutletWorkspaceActive()) {
         return false;
     }
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
+    const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    const hasRecentOrigin = originButtons.length ? recentOutletSubpageIs(originButtons) : false;
     if (!pageNames.includes(title)) {
         return false;
     }
-    if (!(breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets"))) {
+    if (!(hasOutletTrail || hasRecentOrigin)) {
         return false;
     }
-    return requiredHints.length ? requiredHints.some((hint) => rootText.includes(hint)) : true;
+    return requiredHints.length
+        ? requiredHints.some((hint) => rootText.includes(hint) || pageText.includes(hint))
+        : true;
 }
 
 function isOutletVisitsPage() {
-    return isOutletRelatedSubpage(["outlet visits", "visits", "my visits"], ["process", "visit", "outlet"]);
+    return isOutletRelatedSubpage(["outlet visits", "visits", "my visits"], ["process", "visit", "outlet"], ["action_view_visits"]);
 }
 
 function isOutletPaymentsPage() {
-    return isOutletRelatedSubpage(["outlet payments", "payments", "all payments"], ["payment", "collected", "open due", "promise"]);
+    return isOutletRelatedSubpage(["outlet payments", "payments", "all payments"], ["payment", "collected", "open due", "promise"], ["action_view_payments"]);
 }
 
 function isOutletSaleOrdersPage() {
-    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer"]);
+    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer", "order snapshot"], ["action_view_sale_orders"]);
 }
 
 function isOutletReturnsPage() {
-    return isOutletRelatedSubpage(["return orders", "returns", "direct returns"], ["return", "estimated value", "pickings", "source document"]);
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_return_orders"]);
+    if (!hasOutletTrail) {
+        return false;
+    }
+    return (
+        title.includes("return")
+        || title.includes("returns")
+        || rootText.includes("return date")
+        || rootText.includes("create return pickings")
+        || pageText.includes("vehicle return")
+        || pageText.includes("damaged return")
+        || pageText.includes("near expiry return")
+    );
 }
 
 function isOutletTransfersPage() {
-    return isOutletRelatedSubpage(["transfers", "transfer orders"], ["from", "to", "scheduled date", "source document"]);
+    if (!isOutletWorkspaceActive()) {
+        return false;
+    }
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_transfers"]);
+    if (!hasOutletTrail) {
+        return false;
+    }
+    return (
+        title.includes("transfer")
+        || title.includes("transfers")
+        || pageText.includes("from")
+        || pageText.includes("to vehicle")
+        || pageText.includes("mus/stock")
+        || rootText.includes("from")
+    );
 }
 
 function isOutletStockFromOutletPage() {
@@ -304,8 +380,10 @@ function isOutletStockFromOutletPage() {
     }
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
+    const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    if (!(breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets"))) {
+    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_stock_balances"]);
+    if (!hasOutletTrail) {
         return false;
     }
     return (
@@ -313,6 +391,8 @@ function isOutletStockFromOutletPage() {
         || title.includes("stock balances")
         || rootText.includes("outlet stock")
         || rootText.includes("stock balances")
+        || pageText.includes("outlet stock")
+        || pageText.includes("stock balances")
     );
 }
 
@@ -469,12 +549,14 @@ function rememberNavigationTargets() {
     }
     if (pageKind === "outlet_center") {
         rememberPair(STORAGE_KEYS.outletCenterHash, STORAGE_KEYS.outletCenterUrl);
+        clearRecentOutletSubpage();
     }
     if (pageKind === "outlet_form") {
         rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
     }
-    if (["snapshot_center", "collections_center", "daily_summary"].includes(pageKind) || isAppsHomePage()) {
+    if (["workspace", "product_center", "snapshot_center", "collections_center", "daily_summary"].includes(pageKind) || isAppsHomePage()) {
         clearOutletWorkspaceActive();
+        clearRecentOutletSubpage();
     }
 }
 
@@ -492,8 +574,14 @@ function rememberOriginFromClick(event) {
     ].includes(name)) {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
     }
-    if (OUTLET_WORKSPACE_ENTRY_BUTTONS.has(name) || OUTLET_FORM_ENTRY_BUTTONS.has(name)) {
+    if (OUTLET_WORKSPACE_ENTRY_BUTTONS.has(name)) {
         markOutletWorkspaceActive();
+        clearRecentOutletSubpage();
+    }
+    if (OUTLET_FORM_ENTRY_BUTTONS.has(name)) {
+        rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
+        markOutletWorkspaceActive();
+        setRecentOutletSubpage(name);
     }
 }
 
@@ -963,6 +1051,43 @@ function interceptMobileHeaderBack(event) {
     backConfig.onClick();
 }
 
+function interceptBreadcrumbBack(event) {
+    if (isInternalRedirect) {
+        return;
+    }
+    const pageKind = detectPageKind();
+    const backConfig = getBackConfig(pageKind);
+    if (!backConfig) {
+        return;
+    }
+    const breadcrumb = event.target.closest(
+        ".o_control_panel .breadcrumb-item a, .o_control_panel .breadcrumb-item, .o_control_panel .o_breadcrumb li a, .o_control_panel .o_breadcrumb li, .o_control_panel_breadcrumbs .breadcrumb-item a, .o_control_panel_breadcrumbs .breadcrumb-item, .breadcrumb-item a, .breadcrumb-item"
+    );
+    if (!breadcrumb || !isElementVisible(breadcrumb)) {
+        return;
+    }
+    const rect = breadcrumb.getBoundingClientRect();
+    if (rect.top > 160) {
+        return;
+    }
+    const text = normalizeText(breadcrumb.textContent || "");
+    const title = normalizeText(findActionTitle());
+    const inTopLeftZone = rect.left < (isSmallScreen() ? 280 : 420);
+    if (!inTopLeftZone) {
+        return;
+    }
+    if (!(text && (text !== title || rect.left < 120 || text.includes("outlet") || text.includes("customer") || text.includes("products") || text.includes("stock") || text.includes("transfer") || text.includes("return")))) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+    }
+    backConfig.onClick();
+}
+
 function ensureBrowserGuard(pageKind) {
     const backConfig = getBackConfig(pageKind);
     if (!backConfig || !backConfig.interceptBrowser) {
@@ -1012,6 +1137,7 @@ function bootRouteWorkspaceNavigationGuard() {
     });
 
     document.addEventListener("click", interceptMobileHeaderBack, true);
+    document.addEventListener("click", interceptBreadcrumbBack, true);
     document.addEventListener("click", rememberOriginFromClick, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
