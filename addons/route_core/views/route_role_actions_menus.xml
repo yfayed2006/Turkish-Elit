@@ -122,9 +122,9 @@
 <field name="name">My Visit Collections</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">kanban,list,form</field>
-<field name="views" eval="[(ref('route_core.view_route_visit_collection_kanban'), 'kanban'), (ref('route_core.view_route_visit_collection_list'), 'list'), (ref('route_core.view_route_visit_payment_form'), 'form')]"/>
+<field name="view_id" ref="route_core.view_route_visit_collection_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_collection_search"/>
-<field name="domain">[("salesperson_id", "=", uid), ("state", "=", "confirmed")] </field>
+<field name="domain">[("salesperson_id", "=", uid), ("state", "=", "confirmed")]</field>
 <field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <menuitem id="menu_route_salesperson_home" name="Route Workspace" parent="route_core.menu_route_visit_root" action="route_core.server_action_open_route_pda_home" sequence="190" groups="route_core.group_route_salesperson"/>
