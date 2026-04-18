@@ -1,4 +1,4 @@
-<odoo>
+<odoo><odoo>
 <!--           Admin / all payments           -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
@@ -187,7 +187,7 @@
 <field name="remaining_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card route_pda_payment_summary_card" invisible="effective_promise_amount <= 0">
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not effective_promise_amount or effective_promise_amount == 0">
 <div class="route_pda_info_label">Promise Amount</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="effective_promise_amount" readonly="1" nolabel="1"/>
