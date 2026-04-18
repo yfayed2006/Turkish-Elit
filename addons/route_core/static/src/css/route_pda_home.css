@@ -1682,3 +1682,109 @@
     }
 }
 
+
+.route_pda_statement_sheet {
+    padding: 8px 0 0 0;
+}
+
+.route_pda_statement_section {
+    margin-bottom: 12px;
+}
+
+.route_pda_statement_grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.route_pda_statement_grid .route_pda_payment_meta_item {
+    min-height: 86px;
+    justify-content: center;
+}
+
+.route_pda_statement_grid .route_pda_payment_meta_item .o_field_widget,
+.route_pda_statement_grid .route_pda_payment_meta_item .o_input {
+    font-weight: 700;
+    min-width: 0;
+}
+
+.route_pda_statement_info {
+    margin-top: 6px;
+    border-left: 4px solid #a5e3ef;
+    background: #dff7fb;
+    color: #155e75;
+    border-radius: 12px;
+    padding: 12px 14px;
+    line-height: 1.6;
+}
+
+.route_pda_statement_footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.route_pda_statement_footer .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 992px) {
+    .route_pda_statement_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .route_pda_statement_sheet {
+        padding-top: 2px;
+    }
+
+    .route_pda_statement_section {
+        margin-bottom: 10px;
+    }
+
+    .route_pda_statement_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .route_pda_statement_grid .route_pda_payment_meta_item {
+        min-height: 78px;
+        padding: 10px 11px;
+    }
+
+    .route_pda_statement_grid .route_pda_payment_meta_label {
+        font-size: 0.76rem;
+        line-height: 1.15;
+    }
+
+    .route_pda_statement_footer {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_pda_statement_footer .btn,
+    .route_pda_statement_footer button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 390px) {
+    .route_pda_statement_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .route_pda_statement_grid .route_pda_payment_meta_item {
+        min-height: 74px;
+        padding: 9px 10px;
+    }
+
+    .route_pda_statement_grid .route_pda_payment_meta_label {
+        font-size: 0.72rem;
+    }
+}
+
