@@ -28,11 +28,15 @@
 </div>
 </div>
 <div class="route_pda_group route_pda_group_operations">
-<div class="route_pda_group_title">General Operations</div>
+<div class="route_pda_group_title">Visit Planning and Execution</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_4">
 <button type="object" name="action_open_my_pda_visits" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-map-marker route_pda_app_icon"/>
-<span class="route_pda_app_label">My Visits</span>
+<span class="route_pda_app_label">Today's Visits</span>
+</button>
+<button type="object" name="action_open_my_weekly_schedule" class="btn route_pda_app_btn route_pda_app_btn_info">
+<i class="fa fa-calendar route_pda_app_icon"/>
+<span class="route_pda_app_label">My Weekly Schedule</span>
 </button>
 <button type="object" name="action_open_current_visit" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-play-circle route_pda_app_icon"/>
