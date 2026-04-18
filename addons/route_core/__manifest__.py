@@ -27,6 +27,8 @@
         "views/route_area_views.xml",
         "views/route_outlet_views.xml",
         "views/route_plan_views.xml",
+        "views/route_schedule_template_views.xml",
+        "views/route_weekly_schedule_views.xml",
         "views/route_vehicle_views.xml",
         "views/route_return_settings_views.xml",
         "views/route_visit_views.xml",
