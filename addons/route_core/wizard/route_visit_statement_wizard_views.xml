@@ -3,41 +3,119 @@
 <field name="name">route.visit.statement.wizard.form</field>
 <field name="model">route.visit.statement.wizard</field>
 <field name="arch" type="xml">
-<form string="Statement of Account" create="0" edit="0" delete="0">
-<sheet>
+<form string="Statement of Account" create="0" edit="0" delete="0" class="route_pda_statement_form">
+<sheet class="route_pda_statement_sheet route_pda_payment_sheet">
 <field name="can_continue_to_collection" invisible="1"/>
-<group string="Visit Context" col="4">
-<field name="visit_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="user_id" readonly="1"/>
-<field name="vehicle_id" readonly="1"/>
-</group>
-<group string="Collection Summary" col="4">
-<field name="previous_due_amount" readonly="1"/>
-<field name="current_visit_sale_amount" readonly="1"/>
-<field name="current_visit_return_amount" readonly="1"/>
-<field name="net_amount_for_visit" readonly="1"/>
-<field name="amount_due_now" readonly="1"/>
-<field name="suggested_collection_now" string="Suggested Cash Collection Now" readonly="1"/>
-<field name="expected_remaining_after_payment" string="Expected Immediate Remaining" readonly="1"/>
-</group>
-<group string="Payment and Promise Snapshot" col="4">
-<field name="previous_confirmed_payment_count" readonly="1"/>
-<field name="previous_confirmed_payment_amount" readonly="1"/>
-<field name="open_promise_count" readonly="1"/>
-<field name="open_promise_amount" readonly="1"/>
-<field name="overdue_promise_count" readonly="1"/>
-<field name="overdue_promise_amount" readonly="1"/>
-<field name="last_payment_date" readonly="1"/>
-<field name="last_payment_amount" readonly="1"/>
-<field name="next_promise_date" readonly="1"/>
-<field name="next_promise_amount" readonly="1"/>
-</group>
-<div class="alert alert-info mt-3" role="alert"> This statement is for review. Continue to Collection is available only while the visit is still in the active collection stage. Suggested Cash Collection Now means the cash amount recommended to collect now, before any new promise is recorded. The full settlement receipt remains available after the visit is finished. </div>
+<div class="route_pda_statement_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Visit Context</div>
+<div class="route_pda_statement_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit</span>
+<field name="visit_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Outlet</span>
+<field name="outlet_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Customer</span>
+<field name="partner_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit Date</span>
+<field name="visit_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Salesperson</span>
+<field name="user_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Vehicle</span>
+<field name="vehicle_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_statement_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Collection Summary</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Previous Due</span>
+<field name="previous_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit Sale</span>
+<field name="current_visit_sale_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit Returns</span>
+<field name="current_visit_return_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Net This Visit</span>
+<field name="net_amount_for_visit" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Due Now</span>
+<field name="amount_due_now" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Suggested Collect</span>
+<field name="suggested_collection_now" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<field name="expected_remaining_after_payment" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_statement_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Payment and Promise Snapshot</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_snapshot">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Prev Confirmed Payments</span>
+<field name="previous_confirmed_payment_count" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Prev Confirmed Amount</span>
+<field name="previous_confirmed_payment_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Open Promises</span>
+<field name="open_promise_count" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Open Promise Amount</span>
+<field name="open_promise_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Overdue Promises</span>
+<field name="overdue_promise_count" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Overdue Promise Amount</span>
+<field name="overdue_promise_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Last Payment Date</span>
+<field name="last_payment_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Last Payment Amount</span>
+<field name="last_payment_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Next Promise Date</span>
+<field name="next_promise_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Next Promise Amount</span>
+<field name="next_promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_statement_info" role="alert"> This statement is for review. Continue to Collection is available only while the visit is still in the active collection stage. Suggested Cash Collection Now means the cash amount recommended to collect now, before any new promise is recorded. The full settlement receipt remains available after the visit is finished. </div>
 </sheet>
-<footer>
+<footer class="route_pda_statement_footer">
 <button name="action_print_statement_pdf" string="Print Statement" type="object" class="btn-primary"/>
 <button name="action_continue_to_collection" string="Continue to Collection" type="object" class="btn-secondary" invisible="not can_continue_to_collection"/>
 <button string="Close" special="cancel" class="btn-secondary"/>
