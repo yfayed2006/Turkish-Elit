@@ -205,6 +205,12 @@ class RouteVisitPayment(models.Model):
         store=False,
         readonly=True,
     )
+    primary_reference_value = fields.Char(
+        string="Primary Reference",
+        compute="_compute_primary_reference_value",
+        store=False,
+        readonly=True,
+    )
     statement_visit_id = fields.Many2one(
         "route.visit",
         string="Statement Visit",
@@ -318,6 +324,16 @@ class RouteVisitPayment(models.Model):
         for rec in self:
             rendered = escape(rec.note or "")
             rec.note_display_html = str(rendered).replace("\n", "<br/>") if rendered else False
+
+    @api.depends("source_type", "visit_id", "visit_id.display_name", "visit_id.name", "sale_order_id", "sale_order_id.name", "source_document_ref")
+    def _compute_primary_reference_value(self):
+        for rec in self:
+            primary_ref = False
+            if rec.source_type == "visit" and rec.visit_id:
+                primary_ref = rec.visit_id.display_name or rec.visit_id.name
+            elif rec.source_type == "direct_sale" and rec.sale_order_id:
+                primary_ref = rec.sale_order_id.name
+            rec.primary_reference_value = primary_ref or rec.source_document_ref or False
 
     @api.depends("visit_id", "settlement_visit_id", "source_type")
     def _compute_statement_visit_context(self):
@@ -731,4 +747,3 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
-
