@@ -261,17 +261,35 @@ class RoutePdaHome(models.TransientModel):
             return self.action_open_visit_collections_center_screen()
         return self.action_open_snapshot_center_screen()
 
-    def action_open_current_visit_statement_of_account(self):
+    def _get_current_statement_target_visit(self):
         self.ensure_one()
         Visit = self.env["route.visit"]
-        snapshot_mode = self.env.context.get("snapshot_mode") or "consignment"
-        visits = Visit.search([
+        ctx = dict(self.env.context or {})
+
+        explicit_visit_id = ctx.get("statement_visit_id") or ctx.get("default_visit_id") or ctx.get("active_id")
+        if explicit_visit_id:
+            visit = Visit.browse(explicit_visit_id).exists()
+            if visit and visit.user_id == self.env.user:
+                return visit
+
+        active_visits = Visit.search([
             ("user_id", "=", self.env.user.id),
             ("state", "=", "in_progress"),
         ], order="start_datetime desc, id desc")
-        if snapshot_mode in ("consignment", "direct_sales"):
-            visits = visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode)
-        visit = visits[:1]
+        if not active_visits:
+            return Visit
+
+        preferred_mode = ctx.get("statement_visit_execution_mode") or ctx.get("snapshot_mode")
+        if preferred_mode in ("consignment", "direct_sales"):
+            matching_visits = active_visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == preferred_mode)
+            if matching_visits:
+                return matching_visits[:1]
+
+        return active_visits[:1]
+
+    def action_open_current_visit_statement_of_account(self):
+        self.ensure_one()
+        visit = self._get_current_statement_target_visit()
         if not visit:
             raise UserError(_("There is no active visit available to open Statement of Account."))
         return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
