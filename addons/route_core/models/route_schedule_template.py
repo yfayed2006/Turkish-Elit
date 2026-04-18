@@ -48,7 +48,9 @@ class RouteScheduleTemplate(models.Model):
     )
     notes = fields.Text(string="Planning Notes")
 
+    off_day = fields.Selection(related="company_id.route_weekly_off_day", string="Weekly Off Day", readonly=True)
     line_count = fields.Integer(string="Template Stops", compute="_compute_template_stats")
+    off_day_stop_count = fields.Integer(string="Off-Day Stops", compute="_compute_template_stats")
     city_summary = fields.Char(string="Cities", compute="_compute_template_stats")
     area_summary = fields.Char(string="Areas", compute="_compute_template_stats")
     outlet_summary = fields.Char(string="Outlets", compute="_compute_template_stats")
@@ -72,11 +74,12 @@ class RouteScheduleTemplate(models.Model):
         store=True,
     )
 
-    @api.depends("line_ids", "line_ids.area_id", "line_ids.outlet_id")
+    @api.depends("line_ids", "line_ids.weekday", "line_ids.area_id", "line_ids.outlet_id", "company_id.route_weekly_off_day")
     def _compute_template_stats(self):
         Schedule = self.env["route.weekly.schedule"]
         for rec in self:
             rec.line_count = len(rec.line_ids)
+            rec.off_day_stop_count = len(rec.line_ids.filtered(lambda line: line.weekday == rec.off_day)) if rec.off_day else 0
             city_names = list(dict.fromkeys(rec.line_ids.mapped("city_id.name")))
             area_names = list(dict.fromkeys(rec.line_ids.mapped("area_id.name")))
             outlet_names = list(dict.fromkeys(rec.line_ids.mapped("outlet_id.name")))
@@ -105,6 +108,12 @@ class RouteScheduleTemplate(models.Model):
         if len(names) <= max_items:
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
+
+    def _get_off_day_lines(self):
+        self.ensure_one()
+        if not self.off_day:
+            return self.env["route.schedule.template.line"]
+        return self.line_ids.filtered(lambda line: line.weekday == self.off_day)
 
     def _prepare_schedule_line_commands(self):
         commands = []
@@ -200,6 +209,7 @@ class RouteScheduleTemplateLine(models.Model):
         default="monday",
     )
     weekday_label = fields.Char(string="Weekday Label", compute="_compute_weekday_label")
+    is_off_day = fields.Boolean(string="Weekly Off Day", compute="_compute_is_off_day")
     area_id = fields.Many2one(
         "route.area",
         string="Area",
@@ -248,11 +258,28 @@ class RouteScheduleTemplateLine(models.Model):
         for rec in self:
             rec.weekday_label = WEEKDAY_LABELS.get(rec.weekday or "", "")
 
+    @api.depends("weekday", "template_id.company_id.route_weekly_off_day")
+    def _compute_is_off_day(self):
+        for rec in self:
+            rec.is_off_day = bool(rec.weekday and rec.template_id.company_id.route_weekly_off_day and rec.weekday == rec.template_id.company_id.route_weekly_off_day)
+
     @api.onchange("area_id")
     def _onchange_area_id(self):
         for rec in self:
             if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
                 rec.outlet_id = False
+
+    @api.onchange("weekday")
+    def _onchange_weekday_warning(self):
+        for rec in self:
+            off_day = rec.template_id.company_id.route_weekly_off_day
+            if rec.weekday and off_day and rec.weekday == off_day:
+                return {
+                    "warning": {
+                        "title": _("Weekly Off Day"),
+                        "message": _("This stop is scheduled on the configured weekly off day. It will be highlighted for supervisor review and skipped when daily plans are generated."),
+                    }
+                }
 
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
