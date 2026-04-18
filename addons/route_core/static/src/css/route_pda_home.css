@@ -1320,3 +1320,111 @@
     }
 }
 
+
+
+.route_pda_statement_btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #ddd6fe !important;
+    background: #faf5ff !important;
+    color: #5b3f72 !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    font-weight: 700;
+    min-height: 44px;
+    box-shadow: none !important;
+}
+
+.route_pda_statement_btn:hover {
+    background: #f3e8ff !important;
+    color: #4c1d95 !important;
+}
+
+.route_pda_compact_header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.route_pda_compact_header .route_pda_detail_title {
+    margin: 0;
+}
+
+.route_pda_compact_header .route_pda_statement_btn {
+    margin-left: auto;
+}
+
+.route_pda_payment_footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px 12px;
+}
+
+.route_pda_payment_footer_item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.route_pda_payment_sheet .o_group .o_td_label,
+.route_pda_payment_sheet .o_group .o_form_label {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .route_pda_detail_title_mobile_hidden {
+        display: none !important;
+    }
+
+    .route_pda_visit_collections_sheet .route_pda_compact_header,
+    .route_pda_collections_snapshot_sheet .route_pda_compact_header {
+        margin-bottom: 10px;
+        gap: 8px;
+    }
+
+    .route_pda_visit_collections_sheet .route_pda_statement_btn,
+    .route_pda_collections_snapshot_sheet .route_pda_statement_btn {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 10px 12px !important;
+    }
+
+    .route_pda_payment_summary_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_pda_payment_summary_card {
+        min-height: 82px;
+        padding: 12px;
+    }
+
+    .route_pda_payment_summary_card .route_pda_info_value .o_input,
+    .route_pda_payment_summary_card .route_pda_info_value {
+        font-size: 1.05rem;
+    }
+
+    .route_pda_payment_footer {
+        justify-content: flex-start;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .route_pda_payment_footer_item {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_pda_payment_summary_grid {
+        grid-template-columns: 1fr;
+    }
+}
+
