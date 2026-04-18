@@ -709,7 +709,7 @@
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Open Promise Total</div>
+<div class="route_pda_info_label">Open Promise Amount</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
@@ -738,7 +738,7 @@
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct SO Collections</div>
+<div class="route_pda_info_label">Direct Sale Order Collections</div>
 <div class="route_pda_info_value">
 <field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
 </div>
