@@ -1,5 +1,5 @@
 <odoo>
-<!--              Admin / all payments              -->
+<!--               Admin / all payments               -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--              Tailored visit list              -->
+<!--               Tailored visit list               -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--              Tailored direct sale list              -->
+<!--               Tailored direct sale list               -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -183,12 +183,17 @@
 <form class="route_pda_payment_form">
 <header>
 <button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not outlet_id"/>
+<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
 <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
 </header>
 <sheet class="route_pda_payment_sheet">
+<field name="source_type" invisible="1"/>
+<field name="can_open_statement" invisible="1"/>
+<field name="statement_visit_id" invisible="1"/>
+<field name="note_display_html" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
 <div class="route_pda_info_label">Collected</div>
@@ -215,51 +220,66 @@
 </div>
 </div>
 </div>
-<group string="Collection Snapshot" col="2">
-<group>
-<field name="source_type" invisible="1"/>
-<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'" string="Visit"/>
-<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'" string="Order"/>
-<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
-<field name="payment_date" readonly="state != 'draft'"/>
-<field name="payment_mode" readonly="state != 'draft'" string="Mode"/>
-</group>
-<group>
-<field name="payment_business_flow" readonly="1" string="Flow"/>
-<field name="settlement_document_ref" readonly="1" string="Settlement" invisible="not settlement_document_ref"/>
-<field name="source_document_ref" readonly="1" string="Document Ref" invisible="visit_id or sale_order_id"/>
-</group>
-</group>
-<group string="Collection Decision" col="2">
-<group>
+<div class="route_pda_payment_meta_grid">
+<div class="route_pda_payment_meta_item" invisible="source_type != 'visit'">
+<span class="route_pda_payment_meta_label">Visit</span>
+<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'" string="Visit" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="source_type != 'direct_sale'">
+<span class="route_pda_payment_meta_label">Order</span>
+<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'" string="Order" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not source_document_ref">
+<span class="route_pda_payment_meta_label">Document</span>
+<field name="source_document_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not settlement_document_ref">
+<span class="route_pda_payment_meta_label">Settlement</span>
+<field name="settlement_document_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Outlet</span>
+<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Flow</span>
+<field name="payment_business_flow" readonly="1" widget="badge" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Payment Date</span>
+<field name="payment_date" readonly="state != 'draft'" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Mode</span>
+<field name="payment_mode" readonly="state != 'draft'" string="Mode" widget="badge" nolabel="1"/>
+</div>
+</div>
+<group string="Collection Decision" col="4" class="route_pda_payment_compact_group">
 <field name="collection_type" readonly="state != 'draft'" string="Scenario"/>
 <field name="amount" readonly="state != 'draft'" string="Collected Now" invisible="collection_type in ('defer_date', 'next_visit')"/>
 <field name="due_date" readonly="state != 'draft'" string="Deferred To" invisible="collection_type != 'defer_date'"/>
 <field name="promise_date" readonly="state != 'draft'" string="Promise Date" invisible="collection_type == 'full'"/>
 <field name="promise_amount" readonly="state != 'draft'" string="Promise Amount" invisible="collection_type == 'full'"/>
-<field name="promise_status" readonly="1" string="Promise Status" invisible="collection_type == 'full'"/>
-</group>
-<group>
+<field name="promise_status" readonly="1" string="Promise Status" invisible="collection_type == 'full'" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference" readonly="state != 'draft'" string="Reference" invisible="payment_mode in ('cash', 'deferred')"/>
 <field name="bank_name" readonly="state != 'draft'" string="Bank" invisible="payment_mode != 'bank'"/>
 <field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" invisible="payment_mode != 'pos'"/>
 </group>
-</group>
-<group string="Reference Details" col="2">
-<group>
+<group string="Reference Details" col="2" class="route_pda_payment_compact_group">
 <field name="area_id" readonly="1"/>
 <field name="salesperson_id" readonly="1"/>
 </group>
-<group/>
-</group>
-<group string="Collection Note" invisible="not note">
-<field name="note" readonly="state != 'draft'"/>
+<group string="Collection Note" invisible="not note" class="route_pda_payment_compact_group">
+<field name="note" readonly="state == 'confirmed' or state == 'cancelled'" invisible="state != 'draft'" placeholder="Add note" widget="text"/>
+<div class="route_pda_multilingual_note" invisible="state == 'draft' or not note_display_html">
+<field name="note_display_html" readonly="1" widget="html" nolabel="1"/>
+</div>
 </group>
 </sheet>
 </form>
 </field>
 </record>
-<!--              Admin / all payments search              -->
+<!--               Admin / all payments search               -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -321,7 +341,7 @@
 </search>
 </field>
 </record>
-<!--              Visit collections search              -->
+<!--               Visit collections search               -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -374,7 +394,7 @@
 </search>
 </field>
 </record>
-<!--              Direct sale payments search              -->
+<!--               Direct sale payments search               -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
