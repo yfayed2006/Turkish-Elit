@@ -5,6 +5,20 @@
 <menuitem id="menu_route_operations_workspace" name="Operations" parent="route_core.menu_route_visit_root" sequence="20" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <menuitem id="menu_route_control_workspace" name="Review and Control" parent="route_core.menu_route_visit_root" sequence="30" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <menuitem id="menu_route_management_workspace" name="Management" parent="route_core.menu_route_visit_root" sequence="80" groups="route_core.group_route_management"/>
+<record id="menu_route_schedule_template" model="ir.ui.menu">
+<field name="name">Weekly Route Templates</field>
+<field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
+<field name="action" ref="route_core.action_route_schedule_template"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+<field name="sequence">7</field>
+</record>
+<record id="menu_route_weekly_schedule" model="ir.ui.menu">
+<field name="name">Weekly Route Planning</field>
+<field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
+<field name="action" ref="route_core.action_route_weekly_schedule"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+<field name="sequence">8</field>
+</record>
 <record id="menu_route_plan" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
@@ -81,7 +95,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--        Salesperson-safe menu actions        -->
+<!--         Salesperson-safe menu actions         -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Route Plans</field>
 <field name="res_model">route.plan</field>
@@ -129,6 +143,7 @@
 </record>
 <menuitem id="menu_route_salesperson_home" name="Route Workspace" parent="route_core.menu_route_visit_root" action="route_core.server_action_open_route_pda_home" sequence="190" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_my_plans" name="My Route Plans" parent="route_core.menu_route_visit_root" action="route_core.action_route_plan_salesperson" sequence="200" groups="route_core.group_route_salesperson"/>
+<menuitem id="menu_route_salesperson_weekly_schedule" name="My Weekly Schedule" parent="route_core.menu_route_visit_root" action="route_core.action_route_weekly_schedule_salesperson" sequence="205" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_my_visits" name="My Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
