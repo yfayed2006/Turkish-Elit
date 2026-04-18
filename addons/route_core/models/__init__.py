@@ -50,3 +50,7 @@ from . import route_direct_return
 from . import stock_picking_direct_return_ext
 
 from . import route_supervisor_assignment
+from . import res_company_route_schedule_ext
+from . import route_schedule_template
+from . import route_weekly_schedule
+from . import route_plan_schedule_ext
