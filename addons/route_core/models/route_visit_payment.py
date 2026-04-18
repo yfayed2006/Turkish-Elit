@@ -1,3 +1,5 @@
+from markupsafe import escape
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -196,6 +198,26 @@ class RouteVisitPayment(models.Model):
     bank_name = fields.Char(string="Bank Name")
     pos_terminal = fields.Char(string="POS Terminal")
     note = fields.Text(string="Note")
+    note_display_html = fields.Html(
+        string="Rendered Note",
+        compute="_compute_note_display_html",
+        sanitize=False,
+        store=False,
+        readonly=True,
+    )
+    statement_visit_id = fields.Many2one(
+        "route.visit",
+        string="Statement Visit",
+        compute="_compute_statement_visit_context",
+        store=False,
+        readonly=True,
+    )
+    can_open_statement = fields.Boolean(
+        string="Can Open Statement",
+        compute="_compute_statement_visit_context",
+        store=False,
+        readonly=True,
+    )
 
     state = fields.Selection(
         [
@@ -290,6 +312,31 @@ class RouteVisitPayment(models.Model):
             rec.source_document_ref = source_ref
             rec.settlement_document_ref = settlement_ref
             rec.payment_business_flow = business_flow
+
+    @api.depends("note")
+    def _compute_note_display_html(self):
+        for rec in self:
+            rendered = escape(rec.note or "")
+            rec.note_display_html = str(rendered).replace("\n", "<br/>") if rendered else False
+
+    @api.depends("visit_id", "settlement_visit_id", "source_type")
+    def _compute_statement_visit_context(self):
+        for rec in self:
+            statement_visit = rec.settlement_visit_id or rec.visit_id
+            rec.statement_visit_id = statement_visit
+            rec.can_open_statement = bool(statement_visit)
+
+    def action_open_statement_of_account(self):
+        self.ensure_one()
+        visit = self.statement_visit_id
+        if not visit:
+            raise ValidationError(_("Statement of Account is available only when this collection is linked to a visit."))
+        if hasattr(visit, "action_open_statement_of_account"):
+            return visit.with_context(
+                statement_visit_id=visit.id,
+                statement_visit_execution_mode=getattr(visit, "visit_execution_mode", False),
+            ).action_open_statement_of_account()
+        return {"type": "ir.actions.act_window_close"}
 
     def action_back_to_outlet_form(self):
         self.ensure_one()
@@ -684,5 +731,4 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
-
 
