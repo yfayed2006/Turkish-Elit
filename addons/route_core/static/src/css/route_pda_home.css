@@ -1323,6 +1323,25 @@
 
 
 
+.route_pda_statement_btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #ddd6fe !important;
+    background: #faf5ff !important;
+    color: #5b3f72 !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    font-weight: 700;
+    min-height: 44px;
+    box-shadow: none !important;
+}
+
+.route_pda_statement_btn:hover {
+    background: #f3e8ff !important;
+    color: #4c1d95 !important;
+}
 
 .route_pda_compact_header {
     display: flex;
@@ -1336,6 +1355,9 @@
     margin: 0;
 }
 
+.route_pda_compact_header .route_pda_statement_btn {
+    margin-left: auto;
+}
 
 .route_pda_payment_footer {
     display: flex;
@@ -1398,6 +1420,13 @@
         gap: 8px;
     }
 
+    .route_pda_visit_collections_sheet .route_pda_statement_btn,
+    .route_pda_collections_snapshot_sheet .route_pda_statement_btn {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 9px 12px !important;
+        min-height: 42px;
+    }
 
     .route_pda_payment_summary_grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1458,6 +1487,10 @@
 
 @media (max-width: 420px) {
     .route_pda_payment_summary_grid {
+        grid-template-columns: 1fr;
+    }
+
+    .route_pda_payment_meta_grid {
         grid-template-columns: 1fr;
     }
 }
@@ -1554,7 +1587,7 @@
 }
 
 .route_pda_collections_snapshot_sheet .route_pda_compact_header {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
 }
 
 .route_pda_collections_snapshot_sheet .route_pda_group {
@@ -1587,22 +1620,18 @@
 
 @media (max-width: 768px) {
     .route_pda_payment_meta_grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         margin-bottom: 10px;
     }
 
     .route_pda_payment_meta_item {
-        padding: 9px 11px;
-    }
-
-    .route_pda_payment_sheet .o_group.route_pda_payment_compact_group,
-    .route_pda_payment_sheet .route_pda_payment_compact_group {
-        margin-top: 8px;
+        padding: 10px 11px;
+        min-height: 82px;
     }
 
     .route_pda_collections_snapshot_sheet .route_pda_compact_header {
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
 
     .route_pda_collections_snapshot_sheet .route_pda_group {
@@ -1612,6 +1641,44 @@
     .route_pda_collections_snapshot_sheet .route_pda_info_card {
         min-height: 72px;
         padding: 10px;
+    }
+}
+
+.route_pda_payment_section {
+    margin-top: 10px;
+}
+
+.route_pda_payment_section_title {
+    margin-bottom: 8px;
+    line-height: 1.25;
+}
+
+.route_pda_payment_note_wrap {
+    margin-top: 2px;
+}
+
+.route_pda_multilingual_note {
+    min-height: 64px;
+}
+
+.route_pda_payment_note_wrap .o_field_text textarea,
+.route_pda_payment_note_wrap textarea.o_input {
+    min-height: 72px;
+    border-radius: 12px;
+}
+
+.route_pda_payment_meta_item .o_field_widget[name="payment_business_flow"],
+.route_pda_payment_meta_item .o_field_widget[name="payment_mode"] {
+    align-self: flex-start;
+}
+
+@media (max-width: 768px) {
+    .route_pda_payment_section {
+        margin-top: 8px;
+    }
+
+    .route_pda_payment_section_title {
+        margin-bottom: 6px;
     }
 }
 
