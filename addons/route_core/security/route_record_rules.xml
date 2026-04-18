@@ -89,4 +89,28 @@
 <field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
 <field name="domain_force">[('return_id.user_id', '=', user.id)]</field>
 </record>
+<record id="rule_route_schedule_template_salesperson_own" model="ir.rule">
+<field name="name">Route Schedule Template - salesperson own templates only</field>
+<field name="model_id" ref="model_route_schedule_template"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_schedule_template_line_salesperson_own" model="ir.rule">
+<field name="name">Route Schedule Template Line - salesperson own templates only</field>
+<field name="model_id" ref="model_route_schedule_template_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('template_id.user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_weekly_schedule_salesperson_own" model="ir.rule">
+<field name="name">Weekly Route Schedule - salesperson own schedules only</field>
+<field name="model_id" ref="model_route_weekly_schedule"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('user_id', '=', user.id)]</field>
+</record>
+<record id="rule_route_weekly_schedule_line_salesperson_own" model="ir.rule">
+<field name="name">Weekly Route Schedule Line - salesperson own schedules only</field>
+<field name="model_id" ref="model_route_weekly_schedule_line"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
+<field name="domain_force">[('schedule_id.user_id', '=', user.id)]</field>
+</record>
 </odoo>
