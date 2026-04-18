@@ -1,5 +1,5 @@
 <odoo>
-<!--            Admin / all payments            -->
+<!--             Admin / all payments             -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--            Tailored visit list            -->
+<!--             Tailored visit list             -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--            Tailored direct sale list            -->
+<!--             Tailored direct sale list             -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -154,16 +154,20 @@
 </div>
 <div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value or record.promise_date.raw_value">
 <t t-if="record.settlement_document_ref.raw_value">
+<div class="route_pda_payment_footer_item">
 <span class="route_pda_payment_footer_label">Settlement:</span>
 <span class="route_pda_payment_footer_value">
 <t t-esc="record.settlement_document_ref.value"/>
 </span>
+</div>
 </t>
 <t t-if="record.promise_date.raw_value">
+<div class="route_pda_payment_footer_item">
 <span class="route_pda_payment_footer_label">Promise Date:</span>
 <span class="route_pda_payment_footer_value">
 <field name="promise_date"/>
 </span>
+</div>
 </t>
 </div>
 </div>
@@ -176,7 +180,7 @@
 <field name="name">route.visit.payment.form</field>
 <field name="model">route.visit.payment</field>
 <field name="arch" type="xml">
-<form>
+<form class="route_pda_payment_form">
 <header>
 <button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not outlet_id"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
@@ -184,7 +188,7 @@
 <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
 </header>
-<sheet>
+<sheet class="route_pda_payment_sheet">
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
 <div class="route_pda_info_label">Collected</div>
@@ -256,7 +260,7 @@
 </form>
 </field>
 </record>
-<!--            Admin / all payments search            -->
+<!--             Admin / all payments search             -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -318,7 +322,7 @@
 </search>
 </field>
 </record>
-<!--            Visit collections search            -->
+<!--             Visit collections search             -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -371,7 +375,7 @@
 </search>
 </field>
 </record>
-<!--            Direct sale payments search            -->
+<!--             Direct sale payments search             -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
