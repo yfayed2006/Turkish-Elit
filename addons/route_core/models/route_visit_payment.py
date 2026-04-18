@@ -91,6 +91,14 @@ class RouteVisitPayment(models.Model):
         readonly=True,
     )
 
+    payment_business_flow_short = fields.Char(
+        string="Flow (Short)",
+        compute="_compute_ui_labels",
+        store=False,
+        readonly=True,
+    )
+
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -134,6 +142,14 @@ class RouteVisitPayment(models.Model):
         string="Collection Scenario",
         required=True,
         default="full",
+    )
+
+
+    collection_type_short = fields.Char(
+        string="Collection Scenario (Short)",
+        compute="_compute_ui_labels",
+        store=False,
+        readonly=True,
     )
 
     amount = fields.Monetary(
@@ -225,6 +241,23 @@ class RouteVisitPayment(models.Model):
         "settlement_visit_id.name",
         "settlement_visit_id.visit_execution_mode",
     )
+    @api.depends("payment_business_flow", "collection_type")
+    def _compute_ui_labels(self):
+        flow_labels = {
+            "consignment_visit": _("Visit"),
+            "direct_stop": _("Direct Stop"),
+            "direct_sale_order": _("Direct SO"),
+        }
+        collection_labels = {
+            "full": _("Full Pay"),
+            "partial": _("Partial + Carry"),
+            "defer_date": _("Defer Date"),
+            "next_visit": _("Next Visit"),
+        }
+        for rec in self:
+            rec.payment_business_flow_short = flow_labels.get(rec.payment_business_flow, rec.payment_business_flow or "")
+            rec.collection_type_short = collection_labels.get(rec.collection_type, rec.collection_type or "")
+
     def _compute_source_context(self):
         for rec in self:
             outlet = False
@@ -391,6 +424,10 @@ class RouteVisitPayment(models.Model):
         for rec in self:
             if not rec._get_target_model():
                 rec.effective_promise_amount = 0.0
+                continue
+
+            if rec._is_direct_stop_settlement_payment():
+                rec.effective_promise_amount = rec.promise_amount or 0.0
                 continue
 
             due_before_this_payment = rec._get_target_remaining_due(
