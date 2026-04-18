@@ -11,96 +11,99 @@
 <template id="report_route_visit_statement_of_account">
 <t t-call="web.html_container">
 <t t-foreach="docs" t-as="doc">
-<t t-call="web.external_layout">
-<div class="page">
-<h2 style="margin-bottom:4px;">Statement of Account</h2>
-<div style="font-size:12px; color:#555; margin-bottom:14px;">Pre-collection statement for review before settlement confirmation.</div>
-<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+<div class="page" style="font-family:Arial, sans-serif; color:#1f2937;">
+<div style="position:relative; min-height:1060px; padding:18px 24px 70px 24px;">
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px;">
+<div>
+<h2 style="margin:0 0 4px 0; font-size:28px; font-weight:700; color:#4b5563;">Statement of Account</h2>
+<div style="font-size:12px; color:#6b7280;">Pre-collection statement for review before settlement confirmation.</div>
+</div>
+<div style="text-align:right; max-width:240px;">
+<div t-if="doc.company_id.logo" style="margin-bottom:8px;">
+<img t-att-src="image_data_uri(doc.company_id.logo)" style="max-height:52px; max-width:180px;" alt="Company Logo"/>
+</div>
+<div style="font-size:16px; font-weight:700; color:#374151;" t-esc="doc.company_id.name or ''"/>
+<div style="font-size:12px; color:#6b7280; line-height:1.45;" t-if="doc.company_id.partner_id">
+<div t-if="doc.company_id.partner_id.city or doc.company_id.partner_id.country_id">
+<span t-esc="doc.company_id.partner_id.city or ''"/>
+<t t-if="doc.company_id.partner_id.city and doc.company_id.partner_id.country_id">, </t>
+<span t-esc="doc.company_id.partner_id.country_id.name or ''"/>
+</div>
+<div t-if="doc.company_id.email" t-esc="doc.company_id.email"/>
+<div t-if="not doc.company_id.email and doc.company_id.partner_id.email" t-esc="doc.company_id.partner_id.email"/>
+</div>
+</div>
+</div>
+<table style="width:100%; border-collapse:separate; border-spacing:0; margin-bottom:14px; border:1px solid #6b7280; border-radius:10px; overflow:hidden;">
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Visit</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; font-weight:700; width:25%;">Visit</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:25%;">
 <span t-esc="doc.visit_id.name or '-'"/>
 </td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Date</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; font-weight:700; width:25%;">Date</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db; width:25%;">
 <span t-field="doc.visit_date"/>
 </td>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Outlet</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; font-weight:700;">Outlet</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">
 <span t-esc="doc.outlet_id.display_name if doc.outlet_id else '-'"/>
 </td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Customer</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; font-weight:700;">Customer</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db;">
 <span t-esc="doc.partner_id.display_name if doc.partner_id else '-'"/>
 </td>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Salesperson</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; font-weight:700;">Salesperson</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">
 <span t-esc="doc.user_id.display_name if doc.user_id else '-'"/>
 </td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
-<strong>Vehicle</strong>
-</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; font-weight:700;">Vehicle</td>
+<td style="padding:8px 10px;">
 <span t-esc="doc.vehicle_id.display_name if doc.vehicle_id else '-'"/>
 </td>
 </tr>
 </table>
-<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">
+<table style="width:100%; border-collapse:separate; border-spacing:0; margin-bottom:14px; border:1px solid #6b7280; border-radius:10px; overflow:hidden;">
 <tr>
-<td colspan="4" style="padding:8px; border:1px solid #ddd; background:#f5f5f5;">
-<strong>Collection Summary</strong>
-</td>
+<td colspan="4" style="padding:8px 10px; background:#f3f4f6; border-bottom:1px solid #d1d5db; font-weight:700;">Collection Summary</td>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Previous Due</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.previous_due_amount or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Current Visit Sale</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.current_visit_sale_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:26%;">Previous Due</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:24%;" t-esc="'%.2f %s' % (doc.previous_due_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:26%;">Current Visit Sale</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db; width:24%;" t-esc="'%.2f %s' % (doc.current_visit_sale_amount or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Current Visit Returns</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.current_visit_return_amount or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Net Amount For This Visit</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.net_amount_for_visit or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Current Visit Returns</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.current_visit_return_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Net Amount For This Visit</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.net_amount_for_visit or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Amount Due Now</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Suggested Cash Collection Now</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.suggested_collection_now or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Amount Due Now</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Suggested Cash Collection Now</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.suggested_collection_now or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Expected Immediate Remaining</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.expected_remaining_after_payment or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Open / Overdue Promises</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Expected Immediate Remaining</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.expected_remaining_after_payment or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Open / Overdue Promises</td>
+<td style="padding:8px 10px;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
 </tr>
 </table>
-<table style="width:100%; border-collapse:collapse;">
+<table style="width:100%; border-collapse:separate; border-spacing:0; border:1px solid #6b7280; border-radius:10px; overflow:hidden;">
 <tr>
-<td colspan="4" style="padding:8px; border:1px solid #ddd; background:#f5f5f5;">
-<strong>Payment and Promise Snapshot</strong>
-</td>
+<td colspan="4" style="padding:8px 10px; background:#f3f4f6; border-bottom:1px solid #d1d5db; font-weight:700;">Payment and Promise Snapshot</td>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Previous Confirmed Payments</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%s / %.2f %s' % (doc.previous_confirmed_payment_count or 0, doc.previous_confirmed_payment_amount or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Last Payment</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:26%;">Previous Confirmed Payments</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:24%;" t-esc="'%s / %.2f %s' % (doc.previous_confirmed_payment_count or 0, doc.previous_confirmed_payment_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db; width:26%;">Last Payment</td>
+<td style="padding:8px 10px; border-bottom:1px solid #d1d5db; width:24%;">
 <span t-if="doc.last_payment_date" t-field="doc.last_payment_date"/>
 <span t-if="not doc.last_payment_date">-</span>
 <t t-if="doc.last_payment_amount">
@@ -110,10 +113,10 @@
 </td>
 </tr>
 <tr>
-<td style="padding:6px 8px; border:1px solid #ddd;">Open Promise Amount</td>
-<td style="padding:6px 8px; border:1px solid #ddd;" t-esc="'%.2f %s' % (doc.open_promise_amount or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:6px 8px; border:1px solid #ddd;">Next Promise</td>
-<td style="padding:6px 8px; border:1px solid #ddd;">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Open Promise Amount</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.open_promise_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Next Promise</td>
+<td style="padding:8px 10px;">
 <span t-if="doc.next_promise_date" t-field="doc.next_promise_date"/>
 <span t-if="not doc.next_promise_date">-</span>
 <t t-if="doc.next_promise_amount">
@@ -123,8 +126,17 @@
 </td>
 </tr>
 </table>
+<div style="position:absolute; left:24px; right:24px; bottom:16px; border-top:1px solid #9ca3af; padding-top:8px; text-align:center; color:#6b7280; font-size:12px;">
+<div t-esc="doc.company_id.email or doc.company_id.partner_id.email or ''"/>
+<div style="margin-top:4px;">
+Page
+<span class="page"/>
+/
+<span class="topage"/>
 </div>
-</t>
+</div>
+</div>
+</div>
 </t>
 </t>
 </template>
