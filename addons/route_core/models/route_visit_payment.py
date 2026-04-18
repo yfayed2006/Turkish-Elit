@@ -246,7 +246,7 @@ class RouteVisitPayment(models.Model):
         flow_labels = {
             "consignment_visit": _("Visit"),
             "direct_stop": _("Direct Stop"),
-            "direct_sale_order": _("Direct SO"),
+            "direct_sale_order": _("Direct Order"),
         }
         collection_labels = {
             "full": _("Full Pay"),
