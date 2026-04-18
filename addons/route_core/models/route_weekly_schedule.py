@@ -67,6 +67,7 @@ class RouteWeeklySchedule(models.Model):
         compute="_compute_schedule_stats",
     )
     line_count = fields.Integer(string="Scheduled Stops", compute="_compute_schedule_stats")
+    off_day_stop_count = fields.Integer(string="Off-Day Stops", compute="_compute_schedule_stats")
     generated_plan_count = fields.Integer(string="Generated Plans", compute="_compute_schedule_stats")
     city_summary = fields.Char(string="Cities", compute="_compute_schedule_stats")
     area_summary = fields.Char(string="Areas", compute="_compute_schedule_stats")
@@ -99,10 +100,11 @@ class RouteWeeklySchedule(models.Model):
             else:
                 rec.week_end_date = False
 
-    @api.depends("line_ids", "line_ids.area_id", "line_ids.outlet_id", "line_ids.generated_plan_id")
+    @api.depends("line_ids", "line_ids.weekday", "line_ids.area_id", "line_ids.outlet_id", "line_ids.generated_plan_id", "company_id.route_weekly_off_day")
     def _compute_schedule_stats(self):
         for rec in self:
             rec.line_count = len(rec.line_ids)
+            rec.off_day_stop_count = len(rec.line_ids.filtered(lambda line: line.weekday == rec.off_day)) if rec.off_day else 0
             rec.route_plan_ids = rec.line_ids.mapped("generated_plan_id")
             rec.generated_plan_count = len(rec.route_plan_ids)
             city_names = list(dict.fromkeys(rec.line_ids.mapped("city_id.name")))
@@ -213,6 +215,10 @@ class RouteWeeklySchedule(models.Model):
         for rec in self:
             if not rec.line_ids:
                 raise UserError(_("Please add scheduled stops before generating daily plans."))
+
+            processable_lines = rec.line_ids.filtered(lambda line: line.weekday != rec.off_day) if rec.off_day else rec.line_ids
+            if not processable_lines:
+                raise UserError(_("All scheduled stops fall on the configured weekly off day. Move them to working days before generating daily plans."))
 
             weekday_codes = sorted({line.weekday for line in rec.line_ids if line.weekday})
             for weekday_code in weekday_codes:
@@ -328,6 +334,19 @@ class RouteWeeklySchedule(models.Model):
         action["domain"] = [("id", "in", plan_ids)] if plan_ids else [("id", "=", 0)]
         return action
 
+    def action_open_template(self):
+        self.ensure_one()
+        if not self.template_id:
+            return False
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Weekly Route Template"),
+            "res_model": "route.schedule.template",
+            "res_id": self.template_id.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
     def action_open_form(self):
         self.ensure_one()
         return {
@@ -367,6 +386,7 @@ class RouteWeeklyScheduleLine(models.Model):
         default="monday",
     )
     weekday_label = fields.Char(string="Weekday Label", compute="_compute_weekday_label")
+    is_off_day = fields.Boolean(string="Weekly Off Day", compute="_compute_is_off_day")
     visit_date = fields.Date(string="Visit Date", compute="_compute_visit_date")
     area_id = fields.Many2one(
         "route.area",
@@ -430,6 +450,11 @@ class RouteWeeklyScheduleLine(models.Model):
         for rec in self:
             rec.weekday_label = WEEKDAY_LABELS.get(rec.weekday or "", "")
 
+    @api.depends("weekday", "schedule_id.company_id.route_weekly_off_day")
+    def _compute_is_off_day(self):
+        for rec in self:
+            rec.is_off_day = bool(rec.weekday and rec.schedule_id.company_id.route_weekly_off_day and rec.weekday == rec.schedule_id.company_id.route_weekly_off_day)
+
     @api.depends("schedule_id.week_start_date", "weekday", "schedule_id.company_id.route_week_start_day")
     def _compute_visit_date(self):
         for rec in self:
@@ -438,6 +463,18 @@ class RouteWeeklyScheduleLine(models.Model):
                 rec.weekday,
                 week_start_day=rec.schedule_id.company_id.route_week_start_day or "monday",
             )
+
+    @api.onchange("weekday")
+    def _onchange_weekday_warning(self):
+        for rec in self:
+            off_day = rec.schedule_id.company_id.route_weekly_off_day
+            if rec.weekday and off_day and rec.weekday == off_day:
+                return {
+                    "warning": {
+                        "title": _("Weekly Off Day"),
+                        "message": _("This stop is scheduled on the configured weekly off day. It will remain visible for review but will be skipped during daily plan generation."),
+                    }
+                }
 
     @api.onchange("area_id")
     def _onchange_area_id(self):
