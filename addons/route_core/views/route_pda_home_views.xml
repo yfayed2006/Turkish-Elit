@@ -514,7 +514,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back</span>
+<span>Back to Collections</span>
 </button>
 <h2 class="route_pda_detail_title">Current Visit Snapshot</h2>
 </div>
@@ -645,7 +645,7 @@
 <button type="object" name="action_open_collections_snapshot_from_collections_center" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-line-chart route_pda_app_icon"/>
 <span class="route_pda_app_label">Daily Summary</span>
-<span class="route_pda_app_hint">Today totals and cash position</span>
+<span class="route_pda_app_hint">Cash, promises and follow-up</span>
 <span class="route_pda_app_hint_value route_pda_app_hint_money">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
@@ -653,7 +653,7 @@
 <button type="object" name="action_open_visit_collections" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-credit-card route_pda_app_icon"/>
 <span class="route_pda_app_label">All Collections</span>
-<span class="route_pda_app_hint">Open collection documents</span>
+<span class="route_pda_app_hint">Open collection records</span>
 </button>
 </div>
 </sheet>
@@ -673,7 +673,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_from_collections_snapshot" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back</span>
+<span>Back to Collections</span>
 </button>
 <h2 class="route_pda_detail_title">Daily Summary</h2>
 <button type="object" name="action_open_current_visit_statement_of_account" class="btn route_pda_back_btn">
@@ -697,25 +697,25 @@
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">POS Collection</div>
+<div class="route_pda_info_label">POS Today</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Deferred / Promised Today</div>
+<div class="route_pda_info_label">Deferred Today</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="deferred_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Open Promises</div>
+<div class="route_pda_info_label">Open Promise Total</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_info_card_emphasis">
-<div class="route_pda_info_label">Remaining Due</div>
+<div class="route_pda_info_label">Today Remaining Due</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
@@ -738,7 +738,7 @@
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sale Order Collections</div>
+<div class="route_pda_info_label">Direct SO Collections</div>
 <div class="route_pda_info_value">
 <field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
 </div>
@@ -764,7 +764,7 @@
 <div class="route_pda_detail_header">
 <button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back</span>
+<span>Back to Collections</span>
 </button>
 <h2 class="route_pda_detail_title">Reference Counts</h2>
 </div>
