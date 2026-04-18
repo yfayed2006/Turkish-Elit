@@ -1,5 +1,5 @@
 <odoo>
-<!--             Admin / all payments             -->
+<!--              Admin / all payments              -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--             Tailored visit list             -->
+<!--              Tailored visit list              -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--             Tailored direct sale list             -->
+<!--              Tailored direct sale list              -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -144,7 +144,7 @@
 </span>
 </div>
 <t t-if="record.effective_promise_amount.raw_value">
-<div class="route_pda_payment_metric route_pda_payment_metric_single">
+<div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
 <span class="route_pda_payment_metric_label">Promise</span>
 <span class="route_pda_payment_metric_value">
 <field name="effective_promise_amount"/>
@@ -154,16 +154,16 @@
 </div>
 <div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value or record.promise_date.raw_value">
 <t t-if="record.settlement_document_ref.raw_value">
-<div class="route_pda_payment_footer_item">
-<span class="route_pda_payment_footer_label">Settlement:</span>
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Settlement</span>
 <span class="route_pda_payment_footer_value">
 <t t-esc="record.settlement_document_ref.value"/>
 </span>
 </div>
 </t>
 <t t-if="record.promise_date.raw_value">
-<div class="route_pda_payment_footer_item">
-<span class="route_pda_payment_footer_label">Promise Date:</span>
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Promise On</span>
 <span class="route_pda_payment_footer_value">
 <field name="promise_date"/>
 </span>
@@ -208,12 +208,11 @@
 <field name="effective_promise_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not promise_status">
 <div class="route_pda_info_label">Promise Status</div>
-<div invisible="not promise_status">
+<div>
 <field name="promise_status" readonly="1" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" nolabel="1"/>
 </div>
-<div class="route_pda_payment_status_empty" invisible="promise_status">No Promise</div>
 </div>
 </div>
 <group string="Collection Snapshot" col="2">
@@ -253,14 +252,14 @@
 </group>
 <group/>
 </group>
-<group string="Collection Note" invisible="state == 'confirmed' and not note">
+<group string="Collection Note" invisible="not note">
 <field name="note" readonly="state != 'draft'"/>
 </group>
 </sheet>
 </form>
 </field>
 </record>
-<!--             Admin / all payments search             -->
+<!--              Admin / all payments search              -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -322,7 +321,7 @@
 </search>
 </field>
 </record>
-<!--             Visit collections search             -->
+<!--              Visit collections search              -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -375,7 +374,7 @@
 </search>
 </field>
 </record>
-<!--             Direct sale payments search             -->
+<!--              Direct sale payments search              -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
