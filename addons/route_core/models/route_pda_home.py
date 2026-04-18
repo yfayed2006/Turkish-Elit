@@ -5,6 +5,8 @@ import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .route_schedule_common import compute_week_start_date
+
 
 class RoutePdaHome(models.TransientModel):
     _name = "route.pda.home"
@@ -737,9 +739,27 @@ class RoutePdaHome(models.TransientModel):
         today = fields.Date.context_today(self)
         return self._prepare_action(
             "route_core.action_route_visit_pda",
-            name="My Visits",
+            name="Today's Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "search_default_filter_active": 1, "edit": 1},
+        )
+
+    def action_open_my_weekly_schedule(self):
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        today = fields.Date.context_today(self)
+        week_start = compute_week_start_date(today, company.route_week_start_day or "monday")
+        week_end = fields.Date.add(week_start, days=6) if week_start else today
+        return self._prepare_action(
+            "route_core.action_route_weekly_schedule_salesperson",
+            name="My Weekly Schedule",
+            domain=[
+                ("user_id", "=", self.env.user.id),
+                ("week_start_date", "<=", today),
+                ("week_end_date", ">=", today),
+                ("state", "!=", "cancelled"),
+            ],
+            context={"search_default_filter_current_week": 1, "create": 0, "edit": 0, "delete": 0},
         )
 
     def action_open_current_visit(self):
