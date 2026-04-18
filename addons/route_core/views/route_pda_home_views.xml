@@ -645,7 +645,7 @@
 <button type="object" name="action_open_collections_snapshot_from_collections_center" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-line-chart route_pda_app_icon"/>
 <span class="route_pda_app_label">Daily Summary</span>
-<span class="route_pda_app_hint">Cash, promises and follow-up</span>
+<span class="route_pda_app_hint">Cash, promises and remaining due</span>
 <span class="route_pda_app_hint_value route_pda_app_hint_money">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
@@ -653,7 +653,7 @@
 <button type="object" name="action_open_visit_collections" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-credit-card route_pda_app_icon"/>
 <span class="route_pda_app_label">All Collections</span>
-<span class="route_pda_app_hint">Open collection records</span>
+<span class="route_pda_app_hint">Confirmed collection entries</span>
 </button>
 </div>
 </sheet>
