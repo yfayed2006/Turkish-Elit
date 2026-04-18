@@ -182,7 +182,6 @@
 <field name="arch" type="xml">
 <form class="route_pda_payment_form">
 <header>
-<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not outlet_id"/>
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
