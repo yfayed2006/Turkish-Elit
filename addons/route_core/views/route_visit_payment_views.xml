@@ -194,6 +194,7 @@
 <field name="can_open_statement" invisible="1"/>
 <field name="statement_visit_id" invisible="1"/>
 <field name="note_display_html" invisible="1"/>
+<field name="primary_reference_value" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
 <div class="route_pda_info_label">Collected</div>
@@ -216,24 +217,28 @@
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not promise_status">
 <div class="route_pda_info_label">Promise Status</div>
 <div>
-<field name="promise_status" readonly="1" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" nolabel="1"/>
+<field name="promise_status" readonly="1" widget="badge" nolabel="1" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 </div>
 </div>
 </div>
+<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn route_pda_statement_btn route_pda_payment_mobile_statement_btn" invisible="not can_open_statement">
+<i class="fa fa-file-text-o"/>
+<span>Statement of Account</span>
+</button>
 <div class="route_pda_payment_meta_grid">
-<div class="route_pda_payment_meta_item" invisible="source_type != 'visit'">
+<div class="route_pda_payment_meta_item" invisible="source_type != 'visit' or not primary_reference_value">
 <span class="route_pda_payment_meta_label">Visit</span>
-<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'" string="Visit" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+<field name="primary_reference_value" readonly="1" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="source_type != 'direct_sale'">
+<div class="route_pda_payment_meta_item" invisible="source_type != 'direct_sale' or not primary_reference_value">
 <span class="route_pda_payment_meta_label">Order</span>
-<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'" string="Order" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+<field name="primary_reference_value" readonly="1" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="not source_document_ref">
+<div class="route_pda_payment_meta_item" invisible="not source_document_ref or source_document_ref == primary_reference_value or source_document_ref == settlement_document_ref">
 <span class="route_pda_payment_meta_label">Document</span>
 <field name="source_document_ref" readonly="1" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="not settlement_document_ref">
+<div class="route_pda_payment_meta_item" invisible="not settlement_document_ref or settlement_document_ref == primary_reference_value or settlement_document_ref == source_document_ref">
 <span class="route_pda_payment_meta_label">Settlement</span>
 <field name="settlement_document_ref" readonly="1" nolabel="1"/>
 </div>
@@ -254,27 +259,69 @@
 <field name="payment_mode" readonly="state != 'draft'" string="Mode" widget="badge" nolabel="1"/>
 </div>
 </div>
-<group string="Collection Decision" col="4" class="route_pda_payment_compact_group">
-<field name="collection_type" readonly="state != 'draft'" string="Scenario"/>
-<field name="amount" readonly="state != 'draft'" string="Collected Now" invisible="collection_type in ('defer_date', 'next_visit')"/>
-<field name="due_date" readonly="state != 'draft'" string="Deferred To" invisible="collection_type != 'defer_date'"/>
-<field name="promise_date" readonly="state != 'draft'" string="Promise Date" invisible="collection_type == 'full'"/>
-<field name="promise_amount" readonly="state != 'draft'" string="Promise Amount" invisible="collection_type == 'full'"/>
-<field name="promise_status" readonly="1" string="Promise Status" invisible="collection_type == 'full'" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="reference" readonly="state != 'draft'" string="Reference" invisible="payment_mode in ('cash', 'deferred')"/>
-<field name="bank_name" readonly="state != 'draft'" string="Bank" invisible="payment_mode != 'bank'"/>
-<field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" invisible="payment_mode != 'pos'"/>
-</group>
-<group string="Reference Details" col="2" class="route_pda_payment_compact_group">
-<field name="area_id" readonly="1"/>
-<field name="salesperson_id" readonly="1"/>
-</group>
-<group string="Collection Note" invisible="not note" class="route_pda_payment_compact_group">
-<field name="note" readonly="state == 'confirmed' or state == 'cancelled'" invisible="state != 'draft'" placeholder="Add note" widget="text"/>
+<div class="route_pda_payment_section">
+<div class="route_pda_payment_section_title">Collection Decision</div>
+<div class="route_pda_payment_detail_grid">
+<div class="route_pda_payment_detail_item">
+<span class="route_pda_payment_detail_label">Scenario</span>
+<field name="collection_type" readonly="state != 'draft'" string="Scenario" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="collection_type in ('defer_date', 'next_visit')">
+<span class="route_pda_payment_detail_label">Collected Now</span>
+<field name="amount" readonly="state != 'draft'" string="Collected Now" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="collection_type != 'defer_date'">
+<span class="route_pda_payment_detail_label">Deferred To</span>
+<field name="due_date" readonly="state != 'draft'" string="Deferred To" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_detail_label">Promise Date</span>
+<field name="promise_date" readonly="state != 'draft'" string="Promise Date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_detail_label">Promise Amount</span>
+<field name="promise_amount" readonly="state != 'draft'" string="Promise Amount" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_detail_label">Promise Status</span>
+<field name="promise_status" readonly="1" string="Promise Status" nolabel="1" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="payment_mode in ('cash', 'deferred')">
+<span class="route_pda_payment_detail_label">Reference</span>
+<field name="reference" readonly="state != 'draft'" string="Reference" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="payment_mode != 'bank'">
+<span class="route_pda_payment_detail_label">Bank</span>
+<field name="bank_name" readonly="state != 'draft'" string="Bank" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item" invisible="payment_mode != 'pos'">
+<span class="route_pda_payment_detail_label">POS Terminal</span>
+<field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section">
+<div class="route_pda_payment_section_title">Reference Details</div>
+<div class="route_pda_payment_detail_grid route_pda_payment_detail_grid_compact">
+<div class="route_pda_payment_detail_item">
+<span class="route_pda_payment_detail_label">Area</span>
+<field name="area_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_detail_item">
+<span class="route_pda_payment_detail_label">Salesperson</span>
+<field name="salesperson_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="not note">
+<div class="route_pda_payment_section_title">Collection Note</div>
+<div class="route_pda_payment_note_editor" invisible="state != 'draft'">
+<field name="note" readonly="state == 'confirmed' or state == 'cancelled'" placeholder="Add note" widget="text" nolabel="1"/>
+</div>
 <div class="route_pda_multilingual_note" invisible="state == 'draft' or not note_display_html">
 <field name="note_display_html" readonly="1" widget="html" nolabel="1"/>
 </div>
-</group>
+</div>
 </sheet>
 </form>
 </field>
@@ -388,8 +435,6 @@
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="payment_mode" string="Payment Mode"/>
-<field name="collection_type" string="Collection"/>
-<field name="state" string="Status"/>
 </searchpanel>
 </search>
 </field>
