@@ -1,5 +1,5 @@
 <odoo>
-<!--           Admin / all payments           -->
+<!--            Admin / all payments            -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--           Tailored visit list           -->
+<!--            Tailored visit list            -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--           Tailored direct sale list           -->
+<!--            Tailored direct sale list            -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -84,8 +84,11 @@
 <kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
 <field name="payment_date"/>
 <field name="payment_business_flow"/>
+<field name="payment_business_flow_short"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
+<field name="collection_type_short"/>
+<field name="promise_date"/>
 <field name="source_document_ref"/>
 <field name="settlement_document_ref"/>
 <field name="outlet_id"/>
@@ -111,7 +114,7 @@
 </div>
 <div class="route_pda_payment_badges route_pda_payment_badges_primary">
 <span class="route_pda_payment_badge route_pda_payment_badge_flow">
-<t t-esc="record.payment_business_flow.value or ''"/>
+<t t-esc="record.payment_business_flow_short.value or record.payment_business_flow.value or ''"/>
 </span>
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
 <t t-esc="record.payment_mode.value or ''"/>
@@ -119,7 +122,7 @@
 </div>
 <div class="route_pda_payment_badges route_pda_payment_badges_secondary">
 <span class="route_pda_payment_badge route_pda_payment_badge_collection">
-<t t-esc="record.collection_type.value or ''"/>
+<t t-esc="record.collection_type_short.value or record.collection_type.value or ''"/>
 </span>
 <t t-if="record.promise_status.raw_value">
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
@@ -142,18 +145,26 @@
 </div>
 <t t-if="record.effective_promise_amount.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single">
-<span class="route_pda_payment_metric_label">Promise Amount</span>
+<span class="route_pda_payment_metric_label">Promise</span>
 <span class="route_pda_payment_metric_value">
 <field name="effective_promise_amount"/>
 </span>
 </div>
 </t>
 </div>
-<div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value">
+<div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value or record.promise_date.raw_value">
+<t t-if="record.settlement_document_ref.raw_value">
 <span class="route_pda_payment_footer_label">Settlement:</span>
 <span class="route_pda_payment_footer_value">
 <t t-esc="record.settlement_document_ref.value"/>
 </span>
+</t>
+<t t-if="record.promise_date.raw_value">
+<span class="route_pda_payment_footer_label">Promise Date:</span>
+<span class="route_pda_payment_footer_value">
+<field name="promise_date"/>
+</span>
+</t>
 </div>
 </div>
 </t>
@@ -204,44 +215,48 @@
 <group string="Collection Snapshot" col="2">
 <group>
 <field name="source_type" invisible="1"/>
-<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'"/>
-<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'"/>
-<field name="source_document_ref" readonly="1" string="Source Document"/>
+<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'" string="Visit"/>
+<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'" string="Order"/>
 <field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
-<field name="area_id" readonly="1"/>
-<field name="salesperson_id" readonly="1"/>
-<field name="payment_business_flow" readonly="1"/>
-<field name="settlement_document_ref" readonly="1" invisible="not settlement_document_ref"/>
-<field name="visit_remaining_due" readonly="1" string="Current Open Due"/>
+<field name="payment_date" readonly="state != 'draft'"/>
+<field name="payment_mode" readonly="state != 'draft'" string="Mode"/>
 </group>
 <group>
-<field name="payment_date" readonly="state != 'draft'"/>
-<field name="payment_mode" readonly="state != 'draft'"/>
+<field name="payment_business_flow" readonly="1" string="Flow"/>
+<field name="settlement_document_ref" readonly="1" string="Settlement" invisible="not settlement_document_ref"/>
+<field name="source_document_ref" readonly="1" string="Document Ref" invisible="visit_id or sale_order_id"/>
 </group>
 </group>
 <group string="Collection Decision" col="2">
 <group>
-<field name="collection_type" readonly="state != 'draft'"/>
-<field name="amount" readonly="state != 'draft'" invisible="collection_type in ('defer_date', 'next_visit')"/>
-<field name="due_date" readonly="state != 'draft'" invisible="collection_type != 'defer_date'"/>
-<field name="promise_date" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
-<field name="promise_amount" readonly="state != 'draft'" invisible="collection_type == 'full'"/>
-<field name="promise_status" readonly="1" invisible="collection_type == 'full'"/>
+<field name="collection_type" readonly="state != 'draft'" string="Scenario"/>
+<field name="amount" readonly="state != 'draft'" string="Collected Now" invisible="collection_type in ('defer_date', 'next_visit')"/>
+<field name="due_date" readonly="state != 'draft'" string="Deferred To" invisible="collection_type != 'defer_date'"/>
+<field name="promise_date" readonly="state != 'draft'" string="Promise Date" invisible="collection_type == 'full'"/>
+<field name="promise_amount" readonly="state != 'draft'" string="Promise Amount" invisible="collection_type == 'full'"/>
+<field name="promise_status" readonly="1" string="Promise Status" invisible="collection_type == 'full'"/>
 </group>
 <group>
-<field name="reference" readonly="state != 'draft'" invisible="payment_mode in ('cash', 'deferred')"/>
-<field name="bank_name" readonly="state != 'draft'" invisible="payment_mode != 'bank'"/>
-<field name="pos_terminal" readonly="state != 'draft'" invisible="payment_mode != 'pos'"/>
+<field name="reference" readonly="state != 'draft'" string="Reference" invisible="payment_mode in ('cash', 'deferred')"/>
+<field name="bank_name" readonly="state != 'draft'" string="Bank" invisible="payment_mode != 'bank'"/>
+<field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" invisible="payment_mode != 'pos'"/>
 </group>
 </group>
+<group string="Reference Details" col="2">
 <group>
+<field name="area_id" readonly="1"/>
+<field name="salesperson_id" readonly="1"/>
+</group>
+<group/>
+</group>
+<group string="Collection Note" invisible="state == 'confirmed' and not note">
 <field name="note" readonly="state != 'draft'"/>
 </group>
 </sheet>
 </form>
 </field>
 </record>
-<!--           Admin / all payments search           -->
+<!--            Admin / all payments search            -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -303,7 +318,7 @@
 </search>
 </field>
 </record>
-<!--           Visit collections search           -->
+<!--            Visit collections search            -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -356,7 +371,7 @@
 </search>
 </field>
 </record>
-<!--           Direct sale payments search           -->
+<!--            Direct sale payments search            -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
