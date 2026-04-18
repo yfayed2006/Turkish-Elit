@@ -156,7 +156,7 @@
 </button>
 <button type="object" name="action_open_consignment_payments" class="btn route_pda_app_btn route_pda_app_btn_snapshot">
 <i class="fa fa-credit-card route_pda_app_icon"/>
-<span class="route_pda_app_label">Consignment Collections</span>
+<span class="route_pda_app_label">Consignment</span>
 </button>
 </div>
 </sheet>
@@ -705,13 +705,13 @@
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Open Promise Amount</div>
+<div class="route_pda_info_label">Open Promise</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_info_card_emphasis">
-<div class="route_pda_info_label">Today Remaining Due</div>
+<div class="route_pda_info_label">Remaining Due</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
@@ -722,25 +722,25 @@
 <div class="route_pda_group_title">Collection Breakdown</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_finance_grid">
 <div class="route_pda_info_card" invisible="route_show_consignment_tools == False">
-<div class="route_pda_info_label">Consignment Collections</div>
+<div class="route_pda_info_label">Consignment</div>
 <div class="route_pda_info_value">
 <field name="visit_collection_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Stop Collections</div>
+<div class="route_pda_info_label">Direct Stop</div>
 <div class="route_pda_info_value">
 <field name="direct_stop_payment_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="route_show_direct_sale_tools == False">
-<div class="route_pda_info_label">Direct Sale Order Collections</div>
+<div class="route_pda_info_label">Direct Sale Orders</div>
 <div class="route_pda_info_value">
 <field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
-<div class="route_pda_info_label">Deferred Entries Today</div>
+<div class="route_pda_info_label">Deferred Entries</div>
 <div class="route_pda_info_value">
 <field name="deferred_payment_count" readonly="1" nolabel="1"/>
 </div>
