@@ -24,9 +24,9 @@
 <field name="arch" type="xml">
 <form string="Weekly Visit Template">
 <header>
-<button name="action_create_current_week_schedule" type="object" string="Activate This Week" class="btn-primary" invisible="not id"/>
-<button name="action_create_next_week_schedule" type="object" string="Activate Next Week" class="btn-secondary" invisible="not id"/>
-<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary" invisible="not id"/>
+<button name="action_create_current_week_schedule" type="object" string="Create This Week Schedule" class="btn-primary"/>
+<button name="action_create_next_week_schedule" type="object" string="Create Next Week Schedule" class="btn-secondary"/>
+<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
@@ -42,7 +42,7 @@
 <field name="active" widget="boolean_toggle"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert"> This screen is for building one reusable weekly visit template. Save the template first. Then activate a dated weekly schedule from it, and finally generate daily plans. </div>
+<div class="alert alert-info" role="alert"> This screen is for creating a reusable weekly visit template. After saving it, create a dated weekly schedule from it, then generate daily route plans. </div>
 <div class="alert alert-warning" role="alert" invisible="off_day_stop_count == 0">
 <strong>Weekly Off Day Review:</strong>
 <field name="off_day_stop_count" class="oe_inline" readonly="1"/>
@@ -66,14 +66,14 @@ and will need supervisor review before operational use.
 </group>
 </group>
 <separator string="Weekly Visit Stops"/>
-<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Add outlets under each weekday tab. Select City first, then Area, then Outlet. </div>
+<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Add outlets under each weekday tab. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
 <field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -87,8 +87,8 @@ and will need supervisor review before operational use.
 <field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -102,8 +102,8 @@ and will need supervisor review before operational use.
 <field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -117,8 +117,8 @@ and will need supervisor review before operational use.
 <field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -132,8 +132,8 @@ and will need supervisor review before operational use.
 <field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -147,8 +147,8 @@ and will need supervisor review before operational use.
 <field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
@@ -162,8 +162,8 @@ and will need supervisor review before operational use.
 <field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
-<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
+<field name="weekday" column_invisible="1" force_save="1"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
