@@ -46,6 +46,13 @@ class RouteScheduleTemplate(models.Model):
         "template_id",
         string="Weekly Stops",
     )
+    monday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Monday Stops")
+    tuesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Tuesday Stops")
+    wednesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Wednesday Stops")
+    thursday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Thursday Stops")
+    friday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Friday Stops")
+    saturday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Saturday Stops")
+    sunday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Sunday Stops")
     notes = fields.Text(string="Planning Notes")
 
     off_day = fields.Selection(related="company_id.route_weekly_off_day", string="Weekly Off Day", readonly=True)
@@ -121,6 +128,7 @@ class RouteScheduleTemplate(models.Model):
             commands.append(fields.Command.create({
                 "sequence": line.sequence,
                 "weekday": line.weekday,
+                "city_id": line.city_id.id,
                 "area_id": line.area_id.id,
                 "outlet_id": line.outlet_id.id,
                 "note": line.note,
@@ -210,18 +218,18 @@ class RouteScheduleTemplateLine(models.Model):
     )
     weekday_label = fields.Char(string="Weekday Label", compute="_compute_weekday_label")
     is_off_day = fields.Boolean(string="Weekly Off Day", compute="_compute_is_off_day")
+    city_id = fields.Many2one(
+        "route.city",
+        string="City",
+        required=True,
+        ondelete="restrict",
+    )
     area_id = fields.Many2one(
         "route.area",
         string="Area",
         required=True,
         ondelete="restrict",
-    )
-    city_id = fields.Many2one(
-        "route.city",
-        string="City",
-        related="area_id.city_id",
-        store=True,
-        readonly=True,
+        domain="[('city_id', '=', city_id)]",
     )
     outlet_id = fields.Many2one(
         "route.outlet",
@@ -263,11 +271,32 @@ class RouteScheduleTemplateLine(models.Model):
         for rec in self:
             rec.is_off_day = bool(rec.weekday and rec.template_id.company_id.route_weekly_off_day and rec.weekday == rec.template_id.company_id.route_weekly_off_day)
 
+    @api.onchange("city_id")
+    def _onchange_city_id(self):
+        for rec in self:
+            if rec.area_id and rec.area_id.city_id != rec.city_id:
+                rec.area_id = False
+            if rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
+                rec.outlet_id = False
+            return {
+                "domain": {
+                    "area_id": [("city_id", "=", rec.city_id.id)] if rec.city_id else [],
+                    "outlet_id": [("area_id.city_id", "=", rec.city_id.id)] if rec.city_id else [],
+                }
+            }
+
     @api.onchange("area_id")
     def _onchange_area_id(self):
         for rec in self:
+            if rec.area_id and rec.area_id.city_id != rec.city_id:
+                rec.city_id = rec.area_id.city_id
             if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
                 rec.outlet_id = False
+            return {
+                "domain": {
+                    "outlet_id": [("area_id", "=", rec.area_id.id)] if rec.area_id else ([('area_id.city_id', '=', rec.city_id.id)] if rec.city_id else []),
+                }
+            }
 
     @api.onchange("weekday")
     def _onchange_weekday_warning(self):
@@ -284,13 +313,23 @@ class RouteScheduleTemplateLine(models.Model):
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
-            if rec.outlet_id and not rec.area_id:
+            if rec.outlet_id:
                 rec.area_id = rec.outlet_id.area_id
+                rec.city_id = rec.outlet_id.area_id.city_id
 
-    @api.constrains("area_id", "outlet_id")
+    @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
         for rec in self:
+            if rec.city_id and rec.area_id and rec.area_id.city_id != rec.city_id:
+                raise ValidationError(
+                    _("The selected area does not belong to the selected city.")
+                )
             if rec.area_id and rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
                 raise ValidationError(
                     _("The selected outlet does not belong to the selected area.")
                 )
+            if rec.city_id and rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
+                raise ValidationError(
+                    _("The selected outlet does not belong to the selected city.")
+                )
+
