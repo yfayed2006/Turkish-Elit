@@ -5,17 +5,17 @@
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
 <list>
-<field name="name"/>
+<field name="name" string="Schedule Reference"/>
 <field name="week_start_date"/>
 <field name="week_end_date"/>
 <field name="user_id"/>
 <field name="vehicle_id"/>
-<field name="template_id" optional="show"/>
+<field name="template_id" string="Weekly Template" optional="show"/>
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="line_count"/>
-<field name="generated_plan_count"/>
+<field name="line_count" string="Stops"/>
+<field name="generated_plan_count" string="Daily Plans"/>
 <field name="state" widget="badge"/>
 </list>
 </field>
@@ -24,7 +24,7 @@
 <field name="name">route.weekly.schedule.form</field>
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
-<form string="Weekly Schedule">
+<form string="Generated Weekly Schedule">
 <header>
 <button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
@@ -52,6 +52,12 @@
 <field name="state" widget="badge"/>
 </div>
 </div>
+<div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a template. Each tab represents one weekday, and each row should appear only under its own day. </div>
+<div class="alert alert-warning" role="alert" invisible="skipped_finalized_plan_count == 0">
+<strong>Finalized Daily Plans Protected:</strong>
+<field name="skipped_finalized_plan_count" class="oe_inline" readonly="1"/>
+day(s) were linked to already finalized daily plans and were skipped during sync to protect operational data.
+</div>
 <group string="Weekly Planning" col="2">
 <group>
 <field name="week_start_date"/>
@@ -65,17 +71,19 @@
 <field name="company_id" readonly="1"/>
 <field name="off_day" readonly="1"/>
 <field name="off_day_stop_count" readonly="1"/>
+<field name="skipped_finalized_plan_count" readonly="1"/>
 <field name="city_summary" readonly="1"/>
 <field name="area_summary" readonly="1"/>
 <field name="outlet_summary" readonly="1"/>
 </group>
 </group>
 <separator string="Scheduled Weekly Stops"/>
-<div class="alert alert-info" role="alert">This screen is a dated weekly schedule created from a template. Each tab represents one weekday, and each row should appear only under its own day.</div>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" domain="[('weekday', '=', 'monday')]" context="{'default_weekday': 'monday'}">
-<list editable="bottom">
+<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -89,8 +97,10 @@
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" domain="[('weekday', '=', 'tuesday')]" context="{'default_weekday': 'tuesday'}">
-<list editable="bottom">
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -104,8 +114,10 @@
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" domain="[('weekday', '=', 'wednesday')]" context="{'default_weekday': 'wednesday'}">
-<list editable="bottom">
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -119,8 +131,10 @@
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" domain="[('weekday', '=', 'thursday')]" context="{'default_weekday': 'thursday'}">
-<list editable="bottom">
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -134,9 +148,10 @@
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" domain="[('weekday', '=', 'friday')]" context="{'default_weekday': 'friday'}">
-<list editable="bottom" decoration-warning="is_off_day">
+<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -150,8 +165,10 @@
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" domain="[('weekday', '=', 'saturday')]" context="{'default_weekday': 'saturday'}">
-<list editable="bottom">
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -165,8 +182,10 @@
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" domain="[('weekday', '=', 'sunday')]" context="{'default_weekday': 'sunday'}">
-<list editable="bottom">
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<field name="is_off_day" column_invisible="1"/>
+<field name="finalized_plan_skip" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -192,7 +211,7 @@
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
 <search>
-<field name="name"/>
+<field name="name" string="Schedule Reference"/>
 <field name="week_start_date"/>
 <field name="user_id"/>
 <field name="vehicle_id"/>
