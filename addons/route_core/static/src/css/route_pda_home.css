@@ -1036,8 +1036,14 @@
 
 @media (max-width: 768px) {
     .o_kanban_view.route_pda_visit_kanban .o_kanban_renderer.o_kanban_ungrouped {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .o_kanban_view.route_pda_visit_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1786,5 +1792,16 @@
     .route_pda_statement_grid .route_pda_payment_meta_label {
         font-size: 0.72rem;
     }
+}
+
+
+.route_pda_info_card_full {
+    grid-column: 1 / -1;
+}
+.route_pda_info_value_left,
+.route_pda_info_value_left .o_field_widget,
+.route_pda_info_value_left .o_input {
+    justify-content: flex-start !important;
+    text-align: left !important;
 }
 
