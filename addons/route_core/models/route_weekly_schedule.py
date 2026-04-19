@@ -372,6 +372,11 @@ class RouteWeeklySchedule(models.Model):
         return True
 
     def action_reset_to_draft(self):
+        for rec in self:
+            rec.line_ids.write({
+                "generated_plan_id": False,
+                "generated_plan_line_id": False,
+            })
         self.write({"state": "draft"})
         return True
 
@@ -534,3 +539,4 @@ class RouteWeeklyScheduleLine(models.Model):
                 raise ValidationError(
                     _("The selected outlet does not belong to the selected city.")
                 )
+
