@@ -46,13 +46,13 @@ class RouteScheduleTemplate(models.Model):
         "template_id",
         string="Weekly Stops",
     )
-    monday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Monday Stops")
-    tuesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Tuesday Stops")
-    wednesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Wednesday Stops")
-    thursday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Thursday Stops")
-    friday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Friday Stops")
-    saturday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Saturday Stops")
-    sunday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Sunday Stops")
+    monday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Monday Stops", domain=[("weekday", "=", "monday")])
+    tuesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Tuesday Stops", domain=[("weekday", "=", "tuesday")])
+    wednesday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Wednesday Stops", domain=[("weekday", "=", "wednesday")])
+    thursday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Thursday Stops", domain=[("weekday", "=", "thursday")])
+    friday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Friday Stops", domain=[("weekday", "=", "friday")])
+    saturday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Saturday Stops", domain=[("weekday", "=", "saturday")])
+    sunday_line_ids = fields.One2many("route.schedule.template.line", "template_id", string="Sunday Stops", domain=[("weekday", "=", "sunday")])
     notes = fields.Text(string="Planning Notes")
 
     off_day = fields.Selection(related="company_id.route_weekly_off_day", string="Weekly Off Day", readonly=True)
@@ -332,4 +332,3 @@ class RouteScheduleTemplateLine(models.Model):
                 raise ValidationError(
                     _("The selected outlet does not belong to the selected city.")
                 )
-
