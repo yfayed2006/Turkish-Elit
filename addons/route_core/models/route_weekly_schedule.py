@@ -635,6 +635,9 @@ class RouteWeeklyScheduleLine(models.Model):
             domain.append(("area_id.city_id", "=", self.city_id.id))
         if self.area_id:
             domain.append(("area_id", "=", self.area_id.id))
+        used_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
+        if used_outlet_ids:
+            domain.append(("id", "not in", used_outlet_ids))
         return domain
 
     def _get_dynamic_domains(self):
@@ -658,12 +661,7 @@ class RouteWeeklyScheduleLine(models.Model):
         for rec in self:
             used_outlet_ids = rec._get_same_day_sibling_lines().mapped("outlet_id").ids
             rec.same_day_used_outlet_ids = Outlet.browse(used_outlet_ids)
-            domain = []
-            if rec.city_id:
-                domain.append(("area_id.city_id", "=", rec.city_id.id))
-            if rec.area_id:
-                domain.append(("area_id", "=", rec.area_id.id))
-            rec.available_outlet_ids = Outlet.search(domain)
+            rec.available_outlet_ids = Outlet.search(rec._get_available_outlet_domain())
 
 
     @api.model_create_multi
