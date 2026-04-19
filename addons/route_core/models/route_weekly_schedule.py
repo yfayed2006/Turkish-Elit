@@ -496,3 +496,4 @@ class RouteWeeklyScheduleLine(models.Model):
                     _("The selected outlet does not belong to the selected area.")
                 )
 
+
