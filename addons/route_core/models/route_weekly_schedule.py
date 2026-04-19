@@ -556,6 +556,16 @@ class RouteWeeklyScheduleLine(models.Model):
         store=False,
     )
     note = fields.Text(string="Line Note")
+    same_day_used_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Same-Day Used Outlets",
+        compute="_compute_same_day_outlet_helpers",
+    )
+    available_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Available Outlets",
+        compute="_compute_same_day_outlet_helpers",
+    )
     generated_plan_id = fields.Many2one(
         "route.plan",
         string="Generated Daily Plan",
@@ -637,6 +647,29 @@ class RouteWeeklyScheduleLine(models.Model):
             "area_id": area_domain,
             "outlet_id": self._get_available_outlet_domain(),
         }
+    @api.depends(
+        "weekday",
+        "city_id",
+        "area_id",
+        "schedule_id.line_ids.weekday",
+        "schedule_id.line_ids.outlet_id",
+        "schedule_id.line_ids.area_id",
+        "schedule_id.line_ids.city_id",
+    )
+    def _compute_same_day_outlet_helpers(self):
+        Outlet = self.env["route.outlet"]
+        for rec in self:
+            used_outlet_ids = rec._get_same_day_sibling_lines().mapped("outlet_id").ids
+            rec.same_day_used_outlet_ids = Outlet.browse(used_outlet_ids)
+            domain = []
+            if rec.city_id:
+                domain.append(("area_id.city_id", "=", rec.city_id.id))
+            if rec.area_id:
+                domain.append(("area_id", "=", rec.area_id.id))
+            if used_outlet_ids:
+                domain.append(("id", "not in", used_outlet_ids))
+            rec.available_outlet_ids = Outlet.search(domain)
+
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -702,10 +735,30 @@ class RouteWeeklyScheduleLine(models.Model):
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         self.ensure_one()
+        warning = False
         if self.outlet_id:
-            self.area_id = self.outlet_id.area_id
-            self.city_id = self.outlet_id.area_id.city_id
-        return {"domain": self._get_dynamic_domains()}
+            duplicate = self._get_same_day_sibling_lines().filtered(lambda line: line.outlet_id == self.outlet_id)[:1]
+            if duplicate:
+                outlet_name = self.outlet_id.display_name or self.outlet_id.name
+                self.outlet_id = False
+                warning = {
+                    "title": _("Validation Error"),
+                    "message": _(
+                        "Outlet %(outlet)s is already added on %(day)s in this weekly schedule. "
+                        "Choose another outlet for that day."
+                    )
+                    % {
+                        "outlet": outlet_name,
+                        "day": WEEKDAY_LABELS.get(self._get_effective_weekday() or "", self._get_effective_weekday() or ""),
+                    },
+                }
+            else:
+                self.area_id = self.outlet_id.area_id
+                self.city_id = self.outlet_id.area_id.city_id
+        response = {"domain": self._get_dynamic_domains()}
+        if warning:
+            response["warning"] = warning
+        return response
 
     @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
