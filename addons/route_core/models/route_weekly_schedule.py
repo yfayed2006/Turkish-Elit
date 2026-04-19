@@ -4,6 +4,8 @@ from odoo.exceptions import UserError, ValidationError
 from .route_schedule_common import (
     WEEKDAY_SELECTION,
     WEEKDAY_LABELS,
+    WEEKDAY_TAB_FIELD_MAP,
+    apply_weekday_to_x2many_commands,
     compute_weekday_date,
 )
 
@@ -182,6 +184,23 @@ class RouteWeeklySchedule(models.Model):
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
 
+    def _normalize_weekday_tab_vals(self, vals):
+        cleaned_vals = dict(vals)
+        merged_line_commands = list(cleaned_vals.get("line_ids") or [])
+        weekday_field_seen = False
+
+        for field_name, weekday_code in WEEKDAY_TAB_FIELD_MAP.items():
+            if field_name not in cleaned_vals:
+                continue
+            weekday_field_seen = True
+            merged_line_commands.extend(
+                apply_weekday_to_x2many_commands(cleaned_vals.pop(field_name) or [], weekday_code)
+            )
+
+        if weekday_field_seen:
+            cleaned_vals["line_ids"] = merged_line_commands
+        return cleaned_vals
+
     def _sanitize_line_dicts(self, line_dicts):
         sanitized = []
         seen = set()
@@ -206,7 +225,7 @@ class RouteWeeklySchedule(models.Model):
     def create(self, vals_list):
         cleaned_vals_list = []
         for vals in vals_list:
-            cleaned_vals = dict(vals)
+            cleaned_vals = self._normalize_weekday_tab_vals(vals)
             commands = cleaned_vals.get("line_ids") or []
             if commands:
                 line_dicts = []
@@ -230,7 +249,7 @@ class RouteWeeklySchedule(models.Model):
         return schedules
 
     def write(self, vals):
-        cleaned_vals = dict(vals)
+        cleaned_vals = self._normalize_weekday_tab_vals(vals)
         commands = cleaned_vals.get("line_ids") or []
         if commands:
             line_dicts = []
@@ -572,6 +591,21 @@ class RouteWeeklyScheduleLine(models.Model):
     )
     finalized_plan_skip = fields.Boolean(string="Skipped Because Finalized", readonly=True, copy=False)
 
+    @api.model
+    def _prepare_weekday_vals(self, vals):
+        cleaned_vals = dict(vals or {})
+        context_weekday = self.env.context.get("default_weekday")
+        if context_weekday and not cleaned_vals.get("weekday"):
+            cleaned_vals["weekday"] = context_weekday
+        return cleaned_vals
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        return super().create([self._prepare_weekday_vals(vals) for vals in vals_list])
+
+    def write(self, vals):
+        return super().write(self._prepare_weekday_vals(vals))
+
     _sql_constraints = [
         (
             "route_weekly_schedule_line_unique_outlet_day",
@@ -660,4 +694,3 @@ class RouteWeeklyScheduleLine(models.Model):
                 raise ValidationError(_("The selected outlet does not belong to the selected area."))
             if rec.city_id and rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
                 raise ValidationError(_("The selected outlet does not belong to the selected city."))
-
