@@ -100,6 +100,13 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_open_promise_due_today_amount = fields.Monetary(string="Open Promises Due Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_open_promise_due_today_count = fields.Integer(string="Promise Entries Due Today", compute="_compute_dashboard")
 
+    next_plan_available = fields.Boolean(string="Next Daily Plan Available", compute="_compute_dashboard")
+    next_plan_ref = fields.Char(string="Next Daily Plan", compute="_compute_dashboard")
+    next_plan_date_label = fields.Char(string="Next Plan Date", compute="_compute_dashboard")
+    next_plan_outlet_summary = fields.Char(string="Next Plan Outlets", compute="_compute_dashboard")
+    next_plan_status_label = fields.Char(string="Next Plan Status", compute="_compute_dashboard")
+    today_visits_empty_message = fields.Text(string="Today Visits Empty Message", compute="_compute_dashboard")
+
     @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return", "route_enable_lot_serial_tracking", "route_enable_expiry_tracking")
     def _compute_route_ui_mode(self):
         labels = {
@@ -606,6 +613,18 @@ class RoutePdaHome(models.TransientModel):
             warehouse_loc = rec._get_main_warehouse_location()
 
             rec.user_display_name = user.display_name or "-"
+            next_plan = rec._get_next_or_latest_plan()
+            rec.next_plan_available = bool(next_plan)
+            rec.next_plan_ref = next_plan.name if next_plan else False
+            rec.next_plan_date_label = fields.Date.to_string(next_plan.date) if next_plan and next_plan.date else False
+            rec.next_plan_outlet_summary = next_plan.outlet_summary if next_plan else False
+            rec.next_plan_status_label = dict(next_plan._fields["state"].selection).get(next_plan.state, next_plan.state) if next_plan else False
+            if next_plan and next_plan.date and next_plan.date >= today:
+                rec.today_visits_empty_message = _("No visits are scheduled for today. The next available daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+            elif next_plan:
+                rec.today_visits_empty_message = _("No visits are scheduled for today. The latest daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+            else:
+                rec.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
             rec.today_display_label = today.strftime("%b %d") if today else "-"
 
             rec.today_plan_count = len(today_plans)
@@ -737,12 +756,63 @@ class RoutePdaHome(models.TransientModel):
     def action_open_my_pda_visits(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
-        return self._prepare_action(
+        active_visit = self.env["route.visit"].search([
+            ("user_id", "=", self.env.user.id),
+            ("state", "=", "in_progress"),
+        ], order="start_datetime desc, id desc", limit=1)
+        if active_visit:
+            return self.action_open_current_visit()
+
+        today_visits = self.env["route.visit"].search_count([
+            ("user_id", "=", self.env.user.id),
+            ("date", "=", today),
+        ])
+        if not today_visits:
+            return self.action_open_today_visits_empty_screen()
+
+        action = self._prepare_action(
             "route_core.action_route_visit_pda",
             name="Today's Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "search_default_filter_active": 1, "edit": 1},
         )
+        action["help"] = _("<p class='o_view_nocontent_smiling_face'>No visits are scheduled for today.</p><p>Open My Daily Plans or My Weekly Schedule to review the next working day.</p>")
+        return action
+
+    def action_open_today_visits_empty_screen(self):
+        self.ensure_one()
+        return self._open_self_view(
+            "route_core.view_route_pda_today_visits_empty_form",
+            "Today's Visits",
+        )
+
+    def action_open_next_daily_plan(self):
+        self.ensure_one()
+        plan = self._get_next_or_latest_plan()
+        if not plan:
+            return self.action_open_today_plans()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Daily Route Plan"),
+            "res_model": "route.plan",
+            "res_id": plan.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def _get_next_or_latest_plan(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        Plan = self.env["route.plan"]
+        next_plan = Plan.search([
+            ("user_id", "=", self.env.user.id),
+            ("date", ">=", today),
+        ], order="date asc, id asc", limit=1)
+        if next_plan:
+            return next_plan
+        return Plan.search([
+            ("user_id", "=", self.env.user.id),
+        ], order="date desc, id desc", limit=1)
 
     def action_open_my_weekly_schedule(self):
         self.ensure_one()
