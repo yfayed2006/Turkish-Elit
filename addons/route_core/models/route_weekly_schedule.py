@@ -61,13 +61,13 @@ class RouteWeeklySchedule(models.Model):
         "schedule_id",
         string="Scheduled Stops",
     )
-    monday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Monday Stops")
-    tuesday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Tuesday Stops")
-    wednesday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Wednesday Stops")
-    thursday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Thursday Stops")
-    friday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Friday Stops")
-    saturday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Saturday Stops")
-    sunday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Sunday Stops")
+    monday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Monday Stops", domain=[("weekday", "=", "monday")])
+    tuesday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Tuesday Stops", domain=[("weekday", "=", "tuesday")])
+    wednesday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Wednesday Stops", domain=[("weekday", "=", "wednesday")])
+    thursday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Thursday Stops", domain=[("weekday", "=", "thursday")])
+    friday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Friday Stops", domain=[("weekday", "=", "friday")])
+    saturday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Saturday Stops", domain=[("weekday", "=", "saturday")])
+    sunday_line_ids = fields.One2many("route.weekly.schedule.line", "schedule_id", string="Sunday Stops", domain=[("weekday", "=", "sunday")])
     route_plan_ids = fields.Many2many(
         "route.plan",
         string="Generated Daily Plans",
@@ -171,6 +171,7 @@ class RouteWeeklySchedule(models.Model):
             commands.append(fields.Command.create({
                 "sequence": line.sequence,
                 "weekday": line.weekday,
+                "city_id": line.city_id.id,
                 "area_id": line.area_id.id,
                 "outlet_id": line.outlet_id.id,
                 "note": line.note,
