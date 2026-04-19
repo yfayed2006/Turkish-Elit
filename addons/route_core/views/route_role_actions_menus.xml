@@ -20,7 +20,7 @@
 <field name="sequence">8</field>
 </record>
 <record id="menu_route_plan" model="ir.ui.menu">
-<field name="name">Daily Plans</field>
+<field name="name">Daily Route Plans</field>
 <field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">10</field>
