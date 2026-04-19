@@ -24,11 +24,11 @@
 <field name="name">route.weekly.schedule.form</field>
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
-<form string="Generated Weekly Schedule">
+<form string="Weekly Schedule">
 <header>
-<button name="action_generate_daily_plans" type="object" string="Generate Daily Route Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_open_template" type="object" string="Open Template" class="btn-secondary"/>
+<button name="action_open_template" type="object" string="Open Weekly Template" class="btn-secondary"/>
 <button name="action_open_daily_plans" type="object" string="Open Daily Plans" class="btn-secondary"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_cancel_schedule" type="object" string="Cancel" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
@@ -71,7 +71,7 @@
 </group>
 </group>
 <separator string="Scheduled Weekly Stops"/>
-<div class="alert alert-info" role="alert">Each tab represents one weekday. Review outlets by day instead of repeating the weekday on every row.</div>
+<div class="alert alert-info" role="alert">This screen is a dated weekly schedule created from a template. Each tab represents one weekday, and each row should appear only under its own day.</div>
 <notebook>
 <page string="Monday">
 <field name="monday_line_ids" domain="[('weekday', '=', 'monday')]" context="{'default_weekday': 'monday'}">
@@ -212,7 +212,7 @@
 </field>
 </record>
 <record id="action_route_weekly_schedule" model="ir.actions.act_window">
-<field name="name">Generated Weekly Schedules</field>
+<field name="name">Weekly Schedules</field>
 <field name="res_model">route.weekly.schedule</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="route_core.view_route_weekly_schedule_search"/>
