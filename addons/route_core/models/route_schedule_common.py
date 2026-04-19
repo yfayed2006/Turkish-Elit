@@ -14,6 +14,30 @@ WEEKDAY_SELECTION = [
 
 WEEKDAY_INDEX = {code: index for index, (code, _label) in enumerate(WEEKDAY_SELECTION)}
 WEEKDAY_LABELS = dict(WEEKDAY_SELECTION)
+WEEKDAY_TAB_FIELD_MAP = {
+    "monday_line_ids": "monday",
+    "tuesday_line_ids": "tuesday",
+    "wednesday_line_ids": "wednesday",
+    "thursday_line_ids": "thursday",
+    "friday_line_ids": "friday",
+    "saturday_line_ids": "saturday",
+    "sunday_line_ids": "sunday",
+}
+
+
+def apply_weekday_to_x2many_commands(commands, weekday_code):
+    normalized = []
+    for command in commands or []:
+        if not command:
+            continue
+        operation = command[0]
+        if operation in (0, 1):
+            values = dict(command[2] or {})
+            values.setdefault("weekday", weekday_code)
+            normalized.append((operation, command[1], values))
+        else:
+            normalized.append(command)
+    return normalized
 
 
 def compute_week_start_date(reference_date, week_start_day="monday"):
