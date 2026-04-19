@@ -52,7 +52,7 @@
 <field name="state" widget="badge"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a template. Each tab represents one weekday, and each row should appear only under its own day. </div>
+<div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a saved template. Each tab represents one weekday. Review the schedule first, then generate daily plans. </div>
 <div class="alert alert-warning" role="alert" invisible="skipped_finalized_plan_count == 0">
 <strong>Finalized Daily Plans Protected:</strong>
 <field name="skipped_finalized_plan_count" class="oe_inline" readonly="1"/>
@@ -84,6 +84,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -101,6 +102,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -118,6 +120,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -135,6 +138,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -152,6 +156,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -169,6 +174,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
@@ -186,6 +192,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
+<field name="weekday" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
 <field name="city_id"/>
