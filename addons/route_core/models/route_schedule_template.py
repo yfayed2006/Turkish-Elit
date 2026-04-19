@@ -332,13 +332,6 @@ class RouteScheduleTemplateLine(models.Model):
     )
     note = fields.Text(string="Line Note")
 
-    _sql_constraints = [
-        (
-            "route_schedule_template_line_unique_outlet_day",
-            "unique(template_id, weekday, outlet_id)",
-            "You cannot schedule the same outlet more than once on the same weekday in one template.",
-        )
-    ]
 
     @api.depends("weekday")
     def _compute_weekday_label(self):
@@ -354,6 +347,41 @@ class RouteScheduleTemplateLine(models.Model):
                 and rec.weekday == rec.template_id.company_id.route_weekly_off_day
             )
 
+
+    def _get_parent_lines(self):
+        self.ensure_one()
+        return self.template_id.line_ids
+
+    def _get_same_day_sibling_lines(self):
+        self.ensure_one()
+        parent_lines = self._get_parent_lines()
+        return parent_lines.filtered(
+            lambda line: line.weekday == self.weekday
+            and line.outlet_id
+            and line != self
+        )
+
+    def _get_duplicate_line(self):
+        self.ensure_one()
+        if not self.template_id or not self.weekday or not self.outlet_id:
+            return self.env[self._name]
+
+        duplicate_line = self._get_same_day_sibling_lines().filtered(
+            lambda line: line.outlet_id == self.outlet_id
+        )[:1]
+        if duplicate_line:
+            return duplicate_line
+
+        if not self.id:
+            return self.env[self._name]
+
+        return self.search([
+            ("template_id", "=", self.template_id.id),
+            ("weekday", "=", self.weekday),
+            ("outlet_id", "=", self.outlet_id.id),
+            ("id", "!=", self.id),
+        ], limit=1)
+
     def _get_available_outlet_domain(self):
         self.ensure_one()
         domain = []
@@ -362,13 +390,7 @@ class RouteScheduleTemplateLine(models.Model):
         if self.area_id:
             domain.append(("area_id", "=", self.area_id.id))
 
-        parent_lines = self.template_id.line_ids if hasattr(self, "template_id") else self.schedule_id.line_ids
-        sibling_lines = (parent_lines - self).filtered(
-            lambda line: line.weekday == self.weekday
-            and line.area_id == self.area_id
-            and line.outlet_id
-        )
-        used_outlet_ids = sibling_lines.mapped("outlet_id").ids
+        used_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
         if used_outlet_ids:
             domain.append(("id", "not in", used_outlet_ids))
         return domain
@@ -417,14 +439,32 @@ class RouteScheduleTemplateLine(models.Model):
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
+            warning = False
             if rec.outlet_id:
                 rec.area_id = rec.outlet_id.area_id
                 rec.city_id = rec.outlet_id.area_id.city_id
-            return {
+                duplicate_line = rec._get_duplicate_line()
+                if duplicate_line:
+                    outlet_name = rec.outlet_id.display_name or rec.outlet_id.name
+                    weekday_label = rec.weekday_label or WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or "")
+                    rec.outlet_id = False
+                    warning = {
+                        "title": _("Duplicate Outlet"),
+                        "message": _(
+                            "Outlet %(outlet)s is already added on %(weekday)s in this weekly visit template. Choose another outlet for that day."
+                        ) % {
+                            "outlet": outlet_name,
+                            "weekday": weekday_label,
+                        },
+                    }
+            result = {
                 "domain": {
                     "outlet_id": rec._get_available_outlet_domain(),
                 }
             }
+            if warning:
+                result["warning"] = warning
+            return result
 
     @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
@@ -435,3 +475,18 @@ class RouteScheduleTemplateLine(models.Model):
                 raise ValidationError(_("The selected outlet does not belong to the selected area."))
             if rec.city_id and rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
                 raise ValidationError(_("The selected outlet does not belong to the selected city."))
+
+    @api.constrains("template_id", "weekday", "outlet_id")
+    def _check_duplicate_outlet_per_day(self):
+        for rec in self:
+            duplicate_line = rec._get_duplicate_line()
+            if duplicate_line:
+                weekday_label = rec.weekday_label or WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or "")
+                outlet_name = rec.outlet_id.display_name or rec.outlet_id.name
+                raise ValidationError(_(
+                    "Outlet %(outlet)s is already added on %(weekday)s in this weekly visit template. Choose another outlet for that day."
+                ) % {
+                    "outlet": outlet_name,
+                    "weekday": weekday_label,
+                })
+
