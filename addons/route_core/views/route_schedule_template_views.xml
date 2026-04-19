@@ -78,7 +78,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -95,7 +95,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -112,7 +112,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -129,7 +129,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -146,7 +146,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -163,7 +163,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -180,7 +180,7 @@ and will need supervisor review before operational use.
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', same_day_used_outlet_ids)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -228,4 +228,4 @@ and will need supervisor review before operational use.
 <field name="context">{'search_default_filter_active': 1}</field>
 </record>
 </data>
-</odoo>
+</
