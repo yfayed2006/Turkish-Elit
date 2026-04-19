@@ -542,12 +542,6 @@ class RouteWeeklyScheduleLine(models.Model):
         ondelete="restrict",
         domain="[('area_id', '=', area_id)]",
     )
-    available_outlet_ids = fields.Many2many(
-        "route.outlet",
-        string="Available Outlets",
-        compute="_compute_available_outlet_ids",
-        store=False,
-    )
     partner_id = fields.Many2one(
         "res.partner",
         string="Customer",
@@ -562,6 +556,16 @@ class RouteWeeklyScheduleLine(models.Model):
         store=False,
     )
     note = fields.Text(string="Line Note")
+    same_day_used_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Same-Day Used Outlets",
+        compute="_compute_same_day_outlet_helpers",
+    )
+    available_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Available Outlets",
+        compute="_compute_same_day_outlet_helpers",
+    )
     generated_plan_id = fields.Many2one(
         "route.plan",
         string="Generated Daily Plan",
@@ -577,7 +581,6 @@ class RouteWeeklyScheduleLine(models.Model):
         ondelete="set null",
     )
     finalized_plan_skip = fields.Boolean(string="Skipped Because Finalized", readonly=True, copy=False)
-
 
     @api.depends("weekday")
     def _compute_weekday_label(self):
@@ -602,6 +605,9 @@ class RouteWeeklyScheduleLine(models.Model):
                 week_start_day=rec.schedule_id.company_id.route_week_start_day or "monday",
             )
 
+    def _get_effective_weekday(self):
+        self.ensure_one()
+        return self.weekday or self.env.context.get("default_weekday") or "monday"
 
     def _get_parent_lines(self):
         self.ensure_one()
@@ -609,20 +615,28 @@ class RouteWeeklyScheduleLine(models.Model):
 
     def _get_same_day_sibling_lines(self):
         self.ensure_one()
-        parent_lines = self._get_parent_lines()
-        return parent_lines.filtered(
-            lambda line: line.weekday == self.weekday
-            and line.outlet_id
-            and line != self
+        weekday = self._get_effective_weekday()
+        sibling_lines = self.env["route.weekly.schedule.line"]
+        if self.schedule_id and self.schedule_id.id:
+            sibling_lines |= self.search([
+                ("schedule_id", "=", self.schedule_id.id),
+                ("weekday", "=", weekday),
+                ("id", "!=", self.id),
+                ("outlet_id", "!=", False),
+            ])
+        sibling_lines |= self._get_parent_lines().filtered(
+            lambda line: line.id != self.id and line.outlet_id and (line.weekday or "monday") == weekday
         )
+        return sibling_lines
 
     def _get_duplicate_line(self):
         self.ensure_one()
-        if not self.schedule_id or not self.weekday or not self.outlet_id:
+        if not self.schedule_id or not self.outlet_id:
             return self.env[self._name]
 
+        weekday = self._get_effective_weekday()
         duplicate_line = self._get_same_day_sibling_lines().filtered(
-            lambda line: line.outlet_id == self.outlet_id
+            lambda line: line.outlet_id == self.outlet_id and (line.weekday or "monday") == weekday
         )[:1]
         if duplicate_line:
             return duplicate_line
@@ -632,85 +646,135 @@ class RouteWeeklyScheduleLine(models.Model):
 
         return self.search([
             ("schedule_id", "=", self.schedule_id.id),
-            ("weekday", "=", self.weekday),
+            ("weekday", "=", weekday),
             ("outlet_id", "=", self.outlet_id.id),
             ("id", "!=", self.id),
         ], limit=1)
 
-    @api.onchange("weekday")
-    def _onchange_weekday_warning(self):
-        for rec in self:
-            off_day = rec.schedule_id.company_id.route_weekly_off_day
-            if rec.weekday and off_day and rec.weekday == off_day:
-                return {
-                    "warning": {
-                        "title": _("Weekly Off Day"),
-                        "message": _(
-                            "This stop is scheduled on the configured weekly off day. It will remain visible for review but will be skipped during daily plan generation."
-                        ),
-                    }
-                }
-
     def _get_available_outlet_domain(self):
         self.ensure_one()
-        return [("id", "in", self.available_outlet_ids.ids)]
+        used_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
+        if not self.area_id:
+            domain = [("id", "=", 0)]
+        else:
+            domain = [("area_id", "=", self.area_id.id)]
+        if used_outlet_ids:
+            domain.append(("id", "not in", used_outlet_ids))
+        return domain
 
-    @api.onchange("city_id")
+    def _get_dynamic_domains(self):
+        self.ensure_one()
+        area_domain = [("city_id", "=", self.city_id.id)] if self.city_id else []
+        return {
+            "area_id": area_domain,
+            "outlet_id": self._get_available_outlet_domain(),
+        }
+
+    @api.depends(
+        "weekday",
+        "city_id",
+        "area_id",
+        "schedule_id.line_ids.weekday",
+        "schedule_id.line_ids.outlet_id",
+        "schedule_id.line_ids.area_id",
+        "schedule_id.line_ids.city_id",
+    )
+    def _compute_same_day_outlet_helpers(self):
+        Outlet = self.env["route.outlet"]
+        for rec in self:
+            used_outlet_ids = rec._get_same_day_sibling_lines().mapped("outlet_id").ids
+            rec.same_day_used_outlet_ids = Outlet.browse(used_outlet_ids)
+            rec.available_outlet_ids = Outlet.search(rec._get_available_outlet_domain())
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        default_weekday = self.env.context.get("default_weekday")
+        for vals in vals_list:
+            if default_weekday and not vals.get("weekday"):
+                vals["weekday"] = default_weekday
+            outlet_id = vals.get("outlet_id")
+            if outlet_id and not vals.get("area_id"):
+                outlet = self.env["route.outlet"].browse(outlet_id)
+                vals["area_id"] = outlet.area_id.id
+                vals["city_id"] = outlet.area_id.city_id.id
+            area_id = vals.get("area_id")
+            if area_id and not vals.get("city_id"):
+                vals["city_id"] = self.env["route.area"].browse(area_id).city_id.id
+        return super().create(vals_list)
+
+    def write(self, vals):
+        vals = dict(vals)
+        default_weekday = self.env.context.get("default_weekday")
+        if default_weekday and "weekday" not in vals:
+            vals["weekday"] = default_weekday
+        if vals.get("outlet_id") and not vals.get("area_id"):
+            outlet = self.env["route.outlet"].browse(vals["outlet_id"])
+            vals["area_id"] = outlet.area_id.id
+            vals["city_id"] = outlet.area_id.city_id.id
+        elif vals.get("area_id") and not vals.get("city_id"):
+            vals["city_id"] = self.env["route.area"].browse(vals["area_id"]).city_id.id
+        return super().write(vals)
+
+    @api.onchange("weekday")
+    def _onchange_weekday_warning(self):
+        self.ensure_one()
+        off_day = self.schedule_id.company_id.route_weekly_off_day
+        response = {"domain": self._get_dynamic_domains()}
+        if self._get_effective_weekday() and off_day and self._get_effective_weekday() == off_day:
+            response["warning"] = {
+                "title": _("Weekly Off Day"),
+                "message": _(
+                    "This stop is scheduled on the configured weekly off day. It will remain visible for review but will be skipped during daily plan generation."
+                ),
+            }
+        return response
+
+    @api.onchange("city_id", "weekday")
     def _onchange_city_id(self):
-        for rec in self:
-            if rec.area_id and rec.area_id.city_id != rec.city_id:
-                rec.area_id = False
-            if rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
-                rec.outlet_id = False
-            return {
-                "domain": {
-                    "area_id": [("city_id", "=", rec.city_id.id)] if rec.city_id else [],
-                    "outlet_id": rec._get_available_outlet_domain(),
-                }
-            }
+        self.ensure_one()
+        if self.area_id and self.area_id.city_id != self.city_id:
+            self.area_id = False
+        if self.outlet_id and self.outlet_id.area_id.city_id != self.city_id:
+            self.outlet_id = False
+        return {"domain": self._get_dynamic_domains()}
 
-    @api.onchange("area_id")
+    @api.onchange("area_id", "weekday")
     def _onchange_area_id(self):
-        for rec in self:
-            if rec.area_id and rec.area_id.city_id != rec.city_id:
-                rec.city_id = rec.area_id.city_id
-            if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
-                rec.outlet_id = False
-            return {
-                "domain": {
-                    "outlet_id": rec._get_available_outlet_domain(),
-                }
-            }
+        self.ensure_one()
+        if self.area_id and self.area_id.city_id != self.city_id:
+            self.city_id = self.area_id.city_id
+        if self.outlet_id and self.outlet_id.area_id != self.area_id:
+            self.outlet_id = False
+        return {"domain": self._get_dynamic_domains()}
 
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
-        for rec in self:
-            warning = False
-            if rec.outlet_id:
-                rec.area_id = rec.outlet_id.area_id
-                rec.city_id = rec.outlet_id.area_id.city_id
-                duplicate_line = rec._get_duplicate_line()
-                if duplicate_line:
-                    outlet_name = rec.outlet_id.display_name or rec.outlet_id.name
-                    weekday_label = rec.weekday_label or WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or "")
-                    rec.outlet_id = False
-                    warning = {
-                        "title": _("Duplicate Outlet"),
-                        "message": _(
-                            "Outlet %(outlet)s is already added on %(weekday)s in this weekly schedule. Choose another outlet for that day."
-                        ) % {
-                            "outlet": outlet_name,
-                            "weekday": weekday_label,
-                        },
-                    }
-            result = {
-                "domain": {
-                    "outlet_id": rec._get_available_outlet_domain(),
-                }
+        self.ensure_one()
+        response = {"domain": self._get_dynamic_domains()}
+        if not self.outlet_id:
+            return response
+
+        duplicate_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
+        if self.outlet_id.id in duplicate_outlet_ids:
+            outlet_name = self.outlet_id.display_name or self.outlet_id.name
+            weekday_label = WEEKDAY_LABELS.get(self._get_effective_weekday() or "", self._get_effective_weekday() or "")
+            self.outlet_id = False
+            response["warning"] = {
+                "title": _("Duplicate Outlet"),
+                "message": _(
+                    "Outlet %(outlet)s is already added on %(day)s in this weekly schedule. Choose another outlet for that day."
+                ) % {
+                    "outlet": outlet_name,
+                    "day": weekday_label,
+                },
             }
-            if warning:
-                result["warning"] = warning
-            return result
+            response["domain"] = self._get_dynamic_domains()
+            return response
+
+        self.area_id = self.outlet_id.area_id
+        self.city_id = self.outlet_id.area_id.city_id
+        response["domain"] = self._get_dynamic_domains()
+        return response
 
     @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
@@ -724,14 +788,17 @@ class RouteWeeklyScheduleLine(models.Model):
 
     @api.constrains("schedule_id", "weekday", "outlet_id")
     def _check_duplicate_outlet_per_day(self):
-        for rec in self:
-            duplicate_line = rec._get_duplicate_line()
-            if duplicate_line:
-                weekday_label = rec.weekday_label or WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or "")
-                outlet_name = rec.outlet_id.display_name or rec.outlet_id.name
+        for rec in self.filtered(lambda line: line.schedule_id and line.outlet_id):
+            duplicate = self.search([
+                ("id", "!=", rec.id),
+                ("schedule_id", "=", rec.schedule_id.id),
+                ("weekday", "=", rec.weekday or "monday"),
+                ("outlet_id", "=", rec.outlet_id.id),
+            ], limit=1)
+            if duplicate:
                 raise ValidationError(_(
-                    "Outlet %(outlet)s is already added on %(weekday)s in this weekly schedule. Choose another outlet for that day."
+                    "Outlet %(outlet)s is already added on %(day)s in this weekly schedule. Choose another outlet or keep only one line for that day."
                 ) % {
-                    "outlet": outlet_name,
-                    "weekday": weekday_label,
+                    "outlet": rec.outlet_id.display_name or rec.outlet_id.name,
+                    "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
