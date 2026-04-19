@@ -375,18 +375,26 @@ class RouteScheduleTemplateLine(models.Model):
     def _get_same_day_sibling_lines(self):
         self.ensure_one()
         weekday = self._get_effective_weekday()
-        return self._get_parent_lines().filtered(
+        sibling_lines = self.env["route.schedule.template.line"]
+        if self.template_id and self.template_id.id:
+            sibling_lines |= self.search([
+                ("template_id", "=", self.template_id.id),
+                ("weekday", "=", weekday),
+                ("id", "!=", self.id),
+                ("outlet_id", "!=", False),
+            ])
+        sibling_lines |= self._get_parent_lines().filtered(
             lambda line: line.id != self.id and line.outlet_id and (line.weekday or "monday") == weekday
         )
+        return sibling_lines
 
     def _get_available_outlet_domain(self):
         self.ensure_one()
-        domain = []
-        if self.city_id:
-            domain.append(("area_id.city_id", "=", self.city_id.id))
-        if self.area_id:
-            domain.append(("area_id", "=", self.area_id.id))
         used_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
+        if not self.area_id:
+            domain = [("id", "=", 0)]
+        else:
+            domain = [("area_id", "=", self.area_id.id)]
         if used_outlet_ids:
             domain.append(("id", "not in", used_outlet_ids))
         return domain
@@ -394,9 +402,10 @@ class RouteScheduleTemplateLine(models.Model):
     def _get_dynamic_domains(self):
         self.ensure_one()
         area_domain = [("city_id", "=", self.city_id.id)] if self.city_id else []
+        outlet_domain = self._get_available_outlet_domain()
         return {
             "area_id": area_domain,
-            "outlet_id": self._get_available_outlet_domain(),
+            "outlet_id": outlet_domain,
         }
     @api.depends(
         "weekday",
@@ -479,10 +488,32 @@ class RouteScheduleTemplateLine(models.Model):
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         self.ensure_one()
-        if self.outlet_id:
-            self.area_id = self.outlet_id.area_id
-            self.city_id = self.outlet_id.area_id.city_id
-        return {"domain": self._get_dynamic_domains()}
+        response = {"domain": self._get_dynamic_domains()}
+        if not self.outlet_id:
+            return response
+
+        duplicate_outlet_ids = self._get_same_day_sibling_lines().mapped("outlet_id").ids
+        if self.outlet_id.id in duplicate_outlet_ids:
+            outlet_name = self.outlet_id.display_name or self.outlet_id.name
+            weekday_label = WEEKDAY_LABELS.get(self._get_effective_weekday() or "", self._get_effective_weekday() or "")
+            self.outlet_id = False
+            response["warning"] = {
+                "title": _("Duplicate Outlet"),
+                "message": _(
+                    "Outlet %(outlet)s is already added on %(day)s in this weekly visit template. "
+                    "Choose another outlet for that day."
+                ) % {
+                    "outlet": outlet_name,
+                    "day": weekday_label,
+                },
+            }
+            response["domain"] = self._get_dynamic_domains()
+            return response
+
+        self.area_id = self.outlet_id.area_id
+        self.city_id = self.outlet_id.area_id.city_id
+        response["domain"] = self._get_dynamic_domains()
+        return response
 
     @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
@@ -514,4 +545,3 @@ class RouteScheduleTemplateLine(models.Model):
                         "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                     }
                 )
-
