@@ -91,7 +91,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.monday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -111,7 +111,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.tuesday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -131,7 +131,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.wednesday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -151,7 +151,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.thursday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -171,7 +171,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.friday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -191,7 +191,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.saturday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
@@ -211,7 +211,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="same_day_used_outlet_ids" column_invisible="1"/>
 <field name="available_outlet_ids" column_invisible="1"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id), ('id', 'not in', parent.sunday_line_ids.outlet_id)]"/>
 <field name="partner_id" optional="show"/>
 <field name="visit_mode" optional="show"/>
 <field name="generated_plan_id" optional="show"/>
