@@ -25,7 +25,7 @@ class RouteWeeklySchedule(models.Model):
     )
     template_id = fields.Many2one(
         "route.schedule.template",
-        string="Route Template",
+        string="Weekly Visit Template",
         ondelete="set null",
     )
     user_id = fields.Many2one(
@@ -61,6 +61,48 @@ class RouteWeeklySchedule(models.Model):
         "schedule_id",
         string="Scheduled Stops",
     )
+    monday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Monday Stops",
+        domain=[("weekday", "=", "monday")],
+    )
+    tuesday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Tuesday Stops",
+        domain=[("weekday", "=", "tuesday")],
+    )
+    wednesday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Wednesday Stops",
+        domain=[("weekday", "=", "wednesday")],
+    )
+    thursday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Thursday Stops",
+        domain=[("weekday", "=", "thursday")],
+    )
+    friday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Friday Stops",
+        domain=[("weekday", "=", "friday")],
+    )
+    saturday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Saturday Stops",
+        domain=[("weekday", "=", "saturday")],
+    )
+    sunday_line_ids = fields.One2many(
+        "route.weekly.schedule.line",
+        "schedule_id",
+        string="Sunday Stops",
+        domain=[("weekday", "=", "sunday")],
+    )
     route_plan_ids = fields.Many2many(
         "route.plan",
         string="Generated Daily Plans",
@@ -72,6 +114,7 @@ class RouteWeeklySchedule(models.Model):
     city_summary = fields.Char(string="Cities", compute="_compute_schedule_stats")
     area_summary = fields.Char(string="Areas", compute="_compute_schedule_stats")
     outlet_summary = fields.Char(string="Outlets", compute="_compute_schedule_stats")
+    skipped_finalized_plan_count = fields.Integer(string="Finalized Days Skipped", compute="_compute_schedule_stats")
     off_day = fields.Selection(related="company_id.route_weekly_off_day", string="Weekly Off Day", readonly=True)
     search_city_ids = fields.Many2many(
         "route.city",
@@ -95,18 +138,25 @@ class RouteWeeklySchedule(models.Model):
     @api.depends("week_start_date")
     def _compute_week_range(self):
         for rec in self:
-            if rec.week_start_date:
-                rec.week_end_date = fields.Date.add(rec.week_start_date, days=6)
-            else:
-                rec.week_end_date = False
+            rec.week_end_date = fields.Date.add(rec.week_start_date, days=6) if rec.week_start_date else False
 
-    @api.depends("line_ids", "line_ids.weekday", "line_ids.area_id", "line_ids.outlet_id", "line_ids.generated_plan_id", "company_id.route_weekly_off_day")
+    @api.depends(
+        "line_ids",
+        "line_ids.weekday",
+        "line_ids.city_id",
+        "line_ids.area_id",
+        "line_ids.outlet_id",
+        "line_ids.generated_plan_id",
+        "line_ids.finalized_plan_skip",
+        "company_id.route_weekly_off_day",
+    )
     def _compute_schedule_stats(self):
         for rec in self:
             rec.line_count = len(rec.line_ids)
             rec.off_day_stop_count = len(rec.line_ids.filtered(lambda line: line.weekday == rec.off_day)) if rec.off_day else 0
             rec.route_plan_ids = rec.line_ids.mapped("generated_plan_id")
             rec.generated_plan_count = len(rec.route_plan_ids)
+            rec.skipped_finalized_plan_count = len(set(rec.line_ids.filtered("finalized_plan_skip").mapped("visit_date")))
             city_names = list(dict.fromkeys(rec.line_ids.mapped("city_id.name")))
             area_names = list(dict.fromkeys(rec.line_ids.mapped("area_id.name")))
             outlet_names = list(dict.fromkeys(rec.line_ids.mapped("outlet_id.name")))
@@ -114,7 +164,7 @@ class RouteWeeklySchedule(models.Model):
             rec.area_summary = rec._format_summary(area_names, max_items=2)
             rec.outlet_summary = rec._format_summary(outlet_names, max_items=3)
 
-    @api.depends("line_ids.area_id", "line_ids.outlet_id")
+    @api.depends("line_ids.city_id", "line_ids.area_id", "line_ids.outlet_id")
     def _compute_search_relations(self):
         for rec in self:
             city_ids = rec.line_ids.mapped("city_id").ids
@@ -132,10 +182,47 @@ class RouteWeeklySchedule(models.Model):
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
 
+    def _sanitize_line_dicts(self, line_dicts):
+        sanitized = []
+        seen = set()
+        next_sequence = 10
+        for line_dict in line_dicts:
+            weekday = line_dict.get("weekday") or "monday"
+            outlet_id = line_dict.get("outlet_id")
+            if not outlet_id:
+                continue
+            key = (weekday, outlet_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            values = dict(line_dict)
+            values["weekday"] = weekday
+            values["sequence"] = values.get("sequence") or next_sequence
+            sanitized.append(values)
+            next_sequence = max(next_sequence + 10, values["sequence"] + 10)
+        return sanitized
+
     @api.model_create_multi
     def create(self, vals_list):
-        schedules = super().create(vals_list)
-        for schedule, vals in zip(schedules, vals_list):
+        cleaned_vals_list = []
+        for vals in vals_list:
+            cleaned_vals = dict(vals)
+            commands = cleaned_vals.get("line_ids") or []
+            if commands:
+                line_dicts = []
+                for command in commands:
+                    if not command or command[0] != 0:
+                        continue
+                    values = dict(command[2] or {})
+                    line_dicts.append(values)
+                cleaned_vals["line_ids"] = [
+                    fields.Command.create(values)
+                    for values in self._sanitize_line_dicts(line_dicts)
+                ]
+            cleaned_vals_list.append(cleaned_vals)
+
+        schedules = super().create(cleaned_vals_list)
+        for schedule, vals in zip(schedules, cleaned_vals_list):
             if vals.get("template_id") and not vals.get("line_ids"):
                 schedule._load_template_lines()
             if not vals.get("name") or vals.get("name") == "New":
@@ -143,8 +230,22 @@ class RouteWeeklySchedule(models.Model):
         return schedules
 
     def write(self, vals):
-        result = super().write(vals)
-        if vals.get("template_id") and not vals.get("line_ids"):
+        cleaned_vals = dict(vals)
+        commands = cleaned_vals.get("line_ids") or []
+        if commands:
+            line_dicts = []
+            preserved_commands = []
+            for command in commands:
+                if not command or command[0] != 0:
+                    preserved_commands.append(command)
+                    continue
+                line_dicts.append(dict(command[2] or {}))
+            cleaned_vals["line_ids"] = preserved_commands + [
+                fields.Command.create(values)
+                for values in self._sanitize_line_dicts(line_dicts)
+            ]
+        result = super().write(cleaned_vals)
+        if cleaned_vals.get("template_id") and not cleaned_vals.get("line_ids"):
             for rec in self:
                 if rec.template_id and not rec.line_ids:
                     rec._load_template_lines()
@@ -160,14 +261,18 @@ class RouteWeeklySchedule(models.Model):
         if not self.template_id:
             return
         commands = [fields.Command.clear()]
-        for line in self.template_id.line_ids.sorted(key=lambda item: (item.sequence, item.id)):
-            commands.append(fields.Command.create({
+        line_dicts = []
+        for line in self.template_id.line_ids.sorted(key=lambda item: (item.weekday or "", item.sequence, item.id)):
+            line_dicts.append({
                 "sequence": line.sequence,
                 "weekday": line.weekday,
+                "city_id": line.city_id.id,
                 "area_id": line.area_id.id,
                 "outlet_id": line.outlet_id.id,
                 "note": line.note,
-            }))
+            })
+        for values in self._sanitize_line_dicts(line_dicts):
+            commands.append(fields.Command.create(values))
         self.line_ids = commands
         if not self.source_warehouse_id and self.template_id.source_warehouse_id:
             self.source_warehouse_id = self.template_id.source_warehouse_id
@@ -183,6 +288,20 @@ class RouteWeeklySchedule(models.Model):
         for rec in self:
             if rec.template_id:
                 rec._load_template_lines()
+
+
+    def _cleanup_duplicate_lines(self):
+        for rec in self:
+            seen = set()
+            duplicate_lines = rec.env["route.weekly.schedule.line"]
+            for line in rec.line_ids.sorted(key=lambda item: (item.weekday or "", item.sequence, item.id)):
+                key = (line.weekday, line.outlet_id.id)
+                if key in seen:
+                    duplicate_lines |= line
+                else:
+                    seen.add(key)
+            if duplicate_lines:
+                duplicate_lines.unlink()
 
     def _get_daily_plan_for_date(self, visit_date):
         self.ensure_one()
@@ -204,15 +323,30 @@ class RouteWeeklySchedule(models.Model):
             "company_id": self.company_id.id,
             "source_warehouse_id": self.source_warehouse_id.id or False,
             "area_id": plan_area_id,
-            "notes": _("Generated from weekly route schedule %s.") % (self.name,),
+            "notes": _("Generated from weekly visit schedule %s.") % (self.name,),
             "weekly_schedule_id": self.id,
         }
+
+    def _link_existing_plan(self, plan, schedule_lines, skipped=False):
+        self.ensure_one()
+        existing_plan_lines = {
+            line.outlet_id.id: line
+            for line in plan.line_ids.filtered("outlet_id")
+        }
+        for schedule_line in schedule_lines:
+            plan_line = existing_plan_lines.get(schedule_line.outlet_id.id)
+            schedule_line.write({
+                "generated_plan_id": plan.id,
+                "generated_plan_line_id": plan_line.id if plan_line else False,
+                "finalized_plan_skip": bool(skipped),
+            })
 
     def action_generate_daily_plans(self):
         Plan = self.env["route.plan"]
         PlanLine = self.env["route.plan.line"]
 
         for rec in self:
+            rec._cleanup_duplicate_lines()
             if not rec.line_ids:
                 raise UserError(_("Please add scheduled stops before generating daily plans."))
 
@@ -220,6 +354,7 @@ class RouteWeeklySchedule(models.Model):
             if not processable_lines:
                 raise UserError(_("All scheduled stops fall on the configured weekly off day. Move them to working days before generating daily plans."))
 
+            rec.line_ids.write({"finalized_plan_skip": False})
             weekday_codes = sorted({line.weekday for line in rec.line_ids if line.weekday})
             for weekday_code in weekday_codes:
                 if weekday_code == rec.off_day:
@@ -241,16 +376,8 @@ class RouteWeeklySchedule(models.Model):
                     plan = rec._get_daily_plan_for_date(visit_date)
 
                 if plan and plan.planning_finalized:
-                    raise UserError(
-                        _(
-                            "Daily plan %(plan)s for %(date)s is already finalized. "
-                            "Please reopen the plan first before syncing weekly schedule changes."
-                        )
-                        % {
-                            "plan": plan.display_name or plan.name,
-                            "date": fields.Date.to_string(visit_date),
-                        }
-                    )
+                    rec._link_existing_plan(plan, day_lines, skipped=True)
+                    continue
 
                 if not plan:
                     plan = Plan.create(rec._prepare_route_plan_vals(visit_date, day_lines))
@@ -287,6 +414,7 @@ class RouteWeeklySchedule(models.Model):
                     schedule_line.write({
                         "generated_plan_id": plan.id,
                         "generated_plan_line_id": plan_line.id,
+                        "finalized_plan_skip": False,
                     })
 
             rec.state = "plans_generated"
@@ -306,6 +434,17 @@ class RouteWeeklySchedule(models.Model):
         if existing_schedule:
             return existing_schedule.action_open_form()
 
+        line_dicts = []
+        for line in self.line_ids.sorted(key=lambda item: (item.weekday or "", item.sequence, item.id)):
+            line_dicts.append({
+                "sequence": line.sequence,
+                "weekday": line.weekday,
+                "city_id": line.city_id.id,
+                "area_id": line.area_id.id,
+                "outlet_id": line.outlet_id.id,
+                "note": line.note,
+            })
+
         new_schedule = self.copy({
             "name": "New",
             "week_start_date": next_week_start,
@@ -313,14 +452,8 @@ class RouteWeeklySchedule(models.Model):
             "line_ids": [
                 fields.Command.clear(),
                 *[
-                    fields.Command.create({
-                        "sequence": line.sequence,
-                        "weekday": line.weekday,
-                        "area_id": line.area_id.id,
-                        "outlet_id": line.outlet_id.id,
-                        "note": line.note,
-                    })
-                    for line in self.line_ids.sorted(key=lambda item: (item.sequence, item.id))
+                    fields.Command.create(values)
+                    for values in self._sanitize_line_dicts(line_dicts)
                 ],
             ],
         })
@@ -340,7 +473,7 @@ class RouteWeeklySchedule(models.Model):
             return False
         return {
             "type": "ir.actions.act_window",
-            "name": _("Weekly Route Template"),
+            "name": _("Weekly Visit Template"),
             "res_model": "route.schedule.template",
             "res_id": self.template_id.id,
             "view_mode": "form",
@@ -349,9 +482,10 @@ class RouteWeeklySchedule(models.Model):
 
     def action_open_form(self):
         self.ensure_one()
+        self._cleanup_duplicate_lines()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Weekly Route Schedule"),
+            "name": _("Generated Weekly Schedule"),
             "res_model": "route.weekly.schedule",
             "res_id": self.id,
             "view_mode": "form",
@@ -388,18 +522,18 @@ class RouteWeeklyScheduleLine(models.Model):
     weekday_label = fields.Char(string="Weekday Label", compute="_compute_weekday_label")
     is_off_day = fields.Boolean(string="Weekly Off Day", compute="_compute_is_off_day")
     visit_date = fields.Date(string="Visit Date", compute="_compute_visit_date")
+    city_id = fields.Many2one(
+        "route.city",
+        string="City",
+        required=True,
+        ondelete="restrict",
+    )
     area_id = fields.Many2one(
         "route.area",
         string="Area",
         required=True,
         ondelete="restrict",
-    )
-    city_id = fields.Many2one(
-        "route.city",
-        string="City",
-        related="area_id.city_id",
-        store=True,
-        readonly=True,
+        domain="[('city_id', '=', city_id)]",
     )
     outlet_id = fields.Many2one(
         "route.outlet",
@@ -436,6 +570,7 @@ class RouteWeeklyScheduleLine(models.Model):
         copy=False,
         ondelete="set null",
     )
+    finalized_plan_skip = fields.Boolean(string="Skipped Because Finalized", readonly=True, copy=False)
 
     _sql_constraints = [
         (
@@ -453,7 +588,11 @@ class RouteWeeklyScheduleLine(models.Model):
     @api.depends("weekday", "schedule_id.company_id.route_weekly_off_day")
     def _compute_is_off_day(self):
         for rec in self:
-            rec.is_off_day = bool(rec.weekday and rec.schedule_id.company_id.route_weekly_off_day and rec.weekday == rec.schedule_id.company_id.route_weekly_off_day)
+            rec.is_off_day = bool(
+                rec.weekday
+                and rec.schedule_id.company_id.route_weekly_off_day
+                and rec.weekday == rec.schedule_id.company_id.route_weekly_off_day
+            )
 
     @api.depends("schedule_id.week_start_date", "weekday", "schedule_id.company_id.route_week_start_day")
     def _compute_visit_date(self):
@@ -472,28 +611,76 @@ class RouteWeeklyScheduleLine(models.Model):
                 return {
                     "warning": {
                         "title": _("Weekly Off Day"),
-                        "message": _("This stop is scheduled on the configured weekly off day. It will remain visible for review but will be skipped during daily plan generation."),
+                        "message": _(
+                            "This stop is scheduled on the configured weekly off day. It will remain visible for review but will be skipped during daily plan generation."
+                        ),
                     }
                 }
+
+    def _get_available_outlet_domain(self):
+        self.ensure_one()
+        domain = []
+        if self.city_id:
+            domain.append(("area_id.city_id", "=", self.city_id.id))
+        if self.area_id:
+            domain.append(("area_id", "=", self.area_id.id))
+
+        parent_lines = self.template_id.line_ids if hasattr(self, "template_id") else self.schedule_id.line_ids
+        sibling_lines = (parent_lines - self).filtered(
+            lambda line: line.weekday == self.weekday
+            and line.area_id == self.area_id
+            and line.outlet_id
+        )
+        used_outlet_ids = sibling_lines.mapped("outlet_id").ids
+        if used_outlet_ids:
+            domain.append(("id", "not in", used_outlet_ids))
+        return domain
+
+    @api.onchange("city_id")
+    def _onchange_city_id(self):
+        for rec in self:
+            if rec.area_id and rec.area_id.city_id != rec.city_id:
+                rec.area_id = False
+            if rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
+                rec.outlet_id = False
+            return {
+                "domain": {
+                    "area_id": [("city_id", "=", rec.city_id.id)] if rec.city_id else [],
+                    "outlet_id": rec._get_available_outlet_domain(),
+                }
+            }
 
     @api.onchange("area_id")
     def _onchange_area_id(self):
         for rec in self:
+            if rec.area_id and rec.area_id.city_id != rec.city_id:
+                rec.city_id = rec.area_id.city_id
             if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
                 rec.outlet_id = False
+            return {
+                "domain": {
+                    "outlet_id": rec._get_available_outlet_domain(),
+                }
+            }
 
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
-            if rec.outlet_id and not rec.area_id:
+            if rec.outlet_id:
                 rec.area_id = rec.outlet_id.area_id
+                rec.city_id = rec.outlet_id.area_id.city_id
+            return {
+                "domain": {
+                    "outlet_id": rec._get_available_outlet_domain(),
+                }
+            }
 
-    @api.constrains("area_id", "outlet_id")
+    @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
         for rec in self:
+            if rec.city_id and rec.area_id and rec.area_id.city_id != rec.city_id:
+                raise ValidationError(_("The selected area does not belong to the selected city."))
             if rec.area_id and rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
-                raise ValidationError(
-                    _("The selected outlet does not belong to the selected area.")
-                )
-
-
+                raise ValidationError(_("The selected outlet does not belong to the selected area."))
+            if rec.city_id and rec.outlet_id and rec.outlet_id.area_id.city_id != rec.city_id:
+                raise ValidationError(_("The selected outlet does not belong to the selected city."))
