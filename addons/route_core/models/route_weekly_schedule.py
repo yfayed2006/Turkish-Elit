@@ -4,8 +4,6 @@ from odoo.exceptions import UserError, ValidationError
 from .route_schedule_common import (
     WEEKDAY_SELECTION,
     WEEKDAY_LABELS,
-    WEEKDAY_TAB_FIELD_MAP,
-    apply_weekday_to_x2many_commands,
     compute_weekday_date,
 )
 
@@ -184,23 +182,6 @@ class RouteWeeklySchedule(models.Model):
             return ", ".join(names)
         return "%s ..." % ", ".join(names[:max_items])
 
-    def _normalize_weekday_tab_vals(self, vals):
-        cleaned_vals = dict(vals)
-        merged_line_commands = list(cleaned_vals.get("line_ids") or [])
-        weekday_field_seen = False
-
-        for field_name, weekday_code in WEEKDAY_TAB_FIELD_MAP.items():
-            if field_name not in cleaned_vals:
-                continue
-            weekday_field_seen = True
-            merged_line_commands.extend(
-                apply_weekday_to_x2many_commands(cleaned_vals.pop(field_name) or [], weekday_code)
-            )
-
-        if weekday_field_seen:
-            cleaned_vals["line_ids"] = merged_line_commands
-        return cleaned_vals
-
     def _sanitize_line_dicts(self, line_dicts):
         sanitized = []
         seen = set()
@@ -225,7 +206,7 @@ class RouteWeeklySchedule(models.Model):
     def create(self, vals_list):
         cleaned_vals_list = []
         for vals in vals_list:
-            cleaned_vals = self._normalize_weekday_tab_vals(vals)
+            cleaned_vals = dict(vals)
             commands = cleaned_vals.get("line_ids") or []
             if commands:
                 line_dicts = []
@@ -249,7 +230,7 @@ class RouteWeeklySchedule(models.Model):
         return schedules
 
     def write(self, vals):
-        cleaned_vals = self._normalize_weekday_tab_vals(vals)
+        cleaned_vals = dict(vals)
         commands = cleaned_vals.get("line_ids") or []
         if commands:
             line_dicts = []
@@ -591,21 +572,6 @@ class RouteWeeklyScheduleLine(models.Model):
     )
     finalized_plan_skip = fields.Boolean(string="Skipped Because Finalized", readonly=True, copy=False)
 
-    @api.model
-    def _prepare_weekday_vals(self, vals):
-        cleaned_vals = dict(vals or {})
-        context_weekday = self.env.context.get("default_weekday")
-        if context_weekday and not cleaned_vals.get("weekday"):
-            cleaned_vals["weekday"] = context_weekday
-        return cleaned_vals
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        return super().create([self._prepare_weekday_vals(vals) for vals in vals_list])
-
-    def write(self, vals):
-        return super().write(self._prepare_weekday_vals(vals))
-
     _sql_constraints = [
         (
             "route_weekly_schedule_line_unique_outlet_day",
@@ -651,6 +617,25 @@ class RouteWeeklyScheduleLine(models.Model):
                     }
                 }
 
+    def _get_available_outlet_domain(self):
+        self.ensure_one()
+        domain = []
+        if self.city_id:
+            domain.append(("area_id.city_id", "=", self.city_id.id))
+        if self.area_id:
+            domain.append(("area_id", "=", self.area_id.id))
+
+        parent_lines = self.template_id.line_ids if hasattr(self, "template_id") else self.schedule_id.line_ids
+        sibling_lines = (parent_lines - self).filtered(
+            lambda line: line.weekday == self.weekday
+            and line.area_id == self.area_id
+            and line.outlet_id
+        )
+        used_outlet_ids = sibling_lines.mapped("outlet_id").ids
+        if used_outlet_ids:
+            domain.append(("id", "not in", used_outlet_ids))
+        return domain
+
     @api.onchange("city_id")
     def _onchange_city_id(self):
         for rec in self:
@@ -661,7 +646,7 @@ class RouteWeeklyScheduleLine(models.Model):
             return {
                 "domain": {
                     "area_id": [("city_id", "=", rec.city_id.id)] if rec.city_id else [],
-                    "outlet_id": [("area_id.city_id", "=", rec.city_id.id)] if rec.city_id else [],
+                    "outlet_id": rec._get_available_outlet_domain(),
                 }
             }
 
@@ -674,7 +659,7 @@ class RouteWeeklyScheduleLine(models.Model):
                 rec.outlet_id = False
             return {
                 "domain": {
-                    "outlet_id": [("area_id", "=", rec.area_id.id)] if rec.area_id else ([('area_id.city_id', '=', rec.city_id.id)] if rec.city_id else []),
+                    "outlet_id": rec._get_available_outlet_domain(),
                 }
             }
 
@@ -684,6 +669,11 @@ class RouteWeeklyScheduleLine(models.Model):
             if rec.outlet_id:
                 rec.area_id = rec.outlet_id.area_id
                 rec.city_id = rec.outlet_id.area_id.city_id
+            return {
+                "domain": {
+                    "outlet_id": rec._get_available_outlet_domain(),
+                }
+            }
 
     @api.constrains("city_id", "area_id", "outlet_id")
     def _check_area_matches_outlet(self):
