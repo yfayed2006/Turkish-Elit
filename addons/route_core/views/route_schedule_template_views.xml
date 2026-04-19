@@ -5,15 +5,15 @@
 <field name="model">route.schedule.template</field>
 <field name="arch" type="xml">
 <list>
-<field name="name"/>
+<field name="name" string="Template Name"/>
 <field name="user_id"/>
 <field name="vehicle_id"/>
 <field name="source_warehouse_id" optional="show"/>
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="line_count"/>
-<field name="schedule_count"/>
+<field name="line_count" string="Stops"/>
+<field name="schedule_count" string="Generated Weeks"/>
 <field name="active" optional="hide"/>
 </list>
 </field>
@@ -22,7 +22,7 @@
 <field name="name">route.schedule.template.form</field>
 <field name="model">route.schedule.template</field>
 <field name="arch" type="xml">
-<form string="Create Weekly Visit Template">
+<form string="Weekly Visit Template">
 <header>
 <button name="action_create_current_week_schedule" type="object" string="Create This Week Schedule" class="btn-primary"/>
 <button name="action_create_next_week_schedule" type="object" string="Create Next Week Schedule" class="btn-secondary"/>
@@ -36,13 +36,13 @@
 </div>
 <div class="oe_title">
 <h1>
-<field name="name" placeholder="Weekly Route Template Name"/>
+<field name="name" placeholder="Weekly Visit Template Name"/>
 </h1>
 <div class="mt8">
 <field name="active" widget="boolean_toggle"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert">This screen is for creating a reusable weekly visit template. After saving it, create a dated weekly schedule from it, then generate daily route plans.</div>
+<div class="alert alert-info" role="alert"> This screen is for creating a reusable weekly visit template. After saving it, create a dated weekly schedule from it, then generate daily route plans. </div>
 <div class="alert alert-warning" role="alert" invisible="off_day_stop_count == 0">
 <strong>Weekly Off Day Review:</strong>
 <field name="off_day_stop_count" class="oe_inline" readonly="1"/>
@@ -66,11 +66,12 @@ and will need supervisor review before operational use.
 </group>
 </group>
 <separator string="Weekly Visit Stops"/>
-<div class="alert alert-info" role="alert">Use this screen to build one reusable weekly template. Add outlets under each weekday tab. Select City first, then Area, then Outlet.</div>
+<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Add outlets under each weekday tab. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" domain="[('weekday', '=', 'monday')]" context="{'default_weekday': 'monday'}">
-<list editable="bottom">
+<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -82,8 +83,9 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" domain="[('weekday', '=', 'tuesday')]" context="{'default_weekday': 'tuesday'}">
-<list editable="bottom">
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -95,8 +97,9 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" domain="[('weekday', '=', 'wednesday')]" context="{'default_weekday': 'wednesday'}">
-<list editable="bottom">
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -108,8 +111,9 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" domain="[('weekday', '=', 'thursday')]" context="{'default_weekday': 'thursday'}">
-<list editable="bottom">
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -121,7 +125,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" domain="[('weekday', '=', 'friday')]" context="{'default_weekday': 'friday'}">
+<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
 <list editable="bottom" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
@@ -135,8 +139,9 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" domain="[('weekday', '=', 'saturday')]" context="{'default_weekday': 'saturday'}">
-<list editable="bottom">
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -148,8 +153,9 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" domain="[('weekday', '=', 'sunday')]" context="{'default_weekday': 'sunday'}">
-<list editable="bottom">
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
 <field name="sequence" widget="handle"/>
 <field name="city_id"/>
 <field name="area_id" domain="[('city_id', '=', city_id)]"/>
@@ -173,7 +179,7 @@ and will need supervisor review before operational use.
 <field name="model">route.schedule.template</field>
 <field name="arch" type="xml">
 <search>
-<field name="name"/>
+<field name="name" string="Template Name"/>
 <field name="user_id"/>
 <field name="vehicle_id"/>
 <field name="city_summary" string="Cities"/>
