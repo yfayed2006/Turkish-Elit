@@ -228,4 +228,4 @@ and will need supervisor review before operational use.
 <field name="context">{'search_default_filter_active': 1}</field>
 </record>
 </data>
-</
+</odoo>
