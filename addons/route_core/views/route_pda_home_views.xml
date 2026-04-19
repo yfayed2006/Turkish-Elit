@@ -33,10 +33,18 @@
 <button type="object" name="action_open_my_pda_visits" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-map-marker route_pda_app_icon"/>
 <span class="route_pda_app_label">Today's Visits</span>
+<span class="route_pda_app_hint">Visits Today</span>
+<span class="route_pda_app_hint_value">
+<field name="today_visit_count" readonly="1" nolabel="1"/>
+</span>
 </button>
 <button type="object" name="action_open_my_weekly_schedule" class="btn route_pda_app_btn route_pda_app_btn_info">
 <i class="fa fa-calendar route_pda_app_icon"/>
 <span class="route_pda_app_label">My Weekly Schedule</span>
+<span class="route_pda_app_hint">Today's Plans</span>
+<span class="route_pda_app_hint_value">
+<field name="today_plan_count" readonly="1" nolabel="1"/>
+</span>
 </button>
 <button type="object" name="action_open_current_visit" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-play-circle route_pda_app_icon"/>
@@ -930,5 +938,71 @@ Price:
 <field name="model_id" ref="model_route_pda_home"/>
 <field name="state">code</field>
 <field name="code">action = env['route.pda.home'].action_open_dashboard()</field>
+</record>
+<record id="view_route_pda_today_visits_empty_form" model="ir.ui.view">
+<field name="name">route.pda.home.today.visits.empty.form</field>
+<field name="model">route.pda.home</field>
+<field name="arch" type="xml">
+<form string="Today's Visits" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_collections_snapshot_sheet">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Route Workspace</span>
+</button>
+<h2 class="route_pda_detail_title">Today's Visits</h2>
+</div>
+<div class="alert alert-info" role="alert">
+<field name="today_visits_empty_message" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Visits Today</div>
+<div class="route_pda_info_value">
+<field name="today_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Daily Plans Today</div>
+<div class="route_pda_info_value">
+<field name="today_plan_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="next_plan_available == False">
+<div class="route_pda_info_label">Next / Latest Daily Plan</div>
+<div class="route_pda_info_value">
+<field name="next_plan_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="next_plan_available == False">
+<div class="route_pda_info_label">Plan Date</div>
+<div class="route_pda_info_value">
+<field name="next_plan_date_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" invisible="next_plan_available == False">
+<div class="route_pda_info_label">Planned Outlets</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="next_plan_outlet_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid mt16">
+<button type="object" name="action_open_today_plans" class="btn route_pda_app_btn route_pda_app_btn_info">
+<i class="fa fa-calendar-check-o route_pda_app_icon"/>
+<span class="route_pda_app_label">Open My Daily Plans</span>
+</button>
+<button type="object" name="action_open_my_weekly_schedule" class="btn route_pda_app_btn route_pda_app_btn_info">
+<i class="fa fa-calendar route_pda_app_icon"/>
+<span class="route_pda_app_label">Open My Weekly Schedule</span>
+</button>
+<button type="object" name="action_open_next_daily_plan" class="btn route_pda_app_btn route_pda_app_btn_primary" invisible="next_plan_available == False">
+<i class="fa fa-map-o route_pda_app_icon"/>
+<span class="route_pda_app_label">Open Next / Latest Plan</span>
+</button>
+</div>
+</sheet>
+</form>
+</field>
 </record>
 </odoo>
