@@ -66,19 +66,101 @@ and will need supervisor review before operational use.
 </group>
 </group>
 <separator string="Weekly Visit Stops"/>
-<field name="line_ids">
-<list editable="bottom" decoration-warning="is_off_day">
-<field name="is_off_day" column_invisible="1"/>
+<div class="alert alert-info" role="alert">Add outlets under each weekday tab. Select City first, then Area, then Outlet.</div>
+<notebook>
+<page string="Monday">
+<field name="monday_line_ids" domain="[('weekday', '=', 'monday')]" context="{'default_weekday': 'monday'}">
+<list editable="bottom">
 <field name="sequence" widget="handle"/>
-<field name="weekday"/>
-<field name="city_id" readonly="1" optional="show"/>
-<field name="area_id"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
+</page>
+<page string="Tuesday">
+<field name="tuesday_line_ids" domain="[('weekday', '=', 'tuesday')]" context="{'default_weekday': 'tuesday'}">
+<list editable="bottom">
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+<page string="Wednesday">
+<field name="wednesday_line_ids" domain="[('weekday', '=', 'wednesday')]" context="{'default_weekday': 'wednesday'}">
+<list editable="bottom">
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+<page string="Thursday">
+<field name="thursday_line_ids" domain="[('weekday', '=', 'thursday')]" context="{'default_weekday': 'thursday'}">
+<list editable="bottom">
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+<page string="Friday">
+<field name="friday_line_ids" domain="[('weekday', '=', 'friday')]" context="{'default_weekday': 'friday'}">
+<list editable="bottom" decoration-warning="is_off_day">
+<field name="is_off_day" column_invisible="1"/>
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+<page string="Saturday">
+<field name="saturday_line_ids" domain="[('weekday', '=', 'saturday')]" context="{'default_weekday': 'saturday'}">
+<list editable="bottom">
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+<page string="Sunday">
+<field name="sunday_line_ids" domain="[('weekday', '=', 'sunday')]" context="{'default_weekday': 'sunday'}">
+<list editable="bottom">
+<field name="sequence" widget="handle"/>
+<field name="city_id"/>
+<field name="area_id" domain="[('city_id', '=', city_id)]"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="note" string="Line Note" optional="show"/>
+</list>
+</field>
+</page>
+</notebook>
 <group string="Notes">
 <field name="notes" placeholder="Supervisor planning notes..."/>
 </group>
