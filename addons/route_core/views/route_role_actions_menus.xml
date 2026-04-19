@@ -6,14 +6,14 @@
 <menuitem id="menu_route_control_workspace" name="Review and Control" parent="route_core.menu_route_visit_root" sequence="30" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <menuitem id="menu_route_management_workspace" name="Management" parent="route_core.menu_route_visit_root" sequence="80" groups="route_core.group_route_management"/>
 <record id="menu_route_schedule_template" model="ir.ui.menu">
-<field name="name">Weekly Route Templates</field>
+<field name="name">Weekly Visit Templates</field>
 <field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
 <field name="action" ref="route_core.action_route_schedule_template"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">7</field>
 </record>
 <record id="menu_route_weekly_schedule" model="ir.ui.menu">
-<field name="name">Generated Weekly Schedules</field>
+<field name="name">Weekly Schedules</field>
 <field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
 <field name="action" ref="route_core.action_route_weekly_schedule"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
