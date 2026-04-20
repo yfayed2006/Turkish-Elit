@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from .route_schedule_common import (
     WEEKDAY_SELECTION,
@@ -273,6 +273,26 @@ class RouteScheduleTemplate(models.Model):
             "default_user_id": self.user_id.id,
             "default_vehicle_id": self.vehicle_id.id,
             "default_source_warehouse_id": self.source_warehouse_id.id,
+        }
+        return action
+
+    def action_open_day_stop_wizard(self):
+        self.ensure_one()
+        if not self.id:
+            raise UserError(_("Please save the weekly visit template first."))
+        weekday = self.env.context.get("default_weekday") or self.env.context.get("wizard_weekday") or "monday"
+        action = self.env.ref("route_core.action_route_schedule_stop_wizard").read()[0]
+        day_lines = self.line_ids.filtered(lambda line: (line.weekday or "monday") == weekday)
+        first_line = day_lines[:1]
+        action["name"] = _("Create %(day)s Stops") % {
+            "day": WEEKDAY_LABELS.get(weekday, weekday.title()),
+        }
+        action["context"] = {
+            **self.env.context,
+            "default_template_id": self.id,
+            "default_weekday": weekday,
+            "default_city_id": first_line.city_id.id if first_line else False,
+            "default_area_id": first_line.area_id.id if first_line else False,
         }
         return action
 
