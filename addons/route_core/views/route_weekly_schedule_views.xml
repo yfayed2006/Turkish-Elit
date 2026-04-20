@@ -52,7 +52,7 @@
 <field name="state" widget="badge"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a saved template. Each tab represents one weekday. Add a line opens a stop form. Review the schedule first, then generate daily plans. </div>
+<div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a saved template. Each tab represents one weekday. Review the schedule first, then generate daily plans. </div>
 <div class="alert alert-warning" role="alert" invisible="skipped_finalized_plan_count == 0">
 <strong>Finalized Daily Plans Protected:</strong>
 <field name="skipped_finalized_plan_count" class="oe_inline" readonly="1"/>
@@ -80,8 +80,8 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <separator string="Scheduled Weekly Stops"/>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" context="{'default_weekday': 'monday', 'default_schedule_id': id}" domain="[('weekday', '=', 'monday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="monday_line_ids" readonly="not id" context="{'default_weekday': 'monday', 'default_schedule_id': id}" domain="[('weekday', '=', 'monday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -96,27 +96,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'tuesday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="tuesday_line_ids" readonly="not id" context="{'default_weekday': 'tuesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'tuesday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -131,27 +115,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'wednesday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="wednesday_line_ids" readonly="not id" context="{'default_weekday': 'wednesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'wednesday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -166,27 +134,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" context="{'default_weekday': 'thursday', 'default_schedule_id': id}" domain="[('weekday', '=', 'thursday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="thursday_line_ids" readonly="not id" context="{'default_weekday': 'thursday', 'default_schedule_id': id}" domain="[('weekday', '=', 'thursday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -201,27 +153,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" context="{'default_weekday': 'friday', 'default_schedule_id': id}" domain="[('weekday', '=', 'friday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="friday_line_ids" readonly="not id" context="{'default_weekday': 'friday', 'default_schedule_id': id}" domain="[('weekday', '=', 'friday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -236,27 +172,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" context="{'default_weekday': 'saturday', 'default_schedule_id': id}" domain="[('weekday', '=', 'saturday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="saturday_line_ids" readonly="not id" context="{'default_weekday': 'saturday', 'default_schedule_id': id}" domain="[('weekday', '=', 'saturday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -271,27 +191,11 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" context="{'default_weekday': 'sunday', 'default_schedule_id': id}" domain="[('weekday', '=', 'sunday')]">
-<list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
+<field name="sunday_line_ids" readonly="not id" context="{'default_weekday': 'sunday', 'default_schedule_id': id}" domain="[('weekday', '=', 'sunday')]">
+<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -306,22 +210,6 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="generated_plan_id" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
-<form string="Scheduled Weekly Stop">
-<group>
-<field name="weekday" invisible="1"/>
-<field name="is_off_day" invisible="1"/>
-<field name="finalized_plan_skip" invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="city_id" options="{'no_create': True}"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]" options="{'no_create': True}"/>
-<field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True}"/>
-<field name="partner_id" readonly="1"/>
-<field name="visit_mode" readonly="1"/>
-<field name="generated_plan_id" readonly="1"/>
-<field name="note" string="Line Note"/>
-</group>
-</form>
 </field>
 </page>
 </notebook>
@@ -371,4 +259,3 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 </data>
-</odoo>
