@@ -66,18 +66,19 @@ and will need supervisor review before operational use.
 </group>
 </group>
 <separator string="Weekly Visit Stops"/>
-<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Add outlets under each weekday tab. Select City first, then Area, then Outlet. </div>
+<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Under each weekday tab, Add a line opens a stop form. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" invisible="not id"/>
+</div>
 <field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -85,15 +86,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Tuesday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" invisible="not id"/>
+</div>
 <field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -101,15 +103,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Wednesday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" invisible="not id"/>
+</div>
 <field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -117,15 +120,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Thursday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" invisible="not id"/>
+</div>
 <field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -133,15 +137,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Friday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" invisible="not id"/>
+</div>
 <field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -149,15 +154,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Saturday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" invisible="not id"/>
+</div>
 <field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
@@ -165,15 +171,16 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Sunday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" invisible="not id"/>
+</div>
 <field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
-<list editable="bottom" decoration-warning="is_off_day">
+<list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
