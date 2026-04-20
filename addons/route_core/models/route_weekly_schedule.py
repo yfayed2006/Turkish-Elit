@@ -480,6 +480,26 @@ class RouteWeeklySchedule(models.Model):
             "target": "current",
         }
 
+    def action_open_day_stop_wizard(self):
+        self.ensure_one()
+        if not self.id:
+            raise UserError(_("Please save the weekly schedule first."))
+        weekday = self.env.context.get("default_weekday") or self.env.context.get("wizard_weekday") or "monday"
+        action = self.env.ref("route_core.action_route_schedule_stop_wizard").read()[0]
+        day_lines = self.line_ids.filtered(lambda line: (line.weekday or "monday") == weekday)
+        first_line = day_lines[:1]
+        action["name"] = _("Create %(day)s Stops") % {
+            "day": WEEKDAY_LABELS.get(weekday, weekday.title()),
+        }
+        action["context"] = {
+            **self.env.context,
+            "default_schedule_id": self.id,
+            "default_weekday": weekday,
+            "default_city_id": first_line.city_id.id if first_line else False,
+            "default_area_id": first_line.area_id.id if first_line else False,
+        }
+        return action
+
     def action_open_form(self):
         self.ensure_one()
         self._cleanup_duplicate_lines()
