@@ -611,7 +611,10 @@ class RouteWeeklyScheduleLine(models.Model):
 
     def _get_parent_lines(self):
         self.ensure_one()
-        return self.schedule_id.line_ids
+        schedule = self.schedule_id
+        if not schedule and self.env.context.get("default_schedule_id"):
+            schedule = self.env["route.weekly.schedule"].browse(self.env.context.get("default_schedule_id"))
+        return schedule.line_ids if schedule else self.env["route.weekly.schedule.line"]
 
     def _is_current_line(self, line):
         self.ensure_one()
@@ -652,7 +655,10 @@ class RouteWeeklyScheduleLine(models.Model):
 
     def _get_duplicate_line(self):
         self.ensure_one()
-        if not self.schedule_id or not self.outlet_id:
+        schedule = self.schedule_id
+        if not schedule and self.env.context.get("default_schedule_id"):
+            schedule = self.env["route.weekly.schedule"].browse(self.env.context.get("default_schedule_id"))
+        if not schedule or not self.outlet_id:
             return self.env[self._name]
 
         weekday = self._get_effective_weekday()
@@ -719,6 +725,8 @@ class RouteWeeklyScheduleLine(models.Model):
         for vals in vals_list:
             if default_weekday and not vals.get("weekday"):
                 vals["weekday"] = default_weekday
+            if self.env.context.get("default_schedule_id") and not vals.get("schedule_id"):
+                vals["schedule_id"] = self.env.context.get("default_schedule_id")
             outlet_id = vals.get("outlet_id")
             if outlet_id and not vals.get("area_id"):
                 outlet = self.env["route.outlet"].browse(outlet_id)
@@ -734,6 +742,8 @@ class RouteWeeklyScheduleLine(models.Model):
         default_weekday = self.env.context.get("default_weekday")
         if default_weekday and "weekday" not in vals:
             vals["weekday"] = default_weekday
+        if self.env.context.get("default_schedule_id") and "schedule_id" not in vals and not self.schedule_id:
+            vals["schedule_id"] = self.env.context.get("default_schedule_id")
         if vals.get("outlet_id") and not vals.get("area_id"):
             outlet = self.env["route.outlet"].browse(vals["outlet_id"])
             vals["area_id"] = outlet.area_id.id
@@ -828,3 +838,4 @@ class RouteWeeklyScheduleLine(models.Model):
                     "outlet": rec.outlet_id.display_name or rec.outlet_id.name,
                     "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
+
