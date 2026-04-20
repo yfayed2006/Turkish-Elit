@@ -17,7 +17,7 @@
 <field name="city_id" options="{'no_create': True, 'no_create_edit': True}"/>
 <field name="area_id" options="{'no_create': True, 'no_create_edit': True}"/>
 <field name="available_outlet_ids" invisible="1"/>
-<field name="outlet_ids" widget="many2many_tags" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True, 'no_create_edit': True}" placeholder="Choose one or more outlets for this day"/>
+<field name="outlet_ids" widget="many2many_tags" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True, 'no_create_edit': True, 'no_open': False}" placeholder="Choose one or more outlets for this day"/>
 <field name="note" placeholder="Optional note for the selected stops..."/>
 </group>
 <group>
