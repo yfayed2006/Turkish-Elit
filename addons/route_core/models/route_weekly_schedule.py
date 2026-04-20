@@ -828,4 +828,3 @@ class RouteWeeklyScheduleLine(models.Model):
                     "outlet": rec.outlet_id.display_name or rec.outlet_id.name,
                     "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
-
