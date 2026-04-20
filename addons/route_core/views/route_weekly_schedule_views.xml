@@ -80,134 +80,141 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <separator string="Scheduled Weekly Stops"/>
 <notebook>
 <page string="Monday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" invisible="not id"/>
+</div>
 <field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Tuesday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" invisible="not id"/>
+</div>
 <field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Wednesday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" invisible="not id"/>
+</div>
 <field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Thursday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" invisible="not id"/>
+</div>
 <field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Friday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" invisible="not id"/>
+</div>
 <field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Saturday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" invisible="not id"/>
+</div>
 <field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
 </page>
 <page string="Sunday">
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" invisible="not id"/>
+</div>
 <field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
-<list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
+<list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
-<field name="sequence" widget="handle"/>
 <field name="visit_date" readonly="1"/>
-<field name="city_id"/>
-<field name="area_id" domain="[('city_id', '=', city_id)]"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="partner_id" optional="show"/>
-<field name="visit_mode" optional="show"/>
-<field name="generated_plan_id" optional="show"/>
+<field name="city_id" readonly="1"/>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
+<field name="visit_mode" readonly="1" optional="show"/>
+<field name="generated_plan_id" readonly="1" optional="show"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
