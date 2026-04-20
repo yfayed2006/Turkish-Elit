@@ -80,7 +80,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <separator string="Scheduled Weekly Stops"/>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<field name="monday_line_ids" context="{'default_weekday': 'monday', 'default_schedule_id': id}" domain="[('weekday', '=', 'monday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -115,7 +115,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'tuesday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -150,7 +150,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'wednesday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -185,7 +185,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday', 'default_schedule_id': id}" domain="[('weekday', '=', 'thursday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -220,7 +220,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
+<field name="friday_line_ids" context="{'default_weekday': 'friday', 'default_schedule_id': id}" domain="[('weekday', '=', 'friday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -255,7 +255,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday', 'default_schedule_id': id}" domain="[('weekday', '=', 'saturday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -290,7 +290,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday', 'default_schedule_id': id}" domain="[('weekday', '=', 'sunday')]">
 <list decoration-warning="is_off_day" decoration-muted="finalized_plan_skip" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
