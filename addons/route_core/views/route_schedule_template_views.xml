@@ -69,7 +69,7 @@ and will need supervisor review before operational use.
 <div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Under each weekday tab, Add a line opens a stop form. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<field name="monday_line_ids" context="{'default_weekday': 'monday', 'default_template_id': id}" domain="[('weekday', '=', 'monday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -98,7 +98,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday', 'default_template_id': id}" domain="[('weekday', '=', 'tuesday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -127,7 +127,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday', 'default_template_id': id}" domain="[('weekday', '=', 'wednesday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -156,7 +156,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday', 'default_template_id': id}" domain="[('weekday', '=', 'thursday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -185,7 +185,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
+<field name="friday_line_ids" context="{'default_weekday': 'friday', 'default_template_id': id}" domain="[('weekday', '=', 'friday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -214,7 +214,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday', 'default_template_id': id}" domain="[('weekday', '=', 'saturday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -243,7 +243,7 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday', 'default_template_id': id}" domain="[('weekday', '=', 'sunday')]">
 <list decoration-warning="is_off_day" open_form_view="1">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
