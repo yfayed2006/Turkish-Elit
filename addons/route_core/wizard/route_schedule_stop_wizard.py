@@ -68,10 +68,10 @@ class RouteScheduleStopWizard(models.TransientModel):
     def _get_parent_record(self):
         self.ensure_one()
         if self.template_id:
-            return self.template_id
+            return self.template_id, "template"
         if self.schedule_id:
-            return self.schedule_id
-        return False
+            return self.schedule_id, "schedule"
+        return False, False
 
     def _get_parent_line_model(self):
         self.ensure_one()
@@ -83,13 +83,10 @@ class RouteScheduleStopWizard(models.TransientModel):
 
     def _get_used_outlet_ids(self):
         self.ensure_one()
-        parent = self._get_parent_record()
+        parent, _parent_type = self._get_parent_record()
         if not parent:
             return []
-        weekday = self.weekday or "monday"
-        return parent.line_ids.filtered(
-            lambda line: (line.weekday or "monday") == weekday and line.outlet_id
-        ).mapped("outlet_id").ids
+        return parent.line_ids.filtered(lambda line: (line.weekday or "monday") == (self.weekday or "monday")).mapped("outlet_id").ids
 
     @api.depends(
         "city_id",
@@ -155,26 +152,25 @@ class RouteScheduleStopWizard(models.TransientModel):
         self.ensure_one()
         line_model, parent_field = self._get_parent_line_model()
         _line_model = line_model
-        parent = self._get_parent_record()
+        parent, _parent_type = self._get_parent_record()
         next_sequence = max(parent.line_ids.mapped("sequence") or [0]) + 10
         vals_list = []
-        for outlet in self.outlet_ids.sorted(key=lambda record: (record.name or "", record.id)):
-            vals_list.append(
-                {
-                    parent_field: parent.id,
-                    "sequence": next_sequence,
-                    "weekday": self.weekday,
-                    "area_id": outlet.area_id.id,
-                    "outlet_id": outlet.id,
-                    "note": self.note,
-                }
-            )
+        for outlet in self.outlet_ids.sorted(key=lambda record: (record.area_id.name or "", record.name or "", record.id)):
+            vals_list.append({
+                parent_field: parent.id,
+                "sequence": next_sequence,
+                "weekday": self.weekday,
+                "city_id": outlet.area_id.city_id.id,
+                "area_id": outlet.area_id.id,
+                "outlet_id": outlet.id,
+                "note": self.note,
+            })
             next_sequence += 10
         return vals_list
 
     def action_save(self):
         self.ensure_one()
-        parent = self._get_parent_record()
+        parent, parent_type = self._get_parent_record()
         if not parent:
             raise UserError(_("Please open this wizard from a weekly visit template or weekly schedule."))
         if not self.city_id:
@@ -188,19 +184,17 @@ class RouteScheduleStopWizard(models.TransientModel):
         duplicate_outlets = self.outlet_ids.filtered(lambda outlet: outlet.id in used_outlet_ids)
         if duplicate_outlets:
             day_label = WEEKDAY_LABELS.get(self.weekday or "", self.weekday or "")
-            raise ValidationError(
-                _(
-                    "Some selected outlets are already added on %(day)s. Remove them from the selection and try again: %(outlets)s"
-                )
-                % {
-                    "day": day_label,
-                    "outlets": ", ".join(duplicate_outlets.mapped("display_name")),
-                }
-            )
+            raise ValidationError(_(
+                "Some selected outlets are already added on %(day)s. Remove them from the selection and try again: %(outlets)s"
+            ) % {
+                "day": day_label,
+                "outlets": ", ".join(duplicate_outlets.mapped("display_name")),
+            })
 
         line_model, _parent_field = self._get_parent_line_model()
         vals_list = self._prepare_line_vals_list()
         if not vals_list:
             raise UserError(_("There are no available outlets to add for this area and day."))
         line_model.create(vals_list)
+
         return {"type": "ir.actions.act_window_close"}
