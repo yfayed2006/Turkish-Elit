@@ -613,13 +613,33 @@ class RouteWeeklyScheduleLine(models.Model):
         self.ensure_one()
         return self.schedule_id.line_ids
 
+    def _is_current_line(self, line):
+        self.ensure_one()
+        line.ensure_one()
+        if line == self:
+            return True
+        self_real_id = self._origin.id or (self.id if isinstance(self.id, int) else False)
+        line_real_id = line._origin.id or (line.id if isinstance(line.id, int) else False)
+        if self_real_id and line_real_id and self_real_id == line_real_id:
+            return True
+        return False
+
     def _get_same_day_sibling_lines(self):
         self.ensure_one()
         weekday = self._get_effective_weekday()
         sibling_lines = self.env["route.weekly.schedule.line"]
-        real_id = self._origin.id or (self.id if isinstance(self.id, int) else False)
 
-        if self.schedule_id and self.schedule_id.id:
+        for line in self._get_parent_lines():
+            if not line.outlet_id:
+                continue
+            if (line.weekday or "monday") != weekday:
+                continue
+            if self._is_current_line(line):
+                continue
+            sibling_lines |= line
+
+        if not sibling_lines and self.schedule_id and self.schedule_id.id:
+            real_id = self._origin.id or (self.id if isinstance(self.id, int) else False)
             domain = [
                 ("schedule_id", "=", self.schedule_id.id),
                 ("weekday", "=", weekday),
@@ -627,18 +647,7 @@ class RouteWeeklyScheduleLine(models.Model):
             ]
             if real_id:
                 domain.append(("id", "!=", real_id))
-            sibling_lines |= self.search(domain)
-
-        parent_lines = self._get_parent_lines().filtered(
-            lambda line: line.outlet_id and (line.weekday or "monday") == weekday
-        )
-        if self in parent_lines:
-            parent_lines -= self
-        if self._origin and self._origin in parent_lines:
-            parent_lines -= self._origin
-        if real_id:
-            parent_lines = parent_lines.filtered(lambda line: line.id != real_id)
-        sibling_lines |= parent_lines
+            sibling_lines = self.search(domain)
         return sibling_lines
 
     def _get_duplicate_line(self):
@@ -772,8 +781,24 @@ class RouteWeeklyScheduleLine(models.Model):
         if not self.outlet_id:
             return response
 
-        self.area_id = self.outlet_id.area_id
-        self.city_id = self.outlet_id.area_id.city_id
+        selected_outlet = self.outlet_id
+        self.area_id = selected_outlet.area_id
+        self.city_id = selected_outlet.area_id.city_id
+        duplicate_line = self._get_duplicate_line()
+        if duplicate_line:
+            self.outlet_id = False
+            response["domain"] = self._get_dynamic_domains()
+            response["warning"] = {
+                "title": _("Duplicate Outlet"),
+                "message": _(
+                    "Outlet %(outlet)s is already added on %(day)s in this weekly schedule. Choose another outlet for that day."
+                ) % {
+                    "outlet": selected_outlet.display_name or selected_outlet.name,
+                    "day": WEEKDAY_LABELS.get(self._get_effective_weekday() or "", self._get_effective_weekday() or ""),
+                },
+            }
+            return response
+
         response["domain"] = self._get_dynamic_domains()
         return response
 
