@@ -829,3 +829,4 @@ class RouteWeeklyScheduleLine(models.Model):
                     "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
 
+
