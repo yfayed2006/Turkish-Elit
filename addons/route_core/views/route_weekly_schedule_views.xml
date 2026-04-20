@@ -80,7 +80,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <separator string="Scheduled Weekly Stops"/>
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" readonly="not id" context="{'default_weekday': 'monday', 'default_schedule_id': id}" domain="[('weekday', '=', 'monday')]">
+<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -99,7 +99,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" readonly="not id" context="{'default_weekday': 'tuesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'tuesday')]">
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -118,7 +118,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" readonly="not id" context="{'default_weekday': 'wednesday', 'default_schedule_id': id}" domain="[('weekday', '=', 'wednesday')]">
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -137,7 +137,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" readonly="not id" context="{'default_weekday': 'thursday', 'default_schedule_id': id}" domain="[('weekday', '=', 'thursday')]">
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -156,7 +156,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" readonly="not id" context="{'default_weekday': 'friday', 'default_schedule_id': id}" domain="[('weekday', '=', 'friday')]">
+<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -175,7 +175,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" readonly="not id" context="{'default_weekday': 'saturday', 'default_schedule_id': id}" domain="[('weekday', '=', 'saturday')]">
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -194,7 +194,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" readonly="not id" context="{'default_weekday': 'sunday', 'default_schedule_id': id}" domain="[('weekday', '=', 'sunday')]">
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
 <list editable="bottom" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
