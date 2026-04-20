@@ -69,10 +69,15 @@ and will need supervisor review before operational use.
 <div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Under each weekday tab, Add a line opens a stop form. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Monday.
 </div>
-<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}"/>
+</div>
+<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -86,10 +91,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Tuesday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Tuesday.
 </div>
-<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}"/>
+</div>
+<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -103,10 +113,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Wednesday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Wednesday.
 </div>
-<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}"/>
+</div>
+<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -120,10 +135,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Thursday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Thursday.
 </div>
-<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}"/>
+</div>
+<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -137,10 +157,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Friday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Friday.
 </div>
-<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}"/>
+</div>
+<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -154,10 +179,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Saturday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Saturday.
 </div>
-<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}"/>
+</div>
+<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
@@ -171,10 +201,15 @@ and will need supervisor review before operational use.
 </field>
 </page>
 <page string="Sunday">
-<div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" invisible="not id"/>
+<div class="alert alert-warning" role="alert" invisible="id">
+Save the template first, then use
+<strong>Add a line</strong>
+to open the stop popup for Sunday.
 </div>
-<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<div class="mb-2" invisible="not id">
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}"/>
+</div>
+<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
 <field name="is_off_day" column_invisible="1"/>
 <field name="weekday" column_invisible="1"/>
