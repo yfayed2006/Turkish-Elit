@@ -28,9 +28,6 @@
 <xpath expr="//field[@name='loading_proposal_count']" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
-<xpath expr="//group[.//field[@name='loading_proposal_count'] and .//field[@name='loading_proposal_state']]" position="attributes">
-<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
-</xpath>
 <xpath expr="//button[@name='action_view_loading_proposal' and hasclass('oe_stat_button')]" position="attributes">
 <attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
 </xpath>
