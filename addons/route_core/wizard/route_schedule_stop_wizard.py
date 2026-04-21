@@ -81,6 +81,11 @@ class RouteScheduleStopWizard(models.TransientModel):
             return self.env["route.weekly.schedule.line"], "schedule_id"
         raise UserError(_("Open this wizard from a weekly visit template or weekly schedule."))
 
+    def _ensure_planning_manager(self):
+        if self.env.user.has_group("route_core.group_route_supervisor") or self.env.user.has_group("route_core.group_route_management"):
+            return
+        raise UserError(_("Only route supervisors can manage weekly planning changes."))
+
     def _get_used_outlet_ids(self):
         self.ensure_one()
         parent, _parent_type = self._get_parent_record()
@@ -138,6 +143,7 @@ class RouteScheduleStopWizard(models.TransientModel):
 
     def action_select_all_area_outlets(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         if not self.area_id:
             raise UserError(_("Please select an area first."))
         self.outlet_ids = [(6, 0, self.available_outlet_ids.ids)]
@@ -145,6 +151,7 @@ class RouteScheduleStopWizard(models.TransientModel):
 
     def action_clear_selection(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         self.outlet_ids = [(5, 0, 0)]
         return self._reopen_action()
 
@@ -170,6 +177,7 @@ class RouteScheduleStopWizard(models.TransientModel):
 
     def action_save(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         parent, parent_type = self._get_parent_record()
         if not parent:
             raise UserError(_("Please open this wizard from a weekly visit template or weekly schedule."))
