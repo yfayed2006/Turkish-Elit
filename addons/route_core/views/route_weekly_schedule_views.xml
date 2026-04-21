@@ -45,13 +45,8 @@
 <header>
 <button name="action_open_daily_plans" type="object" string="Open Daily Plans" class="btn-primary" invisible="generated_plan_count == 0"/>
 </header>
-<sheet>
-<div class="oe_button_box" name="button_box">
-<button name="action_open_daily_plans" type="object" class="oe_stat_button" icon="fa-calendar-check-o" invisible="generated_plan_count == 0">
-<field name="generated_plan_count" string="Daily Plans" widget="statinfo"/>
-</button>
-</div>
-<div class="oe_title">
+<sheet class="route_mobile_compact_sheet">
+<div class="oe_title route_mobile_header_title">
 <h1>
 <field name="name" readonly="1"/>
 </h1>
@@ -61,131 +56,564 @@
 </div>
 <div class="alert alert-info" role="alert" invisible="state != 'draft'">This weekly schedule is ready for review. Your supervisor has not generated daily plans yet for this week.</div>
 <div class="alert alert-success" role="alert" invisible="state != 'plans_generated'">Daily plans are ready for this week. Use Open Daily Plans to review the generated route days and start execution.</div>
-<group string="My Weekly Schedule" col="2">
-<group>
-<field name="week_start_date" readonly="1"/>
-<field name="week_end_date" readonly="1"/>
-<field name="vehicle_id" readonly="1"/>
-<field name="source_warehouse_id" readonly="1"/>
-</group>
-<group>
-<field name="off_day" readonly="1"/>
-<field name="line_count" string="Scheduled Stops" readonly="1"/>
-<field name="generated_plan_count" string="Daily Plans" readonly="1"/>
-<field name="outlet_summary" string="Planned Outlets" readonly="1"/>
-</group>
-</group>
-<separator string="Weekly Stops"/>
+<notebook>
+<page string="Overview">
+<div class="route_mobile_summary_grid">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Week Start</div>
+<div class="route_mobile_info_value">
+<field name="week_start_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Week End</div>
+<div class="route_mobile_info_value">
+<field name="week_end_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Vehicle</div>
+<div class="route_mobile_info_value">
+<field name="vehicle_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Weekly Off Day</div>
+<div class="route_mobile_info_value">
+<field name="off_day" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Scheduled Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" string="Scheduled Stops" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Daily Plans</div>
+<div class="route_mobile_info_value">
+<field name="generated_plan_count" string="Daily Plans" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_label">Source Warehouse</div>
+<div class="route_mobile_detail_value">
+<field name="source_warehouse_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</page>
+<page string="Weekly Stops">
 <notebook>
 <page string="Monday">
 <field name="monday_line_ids" readonly="1" domain="[('weekday', '=', 'monday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Tuesday">
 <field name="tuesday_line_ids" readonly="1" domain="[('weekday', '=', 'tuesday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Wednesday">
 <field name="wednesday_line_ids" readonly="1" domain="[('weekday', '=', 'wednesday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Thursday">
 <field name="thursday_line_ids" readonly="1" domain="[('weekday', '=', 'thursday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Friday">
 <field name="friday_line_ids" readonly="1" domain="[('weekday', '=', 'friday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Saturday">
 <field name="saturday_line_ids" readonly="1" domain="[('weekday', '=', 'saturday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 <page string="Sunday">
 <field name="sunday_line_ids" readonly="1" domain="[('weekday', '=', 'sunday')]">
-<list create="0" delete="0" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
-<field name="is_off_day" column_invisible="1"/>
-<field name="finalized_plan_skip" column_invisible="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
-<field name="visit_mode" readonly="1" optional="show"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
-<field name="note" string="Line Note" optional="hide"/>
-</list>
+<kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
+<field name="visit_date"/>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="visit_mode"/>
+<field name="generated_plan_id"/>
+<field name="note"/>
+<field name="is_off_day"/>
+<field name="finalized_plan_skip"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_visit_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="outlet_id"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<t t-if="record.is_off_day.raw_value">
+<span class="badge text-bg-warning">Off Day</span>
+</t>
+<t t-if="record.finalized_plan_skip.raw_value">
+<span class="badge text-bg-secondary">Protected</span>
+</t>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Date</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Area</div>
+<div class="route_mobile_visit_meta_value">
+<field name="area_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Customer</div>
+<div class="route_mobile_visit_meta_value">
+<field name="partner_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Visit Type</div>
+<div class="route_mobile_visit_meta_value">
+<field name="visit_mode"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.generated_plan_id.raw_value">
+<div class="route_mobile_detail_label">Generated Daily Plan</div>
+<div class="route_mobile_detail_value">
+<field name="generated_plan_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_note" t-if="record.note.raw_value">
+<field name="note"/>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 </notebook>
-<group string="Notes" invisible="not notes">
-<field name="notes" readonly="1"/>
-</group>
+</page>
+<page string="Details">
+<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_label">Planned Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="outlet_summary" string="Planned Outlets" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not area_summary">
+<div class="route_mobile_detail_label">Areas</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="area_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not city_summary">
+<div class="route_mobile_detail_label">Cities</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="city_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+</page>
+<page string="Notes" invisible="not notes">
+<field name="notes" readonly="1" nolabel="1"/>
+</page>
+</notebook>
 </sheet>
 </form>
 </field>
@@ -437,7 +865,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--  Current Week filter removed to avoid XML parser issues on Odoo upgrade  -->
+<!--   Current Week filter removed to avoid XML parser issues on Odoo upgrade   -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
