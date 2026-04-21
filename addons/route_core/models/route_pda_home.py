@@ -5,7 +5,6 @@ import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-from .route_schedule_common import compute_week_start_date
 
 
 class RoutePdaHome(models.TransientModel):
@@ -281,20 +280,15 @@ class RoutePdaHome(models.TransientModel):
             if visit and visit.user_id == self.env.user:
                 return visit
 
-        active_visits = Visit.search([
-            ("user_id", "=", self.env.user.id),
-            ("state", "=", "in_progress"),
-        ], order="start_datetime desc, id desc")
-        if not active_visits:
-            return Visit
-
         preferred_mode = ctx.get("statement_visit_execution_mode") or ctx.get("snapshot_mode")
-        if preferred_mode in ("consignment", "direct_sales"):
-            matching_visits = active_visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == preferred_mode)
-            if matching_visits:
-                return matching_visits[:1]
-
-        return active_visits[:1]
+        active_visit = self._get_workspace_current_visit(
+            user=self.env.user,
+            snapshot_mode=preferred_mode,
+            today_only=True,
+        )
+        if active_visit:
+            return active_visit
+        return Visit
 
     def action_open_current_visit_statement_of_account(self):
         self.ensure_one()
@@ -316,6 +310,35 @@ class RoutePdaHome(models.TransientModel):
         end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
         return today, fields.Datetime.to_string(start_utc), fields.Datetime.to_string(end_utc)
 
+    def _get_workspace_active_visits(self, user=None, snapshot_mode=False, today_only=True):
+        self.ensure_one()
+        user = user or self.env.user
+        domain = [
+            ("user_id", "=", user.id),
+            ("state", "=", "in_progress"),
+        ]
+        if today_only:
+            domain.append(("date", "=", fields.Date.context_today(self)))
+        visits = self.env["route.visit"].search(domain, order="start_datetime desc, id desc")
+        if snapshot_mode in ("consignment", "direct_sales"):
+            visits = visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode)
+        return visits
+
+    def _get_workspace_current_visit(self, user=None, snapshot_mode=False, today_only=True):
+        self.ensure_one()
+        return self._get_workspace_active_visits(user=user, snapshot_mode=snapshot_mode, today_only=today_only)[:1]
+
+    def _get_current_week_schedule_record(self, user=None):
+        self.ensure_one()
+        user = user or self.env.user
+        today = fields.Date.context_today(self)
+        return self.env["route.weekly.schedule"].search([
+            ("user_id", "=", user.id),
+            ("week_start_date", "<=", today),
+            ("week_end_date", ">=", today),
+            ("state", "!=", "cancelled"),
+        ], order="week_start_date desc, id desc", limit=1)
+
     def _prepare_action(self, xmlid, name=None, domain=None, context=None):
         action = self.env.ref(xmlid).read()[0]
         if name:
@@ -334,10 +357,7 @@ class RoutePdaHome(models.TransientModel):
     def _get_current_vehicle(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
-        current_visit = self.env["route.visit"].search([
-            ("user_id", "=", self.env.user.id),
-            ("state", "=", "in_progress"),
-        ], order="start_datetime desc, id desc", limit=1)
+        current_visit = self._get_workspace_current_visit(user=self.env.user, today_only=True)
         if current_visit and current_visit.vehicle_id:
             return current_visit.vehicle_id
         plan = self.env["route.plan"].search([
@@ -561,17 +581,12 @@ class RoutePdaHome(models.TransientModel):
                 ("user_id", "=", user.id),
                 ("date", "=", today),
             ])
-            active_visits = Visit.search([
-                ("user_id", "=", user.id),
-                ("state", "=", "in_progress"),
-            ], order="start_datetime desc, id desc")
             snapshot_mode = self.env.context.get("snapshot_mode")
-            if snapshot_mode in ("consignment", "direct_sales"):
-                current_visit = active_visits.filtered(
-                    lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode
-                )[:1]
-            else:
-                current_visit = active_visits[:1]
+            current_visit = rec._get_workspace_current_visit(
+                user=user,
+                snapshot_mode=snapshot_mode,
+                today_only=True,
+            )
             today_closings = Closing.search([
                 ("user_id", "=", user.id),
                 ("plan_date", "=", today),
@@ -756,10 +771,7 @@ class RoutePdaHome(models.TransientModel):
     def action_open_my_pda_visits(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
-        active_visit = self.env["route.visit"].search([
-            ("user_id", "=", self.env.user.id),
-            ("state", "=", "in_progress"),
-        ], order="start_datetime desc, id desc", limit=1)
+        active_visit = self._get_workspace_current_visit(user=self.env.user, today_only=True)
         if active_visit:
             return self.action_open_current_visit()
 
@@ -816,10 +828,20 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_my_weekly_schedule(self):
         self.ensure_one()
-        company = self.company_id or self.env.company
+        schedule = self._get_current_week_schedule_record(user=self.env.user)
+        if schedule:
+            action = self._prepare_action(
+                "route_core.action_route_weekly_schedule_salesperson",
+                name="My Weekly Schedule",
+                context={"create": 0, "edit": 0, "delete": 0},
+            )
+            action["view_mode"] = "form"
+            action["views"] = [(self.env.ref("route_core.view_route_weekly_schedule_salesperson_form").id, "form")]
+            action["res_id"] = schedule.id
+            action.pop("domain", None)
+            return action
+
         today = fields.Date.context_today(self)
-        week_start = compute_week_start_date(today, company.route_week_start_day or "monday")
-        week_end = fields.Date.add(week_start, days=6) if week_start else today
         return self._prepare_action(
             "route_core.action_route_weekly_schedule_salesperson",
             name="My Weekly Schedule",
@@ -834,10 +856,7 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_current_visit(self):
         self.ensure_one()
-        visit = self.env["route.visit"].search([
-            ("user_id", "=", self.env.user.id),
-            ("state", "=", "in_progress"),
-        ], order="start_datetime desc, id desc", limit=1)
+        visit = self._get_workspace_current_visit(user=self.env.user, today_only=True)
         if not visit:
             return self.action_open_my_pda_visits()
         action = self._prepare_action(
