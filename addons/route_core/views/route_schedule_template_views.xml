@@ -24,13 +24,13 @@
 <field name="arch" type="xml">
 <form string="Weekly Visit Template">
 <header>
-<button name="action_create_current_week_schedule" type="object" string="Activate This Week" class="btn-primary" invisible="not id"/>
-<button name="action_create_next_week_schedule" type="object" string="Activate Next Week" class="btn-secondary" invisible="not id"/>
-<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary" invisible="not id"/>
+<button name="action_create_current_week_schedule" type="object" string="Activate This Week" class="btn-primary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_next_week_schedule" type="object" string="Activate Next Week" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
-<button name="action_view_weekly_schedules" type="object" class="oe_stat_button" icon="fa-calendar">
+<button name="action_view_weekly_schedules" type="object" class="oe_stat_button" icon="fa-calendar" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <field name="schedule_count" string="Generated Weeks" widget="statinfo"/>
 </button>
 </div>
@@ -75,7 +75,7 @@ Save the template first, then use
 to open the stop popup for Monday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -97,7 +97,7 @@ Save the template first, then use
 to open the stop popup for Tuesday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -119,7 +119,7 @@ Save the template first, then use
 to open the stop popup for Wednesday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -141,7 +141,7 @@ Save the template first, then use
 to open the stop popup for Thursday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -163,7 +163,7 @@ Save the template first, then use
 to open the stop popup for Friday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -185,7 +185,7 @@ Save the template first, then use
 to open the stop popup for Saturday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -207,7 +207,7 @@ Save the template first, then use
 to open the stop popup for Sunday.
 </div>
 <div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
