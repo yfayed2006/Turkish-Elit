@@ -262,22 +262,12 @@ class RoutePlan(models.Model):
 
     def _ensure_no_unresolved_previous_pending(self, line):
         self.ensure_one()
-        previous_pending = self._get_previous_pending_lines(outlet=line.outlet_id)[:1]
-        if not previous_pending:
-            return
-
-        source_line = previous_pending[0]
-        raise UserError(
-            _(
-                "There is an older pending visit for outlet '%(outlet)s' in route plan '%(plan)s' dated %(date)s. "
-                "Please review pending visits first, then decide Carry Forward, Reschedule, or Cancel before starting a new visit for this outlet."
-            )
-            % {
-                "outlet": source_line.outlet_id.display_name or _("Unknown Outlet"),
-                "plan": source_line.plan_id.display_name or source_line.plan_id.name,
-                "date": fields.Date.to_string(source_line.plan_id.date) if source_line.plan_id.date else _("Unknown Date"),
-            }
-        )
+        # Pending-visit blocking is intentionally disabled for now.
+        # Supervisors can still review and manage previous pending visits
+        # from the dedicated review tools and menu screens, but route
+        # execution should not be blocked while the new weekly planning and
+        # mobile execution UX is being stabilized.
+        return
 
     def _get_or_create_plan_for_date(self, target_date, area=None):
         self.ensure_one()
