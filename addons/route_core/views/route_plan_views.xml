@@ -490,7 +490,6 @@ Please review them before today's execution.
 <field name="outlet_id" string="Outlet"/>
 <field name="partner_id" string="Customer"/>
 <filter name="filter_pending_only" string="Pending" domain="[('state', '=', 'pending')]"/>
-<filter name="filter_today_or_older" string="Today or Older" domain="[('plan_date', '<=', context_today())]"/>
 <separator/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'salesperson_id'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
