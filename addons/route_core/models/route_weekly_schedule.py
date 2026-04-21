@@ -154,7 +154,7 @@ class RouteWeeklySchedule(models.Model):
         for rec in self:
             rec.line_count = len(rec.line_ids)
             rec.off_day_stop_count = len(rec.line_ids.filtered(lambda line: line.weekday == rec.off_day)) if rec.off_day else 0
-            rec.route_plan_ids = rec.line_ids.mapped("generated_plan_id")
+            rec.route_plan_ids = rec.line_ids.mapped("generated_plan_id").filtered(lambda plan: plan.state != "cancel")
             rec.generated_plan_count = len(rec.route_plan_ids)
             rec.skipped_finalized_plan_count = len(set(rec.line_ids.filtered("finalized_plan_skip").mapped("visit_date")))
             city_names = list(dict.fromkeys(rec.line_ids.mapped("city_id.name")))
@@ -244,12 +244,37 @@ class RouteWeeklySchedule(models.Model):
                 fields.Command.create(values)
                 for values in self._sanitize_line_dicts(line_dicts)
             ]
+
+        allowed_locked_write_fields = {"state"}
+        restricted_locked_fields = set(cleaned_vals.keys()) - allowed_locked_write_fields
+        if restricted_locked_fields and not self.env.context.get("route_weekly_schedule_skip_lock"):
+            for rec in self:
+                if rec.state != "draft":
+                    raise UserError(
+                        _(
+                            "This weekly schedule is locked because daily plans have already been generated from it. "
+                            "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                        )
+                    )
+
         result = super().write(cleaned_vals)
         if cleaned_vals.get("template_id") and not cleaned_vals.get("line_ids"):
             for rec in self:
                 if rec.template_id and not rec.line_ids:
                     rec._load_template_lines()
         return result
+
+    def unlink(self):
+        if not self.env.context.get("route_weekly_schedule_skip_lock"):
+            for rec in self:
+                if rec.state != "draft" or rec._get_linked_daily_plans():
+                    raise UserError(
+                        _(
+                            "You cannot delete this weekly schedule after daily plans have been generated from it. "
+                            "Cancel or keep the planning record instead."
+                        )
+                    )
+        return super().unlink()
 
     def _build_schedule_name(self):
         self.ensure_one()
@@ -303,6 +328,82 @@ class RouteWeeklySchedule(models.Model):
             if duplicate_lines:
                 duplicate_lines.unlink()
 
+    def _ensure_planning_manager(self):
+        if self.env.user.has_group("route_core.group_route_supervisor") or self.env.user.has_group("route_core.group_route_management"):
+            return
+        raise UserError(_("Only route supervisors can manage weekly schedules and planning changes."))
+
+    def _ensure_schedule_draft_editable(self, action_label=None):
+        self._ensure_planning_manager()
+        for rec in self:
+            if rec.state != "draft":
+                if action_label:
+                    raise UserError(
+                        _(
+                            "You cannot %(action)s after daily plans have already been generated from this weekly schedule. "
+                            "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                        )
+                        % {"action": action_label}
+                    )
+                raise UserError(
+                    _(
+                        "This weekly schedule is locked because daily plans have already been generated from it. "
+                        "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                    )
+                )
+
+    def _get_linked_daily_plans(self):
+        self.ensure_one()
+        return self.line_ids.mapped("generated_plan_id").filtered(lambda plan: plan and plan.state != "cancel")
+
+    def _get_unsafe_linked_daily_plans(self):
+        self.ensure_one()
+        return self._get_linked_daily_plans().filtered(
+            lambda plan: plan.planning_finalized or plan.visit_count or plan.state in ("in_progress", "done")
+        )
+
+    def _format_linked_plan_names(self, plans, max_items=3):
+        names = [plan.display_name or plan.name for plan in plans if plan]
+        if not names:
+            return ""
+        if len(names) <= max_items:
+            return ", ".join(names)
+        return "%s ..." % ", ".join(names[:max_items])
+
+    def _ensure_can_rebuild_generated_plans(self):
+        for rec in self:
+            unsafe_plans = rec._get_unsafe_linked_daily_plans()
+            if unsafe_plans:
+                raise UserError(
+                    _(
+                        "You cannot rebuild this weekly schedule because some generated daily plans are already finalized or execution has already started. "
+                        "Please continue with those daily plans directly, or reopen/cancel them first if operationally appropriate.\n\nAffected daily plans: %(plans)s"
+                    )
+                    % {"plans": rec._format_linked_plan_names(unsafe_plans)}
+                )
+
+    def _cancel_safe_linked_daily_plans(self):
+        for rec in self:
+            linked_plans = rec._get_linked_daily_plans()
+            if not linked_plans:
+                continue
+            linked_plans.with_context(
+                route_plan_skip_locked_check=True,
+                route_plan_skip_sync=True,
+                route_plan_skip_loading_dirty=True,
+            ).write({
+                "planning_finalized": False,
+                "planning_finalized_datetime": False,
+                "state": "cancel",
+            })
+
+    def _clear_generated_plan_links(self):
+        self.mapped("line_ids").with_context(route_weekly_schedule_skip_lock=True).write({
+            "generated_plan_id": False,
+            "generated_plan_line_id": False,
+            "finalized_plan_skip": False,
+        })
+
     def _get_daily_plan_for_date(self, visit_date):
         self.ensure_one()
         return self.env["route.plan"].search([
@@ -342,10 +443,12 @@ class RouteWeeklySchedule(models.Model):
             })
 
     def action_generate_daily_plans(self):
+        self._ensure_planning_manager()
         Plan = self.env["route.plan"]
         PlanLine = self.env["route.plan.line"]
 
         for rec in self:
+            rec._ensure_schedule_draft_editable(_("generate daily plans"))
             rec._cleanup_duplicate_lines()
             if not rec.line_ids:
                 raise UserError(_("Please add scheduled stops before generating daily plans."))
@@ -423,6 +526,7 @@ class RouteWeeklySchedule(models.Model):
 
     def action_copy_to_next_week(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         next_week_start = fields.Date.add(self.week_start_date, days=7)
         existing_schedule = self.search([
             ("template_id", "=", self.template_id.id),
@@ -462,13 +566,20 @@ class RouteWeeklySchedule(models.Model):
 
     def action_open_daily_plans(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_plan").read()[0]
-        plan_ids = self.line_ids.mapped("generated_plan_id").ids
+        action_xmlid = "route_core.action_route_plan"
+        if self.env.user.has_group("route_core.group_route_salesperson") and not (
+            self.env.user.has_group("route_core.group_route_supervisor")
+            or self.env.user.has_group("route_core.group_route_management")
+        ):
+            action_xmlid = "route_core.action_route_plan_salesperson"
+        action = self.env.ref(action_xmlid).read()[0]
+        plan_ids = self.line_ids.mapped("generated_plan_id").filtered(lambda plan: plan.state != "cancel").ids
         action["domain"] = [("id", "in", plan_ids)] if plan_ids else [("id", "=", 0)]
         return action
 
     def action_open_template(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         if not self.template_id:
             return False
         return {
@@ -493,15 +604,23 @@ class RouteWeeklySchedule(models.Model):
         }
 
     def action_cancel_schedule(self):
-        self.write({"state": "cancelled"})
+        self._ensure_planning_manager()
+        self._ensure_can_rebuild_generated_plans()
+        self._cancel_safe_linked_daily_plans()
+        self.with_context(route_weekly_schedule_skip_lock=True).write({"state": "cancelled"})
         return True
 
     def action_reset_to_draft(self):
-        self.write({"state": "draft"})
+        self._ensure_planning_manager()
+        self._ensure_can_rebuild_generated_plans()
+        self._cancel_safe_linked_daily_plans()
+        self._clear_generated_plan_links()
+        self.with_context(route_weekly_schedule_skip_lock=True).write({"state": "draft"})
         return True
 
     def action_open_day_stop_wizard(self):
         self.ensure_one()
+        self._ensure_schedule_draft_editable(_("add weekly stops"))
         weekday = self.env.context.get("default_weekday") or self.env.context.get("wizard_weekday") or "monday"
         action = self.env.ref("route_core.action_route_schedule_stop_wizard").read()[0]
         day_lines = self.line_ids.filtered(lambda line: (line.weekday or "monday") == weekday)
@@ -733,6 +852,16 @@ class RouteWeeklyScheduleLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.context.get("route_weekly_schedule_skip_lock"):
+            schedule_ids = {vals.get("schedule_id") for vals in vals_list if vals.get("schedule_id")}
+            for schedule in self.env["route.weekly.schedule"].browse(list(schedule_ids)):
+                if schedule.state != "draft":
+                    raise UserError(
+                        _(
+                            "You cannot add weekly schedule lines after daily plans have already been generated. "
+                            "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                        )
+                    )
         default_weekday = self.env.context.get("default_weekday")
         for vals in vals_list:
             if default_weekday and not vals.get("weekday"):
@@ -749,6 +878,15 @@ class RouteWeeklyScheduleLine(models.Model):
 
     def write(self, vals):
         vals = dict(vals)
+        if not self.env.context.get("route_weekly_schedule_skip_lock"):
+            for rec in self:
+                if rec.schedule_id and rec.schedule_id.state != "draft":
+                    raise UserError(
+                        _(
+                            "You cannot edit weekly schedule lines after daily plans have already been generated. "
+                            "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                        )
+                    )
         default_weekday = self.env.context.get("default_weekday")
         if default_weekday and "weekday" not in vals:
             vals["weekday"] = default_weekday
@@ -759,6 +897,18 @@ class RouteWeeklyScheduleLine(models.Model):
         elif vals.get("area_id") and not vals.get("city_id"):
             vals["city_id"] = self.env["route.area"].browse(vals["area_id"]).city_id.id
         return super().write(vals)
+
+    def unlink(self):
+        if not self.env.context.get("route_weekly_schedule_skip_lock"):
+            for rec in self:
+                if rec.schedule_id and rec.schedule_id.state != "draft":
+                    raise UserError(
+                        _(
+                            "You cannot remove weekly schedule lines after daily plans have already been generated. "
+                            "Reset the weekly schedule safely first, or edit the daily route plans directly."
+                        )
+                    )
+        return super().unlink()
 
     @api.onchange("weekday")
     def _onchange_weekday_warning(self):
