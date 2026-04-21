@@ -25,6 +25,13 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">10</field>
 </record>
+<record id="menu_route_pending_visits" model="ir.ui.menu">
+<field name="name">Pending Visits</field>
+<field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
+<field name="action" ref="route_core.action_route_pending_visit_lines"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+<field name="sequence">12</field>
+</record>
 <record id="menu_route_loading_proposal" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_operations_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
@@ -96,7 +103,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--          Salesperson-safe menu actions          -->
+<!--           Salesperson-safe menu actions           -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Daily Plans</field>
 <field name="res_model">route.plan</field>
