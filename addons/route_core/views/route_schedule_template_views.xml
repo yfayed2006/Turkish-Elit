@@ -4,16 +4,16 @@
 <field name="name">route.schedule.template.list</field>
 <field name="model">route.schedule.template</field>
 <field name="arch" type="xml">
-<list>
+<list string="Weekly Visit Templates">
 <field name="name" string="Template Name"/>
 <field name="user_id"/>
 <field name="vehicle_id"/>
 <field name="source_warehouse_id" optional="show"/>
+<field name="line_count" string="Stops"/>
+<field name="schedule_count" string="Generated Weeks"/>
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="line_count" string="Stops"/>
-<field name="schedule_count" string="Generated Weeks"/>
 <field name="active" optional="hide"/>
 </list>
 </field>
