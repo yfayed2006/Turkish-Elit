@@ -206,3 +206,4 @@ class RouteScheduleStopWizard(models.TransientModel):
         line_model.create(vals_list)
 
         return {"type": "ir.actions.act_window_close"}
+
