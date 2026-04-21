@@ -258,16 +258,37 @@ class ProductProduct(models.Model):
         return False
 
     @api.model
+    def _route_normalize_unsupported_relational_operators(self, domain):
+        normalized = []
+        for item in list(domain or []):
+            if isinstance(item, tuple):
+                item = list(item)
+                if len(item) >= 2 and item[1] == "any!":
+                    item[1] = "any"
+                elif len(item) >= 2 and item[1] == "not any!":
+                    item[1] = "not any"
+                if len(item) > 2 and isinstance(item[2], (list, tuple)):
+                    item[2] = self._route_normalize_unsupported_relational_operators(item[2])
+                normalized.append(tuple(item))
+            elif isinstance(item, list):
+                normalized.append(self._route_normalize_unsupported_relational_operators(item))
+            else:
+                normalized.append(item)
+        return normalized
+
+    @api.model
     def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None, count=False, **kwargs):
         domain = self._route_apply_source_available_domain(domain)
 
         # Some internal stock scheduler domains use advanced relational operators
         # like `any!`. The enterprise stock_barcode override preprocesses the
         # domain through GS1 parsing and crashes on those operators. In that case,
-        # bypass the barcode-specific parent override and fall back to the base ORM
-        # search path. Keep the call signature conservative because the upstream
-        # BaseModel._search in this stack does not accept access_rights_uid.
+        # normalize those operators to their ORM equivalents and bypass the
+        # barcode-specific parent override by falling back to the base ORM search.
+        # Keep the call signature conservative because the upstream BaseModel
+        # `_search` in this stack does not accept `access_rights_uid`.
         if self._route_domain_contains_unsupported_relational_operator(domain):
+            domain = self._route_normalize_unsupported_relational_operators(domain)
             if count:
                 return len(models.Model._search(self, domain, offset=0, limit=None, order=None))
             return models.Model._search(self, domain, offset=offset, limit=limit, order=order)
