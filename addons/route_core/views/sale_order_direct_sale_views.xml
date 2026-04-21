@@ -51,4 +51,76 @@
 </xpath>
 </field>
 </record>
+<record id="view_sale_order_line_form_route_direct_sale" model="ir.ui.view">
+<field name="name">sale.order.line.form.route.direct.sale</field>
+<field name="model">sale.order.line</field>
+<field name="priority" eval="200"/>
+<field name="arch" type="xml">
+<form string="Create Order Lines">
+<sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
+<field name="order_id" invisible="1"/>
+<field name="route_available_product_ids" invisible="1"/>
+<field name="route_available_product_tmpl_ids" invisible="1"/>
+<field name="route_source_available_qty" invisible="1"/>
+<field name="display_type" invisible="1"/>
+<div class="route_mobile_summary_grid" invisible="display_type">
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Product</div>
+<div class="route_mobile_info_value">
+<field name="product_id" domain="order_id.route_order_mode != 'direct_sale' and [] or [('id', 'in', route_available_product_ids)]" context="{'route_only_source_available_products': order_id.route_order_mode == 'direct_sale', 'route_source_location_id': order_id.route_source_location_id}" options="{'no_create': True, 'no_open': False}" required="not display_type"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Quantity</div>
+<div class="route_mobile_info_value">
+<field name="product_uom_qty" string="Quantity" invisible="display_type"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="order_id.route_order_mode != 'direct_sale' or display_type">
+<div class="route_mobile_info_label">Available in Vehicle</div>
+<div class="route_mobile_info_value">
+<field name="route_source_available_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="display_type">
+<div class="route_mobile_info_label">Unit Price</div>
+<div class="route_mobile_info_value">
+<field name="price_unit" string="Unit Price"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="order_id.route_order_mode != 'direct_sale' or not order_id.route_enable_lot_serial_tracking or not product_id or product_id.tracking == 'none'">
+<div class="route_mobile_detail_label">Lot / Serial</div>
+<div class="route_mobile_detail_value">
+<field name="route_lot_id" string="Lot/Serial" options="{'no_create': True, 'no_open': False}"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="order_id.route_order_mode != 'direct_sale' or not order_id.route_enable_lot_serial_tracking or not order_id.route_enable_expiry_tracking or not route_lot_id">
+<div class="route_mobile_detail_label">Expiry Date</div>
+<div class="route_mobile_detail_value">
+<field name="route_expiry_date" string="Expiry" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Taxes</div>
+<div class="route_mobile_detail_value">
+<field name="tax_id" widget="many2many_tags"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Discount (%)</div>
+<div class="route_mobile_detail_value">
+<field name="discount"/>
+</div>
+</div>
+<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_label">Description</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="name"/>
+</div>
+</div>
+</sheet>
+</form>
+</field>
+</record>
 </odoo>
