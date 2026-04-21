@@ -4,16 +4,33 @@
 <field name="name">route.weekly.schedule.list</field>
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
-<list>
+<list string="Weekly Schedules">
 <field name="name" string="Schedule Reference"/>
-<field name="week_start_date"/>
+<field name="week_start_date" readonly="state != 'draft'"/>
 <field name="week_end_date"/>
-<field name="user_id"/>
-<field name="vehicle_id"/>
+<field name="user_id" readonly="state != 'draft'"/>
+<field name="vehicle_id" readonly="state != 'draft'"/>
+<field name="source_warehouse_id" optional="show"/>
 <field name="template_id" string="Weekly Template" optional="show"/>
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
+<field name="line_count" string="Stops"/>
+<field name="generated_plan_count" string="Daily Plans"/>
+<field name="skipped_finalized_plan_count" string="Skipped Finalized Days" optional="show"/>
+<field name="state" widget="badge"/>
+</list>
+</field>
+</record>
+<record id="view_route_weekly_schedule_salesperson_list" model="ir.ui.view">
+<field name="name">route.weekly.schedule.salesperson.list</field>
+<field name="model">route.weekly.schedule</field>
+<field name="arch" type="xml">
+<list string="My Weekly Schedule" create="0" edit="0" delete="0">
+<field name="week_start_date"/>
+<field name="week_end_date"/>
+<field name="vehicle_id"/>
+<field name="outlet_summary" string="Planned Outlets"/>
 <field name="line_count" string="Stops"/>
 <field name="generated_plan_count" string="Daily Plans"/>
 <field name="state" widget="badge"/>
@@ -26,16 +43,16 @@
 <field name="arch" type="xml">
 <form string="Generated Weekly Schedule">
 <header>
-<button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_open_template" type="object" string="Open Weekly Template" class="btn-secondary"/>
-<button name="action_open_daily_plans" type="object" string="Open Daily Plans" class="btn-secondary"/>
-<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_cancel_schedule" type="object" string="Cancel" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'draft'"/>
+<button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state == 'cancelled'"/>
+<button name="action_open_template" type="object" string="Open Weekly Template" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_open_daily_plans" type="object" string="Open Daily Plans" class="btn-secondary" invisible="generated_plan_count == 0"/>
+<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'plans_generated'"/>
+<button name="action_cancel_schedule" type="object" string="Cancel" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state == 'cancelled'"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
-<button name="action_open_template" type="object" class="oe_stat_button" icon="fa-copy">
+<button name="action_open_template" type="object" class="oe_stat_button" icon="fa-copy" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <div class="o_stat_info">
 <span class="o_stat_text">Weekly Template</span>
 </div>
@@ -53,6 +70,12 @@
 </div>
 </div>
 <div class="alert alert-info" role="alert"> This screen is a dated weekly schedule created from a saved template. Each tab represents one weekday. Review the schedule first, then generate daily plans. </div>
+<div class="alert alert-warning" role="alert" invisible="state == 'draft'">
+<strong>Planning Locked:</strong>
+This weekly schedule is now read-only because daily plans have already been generated from it. To change this week safely, use
+<strong>Reset to Draft</strong>
+only before any daily plan is finalized or any visit starts. Otherwise, edit the daily route plans directly.
+</div>
 <div class="alert alert-warning" role="alert" invisible="skipped_finalized_plan_count == 0">
 <strong>Finalized Daily Plans Protected:</strong>
 <field name="skipped_finalized_plan_count" class="oe_inline" readonly="1"/>
@@ -60,12 +83,12 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </div>
 <group string="Weekly Planning" col="2">
 <group>
-<field name="week_start_date"/>
+<field name="week_start_date" readonly="state != 'draft'"/>
 <field name="week_end_date" readonly="1"/>
-<field name="template_id" options="{'no_create': True}"/>
-<field name="user_id"/>
-<field name="vehicle_id"/>
-<field name="source_warehouse_id" options="{'no_create': True}"/>
+<field name="template_id" options="{'no_create': True}" readonly="state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<field name="user_id" readonly="state != 'draft'"/>
+<field name="vehicle_id" readonly="state != 'draft'"/>
+<field name="source_warehouse_id" options="{'no_create': True}" readonly="state != 'draft'"/>
 </group>
 <group>
 <field name="company_id" readonly="1"/>
@@ -81,9 +104,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <notebook>
 <page string="Monday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
+<field name="monday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -101,9 +124,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Tuesday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
+<field name="tuesday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -121,9 +144,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Wednesday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
+<field name="wednesday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -141,9 +164,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Thursday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
+<field name="thursday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -161,9 +184,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Friday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
+<field name="friday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -181,9 +204,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Saturday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
+<field name="saturday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -201,9 +224,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 <page string="Sunday">
 <div class="mb-2">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" invisible="not id"/>
+<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" invisible="not id or state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
-<field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
+<field name="sunday_line_ids" readonly="state != 'draft'" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]">
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="is_off_day" column_invisible="1"/>
 <field name="finalized_plan_skip" column_invisible="1"/>
@@ -221,7 +244,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 </page>
 </notebook>
 <group string="Notes">
-<field name="notes" placeholder="Weekly supervisor notes..."/>
+<field name="notes" placeholder="Weekly supervisor notes..." readonly="state != 'draft'"/>
 </group>
 </sheet>
 </form>
@@ -233,9 +256,9 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="arch" type="xml">
 <search>
 <field name="name" string="Schedule Reference"/>
-<field name="week_start_date"/>
-<field name="user_id"/>
-<field name="vehicle_id"/>
+<field name="week_start_date" readonly="state != 'draft'"/>
+<field name="user_id" readonly="state != 'draft'"/>
+<field name="vehicle_id" readonly="state != 'draft'"/>
 <field name="template_id"/>
 <field name="state"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
@@ -261,9 +284,10 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="name">My Weekly Schedule</field>
 <field name="res_model">route.weekly.schedule</field>
 <field name="view_mode">list,form</field>
+<field name="view_id" ref="route_core.view_route_weekly_schedule_salesperson_list"/>
 <field name="search_view_id" ref="route_core.view_route_weekly_schedule_search"/>
 <field name="domain">[('user_id', '=', uid), ('state', '!=', 'cancelled')]</field>
 <field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 </data>
-</odoo>
+</odoo
