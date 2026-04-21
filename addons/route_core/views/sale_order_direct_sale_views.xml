@@ -104,7 +104,7 @@
 <div class="route_mobile_detail_box" invisible="display_type">
 <div class="route_mobile_detail_label">Taxes</div>
 <div class="route_mobile_detail_value">
-<field name="tax_id" widget="many2many_tags"/>
+<field name="tax_ids" widget="many2many_tags"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="display_type">
