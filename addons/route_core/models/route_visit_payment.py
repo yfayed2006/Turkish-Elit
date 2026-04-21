@@ -255,21 +255,6 @@ class RouteVisitPayment(models.Model):
             result.append((rec.id, title))
         return result
 
-    @api.depends(
-        "source_type",
-        "visit_id",
-        "visit_id.outlet_id",
-        "visit_id.area_id",
-        "visit_id.user_id",
-        "sale_order_id",
-        "sale_order_id.name",
-        "sale_order_id.route_outlet_id",
-        "sale_order_id.route_outlet_id.area_id",
-        "sale_order_id.user_id",
-        "settlement_visit_id",
-        "settlement_visit_id.name",
-        "settlement_visit_id.visit_execution_mode",
-    )
     @api.depends("payment_business_flow", "collection_type")
     def _compute_ui_labels(self):
         flow_labels = {
@@ -287,6 +272,21 @@ class RouteVisitPayment(models.Model):
             rec.payment_business_flow_short = flow_labels.get(rec.payment_business_flow, rec.payment_business_flow or "")
             rec.collection_type_short = collection_labels.get(rec.collection_type, rec.collection_type or "")
 
+    @api.depends(
+        "source_type",
+        "visit_id",
+        "visit_id.outlet_id",
+        "visit_id.area_id",
+        "visit_id.user_id",
+        "sale_order_id",
+        "sale_order_id.name",
+        "sale_order_id.route_outlet_id",
+        "sale_order_id.route_outlet_id.area_id",
+        "sale_order_id.user_id",
+        "settlement_visit_id",
+        "settlement_visit_id.name",
+        "settlement_visit_id.visit_execution_mode",
+    )
     def _compute_source_context(self):
         for rec in self:
             outlet = False
@@ -742,4 +742,3 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
-
