@@ -437,7 +437,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<filter name="filter_current_week" string="Current Week" domain="[('week_start_date', '<=', context_today()), ('week_end_date', '>=', context_today())]"/>
+<!--  Current Week filter removed to avoid XML parser issues on Odoo upgrade  -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
