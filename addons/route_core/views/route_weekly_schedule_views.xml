@@ -37,6 +37,77 @@
 </list>
 </field>
 </record>
+<record id="view_route_weekly_schedule_salesperson_kanban" model="ir.ui.view">
+<field name="name">route.weekly.schedule.salesperson.kanban</field>
+<field name="model">route.weekly.schedule</field>
+<field name="arch" type="xml">
+<kanban string="My Weekly Schedule" class="o_kanban_mobile route_mobile_schedule_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="week_start_date"/>
+<field name="week_end_date"/>
+<field name="vehicle_id"/>
+<field name="line_count"/>
+<field name="generated_plan_count"/>
+<field name="outlet_summary"/>
+<field name="state"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_mobile_visit_card route_mobile_schedule_card">
+<div class="route_mobile_visit_card_head">
+<div class="route_mobile_visit_title">
+<field name="name"/>
+</div>
+<div class="route_mobile_visit_small_badges">
+<field name="state" widget="badge"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_grid">
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Week Start</div>
+<div class="route_mobile_visit_meta_value">
+<field name="week_start_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Week End</div>
+<div class="route_mobile_visit_meta_value">
+<field name="week_end_date"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Vehicle</div>
+<div class="route_mobile_visit_meta_value">
+<field name="vehicle_id"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Stops</div>
+<div class="route_mobile_visit_meta_value">
+<field name="line_count"/>
+</div>
+</div>
+<div class="route_mobile_visit_meta_item">
+<div class="route_mobile_visit_meta_label">Daily Plans</div>
+<div class="route_mobile_visit_meta_value">
+<field name="generated_plan_count"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" t-if="record.outlet_summary.raw_value">
+<div class="route_mobile_detail_label">Planned Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="outlet_summary"/>
+</div>
+</div>
+<div class="route_mobile_visit_actions">
+<a type="open" role="button" class="btn btn-primary route_mobile_action_btn route_mobile_action_btn_full">Open Weekly Schedule</a>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_weekly_schedule_salesperson_form" model="ir.ui.view">
 <field name="name">route.weekly.schedule.salesperson.form</field>
 <field name="model">route.weekly.schedule</field>
@@ -106,7 +177,7 @@
 <page string="Weekly Stops">
 <notebook>
 <page string="Monday">
-<field name="monday_line_ids" readonly="1" domain="[('weekday', '=', 'monday')]">
+<field name="monday_line_ids" readonly="1" domain="[('weekday', '=', 'monday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -175,7 +246,7 @@
 </field>
 </page>
 <page string="Tuesday">
-<field name="tuesday_line_ids" readonly="1" domain="[('weekday', '=', 'tuesday')]">
+<field name="tuesday_line_ids" readonly="1" domain="[('weekday', '=', 'tuesday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -244,7 +315,7 @@
 </field>
 </page>
 <page string="Wednesday">
-<field name="wednesday_line_ids" readonly="1" domain="[('weekday', '=', 'wednesday')]">
+<field name="wednesday_line_ids" readonly="1" domain="[('weekday', '=', 'wednesday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -313,7 +384,7 @@
 </field>
 </page>
 <page string="Thursday">
-<field name="thursday_line_ids" readonly="1" domain="[('weekday', '=', 'thursday')]">
+<field name="thursday_line_ids" readonly="1" domain="[('weekday', '=', 'thursday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -382,7 +453,7 @@
 </field>
 </page>
 <page string="Friday">
-<field name="friday_line_ids" readonly="1" domain="[('weekday', '=', 'friday')]">
+<field name="friday_line_ids" readonly="1" domain="[('weekday', '=', 'friday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -451,7 +522,7 @@
 </field>
 </page>
 <page string="Saturday">
-<field name="saturday_line_ids" readonly="1" domain="[('weekday', '=', 'saturday')]">
+<field name="saturday_line_ids" readonly="1" domain="[('weekday', '=', 'saturday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -520,7 +591,7 @@
 </field>
 </page>
 <page string="Sunday">
-<field name="sunday_line_ids" readonly="1" domain="[('weekday', '=', 'sunday')]">
+<field name="sunday_line_ids" readonly="1" domain="[('weekday', '=', 'sunday')]" context="{'form_view_ref': 'route_core.view_route_weekly_schedule_line_form'}">
 <kanban class="route_mobile_visit_kanban" create="0" delete="0" quick_create="0">
 <field name="visit_date"/>
 <field name="area_id"/>
@@ -843,6 +914,8 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="outlet_id" readonly="1"/>
 </h1>
 </div>
+<notebook>
+<page string="Overview">
 <div class="route_mobile_summary_grid">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Visit Date</div>
@@ -893,6 +966,120 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="note" readonly="1" nolabel="1"/>
 </div>
 </div>
+</page>
+<page string="Related Outlets">
+<div class="route_mobile_related_section" invisible="not same_day_used_outlet_ids">
+<div class="route_mobile_related_title">Same-Day Used Outlets</div>
+<field name="same_day_used_outlet_ids" readonly="1" nolabel="1">
+<kanban class="route_mobile_related_outlet_kanban" create="0" delete="0" quick_create="0">
+<field name="name"/>
+<field name="partner_id"/>
+<field name="outlet_operation_mode"/>
+<field name="current_due_amount"/>
+<field name="last_visit_date"/>
+<field name="visit_count"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_related_outlet_card route_mobile_related_outlet_card_used">
+<div class="route_mobile_related_outlet_head">
+<div class="route_mobile_related_outlet_title">
+<field name="name"/>
+</div>
+<div class="route_mobile_related_outlet_ref" t-if="record.id.raw_value">
+OUT/
+<t t-esc="('%05d' % record.id.raw_value)"/>
+</div>
+</div>
+<div class="route_mobile_related_outlet_partner">
+<field name="partner_id"/>
+</div>
+<div class="route_mobile_related_outlet_badges">
+<field name="outlet_operation_mode" widget="badge"/>
+<span class="badge text-bg-secondary">Used Same Day</span>
+</div>
+<div class="route_mobile_summary_grid route_mobile_summary_grid_compact">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Due</div>
+<div class="route_mobile_info_value">
+<field name="current_due_amount"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Last Visit</div>
+<div class="route_mobile_info_value">
+<field name="last_visit_date"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full route_mobile_info_card_inline_stat">
+<div class="route_mobile_info_label">Visits</div>
+<div class="route_mobile_info_value">
+<field name="visit_count"/>
+</div>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</div>
+<div class="route_mobile_related_section" invisible="not available_outlet_ids">
+<div class="route_mobile_related_title">Available Outlets</div>
+<field name="available_outlet_ids" readonly="1" nolabel="1">
+<kanban class="route_mobile_related_outlet_kanban" create="0" delete="0" quick_create="0">
+<field name="name"/>
+<field name="partner_id"/>
+<field name="outlet_operation_mode"/>
+<field name="current_due_amount"/>
+<field name="last_visit_date"/>
+<field name="visit_count"/>
+<templates>
+<t t-name="card">
+<div class="route_mobile_related_outlet_card">
+<div class="route_mobile_related_outlet_head">
+<div class="route_mobile_related_outlet_title">
+<field name="name"/>
+</div>
+<div class="route_mobile_related_outlet_ref" t-if="record.id.raw_value">
+OUT/
+<t t-esc="('%05d' % record.id.raw_value)"/>
+</div>
+</div>
+<div class="route_mobile_related_outlet_partner">
+<field name="partner_id"/>
+</div>
+<div class="route_mobile_related_outlet_badges">
+<field name="outlet_operation_mode" widget="badge"/>
+<span class="badge text-bg-secondary">Available</span>
+</div>
+<div class="route_mobile_summary_grid route_mobile_summary_grid_compact">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Due</div>
+<div class="route_mobile_info_value">
+<field name="current_due_amount"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Last Visit</div>
+<div class="route_mobile_info_value">
+<field name="last_visit_date"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full route_mobile_info_card_inline_stat">
+<div class="route_mobile_info_label">Visits</div>
+<div class="route_mobile_info_value">
+<field name="visit_count"/>
+</div>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</div>
+</page>
+</notebook>
 <field name="sequence" invisible="1"/>
 <field name="weekday" invisible="1"/>
 <field name="is_off_day" invisible="1"/>
@@ -939,7 +1126,7 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--    Current Week filter removed to avoid XML parser issues on Odoo upgrade    -->
+<!--     Current Week filter removed to avoid XML parser issues on Odoo upgrade     -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
@@ -959,21 +1146,27 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <record id="action_route_weekly_schedule_salesperson" model="ir.actions.act_window">
 <field name="name">My Weekly Schedule</field>
 <field name="res_model">route.weekly.schedule</field>
-<field name="view_mode">list,form</field>
+<field name="view_mode">kanban,form</field>
 <field name="search_view_id" ref="route_core.view_route_weekly_schedule_salesperson_search"/>
 <field name="domain">[('user_id', '=', uid), ('state', '!=', 'cancelled')]</field>
 <field name="context">{'search_default_filter_current_week': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
-<record id="action_route_weekly_schedule_salesperson_list_view" model="ir.actions.act_window.view">
+<record id="action_route_weekly_schedule_salesperson_kanban_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
-<field name="view_mode">list</field>
-<field name="view_id" ref="route_core.view_route_weekly_schedule_salesperson_list"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="route_core.view_route_weekly_schedule_salesperson_kanban"/>
 <field name="act_window_id" ref="route_core.action_route_weekly_schedule_salesperson"/>
 </record>
 <record id="action_route_weekly_schedule_salesperson_form_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="2"/>
 <field name="view_mode">form</field>
 <field name="view_id" ref="route_core.view_route_weekly_schedule_salesperson_form"/>
+<field name="act_window_id" ref="route_core.action_route_weekly_schedule_salesperson"/>
+</record>
+<record id="action_route_weekly_schedule_salesperson_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_weekly_schedule_salesperson_list"/>
 <field name="act_window_id" ref="route_core.action_route_weekly_schedule_salesperson"/>
 </record>
 </data>
