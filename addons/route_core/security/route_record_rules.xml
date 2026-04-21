@@ -27,7 +27,7 @@
 <field name="name">Route Visit Payment - salesperson own payments only</field>
 <field name="model_id" ref="model_route_visit_payment"/>
 <field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
-<field name="domain_force">['|', '|', '|', ('salesperson_id', '=', user.id), ('visit_id.user_id', '=', user.id), ('sale_order_id.user_id', '=', user.id), ('settlement_visit_id.user_id', '=', user.id)]</field>
+<field name="domain_force">['|', '|', '|', '|', ('id', '=', False), ('salesperson_id', '=', user.id), ('visit_id.user_id', '=', user.id), ('sale_order_id.user_id', '=', user.id), ('settlement_visit_id.user_id', '=', user.id)]</field>
 </record>
 <record id="rule_route_refill_backorder_salesperson_own" model="ir.rule">
 <field name="name">Route Refill Backorder - salesperson own only</field>
