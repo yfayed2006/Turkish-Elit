@@ -51,6 +51,33 @@ class RoutePlanLine(models.Model):
         store=True,
         readonly=True,
     )
+    plan_date = fields.Date(
+        string="Plan Date",
+        related="plan_id.date",
+        store=True,
+        readonly=True,
+    )
+    salesperson_id = fields.Many2one(
+        "res.users",
+        string="Salesperson",
+        related="plan_id.user_id",
+        store=True,
+        readonly=True,
+    )
+    vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Vehicle",
+        related="plan_id.vehicle_id",
+        store=True,
+        readonly=True,
+    )
+    weekly_schedule_id = fields.Many2one(
+        "route.weekly.schedule",
+        string="Weekly Schedule",
+        related="plan_id.weekly_schedule_id",
+        store=True,
+        readonly=True,
+    )
     visit_id = fields.Many2one(
         "route.visit",
         string="Visit",
