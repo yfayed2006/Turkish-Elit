@@ -2051,3 +2051,117 @@
     }
 }
 
+
+
+.route_mobile_schedule_kanban {
+    --KanbanRecord-padding-v: 0;
+    --KanbanRecord-padding-h: 0;
+}
+
+.route_mobile_schedule_kanban .o_kanban_record {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 12px;
+}
+
+.route_mobile_schedule_card {
+    gap: 10px;
+}
+
+.route_mobile_summary_grid_compact {
+    margin-bottom: 0;
+    gap: 10px;
+}
+
+.route_mobile_info_card_full {
+    grid-column: 1 / -1;
+}
+
+.route_mobile_info_card_inline_stat {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.route_mobile_related_section {
+    margin-bottom: 14px;
+}
+
+.route_mobile_related_title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #6b7280;
+    margin: 0 0 10px;
+}
+
+.route_mobile_related_outlet_kanban {
+    --KanbanRecord-padding-v: 0;
+    --KanbanRecord-padding-h: 0;
+}
+
+.route_mobile_related_outlet_kanban .o_kanban_record {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 12px;
+}
+
+.route_mobile_related_outlet_card {
+    border: 1px solid #dbe5e8;
+    border-radius: 18px;
+    background: #f4fbfb;
+    padding: 16px;
+}
+
+.route_mobile_related_outlet_card_used {
+    background: #f2fbf8;
+}
+
+.route_mobile_related_outlet_head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.route_mobile_related_outlet_title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f766e;
+    line-height: 1.2;
+}
+
+.route_mobile_related_outlet_ref {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #6b7280;
+}
+
+.route_mobile_related_outlet_partner {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+.route_mobile_related_outlet_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.route_mobile_sale_order_line_sheet .route_mobile_info_card .o_field_many2one .o_input_dropdown,
+.route_mobile_sale_order_line_sheet .route_mobile_detail_box .o_field_many2one .o_input_dropdown {
+    width: 100%;
+}
+
+.route_mobile_sale_order_line_sheet .route_mobile_detail_box .o_field_widget,
+.route_mobile_sale_order_line_sheet .route_mobile_info_value .o_field_widget {
+    width: 100%;
+}
+
