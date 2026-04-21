@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from .route_schedule_common import (
     WEEKDAY_SELECTION,
@@ -192,6 +192,11 @@ class RouteScheduleTemplate(models.Model):
             if duplicate_lines:
                 duplicate_lines.unlink()
 
+    def _ensure_planning_manager(self):
+        if self.env.user.has_group("route_core.group_route_supervisor") or self.env.user.has_group("route_core.group_route_management"):
+            return
+        raise UserError(_("Only route supervisors can manage weekly visit templates and planning changes."))
+
     def _get_off_day_lines(self):
         self.ensure_one()
         if not self.off_day:
@@ -238,6 +243,7 @@ class RouteScheduleTemplate(models.Model):
 
     def _create_or_open_schedule(self, week_start_date):
         self.ensure_one()
+        self._ensure_planning_manager()
         self._cleanup_duplicate_lines()
         existing_schedule = self._get_existing_schedule(week_start_date)
         if existing_schedule:
@@ -265,6 +271,7 @@ class RouteScheduleTemplate(models.Model):
 
     def action_view_weekly_schedules(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         action = self.env.ref("route_core.action_route_weekly_schedule").read()[0]
         action["domain"] = [("template_id", "=", self.id)]
         action["context"] = {
@@ -278,6 +285,7 @@ class RouteScheduleTemplate(models.Model):
 
     def action_open_day_stop_wizard(self):
         self.ensure_one()
+        self._ensure_planning_manager()
         if not self.id:
             raise ValidationError(_("Please save the weekly visit template first."))
         weekday = self.env.context.get("default_weekday") or self.env.context.get("wizard_weekday") or "monday"
