@@ -290,4 +290,4 @@ day(s) were linked to already finalized daily plans and were skipped during sync
 <field name="context">{'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 </data>
-</odoo
+</odoo>
