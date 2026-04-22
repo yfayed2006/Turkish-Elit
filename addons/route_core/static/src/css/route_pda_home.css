@@ -1320,6 +1320,13 @@
     }
 }
 
+@media (max-width: 480px) {
+    .route_pda_outlet_sheet .o_notebook .nav-tabs,
+    .route_pda_visit_form .o_notebook .nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 390px) {
     .route_pda_outlet_sheet .o_notebook .nav-tabs,
     .route_pda_visit_form .o_notebook .nav-tabs {
@@ -1854,9 +1861,10 @@
 .route_mobile_detail_value,
 .route_mobile_visit_meta_value,
 .route_desktop_text_value {
-    font-size: 1.15rem;
+    font-size: 1.12rem;
     font-weight: 700;
     color: #111827;
+    line-height: 1.32;
 }
 
 .route_mobile_info_value .o_field_widget,
@@ -1882,6 +1890,7 @@
 .route_mobile_detail_box {
     padding: 14px 16px;
     margin-bottom: 12px;
+    min-height: 116px;
 }
 
 .route_mobile_detail_box_subtle {
@@ -1892,7 +1901,9 @@
 .route_mobile_wrap_value,
 .route_desktop_text_value .o_input {
     white-space: normal !important;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
 }
 
 .route_mobile_visit_kanban {
