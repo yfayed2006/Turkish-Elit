@@ -529,17 +529,17 @@
 <field name="barcode" readonly="1"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
 <field name="expiry_date" readonly="1" optional="hide" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
-<field name="uom_id" readonly="1"/>
+<field name="uom_id" readonly="1" optional="hide"/>
 <field name="previous_qty"/>
 <field name="counted_qty"/>
-<field name="sold_qty" readonly="1"/>
-<field name="return_qty"/>
-<field name="return_route"/>
-<field name="supplied_qty" string="Refill Proposal"/>
-<field name="pending_refill_qty" string="Pending Refill" optional="hide"/>
-<field name="vehicle_available_qty" readonly="1"/>
-<field name="unit_price"/>
-<field name="sold_amount" readonly="1"/>
+<field name="sold_qty" readonly="1" column_invisible="parent.ux_primary_action == 'load_previous_balance'"/>
+<field name="return_qty" optional="hide" column_invisible="parent.returns_step_done == False and parent.ux_primary_action not in ('returns_step', 'confirm_return_transfers', 'generate_refill', 'confirm_refill', 'collect_payment', 'confirm_payments', 'finalize_visit', 'finish_visit')"/>
+<field name="return_route" optional="hide" column_invisible="parent.returns_step_done == False and parent.ux_primary_action not in ('returns_step', 'confirm_return_transfers', 'generate_refill', 'confirm_refill', 'collect_payment', 'confirm_payments', 'finalize_visit', 'finish_visit')"/>
+<field name="supplied_qty" string="Refill Proposal" optional="hide" column_invisible="parent.visit_process_state != 'reconciled' and parent.ux_primary_action not in ('generate_refill', 'confirm_refill')"/>
+<field name="pending_refill_qty" string="Pending Refill" optional="hide" column_invisible="parent.visit_process_state != 'reconciled' and parent.ux_primary_action not in ('generate_refill', 'confirm_refill')"/>
+<field name="vehicle_available_qty" readonly="1" optional="hide" column_invisible="parent.visit_process_state != 'reconciled' and parent.ux_primary_action not in ('generate_refill', 'confirm_refill')"/>
+<field name="unit_price" optional="hide"/>
+<field name="sold_amount" readonly="1" optional="hide"/>
 </list>
 </field>
 </page>
@@ -644,6 +644,7 @@
 </div>
 </div>
 </div>
+<div class="route_mobile_detail_grid">
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref">
 <div class="route_mobile_detail_label">Sale Order</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
@@ -686,7 +687,8 @@
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
+</div>
+<div class="route_mobile_detail_box route_mobile_detail_box_full route_mobile_detail_box_emphasis">
 <div class="route_mobile_detail_label">Step Help</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="ux_stage_help" readonly="1" nolabel="1"/>
@@ -796,6 +798,7 @@
 </div>
 </div>
 </div>
+<div class="route_mobile_detail_grid">
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs">
 <div class="route_mobile_detail_label">Sale Order</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
@@ -818,6 +821,7 @@
 <div class="route_mobile_detail_label">Latest Promise Status</div>
 <div class="route_mobile_detail_value">
 <field name="direct_stop_latest_promise_status" readonly="1" nolabel="1" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
+</div>
 </div>
 </div>
 <field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
