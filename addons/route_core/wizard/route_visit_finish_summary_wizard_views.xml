@@ -173,4 +173,4 @@
 <field name="view_id" ref="view_route_visit_finish_summary_wizard_form"/>
 <field name="target">new</field>
 </record>
-</odoo
+</odoo>
