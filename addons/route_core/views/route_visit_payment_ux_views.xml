@@ -57,18 +57,20 @@
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="arch" type="xml">
 <xpath expr="//field[@name='display_payment_ids']" position="replace">
-<field name="display_payment_ids" mode="kanban" readonly="1" context="{'default_visit_id': id}">
-<kanban class="route_pda_payment_kanban" create="0" delete="0">
+<field name="display_payment_ids" mode="kanban" readonly="1" class="route_mobile_payment_x2many" context="{'default_visit_id': id}">
+<kanban class="route_pda_payment_kanban route_pda_payment_kanban_compact" create="0" delete="0">
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_type"/>
 <field name="source_document_ref"/>
 <field name="amount"/>
 <field name="remaining_due_amount"/>
+<field name="effective_promise_amount"/>
+<field name="promise_date"/>
 <field name="promise_status"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_visit">
 <div class="route_pda_payment_head">
 <div class="route_pda_payment_title">
 <t t-esc="record.source_document_ref.value or 'Payment'"/>
@@ -77,16 +79,18 @@
 <field name="payment_date"/>
 </div>
 </div>
-<div class="route_pda_payment_badges">
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
 <t t-esc="record.payment_mode.value or ''"/>
 </span>
 <span class="route_pda_payment_badge route_pda_payment_badge_collection">
 <t t-esc="record.collection_type.value or ''"/>
 </span>
+<t t-if="record.promise_status.raw_value">
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
-<t t-esc="record.promise_status.value or 'No Promise'"/>
+<t t-esc="record.promise_status.value"/>
 </span>
+</t>
 </div>
 <div class="route_pda_payment_metrics">
 <div class="route_pda_payment_metric">
@@ -99,6 +103,22 @@
 <span class="route_pda_payment_metric_label">Open Due</span>
 <span class="route_pda_payment_metric_value">
 <field name="remaining_due_amount"/>
+</span>
+</div>
+<t t-if="record.effective_promise_amount.raw_value">
+<div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
+<span class="route_pda_payment_metric_label">Promise</span>
+<span class="route_pda_payment_metric_value">
+<field name="effective_promise_amount"/>
+</span>
+</div>
+</t>
+</div>
+<div class="route_pda_payment_footer" t-if="record.promise_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Promise On</span>
+<span class="route_pda_payment_footer_value">
+<field name="promise_date"/>
 </span>
 </div>
 </div>
