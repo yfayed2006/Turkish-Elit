@@ -492,3 +492,4 @@ class RouteVisitLine(models.Model):
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
 
+
