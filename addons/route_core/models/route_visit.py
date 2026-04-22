@@ -1,5 +1,8 @@
+from markupsafe import escape
+
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
+from odoo.tools import format_date, format_datetime
 
 
 class RouteVisit(models.Model):
@@ -263,6 +266,13 @@ class RouteVisit(models.Model):
         "route.visit.payment",
         string="Displayed Payments",
         compute="_compute_display_payment_ids",
+        store=False,
+    )
+
+    display_payment_cards_html = fields.Html(
+        string="Displayed Payments (Mobile)",
+        compute="_compute_display_payment_cards_html",
+        sanitize=False,
         store=False,
     )
 
@@ -1376,9 +1386,218 @@ class RouteVisit(models.Model):
                 )
             )
 
+    def _format_route_currency_amount(self, amount):
+        self.ensure_one()
+        amount = amount or 0.0
+        currency = self.currency_id or self.company_id.currency_id
+        if not currency:
+            return "%.2f" % amount
+
+        precision = currency.decimal_places or 2
+        formatted = f"{amount:,.{precision}f}"
+        symbol = currency.symbol or currency.name or ""
+        if not symbol:
+            return formatted
+        if currency.position == "before":
+            return f"{symbol} {formatted}"
+        return f"{formatted} {symbol}"
+
+    def _format_route_payment_datetime(self, value):
+        self.ensure_one()
+        if not value:
+            return "-"
+        try:
+            return format_datetime(self.env, value)
+        except Exception:
+            return fields.Datetime.to_string(value)
+
+    def _format_route_payment_date(self, value):
+        self.ensure_one()
+        if not value:
+            return "-"
+        try:
+            return format_date(self.env, value)
+        except Exception:
+            return fields.Date.to_string(value)
+
+    def _build_payment_cards_html(self, payments, empty_message=None, show_source=False, show_settlement=False, show_notes=True):
+        self.ensure_one()
+        payments = payments.filtered(lambda p: p.state != "cancelled") if payments else payments
+        if not payments:
+            return empty_message or _("<div class='alert alert-info mb-0'>No payments are available yet.</div>")
+
+        payment_model = self.env["route.visit.payment"]
+        payment_mode_map = dict(payment_model._fields["payment_mode"].selection)
+        collection_type_map = dict(payment_model._fields["collection_type"].selection)
+        promise_status_map = dict(payment_model._fields["promise_status"].selection)
+        state_map = dict(payment_model._fields["state"].selection)
+        cards = []
+
+        for payment in payments:
+            mode_label = payment_mode_map.get(payment.payment_mode, payment.payment_mode or _("Payment"))
+            collection_label = collection_type_map.get(payment.collection_type, payment.collection_type or _("Collection"))
+            promise_status_label = promise_status_map.get(payment.promise_status, payment.promise_status or "")
+            state_label = state_map.get(payment.state, payment.state or "")
+            promise_amount = getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0
+            title = _("%s Payment") % mode_label if mode_label else _("Payment")
+            if payment.source_document_ref and payment.source_document_ref not in filter(None, [self.name, payment.settlement_document_ref]):
+                title = payment.source_document_ref
+
+            badges = [
+                f"<span class='route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_{escape(payment.payment_mode or 'none')}'>{escape(mode_label)}</span>",
+                f"<span class='route_pda_payment_badge route_pda_payment_badge_collection'>{escape(collection_label)}</span>",
+            ]
+            if state_label:
+                badges.append(
+                    f"<span class='route_pda_payment_badge route_pda_payment_badge_state route_pda_payment_state_{escape(payment.state or 'none')}'>{escape(state_label)}</span>"
+                )
+            if promise_amount and promise_status_label:
+                badges.append(
+                    f"<span class='route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_{escape(payment.promise_status or 'none')}'>{escape(promise_status_label)}</span>"
+                )
+
+            metrics = [
+                "<div class='route_pda_payment_metric'>"
+                "<span class='route_pda_payment_metric_label'>Collected</span>"
+                f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(payment.amount))}</span>"
+                "</div>",
+                "<div class='route_pda_payment_metric'>"
+                "<span class='route_pda_payment_metric_label'>Open Due</span>"
+                f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(payment.remaining_due_amount))}</span>"
+                "</div>",
+            ]
+            if promise_amount:
+                metrics.append(
+                    "<div class='route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise'>"
+                    "<span class='route_pda_payment_metric_label'>Promise Amount</span>"
+                    f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(promise_amount))}</span>"
+                    "</div>"
+                )
+
+            footer_items = []
+            if payment.promise_date:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                    "<span class='route_pda_payment_footer_label'>Promise On</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(self._format_route_payment_date(payment.promise_date))}</span>"
+                    "</div>"
+                )
+            if payment.collection_type == "defer_date" and payment.due_date:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                    "<span class='route_pda_payment_footer_label'>Deferred To</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(self._format_route_payment_date(payment.due_date))}</span>"
+                    "</div>"
+                )
+            if payment.reference:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Ref</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(payment.reference)}</span>"
+                    "</div>"
+                )
+            if payment.payment_mode == "bank" and payment.bank_name:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Bank</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(payment.bank_name)}</span>"
+                    "</div>"
+                )
+            if payment.payment_mode == "pos" and payment.pos_terminal:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>POS</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(payment.pos_terminal)}</span>"
+                    "</div>"
+                )
+            if show_source and payment.source_document_ref and payment.source_document_ref != self.name:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Source</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(payment.source_document_ref)}</span>"
+                    "</div>"
+                )
+            if show_settlement and payment.settlement_document_ref and payment.settlement_document_ref != payment.source_document_ref:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Settlement</span>"
+                    f"<span class='route_pda_payment_footer_value'>{escape(payment.settlement_document_ref)}</span>"
+                    "</div>"
+                )
+
+            note_html = ""
+            if show_notes and payment.note:
+                note_html = (
+                    "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
+                    f"{escape(payment.note).replace(chr(10), '<br/>')}"
+                    "</div>"
+                )
+
+            footer_html = f"<div class='route_pda_payment_footer'>{''.join(footer_items)}</div>" if footer_items else ""
+            cards.append(
+                "<div class='route_pda_payment_card route_pda_payment_card_html route_pda_payment_card_visit'>"
+                "<div class='route_pda_payment_head'>"
+                f"<div class='route_pda_payment_title'>{escape(title)}</div>"
+                f"<div class='route_pda_payment_date'>{escape(self._format_route_payment_datetime(payment.payment_date))}</div>"
+                "</div>"
+                f"<div class='route_pda_payment_badges route_pda_payment_badges_primary'>{''.join(badges)}</div>"
+                f"<div class='route_pda_payment_metrics'>{''.join(metrics)}</div>"
+                f"{footer_html}"
+                f"{note_html}"
+                "</div>"
+            )
+
+        return "<div class='route_pda_payment_cards_html'>%s</div>" % "".join(cards)
+
     @api.depends(
         "visit_execution_mode",
         "payment_ids.state",
+        "payment_ids.payment_date",
+        "payment_ids.payment_mode",
+        "payment_ids.collection_type",
+        "payment_ids.amount",
+        "payment_ids.due_date",
+        "payment_ids.promise_date",
+        "payment_ids.promise_amount",
+        "payment_ids.reference",
+        "payment_ids.bank_name",
+        "payment_ids.pos_terminal",
+        "payment_ids.note",
+        "payment_ids.source_document_ref",
+        "payment_ids.settlement_document_ref",
+        "settlement_payment_ids.state",
+        "settlement_payment_ids.payment_date",
+        "settlement_payment_ids.payment_mode",
+        "settlement_payment_ids.collection_type",
+        "settlement_payment_ids.amount",
+        "settlement_payment_ids.due_date",
+        "settlement_payment_ids.promise_date",
+        "settlement_payment_ids.promise_amount",
+        "settlement_payment_ids.reference",
+        "settlement_payment_ids.bank_name",
+        "settlement_payment_ids.pos_terminal",
+        "settlement_payment_ids.note",
+        "settlement_payment_ids.source_document_ref",
+        "settlement_payment_ids.settlement_document_ref",
+    )
+    def _compute_display_payment_cards_html(self):
+        for rec in self:
+            payments = rec.display_payment_ids
+            rec.display_payment_cards_html = rec._build_payment_cards_html(
+                payments,
+                empty_message=_("<div class='alert alert-info mb-0'>No payments are available yet for this visit.</div>"),
+                show_source=False,
+                show_settlement=False,
+                show_notes=True,
+            )
+
+    @api.depends(
+        "visit_execution_mode",
+        "payment_ids.state",
+        "payment_ids.payment_date",
+        "payment_ids.promise_date",
+        "payment_ids.promise_amount",
+        "payment_ids.amount",
         "settlement_payment_ids.state",
         "settlement_payment_ids.payment_date",
         "settlement_payment_ids.promise_date",
@@ -2185,4 +2404,3 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
-
