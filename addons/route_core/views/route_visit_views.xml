@@ -248,6 +248,9 @@
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
+<field name="barcode" readonly="1" optional="show"/>
+<field name="lot_id" optional="show" options="{'no_create': True}"/>
+<field name="expiry_date" readonly="1" optional="show"/>
 <field name="previous_qty" string="Previous"/>
 <field name="counted_qty" string="Counted"/>
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
@@ -255,10 +258,6 @@
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
 <field name="approved_refill_qty" string="Approved Refill" readonly="1" optional="show"/>
-<field name="pending_refill_qty" string="Pending Refill" readonly="1" optional="show"/>
-<field name="barcode" readonly="1" optional="show"/>
-<field name="lot_id" optional="show" options="{'no_create': True}"/>
-<field name="expiry_date" readonly="1" optional="show"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="last_sold_date" readonly="1" optional="hide"/>
@@ -529,6 +528,9 @@
 <field name="line_ids">
 <list editable="bottom">
 <field name="product_id"/>
+<field name="barcode" readonly="1" optional="show"/>
+<field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
+<field name="expiry_date" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="previous_qty" string="Previous"/>
 <field name="counted_qty" string="Counted"/>
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
@@ -536,10 +538,6 @@
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
 <field name="approved_refill_qty" string="Approved Refill" readonly="1" optional="show"/>
-<field name="pending_refill_qty" string="Pending Refill" readonly="1" optional="show"/>
-<field name="barcode" readonly="1" optional="show"/>
-<field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
-<field name="expiry_date" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="unit_price" optional="hide"/>
