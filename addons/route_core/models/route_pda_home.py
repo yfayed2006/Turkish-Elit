@@ -105,6 +105,9 @@ class RoutePdaHome(models.TransientModel):
     next_plan_outlet_summary = fields.Char(string="Next Plan Outlets", compute="_compute_dashboard")
     next_plan_status_label = fields.Char(string="Next Plan Status", compute="_compute_dashboard")
     today_visits_empty_message = fields.Text(string="Today Visits Empty Message", compute="_compute_dashboard")
+    current_visit_empty_message = fields.Text(string="Current Visit Empty Message", compute="_compute_dashboard")
+    current_visit_button_hint = fields.Char(string="Current Visit Button Hint", compute="_compute_dashboard")
+    current_visit_button_value = fields.Char(string="Current Visit Button Value", compute="_compute_dashboard")
 
     @api.depends("route_operation_mode", "route_enable_direct_sale", "route_enable_direct_return", "route_enable_lot_serial_tracking", "route_enable_expiry_tracking")
     def _compute_route_ui_mode(self):
@@ -640,6 +643,30 @@ class RoutePdaHome(models.TransientModel):
                 rec.today_visits_empty_message = _("No visits are scheduled for today. The latest daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
             else:
                 rec.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
+
+            if current_visit:
+                rec.current_visit_empty_message = _("Visit %s at %s is already in progress. Use Current Visit to continue it.") % (
+                    current_visit.display_name or "-",
+                    current_visit.outlet_id.display_name or "-",
+                )
+                rec.current_visit_button_hint = _("Active Outlet")
+                rec.current_visit_button_value = current_visit.outlet_id.display_name or current_visit.display_name or _("Open active visit")
+            elif today_visits:
+                rec.current_visit_empty_message = _("No visit is in progress right now. Open Today's Visits to start or continue one of the %s scheduled visits.") % len(today_visits)
+                rec.current_visit_button_hint = _("Status")
+                rec.current_visit_button_value = _("No active visit")
+            elif next_plan and next_plan.date and next_plan.date >= today:
+                rec.current_visit_empty_message = _("No visit is in progress right now. The next available daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+                rec.current_visit_button_hint = _("Next Plan")
+                rec.current_visit_button_value = next_plan.name
+            elif next_plan:
+                rec.current_visit_empty_message = _("No visit is in progress right now. The latest daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+                rec.current_visit_button_hint = _("Latest Plan")
+                rec.current_visit_button_value = next_plan.name
+            else:
+                rec.current_visit_empty_message = _("No visit is in progress right now, and no daily plans are available yet.")
+                rec.current_visit_button_hint = _("Status")
+                rec.current_visit_button_value = _("No active visit")
             rec.today_display_label = today.strftime("%b %d") if today else "-"
 
             rec.today_plan_count = len(today_plans)
@@ -771,9 +798,6 @@ class RoutePdaHome(models.TransientModel):
     def action_open_my_pda_visits(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
-        active_visit = self._get_workspace_current_visit(user=self.env.user, today_only=True)
-        if active_visit:
-            return self.action_open_current_visit()
 
         today_visits = self.env["route.visit"].search_count([
             ("user_id", "=", self.env.user.id),
@@ -796,6 +820,13 @@ class RoutePdaHome(models.TransientModel):
         return self._open_self_view(
             "route_core.view_route_pda_today_visits_empty_form",
             "Today's Visits",
+        )
+
+    def action_open_current_visit_empty_screen(self):
+        self.ensure_one()
+        return self._open_self_view(
+            "route_core.view_route_pda_current_visit_empty_form",
+            "Current Visit",
         )
 
     def action_open_next_daily_plan(self):
@@ -858,7 +889,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         visit = self._get_workspace_current_visit(user=self.env.user, today_only=True)
         if not visit:
-            return self.action_open_my_pda_visits()
+            return self.action_open_current_visit_empty_screen()
         action = self._prepare_action(
             "route_core.action_route_visit_pda",
             name="Current Visit",
