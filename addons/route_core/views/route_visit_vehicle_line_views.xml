@@ -1,53 +1,43 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <record id="view_route_visit_form_vehicle_line_ext" model="ir.ui.view">
-        <field name="name">route.visit.form.vehicle.line.ext</field>
-        <field name="model">route.visit</field>
-        <field name="inherit_id" ref="route_core.view_route_visit_form"/>
-        <field name="arch" type="xml">
-
-            <!-- Helper field for domain only: add it hidden before Product -->
-            <xpath expr="//field[@name='line_ids']//field[@name='product_id']" position="before">
-                <field name="vehicle_product_ids" invisible="1" column_invisible="1"/>
-            </xpath>
-
-            <!-- Restrict selectable products to products available in van -->
-            <xpath expr="//field[@name='line_ids']//field[@name='product_id']" position="attributes">
-                <attribute name="domain">[('id', 'in', vehicle_product_ids)]</attribute>
-                <attribute name="string">Product</attribute>
-            </xpath>
-
-            <!-- Clearer labels -->
-            <xpath expr="//field[@name='line_ids']//field[@name='previous_qty']" position="attributes">
-                <attribute name="string">Prev. Bal.</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='counted_qty']" position="attributes">
-                <attribute name="string">Counted</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='sold_qty']" position="attributes">
-                <attribute name="string">Sold</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='vehicle_available_qty']" position="attributes">
-                <attribute name="string">Van Qty</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='supplied_qty']" position="attributes">
-                <attribute name="string">Refill Qty</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='pending_refill_qty']" position="attributes">
-                <attribute name="string">Pending</attribute>
-            </xpath>
-
-            <xpath expr="//field[@name='line_ids']//field[@name='new_balance_qty']" position="attributes">
-                <attribute name="string">New Bal.</attribute>
-            </xpath>
-
-        </field>
-    </record>
-
+<record id="view_route_visit_form_vehicle_line_ext" model="ir.ui.view">
+<field name="name">route.visit.form.vehicle.line.ext</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="arch" type="xml">
+<!--  Helper field for domain only: add it hidden before Product  -->
+<xpath expr="//field[@name='line_ids']//field[@name='product_id']" position="before">
+<field name="vehicle_product_ids" invisible="1" column_invisible="1"/>
+</xpath>
+<!--  Restrict selectable products to products available in van  -->
+<xpath expr="//field[@name='line_ids']//field[@name='product_id']" position="attributes">
+<attribute name="domain">[('id', 'in', vehicle_product_ids)]</attribute>
+<attribute name="string">Product</attribute>
+</xpath>
+<!--  Clearer labels with current active fields only  -->
+<xpath expr="//field[@name='line_ids']//field[@name='previous_qty']" position="attributes">
+<attribute name="string">Previous</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='counted_qty']" position="attributes">
+<attribute name="string">Counted</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='sold_qty']" position="attributes">
+<attribute name="string">Sold Qty</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='return_qty']" position="attributes">
+<attribute name="string">Returned Qty</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='vehicle_available_qty']" position="attributes">
+<attribute name="string">Vehicle Balance</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='refill_proposal_qty']" position="attributes">
+<attribute name="string">Refill Proposal</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='approved_refill_qty']" position="attributes">
+<attribute name="string">Approved Refill</attribute>
+</xpath>
+<xpath expr="//field[@name='line_ids']//field[@name='new_balance_qty']" position="attributes">
+<attribute name="string">New Balance</attribute>
+</xpath>
+</field>
+</record>
 </odoo>
