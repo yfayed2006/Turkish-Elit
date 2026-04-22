@@ -107,7 +107,8 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
+<!--  Stable insertion point: before Notes page, instead of searching Payments page  -->
+<xpath expr="//page[field[@name='notes']]" position="before">
 <page string="Direct Stop" invisible="1">
 <group col="2">
 <group>
@@ -200,4 +201,4 @@
 </xpath>
 </field>
 </record>
-</
+</odoo>
