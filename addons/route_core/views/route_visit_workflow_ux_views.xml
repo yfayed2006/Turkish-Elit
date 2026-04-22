@@ -43,7 +43,7 @@
 <xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
 </xpath>
-<xpath expr="//field[@name='display_payment_ids']/ancestor::page[1]" position="attributes">
+<xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="attributes">
 <attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]" position="before">
@@ -110,7 +110,7 @@
 <field name="direct_stop_credit_policy" readonly="1" invisible="not direct_stop_credit_amount"/>
 </group>
 </xpath>
-<xpath expr="//field[@name='display_payment_ids']/ancestor::page[1]" position="before">
+<xpath expr="//page[.//field[@name='display_payment_ids'] or .//field[@name='payment_ids']]" position="before">
 <page string="Direct Stop" invisible="1">
 <group col="2">
 <group>
@@ -191,9 +191,6 @@
 </xpath>
 <xpath expr="//page[field[@name='line_ids']]" position="attributes">
 <attribute name="invisible">visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales'</attribute>
-</xpath>
-<xpath expr="//field[@name='display_payment_ids']/ancestor::page[1]" position="attributes">
-<attribute name="invisible">False</attribute>
 </xpath>
 <xpath expr="//div[field[@name='outlet_decision_flags_html']]/preceding-sibling::separator[1]" position="attributes">
 <attribute name="invisible">(visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales') or not outlet_decision_flags_html</attribute>
