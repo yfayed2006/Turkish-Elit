@@ -2310,3 +2310,69 @@
         font-size: 0.88rem;
     }
 }
+
+.route_pda_payment_cards_host .o_field_html,
+.route_pda_payment_cards_host .oe_read_only,
+.route_pda_payment_cards_host .o_readonly_modifier {
+    margin-bottom: 0;
+}
+
+.route_pda_payment_cards_html {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.route_pda_payment_card_html {
+    margin: 0 !important;
+}
+
+.route_pda_payment_badge_state {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.route_pda_payment_state_draft {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.route_pda_payment_state_confirmed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.route_pda_payment_state_cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.route_pda_payment_card_note {
+    margin-top: 2px;
+}
+
+.route_pda_finish_payment_cards_host {
+    margin-top: 2px;
+}
+
+@media (min-width: 992px) {
+    .route_pda_payment_cards_html {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .route_pda_payment_cards_html {
+        gap: 10px;
+    }
+
+    .route_pda_payment_cards_html .route_pda_payment_card {
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    .route_pda_payment_cards_html .route_pda_payment_metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
