@@ -3,61 +3,161 @@
 <field name="name">route.visit.finish.summary.wizard.form</field>
 <field name="model">route.visit.finish.summary.wizard</field>
 <field name="arch" type="xml">
-<form string="Visit Finished" create="0" edit="0" delete="0">
-<sheet>
+<form string="Visit Finished" create="0" edit="0" delete="0" class="route_pda_statement_form">
+<sheet class="route_pda_payment_sheet route_pda_finish_summary_sheet">
 <field name="is_direct_sales_stop" invisible="1"/>
 <field name="currency_id" invisible="1"/>
-<group col="2">
-<group>
-<field name="visit_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1"/>
-<field name="user_id" readonly="1"/>
-</group>
-<group>
-<field name="visit_date" readonly="1"/>
-<field name="end_datetime" readonly="1"/>
-<field name="sale_status_label" string="Sale Decision" readonly="1" invisible="not is_direct_sales_stop"/>
-<field name="return_status_label" string="Return Decision" readonly="1" invisible="not is_direct_sales_stop"/>
-</group>
-</group>
-<group string="Settlement Summary" col="4" invisible="not is_direct_sales_stop">
-<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
-<field name="direct_stop_previous_due_since_display" string="Previous Due Since" readonly="1"/>
-<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
-<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1" invisible="not direct_stop_returns_total"/>
-<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
-<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1"/>
-<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="not direct_stop_open_promise_amount"/>
-<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
-<field name="direct_stop_latest_promise_status" string="Promise Status" readonly="1" invisible="not direct_stop_open_promise_amount"/>
-<field name="direct_stop_order_count" string="Direct Sale Orders" readonly="1" invisible="not direct_stop_order_count"/>
-<field name="direct_stop_return_count" string="Direct Returns" readonly="1" invisible="not direct_stop_return_count"/>
-<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
-</group>
-<group string="Visit Summary" col="4" invisible="is_direct_sales_stop">
-<field name="consignment_current_due_amount" string="Amount Due Now" readonly="1"/>
-<field name="consignment_collected_amount" string="Collected" readonly="1"/>
-<field name="consignment_remaining_amount" string="Immediate Remaining" readonly="1"/>
-<field name="consignment_promise_amount" string="Promise Amount" readonly="1"/>
-</group>
-<group string="Visit Documents" col="4" invisible="is_direct_sales_stop">
-<field name="consignment_sale_order_ref" string="Sale Order" readonly="1"/>
-<field name="consignment_refill_ref" string="Refill Transfer" readonly="1"/>
-<field name="consignment_return_refs" string="Return Transfers" readonly="1"/>
-<field name="consignment_execution_mode_label" string="Execution Mode" readonly="1"/>
-</group>
-<group string="Confirmed Payments" invisible="is_direct_sales_stop">
-<field name="consignment_payment_count" string="Confirmed Payments" readonly="1"/>
-<field name="consignment_payment_summary_html" readonly="1" nolabel="1" widget="html"/>
-</group>
-<group>
+<field name="show_credit_section" invisible="1"/>
+<field name="show_return_section" invisible="1"/>
+<field name="show_previous_due" invisible="1"/>
+<field name="show_consignment_section" invisible="1"/>
+<div class="route_pda_payment_section">
 <field name="finish_message" readonly="1" nolabel="1" widget="html"/>
-</group>
+</div>
+<div class="route_pda_payment_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Visit Context</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit</span>
+<field name="visit_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Outlet</span>
+<field name="outlet_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Customer</span>
+<field name="partner_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Salesperson</span>
+<field name="user_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit Date</span>
+<field name="visit_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">End DateTime</span>
+<field name="end_datetime" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not is_direct_sales_stop">
+<span class="route_pda_payment_meta_label">Sale Decision</span>
+<field name="sale_status_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not is_direct_sales_stop">
+<span class="route_pda_payment_meta_label">Return Decision</span>
+<field name="return_status_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="not is_direct_sales_stop">
+<div class="route_pda_group_title route_pda_payment_section_title">Settlement Summary</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item" invisible="not show_previous_due">
+<span class="route_pda_payment_meta_label">Previous Due</span>
+<field name="direct_stop_previous_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not show_previous_due">
+<span class="route_pda_payment_meta_label">Previous Due Since</span>
+<field name="direct_stop_previous_due_since_display" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Current Stop Gross Sale</span>
+<field name="direct_stop_sales_total" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not show_return_section">
+<span class="route_pda_payment_meta_label">Current Stop Returns</span>
+<field name="direct_stop_returns_total" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Current Stop Net</span>
+<field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Amount Due Now</span>
+<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Collected Now</span>
+<field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not direct_stop_open_promise_amount">
+<span class="route_pda_payment_meta_label">Promise Amount</span>
+<field name="direct_stop_open_promise_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not direct_stop_open_promise_amount">
+<span class="route_pda_payment_meta_label">Next Promise Date</span>
+<field name="direct_stop_latest_promise_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not direct_stop_open_promise_amount">
+<span class="route_pda_payment_meta_label">Promise Status</span>
+<field name="direct_stop_latest_promise_status" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not show_credit_section">
+<span class="route_pda_payment_meta_label">Return Credit</span>
+<field name="direct_stop_credit_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not show_credit_section">
+<span class="route_pda_payment_meta_label">Credit Handling</span>
+<field name="credit_policy_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="is_direct_sales_stop">
+<div class="route_pda_group_title route_pda_payment_section_title">Visit Summary</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Amount Due Now</span>
+<field name="consignment_current_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Collected</span>
+<field name="consignment_collected_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<field name="consignment_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not consignment_promise_amount">
+<span class="route_pda_payment_meta_label">Promise Amount</span>
+<field name="consignment_promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="is_direct_sales_stop">
+<div class="route_pda_group_title route_pda_payment_section_title">Visit Documents</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Sale Order</span>
+<field name="consignment_sale_order_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Refill Transfer</span>
+<field name="consignment_refill_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Return Transfers</span>
+<field name="consignment_return_refs" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Execution Mode</span>
+<field name="consignment_execution_mode_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="is_direct_sales_stop">
+<div class="route_pda_group_title route_pda_payment_section_title">Confirmed Payments</div>
+<div class="route_pda_wizard_table_wrap">
+<field name="consignment_payment_summary_html" readonly="1" nolabel="1" widget="html"/>
+</div>
+</div>
 </sheet>
-<footer>
+<footer class="route_pda_statement_footer">
 <button name="action_print_receipt" string="Print Receipt" type="object" class="btn-primary"/>
 <button name="action_send_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary"/>
 <button name="action_send_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary"/>
