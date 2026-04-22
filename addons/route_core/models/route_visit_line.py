@@ -68,6 +68,18 @@ class RouteVisitLine(models.Model):
     supplied_qty = fields.Float(string="Supplied Qty", default=0.0)
     pending_refill_qty = fields.Float(string="Pending Refill Qty", default=0.0)
 
+    refill_proposal_qty = fields.Float(
+        string="Refill Proposal Qty",
+        compute="_compute_refill_display_quantities",
+        store=False,
+    )
+
+    approved_refill_qty = fields.Float(
+        string="Approved Refill Qty",
+        compute="_compute_refill_display_quantities",
+        store=False,
+    )
+
     refill_proposal_qty_display = fields.Float(
         string="Refill Proposal Qty",
         compute="_compute_refill_display_quantities",
@@ -273,6 +285,8 @@ class RouteVisitLine(models.Model):
     def _compute_refill_display_quantities(self):
         for line in self:
             qty = line.supplied_qty or 0.0
+            line.refill_proposal_qty = qty
+            line.approved_refill_qty = qty
             line.refill_proposal_qty_display = qty
             line.approved_refill_qty_display = qty
 
@@ -491,5 +505,3 @@ class RouteVisitLine(models.Model):
             else:
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
-
-
