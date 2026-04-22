@@ -2165,3 +2165,56 @@
     width: 100%;
 }
 
+
+.route_pda_app_hint_value_wrap,
+.route_pda_app_hint_value_wrap .o_field_widget,
+.route_pda_app_hint_value_wrap .o_input {
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+.route_mobile_detail_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.route_mobile_detail_box_full {
+    grid-column: 1 / -1;
+}
+
+.route_mobile_detail_box_emphasis {
+    background: #f8fafc;
+}
+
+.route_mobile_payment_x2many .o_kanban_renderer.o_kanban_ungrouped {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+}
+
+.route_mobile_payment_x2many .o_kanban_record,
+.route_mobile_payment_x2many .route_pda_payment_card_visit {
+    margin-bottom: 0 !important;
+}
+
+.route_pda_payment_card_visit .route_pda_payment_metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.route_pda_payment_card_visit .route_pda_payment_metric_promise {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 767.98px) {
+    .route_mobile_detail_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_pda_app_hint_value_wrap,
+    .route_pda_app_hint_value_wrap .o_input {
+        font-size: 0.88rem;
+    }
+}
