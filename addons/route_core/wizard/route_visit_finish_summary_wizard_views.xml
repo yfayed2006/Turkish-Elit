@@ -152,7 +152,7 @@
 </div>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Confirmed Payments</div>
-<div class="route_pda_payment_cards_host route_pda_finish_payment_cards_host">
+<div class="route_pda_wizard_table_wrap">
 <field name="consignment_payment_summary_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 </div>
