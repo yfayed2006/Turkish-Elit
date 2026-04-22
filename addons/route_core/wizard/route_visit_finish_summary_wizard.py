@@ -149,8 +149,6 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
 
     @api.depends("visit_id")
     def _compute_consignment_summary(self):
-        payment_mode_map = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
-        collection_type_map = dict(self.env["route.visit.payment"]._fields["collection_type"].selection)
         for rec in self:
             if rec.is_direct_sales_stop or not rec.visit_id:
                 rec.consignment_sale_order_ref = False
@@ -175,39 +173,13 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rec.consignment_promise_amount = summary.get("promise_amount", 0.0)
             payments = rec.visit_id._get_consignment_receipt_payments() if hasattr(rec.visit_id, "_get_consignment_receipt_payments") else self.env["route.visit.payment"]
             rec.consignment_payment_count = len(payments)
-            rows = []
-            for payment in payments:
-                promise_text = "-"
-                effective_promise = getattr(payment, "effective_promise_amount", False) or payment.promise_amount
-                if payment.promise_date or effective_promise:
-                    bits = []
-                    if payment.promise_date:
-                        bits.append(str(payment.promise_date))
-                    if effective_promise:
-                        bits.append(rec._format_currency_amount(effective_promise))
-                    promise_text = " / ".join(bits)
-                rows.append(
-                    "<tr>"
-                    f"<td style='padding:6px 8px; border-bottom:1px solid #eee;'>{payment.payment_date or '-'}</td>"
-                    f"<td style='padding:6px 8px; border-bottom:1px solid #eee;'>{payment_mode_map.get(payment.payment_mode, payment.payment_mode or '-')}</td>"
-                    f"<td style='padding:6px 8px; border-bottom:1px solid #eee;'>{collection_type_map.get(payment.collection_type, payment.collection_type or '-')}</td>"
-                    f"<td style='padding:6px 8px; border-bottom:1px solid #eee; text-align:right;'>{rec._format_currency_amount(payment.amount)}</td>"
-                    f"<td style='padding:6px 8px; border-bottom:1px solid #eee;'>{promise_text}</td>"
-                    "</tr>"
-                )
-            if rows:
-                rec.consignment_payment_summary_html = (
-                    "<table style='width:100%; border-collapse:collapse;'>"
-                    "<thead><tr>"
-                    "<th style='text-align:left; padding:6px 8px; border-bottom:1px solid #ddd;'>Date</th>"
-                    "<th style='text-align:left; padding:6px 8px; border-bottom:1px solid #ddd;'>Mode</th>"
-                    "<th style='text-align:left; padding:6px 8px; border-bottom:1px solid #ddd;'>Collection</th>"
-                    "<th style='text-align:right; padding:6px 8px; border-bottom:1px solid #ddd;'>Amount</th>"
-                    "<th style='text-align:left; padding:6px 8px; border-bottom:1px solid #ddd;'>Promise</th>"
-                    "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
-                )
-            else:
-                rec.consignment_payment_summary_html = _("<div class='alert alert-info mb-0'>No confirmed payments were found for this visit.</div>")
+            rec.consignment_payment_summary_html = rec.visit_id._build_payment_cards_html(
+                payments,
+                empty_message=_("<div class='alert alert-info mb-0'>No confirmed payments were found for this visit.</div>"),
+                show_source=False,
+                show_settlement=False,
+                show_notes=True,
+            )
 
     @api.depends(
         "is_direct_sales_stop",
