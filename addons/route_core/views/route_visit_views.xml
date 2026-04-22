@@ -826,22 +826,9 @@
 </div>
 </div>
 </div>
-<field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
-<list create="0" delete="0">
-<field name="payment_date"/>
-<field name="payment_mode"/>
-<field name="collection_type"/>
-<field name="source_document_ref" string="Source Document" optional="show"/>
-<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
-<field name="amount"/>
-<field name="due_date"/>
-<field name="promise_date"/>
-<field name="effective_promise_amount" string="Promise Amount"/>
-<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="reference"/>
-<field name="state"/>
-</list>
-</field>
+<div class="route_pda_payment_cards_host">
+<field name="display_payment_cards_html" readonly="1" nolabel="1" widget="html"/>
+</div>
 </page>
 <page string="Notes">
 <field name="notes" placeholder="Internal notes..."/>
