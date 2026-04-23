@@ -55,6 +55,7 @@
 <record id="menu_route_shortage" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+<field name="active" eval="False"/>
 <field name="sequence">10</field>
 </record>
 <record id="menu_route_salesperson_shortage" model="ir.ui.menu">
@@ -176,6 +177,13 @@
 <menuitem id="menu_route_salesperson_my_visits" name="Today's Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_shortages" name="Outlet Visit Shortages" parent="route_core.menu_route_control_workspace" action="route_core.action_route_shortage" sequence="20" groups="base.group_no_one"/>
+<record id="menu_route_salesperson_shortages" model="ir.ui.menu">
+<field name="name">Outlet Visit Shortages</field>
+<field name="parent_id" ref="route_core.menu_route_control_workspace"/>
+<field name="action" ref="route_core.action_route_shortage"/>
+<field name="group_ids" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+<field name="active" eval="False"/>
+<field name="sequence">20</field>
+</record>
 <menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection_salesperson" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
