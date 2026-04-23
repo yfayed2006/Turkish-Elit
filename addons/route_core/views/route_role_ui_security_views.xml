@@ -99,4 +99,17 @@
 </xpath>
 </field>
 </record>
+<record id="view_route_visit_form_role_security" model="ir.ui.view">
+<field name="name">route.visit.form.role.security</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="arch" type="xml">
+<xpath expr="//button[@name='action_recompute_visit_health']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+<xpath expr="//button[@name='action_visit_diagnostics']" position="attributes">
+<attribute name="groups">route_core.group_route_supervisor,route_core.group_route_management</attribute>
+</xpath>
+</field>
+</record>
 </odoo>
