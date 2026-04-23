@@ -2256,10 +2256,18 @@ class RouteVisit(models.Model):
 
     def _get_route_sale_delivery_form_action(self, picking):
         self.ensure_one()
+        picking.sudo().write({"route_return_to_finish_summary": True})
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["res_id"] = picking.id
         action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
-        action["context"] = dict(self.env.context, default_origin=self.name, route_visit_name=self.name)
+        action["context"] = dict(
+            self.env.context,
+            default_origin=self.name,
+            route_visit_name=self.name,
+            default_route_visit_id=self.id,
+            route_visit_id=self.id,
+            route_return_to_finish_summary=True,
+        )
         return action
 
     def action_create_sale_order(self):
