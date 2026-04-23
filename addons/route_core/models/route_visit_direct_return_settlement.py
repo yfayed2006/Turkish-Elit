@@ -1841,7 +1841,6 @@ class RouteVisit(models.Model):
 
     def _get_route_sale_delivery_form_action(self, picking):
         self.ensure_one()
-        picking.sudo().write({"route_return_to_finish_summary": True})
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["res_id"] = picking.id
         action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
