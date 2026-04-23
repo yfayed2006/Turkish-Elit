@@ -202,6 +202,23 @@ function isCollectionsCenterPage() {
     ]);
 }
 
+function isLoadingProposalPage() {
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    return (
+        hasVisibleButton("action_open_route_plan")
+        && hasVisibleButton("action_open_vehicle_stock_snapshot")
+        && (
+            title.startsWith("rlp/")
+            || rootText.includes("proposal information")
+            || rootText.includes("loading summary")
+            || pageText.includes("proposal information")
+            || pageText.includes("loading summary")
+        )
+    );
+}
+
 function isOutletCenterPage() {
     return hasAnyVisibleButton(Array.from(OUTLET_WORKSPACE_ENTRY_BUTTONS));
 }
@@ -465,6 +482,9 @@ function detectPageKind() {
     }
     if (isDailySummaryPage()) {
         return "daily_summary";
+    }
+    if (isLoadingProposalPage()) {
+        return "loading_proposal";
     }
 
     if (
@@ -799,6 +819,17 @@ function navigateBackToOutletForm() {
     }, 1200);
 }
 
+function navigateBackToRoutePlan() {
+    if (openServerButton("action_open_route_plan")) {
+        return;
+    }
+    isInternalRedirect = true;
+    window.history.back();
+    window.setTimeout(() => {
+        isInternalRedirect = false;
+    }, 900);
+}
+
 function maybeRunPendingFromAppsHome() {
     const pendingButton = getPendingButton();
     if (!pendingButton) {
@@ -982,6 +1013,15 @@ function getDesktopBackHost() {
 }
 
 function getBackConfig(pageKind) {
+    if (pageKind === "loading_proposal") {
+        return {
+            label: "Back to Route Plan",
+            href: "",
+            onClick: navigateBackToRoutePlan,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
     if (STOCK_PAGE_KINDS.has(pageKind)) {
         return {
             label: "Back to Products and Stock",
@@ -1288,6 +1328,7 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
 
 
