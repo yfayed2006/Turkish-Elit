@@ -11,11 +11,6 @@ class StockPicking(models.Model):
         copy=False,
         ondelete="set null",
     )
-    route_return_to_finish_summary = fields.Boolean(
-        string="Return To Visit Finish Summary",
-        copy=False,
-        default=False,
-    )
 
     def _get_related_consignment_outlets_for_balance_sync(self):
         self.ensure_one()
@@ -36,7 +31,6 @@ class StockPicking(models.Model):
         if outlets:
             outlets._sync_outlet_stock_balance_records()
         return True
-
 
     def action_back_to_outlet_form(self):
         self.ensure_one()
@@ -62,11 +56,10 @@ class StockPicking(models.Model):
 
     def _get_route_visit_finish_return_action(self):
         self.ensure_one()
-        if not self.route_return_to_finish_summary:
+        if not self.env.context.get("route_return_to_finish_summary"):
             return False
 
-        visit = self.route_visit_id.exists()
-        self.route_return_to_finish_summary = False
+        visit = self.route_visit_id.exists() or self.env["route.visit"].browse(self.env.context.get("route_visit_id")).exists()
         if not visit:
             return False
 
