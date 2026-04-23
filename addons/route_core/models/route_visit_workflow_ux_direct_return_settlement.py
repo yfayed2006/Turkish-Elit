@@ -371,7 +371,7 @@ class RouteVisit(models.Model):
                     rec.ux_stage = "done"
                     rec.ux_primary_action = "none"
                     rec.ux_stage_title = _("Stop completed")
-                    rec.ux_stage_help = _("No action required.")
+                    rec.ux_stage_help = _("No action required. Use Visit Summary for final review, receipt, or sharing actions when needed.")
                 continue
 
             rec.ux_can_scan_barcode = (
@@ -536,7 +536,7 @@ class RouteVisit(models.Model):
                 rec.ux_stage = "done"
                 rec.ux_primary_action = "none"
                 rec.ux_stage_title = _("Visit completed")
-                rec.ux_stage_help = _("No action required.")
+                rec.ux_stage_help = _("No action required. Use Visit Summary for final review, receipt, or sharing actions when needed.")
 
     def _get_pda_form_action(self):
         self.ensure_one()
@@ -558,7 +558,6 @@ class RouteVisit(models.Model):
                 "context": {
                     "search_default_filter_my_visits": 1,
                     "search_default_filter_today": 1,
-                    "search_default_filter_active": 1,
                     "pda_mode": True,
                     "create": 0,
                     "edit": 1,
@@ -579,7 +578,6 @@ class RouteVisit(models.Model):
             "context": {
                 "search_default_filter_my_visits": 1,
                 "search_default_filter_today": 1,
-                "search_default_filter_active": 1,
                 "pda_mode": True,
                 "create": 0,
                 "edit": 1,
