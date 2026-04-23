@@ -13,13 +13,13 @@
 <record id="group_route_supervisor" model="res.groups">
 <field name="name">Route Supervisor</field>
 <field name="category_id" ref="route_core.module_category_route_core"/>
-<field name="comment">Operational supervisor for route planning, reviews, shortages, loading, and vehicle control.</field>
+<field name="comment">Operational supervisor for route planning, review, loading, and vehicle control. Visit-generated outlet shortages are hidden in the current phase; vehicle-closing shortage review remains available.</field>
 </record>
 <record id="group_route_management" model="res.groups">
 <field name="name">Route Management</field>
 <field name="category_id" ref="route_core.module_category_route_core"/>
 <field name="implied_ids" eval="[(4, ref('route_core.group_route_supervisor'))]"/>
-<field name="comment">Management visibility across all route operations, including supervisor capabilities.</field>
+<field name="comment">Management visibility across all route operations and configuration. Managers can decide who receives supervisor-facing access in user access rights.</field>
 </record>
 </data>
 </odoo>
