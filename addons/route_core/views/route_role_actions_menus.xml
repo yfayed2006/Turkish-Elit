@@ -54,15 +54,17 @@
 </record>
 <record id="menu_route_shortage" model="ir.ui.menu">
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
-<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+<field name="group_ids" eval="[(6, 0, [ref('base.group_no_one')])]"/>
 <field name="sequence">10</field>
 </record>
 <record id="menu_route_salesperson_shortage" model="ir.ui.menu">
+<field name="name">Vehicle Closing Shortages</field>
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">20</field>
 </record>
 <record id="menu_route_salesperson_deduction" model="ir.ui.menu">
+<field name="name">Salesperson Deductions</field>
 <field name="parent_id" ref="route_core.menu_route_control_workspace"/>
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
 <field name="sequence">30</field>
@@ -103,7 +105,14 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--  Action-level role separation removed for Odoo 19 compatibility  -->
+<record id="menu_route_user_access" model="ir.ui.menu">
+<field name="name">Users and Access</field>
+<field name="parent_id" ref="route_core.menu_route_management_workspace"/>
+<field name="action" ref="base.action_res_users"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+<field name="sequence">15</field>
+</record>
+<!--   Action-level role separation removed for Odoo 19 compatibility   -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Daily Plans</field>
 <field name="res_model">route.plan</field>
@@ -167,6 +176,6 @@
 <menuitem id="menu_route_salesperson_my_visits" name="Today's Visits" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_pda_salesperson" sequence="210" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_history" name="My Visit History" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_history_salesperson" sequence="220" groups="route_core.group_route_salesperson"/>
 <menuitem id="menu_route_salesperson_vehicle_closing" name="My Vehicle Closings" parent="route_core.menu_route_visit_root" action="route_core.action_route_vehicle_closing_salesperson" sequence="230" groups="route_core.group_route_salesperson"/>
-<menuitem id="menu_route_salesperson_shortages" name="Shortages" parent="route_core.menu_route_control_workspace" action="route_core.action_route_shortage" sequence="20" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<menuitem id="menu_route_salesperson_shortages" name="Outlet Visit Shortages" parent="route_core.menu_route_control_workspace" action="route_core.action_route_shortage" sequence="20" groups="base.group_no_one"/>
 <menuitem id="menu_route_salesperson_payments" name="My Visit Collections" parent="route_core.menu_route_visit_root" action="route_core.action_route_visit_collection_salesperson" sequence="280" groups="route_core.group_route_salesperson"/>
 </odoo>
