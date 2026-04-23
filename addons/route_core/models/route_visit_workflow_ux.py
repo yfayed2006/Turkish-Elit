@@ -871,7 +871,7 @@ class RouteVisit(models.Model):
                 "context": {
                     "search_default_filter_my_visits": 1,
                     "search_default_filter_today": 1,
-                    "pda_mode": True,
+                                        "pda_mode": True,
                     "create": 0,
                     "edit": 1,
                     "delete": 0,
@@ -891,7 +891,7 @@ class RouteVisit(models.Model):
             "context": {
                 "search_default_filter_my_visits": 1,
                 "search_default_filter_today": 1,
-                "pda_mode": True,
+                                "pda_mode": True,
                 "create": 0,
                 "edit": 1,
                 "delete": 0,
@@ -1904,7 +1904,6 @@ class RouteVisit(models.Model):
             "type": "ir.actions.act_url",
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
-        }
         }
 
 
