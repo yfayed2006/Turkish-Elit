@@ -73,6 +73,35 @@
 </button>
 </div>
 </div>
+<div class="route_pda_group route_pda_group_execution_snapshot">
+<div class="route_pda_group_title">Today's Execution Snapshot</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card route_pda_info_card_emphasis">
+<div class="route_pda_info_label">Scheduled Visits</div>
+<div class="route_pda_info_value">
+<field name="today_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Done</div>
+<div class="route_pda_info_value">
+<field name="today_done_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">In Progress</div>
+<div class="route_pda_info_value">
+<field name="today_in_progress_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Pending</div>
+<div class="route_pda_info_value">
+<field name="today_pending_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 <div class="route_pda_group route_pda_group_shared_centers">
 <div class="route_pda_group_title">Shared Centers</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_3">
@@ -964,8 +993,9 @@ Price:
 <div class="alert alert-info" role="alert">
 <field name="current_visit_empty_message" readonly="1" nolabel="1"/>
 </div>
+<div class="route_pda_group_title route_pda_group_title_inline">Today's Execution Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
-<div class="route_pda_info_card">
+<div class="route_pda_info_card route_pda_info_card_emphasis">
 <div class="route_pda_info_label">Active Visit</div>
 <div class="route_pda_info_value">
 <field name="current_visit_count" readonly="1" nolabel="1"/>
@@ -975,6 +1005,18 @@ Price:
 <div class="route_pda_info_label">Visits Today</div>
 <div class="route_pda_info_value">
 <field name="today_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Done</div>
+<div class="route_pda_info_value">
+<field name="today_done_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Pending</div>
+<div class="route_pda_info_value">
+<field name="today_pending_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card" invisible="next_plan_available == False">
@@ -1024,11 +1066,24 @@ Price:
 <div class="alert alert-info" role="alert">
 <field name="today_visits_empty_message" readonly="1" nolabel="1"/>
 </div>
+<div class="route_pda_group_title route_pda_group_title_inline">Today's Execution Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
-<div class="route_pda_info_card">
+<div class="route_pda_info_card route_pda_info_card_emphasis">
 <div class="route_pda_info_label">Visits Today</div>
 <div class="route_pda_info_value">
 <field name="today_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Done</div>
+<div class="route_pda_info_value">
+<field name="today_done_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">In Progress</div>
+<div class="route_pda_info_value">
+<field name="today_in_progress_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
