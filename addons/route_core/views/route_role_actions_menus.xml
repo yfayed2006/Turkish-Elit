@@ -103,7 +103,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--           Salesperson-safe menu actions           -->
+<!--            Salesperson-safe menu actions            -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Daily Plans</field>
 <field name="res_model">route.plan</field>
@@ -129,8 +129,8 @@
 <field name="res_model">route.visit</field>
 <field name="view_mode">kanban,form,list</field>
 <field name="search_view_id" ref="route_core.view_route_visit_search"/>
-<field name="domain">[("user_id", "=", uid), ("date", "=", context_today()), ("state", "not in", ["done", "cancel", "cancelled"])]</field>
-<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'search_default_filter_active': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+<field name="domain">[("user_id", "=", uid), ("date", "=", context_today())]</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 </record>
 <record id="action_route_visit_history_salesperson" model="ir.actions.act_window">
 <field name="name">My Visit History</field>
