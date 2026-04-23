@@ -237,6 +237,17 @@ pending visit(s) were found for this planning area.
 </div>
 <notebook>
 <page string="Overview">
+<group string="Planning Setup" col="2" invisible="planning_finalized">
+<group>
+<field name="date"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+</group>
+<group>
+<field name="source_warehouse_id" options="{'no_create': True}"/>
+<field name="area_id"/>
+</group>
+</group>
 <div class="route_mobile_summary_grid">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Plan Date</div>
