@@ -61,7 +61,12 @@
 </span>
 </div>
 <div class="route_pda_visit_btn_wrap">
+<t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
+<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">View Visit</a>
+</t>
+<t t-else="">
 <a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">Open Visit</a>
+</t>
 </div>
 </div>
 </t>
