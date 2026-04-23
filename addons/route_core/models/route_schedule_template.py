@@ -233,13 +233,28 @@ class RouteScheduleTemplate(models.Model):
 
     def _get_existing_schedule(self, week_start_date):
         self.ensure_one()
-        return self.env["route.weekly.schedule"].search([
-            ("template_id", "=", self.id),
+        schedules = self.env["route.weekly.schedule"].search([
             ("week_start_date", "=", week_start_date),
             ("user_id", "=", self.user_id.id),
             ("vehicle_id", "=", self.vehicle_id.id),
             ("state", "!=", "cancelled"),
-        ], limit=1)
+        ], order="id desc")
+        if not schedules:
+            return self.env["route.weekly.schedule"]
+
+        same_template = schedules.filtered(lambda schedule: schedule.template_id == self)
+        if same_template:
+            return same_template[:1]
+
+        preferred = schedules.filtered(lambda schedule: schedule.state == "plans_generated" and schedule.generated_plan_count)
+        if preferred:
+            return preferred[:1]
+
+        populated = schedules.filtered(lambda schedule: schedule.line_count)
+        if populated:
+            return populated[:1]
+
+        return schedules[:1]
 
     def _create_or_open_schedule(self, week_start_date):
         self.ensure_one()
@@ -247,6 +262,15 @@ class RouteScheduleTemplate(models.Model):
         self._cleanup_duplicate_lines()
         existing_schedule = self._get_existing_schedule(week_start_date)
         if existing_schedule:
+            update_vals = {}
+            if not existing_schedule.template_id:
+                update_vals["template_id"] = self.id
+            if not existing_schedule.source_warehouse_id and self.source_warehouse_id:
+                update_vals["source_warehouse_id"] = self.source_warehouse_id.id
+            if not existing_schedule.notes and self.notes:
+                update_vals["notes"] = self.notes
+            if update_vals:
+                existing_schedule.with_context(route_weekly_schedule_skip_lock=True).write(update_vals)
             existing_schedule._cleanup_duplicate_lines()
             return existing_schedule.action_open_form()
 
@@ -607,4 +631,3 @@ class RouteScheduleTemplateLine(models.Model):
                     "outlet": rec.outlet_id.display_name or rec.outlet_id.name,
                     "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
-
