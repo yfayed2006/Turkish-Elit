@@ -103,85 +103,8 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">60</field>
 </record>
-<!--             Action-level role separation             -->
-<record id="action_route_schedule_template" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_weekly_schedule" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_plan" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_pending_visit_lines" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_loading_proposal" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_vehicle_closing" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_visit" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_visit_pda" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_visit_payment" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_visit_collection" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_shortage" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_shortage_line" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_salesperson_shortage" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_salesperson_shortage_line" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_salesperson_deduction" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_outlet_stock_balance" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_outlet" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_vehicle" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_city" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_area" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_return_settings" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_product_barcode" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="action_route_supervisor_assignment" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
-</record>
-<record id="server_action_open_route_pda_home" model="ir.actions.server">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
-</record>
-<!--             Salesperson-safe menu actions             -->
-<record id="action_route_weekly_schedule_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
-</record>
+<!--  Action-level role separation removed for Odoo 19 compatibility  -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
 <field name="name">My Daily Plans</field>
 <field name="res_model">route.plan</field>
 <field name="view_mode">list,form</field>
@@ -202,7 +125,6 @@
 <field name="act_window_id" ref="route_core.action_route_plan_salesperson"/>
 </record>
 <record id="action_route_visit_pda_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
 <field name="name">Today's Visits</field>
 <field name="res_model">route.visit</field>
 <field name="view_mode">kanban,form,list</field>
@@ -211,7 +133,6 @@
 <field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 </record>
 <record id="action_route_visit_history_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
 <field name="name">My Visit History</field>
 <field name="res_model">route.visit</field>
 <field name="view_mode">list,form</field>
@@ -223,7 +144,6 @@
 </field>
 </record>
 <record id="action_route_vehicle_closing_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
 <field name="name">My Vehicle Closings</field>
 <field name="res_model">route.vehicle.closing</field>
 <field name="view_mode">list,form</field>
@@ -233,7 +153,6 @@
 <field name="context">{'search_default_filter_closed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_visit_collection_salesperson" model="ir.actions.act_window">
-<field name="groups_id" eval="[(6, 0, [ref('route_core.group_route_salesperson')])]"/>
 <field name="name">My Visit Collections</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">kanban,list,form</field>
