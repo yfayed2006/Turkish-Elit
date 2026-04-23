@@ -35,6 +35,9 @@ class RoutePdaHome(models.TransientModel):
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
+    today_done_visit_count = fields.Integer(string="Done Today", compute="_compute_dashboard")
+    today_in_progress_visit_count = fields.Integer(string="In Progress Today", compute="_compute_dashboard")
+    today_pending_visit_count = fields.Integer(string="Pending Today", compute="_compute_dashboard")
     current_visit_count = fields.Integer(string="Current Visit", compute="_compute_dashboard")
     vehicle_closing_count = fields.Integer(string="Vehicle Closings", compute="_compute_dashboard")
     shortage_count = fields.Integer(string="Shortages", compute="_compute_dashboard")
@@ -332,6 +335,16 @@ class RoutePdaHome(models.TransientModel):
     def _get_workspace_current_visit(self, user=None, snapshot_mode=False, today_only=True):
         self.ensure_one()
         return self._get_workspace_active_visits(user=user, snapshot_mode=snapshot_mode, today_only=today_only)[:1]
+
+    def _get_visit_execution_bucket(self, visit):
+        visit_process_state = getattr(visit, "visit_process_state", False) or False
+        visit_state = getattr(visit, "state", False) or False
+
+        if visit_state in ("done", "cancel", "cancelled") or visit_process_state == "done":
+            return "done"
+        if visit_state == "in_progress" or visit_process_state in ("checked_in", "counting", "reconciled", "collection_done", "ready_to_close"):
+            return "in_progress"
+        return "pending"
 
     def _get_current_week_schedule_record(self, user=None):
         self.ensure_one()
@@ -680,6 +693,10 @@ class RoutePdaHome(models.TransientModel):
             else:
                 rec.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
 
+            done_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "done")
+            in_progress_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "in_progress")
+            pending_visits = today_visits - done_visits - in_progress_visits
+
             if current_visit:
                 rec.current_visit_empty_message = _("Visit %s at %s is already in progress. Use Current Visit to continue it.") % (
                     current_visit.display_name or "-",
@@ -688,9 +705,14 @@ class RoutePdaHome(models.TransientModel):
                 rec.current_visit_button_hint = _("Active Outlet")
                 rec.current_visit_button_value = current_visit.outlet_id.display_name or current_visit.display_name or _("Open active visit")
             elif today_visits:
-                rec.current_visit_empty_message = _("No visit is in progress right now. Open Today's Visits to start or continue one of the %s scheduled visits.") % len(today_visits)
-                rec.current_visit_button_hint = _("Status")
-                rec.current_visit_button_value = _("No active visit")
+                rec.current_visit_empty_message = _("No visit is in progress right now. Today has %s scheduled visits: %s done, %s in progress, and %s pending.") % (
+                    len(today_visits),
+                    len(done_visits),
+                    len(in_progress_visits),
+                    len(pending_visits),
+                )
+                rec.current_visit_button_hint = _("Today's Progress")
+                rec.current_visit_button_value = _("%s done • %s pending") % (len(done_visits), len(pending_visits))
             elif next_plan and next_plan.date and next_plan.date >= today:
                 rec.current_visit_empty_message = _("No visit is in progress right now. The next available daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
                 rec.current_visit_button_hint = _("Next Plan")
@@ -707,6 +729,9 @@ class RoutePdaHome(models.TransientModel):
 
             rec.today_plan_count = len(today_plans)
             rec.today_visit_count = len(today_visits)
+            rec.today_done_visit_count = len(done_visits)
+            rec.today_in_progress_visit_count = len(in_progress_visits)
+            rec.today_pending_visit_count = len(pending_visits)
             rec.current_visit_count = 1 if current_visit else 0
             rec.vehicle_closing_count = len(today_closings)
             rec.shortage_count = len(open_shortages)
@@ -846,7 +871,7 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_pda",
             name="Today's Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
-            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "search_default_filter_active": 1, "edit": 1},
+            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
         )
         action["help"] = _("<p class='o_view_nocontent_smiling_face'>No visits are scheduled for today.</p><p>Open My Daily Plans or My Weekly Schedule to review the next working day.</p>")
         return action
@@ -1484,3 +1509,4 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
+
