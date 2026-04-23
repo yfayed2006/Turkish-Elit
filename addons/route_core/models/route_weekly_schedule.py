@@ -717,7 +717,45 @@ class RouteWeeklyScheduleLine(models.Model):
         copy=False,
         ondelete="set null",
     )
+    execution_status = fields.Selection(
+        [
+            ("pending", "Pending"),
+            ("in_progress", "In Progress"),
+            ("done", "Done"),
+            ("skipped", "Skipped"),
+        ],
+        string="Execution Status",
+        compute="_compute_execution_status",
+    )
     finalized_plan_skip = fields.Boolean(string="Skipped Because Finalized", readonly=True, copy=False)
+
+    @api.depends(
+        "generated_plan_id",
+        "generated_plan_id.state",
+        "generated_plan_line_id",
+        "generated_plan_line_id.state",
+        "generated_plan_line_id.visit_id",
+        "generated_plan_line_id.visit_id.state",
+        "generated_plan_line_id.visit_id.visit_process_state",
+    )
+    def _compute_execution_status(self):
+        for rec in self:
+            status = False
+            visit = rec.generated_plan_line_id.visit_id
+            line_state = rec.generated_plan_line_id.state
+            visit_state = visit.state if visit else False
+            visit_process_state = visit.visit_process_state if visit else False
+
+            if line_state == "skipped":
+                status = "skipped"
+            elif visit_state == "done" or visit_process_state == "done" or line_state == "visited":
+                status = "done"
+            elif line_state == "in_progress" or visit_state == "in_progress" or visit_process_state in ("checked_in", "counting", "reconciled", "collection_done", "ready_to_close"):
+                status = "in_progress"
+            elif rec.generated_plan_id and rec.generated_plan_id.state != "cancel":
+                status = "pending"
+
+            rec.execution_status = status
 
     @api.depends("weekday")
     def _compute_weekday_label(self):
@@ -996,3 +1034,4 @@ class RouteWeeklyScheduleLine(models.Model):
                     "outlet": rec.outlet_id.display_name or rec.outlet_id.name,
                     "day": WEEKDAY_LABELS.get(rec.weekday or "", rec.weekday or ""),
                 })
+
