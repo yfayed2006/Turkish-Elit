@@ -578,7 +578,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected Amount</div>
+<div class="route_mobile_info_label">Collected</div>
 <div class="route_mobile_info_value">
 <field name="collected_amount" readonly="1" nolabel="1"/>
 </div>
@@ -628,7 +628,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected Amount</div>
+<div class="route_mobile_info_label">Collected</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
 </div>
@@ -659,19 +659,19 @@
 <field name="summary_refill_transfer_ref" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs or summary_return_transfer_refs == '-'">
 <div class="route_mobile_detail_label">Return Transfers</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="summary_return_transfer_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
@@ -690,21 +690,15 @@
 </div>
 </div>
 </div>
-<div class="route_mobile_detail_box route_mobile_detail_box_full route_mobile_detail_box_emphasis">
-<div class="route_mobile_detail_label">Step Help</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="ux_stage_help" readonly="1" nolabel="1"/>
-</div>
-</div>
 <div class="route_mobile_summary_grid">
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales'">
+<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0">
 <div class="route_mobile_info_label">Open Promises</div>
 <div class="route_mobile_info_value">
 <field name="promise_to_pay_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Open Promises</div>
+<div class="route_mobile_info_label">Open Promise Amount</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_open_promise_amount" readonly="1" nolabel="1"/>
 </div>
@@ -733,13 +727,13 @@
 <field name="direct_stop_latest_promise_status" readonly="1" nolabel="1" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
 </div>
 </div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False or outlet_near_expiry_count == 0">
 <div class="route_mobile_info_label">Near Expiry</div>
 <div class="route_mobile_info_value">
 <field name="outlet_near_expiry_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False or pending_near_expiry_line_count == 0">
 <div class="route_mobile_info_label">Pending Near Expiry</div>
 <div class="route_mobile_info_value">
 <field name="pending_near_expiry_line_count" readonly="1" nolabel="1"/>
@@ -748,15 +742,15 @@
 </div>
 </page>
 <page string="Payments">
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales'">
+<div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales' or (not display_payment_ids and consignment_amount_due_now == 0 and collected_amount == 0 and consignment_immediate_remaining_amount == 0 and promise_to_pay_count == 0)">
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Due</div>
+<div class="route_mobile_info_label">Amount Due Now</div>
 <div class="route_mobile_info_value">
 <field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected Amount</div>
+<div class="route_mobile_info_label">Collected</div>
 <div class="route_mobile_info_value">
 <field name="collected_amount" readonly="1" nolabel="1"/>
 </div>
@@ -774,15 +768,15 @@
 </div>
 </div>
 </div>
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales'">
+<div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales' or (not display_payment_ids and direct_stop_grand_due_amount == 0 and direct_stop_settlement_paid_amount == 0 and direct_stop_immediate_remaining_amount == 0 and not direct_stop_open_promise_amount)">
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Due</div>
+<div class="route_mobile_info_label">Amount Due Now</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected Amount</div>
+<div class="route_mobile_info_label">Collected</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
 </div>
@@ -801,13 +795,13 @@
 </div>
 </div>
 <div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
