@@ -5,34 +5,23 @@
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
 <field name="priority" eval="210"/>
 <field name="arch" type="xml">
-<xpath expr="//page[field[@name='notes']]" position="before">
+<xpath expr="//page[@string='Notes']" position="before">
 <page string="Documents" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<group string="Visit Documents" col="4">
+<group string="Visit Documents" col="2">
+<group>
 <field name="sale_order_id" readonly="1"/>
 <field name="sale_delivery_id" readonly="1"/>
+</group>
+<group>
 <field name="refill_picking_id" readonly="1"/>
 <field name="refill_backorder_id" readonly="1"/>
 </group>
-<group string="Transfer Summary" col="3">
-<group>
-<field name="sale_delivery_count" readonly="1"/>
-<field name="refill_picking_count" readonly="1"/>
 </group>
-<group>
-<field name="return_picking_count" readonly="1"/>
-<field name="summary_return_transfer_refs" readonly="1"/>
-</group>
-<group>
-<field name="summary_sale_order_ref" readonly="1"/>
-<field name="summary_refill_transfer_ref" readonly="1"/>
-</group>
-</group>
-<group string="Open Linked Documents" col="5">
+<group string="Open Linked Documents" col="4">
 <button name="action_ux_view_sale_order" string="Open Sale Order" type="object" class="btn-secondary" invisible="not ux_can_view_sale_order"/>
 <button name="action_view_sale_deliveries" string="Open Sales Delivery" type="object" class="btn-secondary" invisible="not sale_delivery_count"/>
 <button name="action_ux_view_refill_transfer" string="Open Refill Transfer" type="object" class="btn-secondary" invisible="not ux_can_view_refill_transfer"/>
 <button name="action_view_return_transfers" string="Open Return Transfers" type="object" class="btn-secondary" invisible="not return_picking_count"/>
-<button name="action_ux_open_pending_refill" string="Open Pending Refill" type="object" class="btn-secondary" invisible="not ux_can_open_pending_refill"/>
 </group>
 </page>
 </xpath>
@@ -44,8 +33,8 @@
 <field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
 <field name="priority" eval="210"/>
 <field name="arch" type="xml">
-<xpath expr="//notebook" position="inside">
-<page string="Documents" invisible="1">
+<xpath expr="//page[@string='Notes']" position="before">
+<page string="Documents" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="1">
 <group>
 <separator string="Documents are kept in supervisor view only in the current phase."/>
 </group>
