@@ -219,24 +219,6 @@ function isLoadingProposalPage() {
     );
 }
 
-function isRoutePlanPage() {
-    const title = normalizeText(findActionTitle());
-    const rootText = getRootText();
-    const pageText = getPageText();
-    return (
-        hasVisibleButton("action_open_pda_screen")
-        && (
-            title.startsWith("plan/")
-            || rootText.includes("plan information")
-            || rootText.includes("planning readiness")
-            || rootText.includes("planned visits")
-            || pageText.includes("plan information")
-            || pageText.includes("planning readiness")
-            || pageText.includes("planned visits")
-        )
-    );
-}
-
 function isOutletCenterPage() {
     return hasAnyVisibleButton(Array.from(OUTLET_WORKSPACE_ENTRY_BUTTONS));
 }
@@ -436,6 +418,22 @@ function isDailySummaryPage() {
         && hasVisibleButton("action_open_current_visit_statement_of_account");
 }
 
+function isRoutePlanPage() {
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const hasWorkspaceButton = hasVisibleButton("action_open_pda_screen");
+    const hasPlanSignals = (
+        title.startsWith("plan/")
+        || rootText.includes("plan information")
+        || rootText.includes("planning readiness")
+        || rootText.includes("planned visits")
+        || pageText.includes("route plan")
+        || pageText.includes("my daily plan")
+    );
+    return hasWorkspaceButton && hasPlanSignals;
+}
+
 function findRouteSalesAppTile() {
     const candidates = Array.from(document.querySelectorAll("a, button, .o_app, .o_app_switcher_item"));
     return candidates.find((element) => {
@@ -461,9 +459,6 @@ function detectPageKind() {
 
     if (isRouteWorkspacePage()) {
         return "workspace";
-    }
-    if (isRoutePlanPage()) {
-        return "route_plan";
     }
     if (isProductCenterPage()) {
         return "product_center";
@@ -503,6 +498,9 @@ function detectPageKind() {
     }
     if (isDailySummaryPage()) {
         return "daily_summary";
+    }
+    if (isRoutePlanPage()) {
+        return "route_plan";
     }
     if (isLoadingProposalPage()) {
         return "loading_proposal";
@@ -840,13 +838,6 @@ function navigateBackToOutletForm() {
     }, 1200);
 }
 
-function navigateBackToWorkspace() {
-    if (openServerButton("action_open_pda_screen")) {
-        return;
-    }
-    navigateViaWorkspace("action_open_pda_screen");
-}
-
 function navigateBackToRoutePlan() {
     if (openServerButton("action_open_route_plan")) {
         return;
@@ -856,6 +847,17 @@ function navigateBackToRoutePlan() {
     window.setTimeout(() => {
         isInternalRedirect = false;
     }, 900);
+}
+
+function navigateBackToRouteWorkspace() {
+    if (openServerButton("action_open_pda_screen")) {
+        return;
+    }
+    const workspaceTarget = getWorkspaceTarget();
+    if (navigateToStoredTarget(workspaceTarget)) {
+        return;
+    }
+    navigateViaWorkspace("action_open_pda_screen");
 }
 
 function maybeRunPendingFromAppsHome() {
@@ -1041,20 +1043,20 @@ function getDesktopBackHost() {
 }
 
 function getBackConfig(pageKind) {
+    if (pageKind === "route_plan") {
+        return {
+            label: "Back to Route Workspace",
+            href: "",
+            onClick: navigateBackToRouteWorkspace,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
     if (pageKind === "loading_proposal") {
         return {
             label: "Back to Route Plan",
             href: "",
             onClick: navigateBackToRoutePlan,
-            interceptBrowser: true,
-            interceptMobileHeader: true,
-        };
-    }
-    if (pageKind === "route_plan") {
-        return {
-            label: "Back to Route Workspace",
-            href: getWorkspaceHref(),
-            onClick: navigateBackToWorkspace,
             interceptBrowser: true,
             interceptMobileHeader: true,
         };
@@ -1327,6 +1329,14 @@ function refreshNavigationUi() {
     ensureBrowserGuard(pageKind);
 }
 
+function safeRefreshNavigationUi() {
+    try {
+        safeRefreshNavigationUi();
+    } catch (error) {
+        console.error("route_core navigation guard failed", error);
+    }
+}
+
 function bootRouteWorkspaceNavigationGuard() {
     if (observerStarted || !document.body) {
         return;
@@ -1337,7 +1347,7 @@ function bootRouteWorkspaceNavigationGuard() {
     let refreshTimer = null;
     const scheduleRefresh = () => {
         window.clearTimeout(refreshTimer);
-        refreshTimer = window.setTimeout(refreshNavigationUi, 80);
+        refreshTimer = window.setTimeout(safeRefreshNavigationUi, 80);
     };
 
     const observer = new MutationObserver(scheduleRefresh);
@@ -1348,16 +1358,52 @@ function bootRouteWorkspaceNavigationGuard() {
         attributeFilter: ["class", "style"],
     });
 
-    document.addEventListener("pointerdown", interceptMobileHeaderBack, true);
-    document.addEventListener("touchstart", interceptMobileHeaderBack, { capture: true, passive: false });
-    document.addEventListener("click", interceptMobileHeaderBack, true);
-    document.addEventListener("click", interceptBreadcrumbBack, true);
-    document.addEventListener("click", rememberOriginFromClick, true);
+    document.addEventListener("pointerdown", (event) => {
+        try {
+            interceptMobileHeaderBack(event);
+        } catch (error) {
+            console.error("route_core mobile header back failed", error);
+        }
+    }, true);
+    document.addEventListener("touchstart", (event) => {
+        try {
+            interceptMobileHeaderBack(event);
+        } catch (error) {
+            console.error("route_core touch back failed", error);
+        }
+    }, { capture: true, passive: false });
+    document.addEventListener("click", (event) => {
+        try {
+            interceptMobileHeaderBack(event);
+        } catch (error) {
+            console.error("route_core click back failed", error);
+        }
+    }, true);
+    document.addEventListener("click", (event) => {
+        try {
+            interceptBreadcrumbBack(event);
+        } catch (error) {
+            console.error("route_core breadcrumb back failed", error);
+        }
+    }, true);
+    document.addEventListener("click", (event) => {
+        try {
+            rememberOriginFromClick(event);
+        } catch (error) {
+            console.error("route_core remember origin failed", error);
+        }
+    }, true);
     document.addEventListener("click", scheduleRefresh, true);
     window.addEventListener("hashchange", scheduleRefresh);
-    window.addEventListener("popstate", handleBrowserBack);
+    window.addEventListener("popstate", () => {
+        try {
+            handleBrowserBack();
+        } catch (error) {
+            console.error("route_core browser back failed", error);
+        }
+    });
 
-    refreshNavigationUi();
+    safeRefreshNavigationUi();
 }
 
 if (document.readyState === "loading") {
