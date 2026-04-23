@@ -1407,9 +1407,15 @@ class RouteVisit(models.Model):
         if not value:
             return "-"
         try:
-            return format_datetime(self.env, value)
+            dt_value = fields.Datetime.to_datetime(value)
+            dt_local = fields.Datetime.context_timestamp(self, dt_value)
+            formatted = dt_local.strftime("%b %d, %I:%M %p")
+            return formatted.replace(" 0", " ").lstrip("0")
         except Exception:
-            return fields.Datetime.to_string(value)
+            try:
+                return format_datetime(self.env, value)
+            except Exception:
+                return fields.Datetime.to_string(value)
 
     def _format_route_payment_date(self, value):
         self.ensure_one()
@@ -1439,7 +1445,7 @@ class RouteVisit(models.Model):
             promise_status_label = promise_status_map.get(payment.promise_status, payment.promise_status or "")
             state_label = state_map.get(payment.state, payment.state or "")
             promise_amount = getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0
-            title = _("%s Payment") % mode_label if mode_label else _("Payment")
+            title = mode_label or _("Payment")
             if payment.source_document_ref and payment.source_document_ref not in filter(None, [self.name, payment.settlement_document_ref]):
                 title = payment.source_document_ref
 
@@ -1585,7 +1591,7 @@ class RouteVisit(models.Model):
             payments = rec.display_payment_ids
             rec.display_payment_cards_html = rec._build_payment_cards_html(
                 payments,
-                empty_message=_("<div class='alert alert-info mb-0'>No payments are available yet for this visit.</div>"),
+                empty_message=_("<div class='route_pda_payment_empty'>No payments are available yet for this visit.</div>"),
                 show_source=False,
                 show_settlement=False,
                 show_notes=True,
