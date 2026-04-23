@@ -464,6 +464,52 @@
     font-weight: 700;
 }
 
+.route_pda_visit_title_row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.route_pda_visit_status_badges {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.route_pda_visit_badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.route_pda_visit_badge_done {
+    background: #22c55e;
+    color: #ffffff;
+}
+
+.route_pda_visit_badge_in_progress {
+    background: #f59e0b;
+    color: #111827;
+}
+
+.route_pda_visit_badge_pending {
+    background: #06b6d4;
+    color: #ffffff;
+}
+
+.route_pda_group_title_inline {
+    margin-bottom: 10px;
+}
+
 
 .route_pda_info_hint_inline {
     margin-top: 8px;
@@ -2239,5 +2285,4 @@
         font-size: 0.88rem;
     }
 }
-
 
