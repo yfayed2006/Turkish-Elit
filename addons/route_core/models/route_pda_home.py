@@ -5,6 +5,8 @@ import pytz
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+from .route_schedule_common import compute_week_start_date
+
 
 
 class RoutePdaHome(models.TransientModel):
@@ -335,12 +337,46 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         user = user or self.env.user
         today = fields.Date.context_today(self)
-        return self.env["route.weekly.schedule"].search([
+        week_start_date = compute_week_start_date(
+            today,
+            week_start_day=(user.company_id.route_week_start_day or self.env.company.route_week_start_day or "monday"),
+        )
+
+        Plan = self.env["route.plan"]
+        today_plan = Plan.search([
             ("user_id", "=", user.id),
-            ("week_start_date", "<=", today),
-            ("week_end_date", ">=", today),
+            ("date", "=", today),
+            ("weekly_schedule_id", "!=", False),
+            ("state", "!=", "cancel"),
+        ], order="planning_finalized desc, id desc", limit=1)
+        if today_plan and today_plan.weekly_schedule_id and today_plan.weekly_schedule_id.state != "cancelled":
+            return today_plan.weekly_schedule_id
+
+        week_plan = Plan.search([
+            ("user_id", "=", user.id),
+            ("date", ">=", week_start_date),
+            ("date", "<=", fields.Date.add(week_start_date, days=6)),
+            ("weekly_schedule_id", "!=", False),
+            ("state", "!=", "cancel"),
+        ], order="date asc, planning_finalized desc, id desc", limit=1)
+        if week_plan and week_plan.weekly_schedule_id and week_plan.weekly_schedule_id.state != "cancelled":
+            return week_plan.weekly_schedule_id
+
+        schedules = self.env["route.weekly.schedule"].search([
+            ("user_id", "=", user.id),
+            ("week_start_date", "=", week_start_date),
             ("state", "!=", "cancelled"),
-        ], order="week_start_date desc, id desc", limit=1)
+        ], order="id desc")
+        if schedules:
+            preferred = schedules.filtered(lambda s: s.state == "plans_generated" and s.generated_plan_count)
+            if preferred:
+                return preferred[:1]
+            populated = schedules.filtered(lambda s: s.line_count)
+            if populated:
+                return populated[:1]
+            return schedules[:1]
+
+        return self.env["route.weekly.schedule"]
 
     def _prepare_action(self, xmlid, name=None, domain=None, context=None):
         action = self.env.ref(xmlid).read()[0]
