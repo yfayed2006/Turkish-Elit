@@ -11,6 +11,11 @@ class StockPicking(models.Model):
         copy=False,
         ondelete="set null",
     )
+    route_return_to_finish_summary = fields.Boolean(
+        string="Return To Visit Finish Summary",
+        copy=False,
+        default=False,
+    )
 
     def _get_related_consignment_outlets_for_balance_sync(self):
         self.ensure_one()
@@ -55,12 +60,43 @@ class StockPicking(models.Model):
             "target": "self",
         }
 
+    def _get_route_visit_finish_return_action(self):
+        self.ensure_one()
+        if not self.route_return_to_finish_summary:
+            return False
+
+        visit = self.route_visit_id.exists()
+        self.route_return_to_finish_summary = False
+        if not visit:
+            return False
+
+        if visit.state == "in_progress":
+            finish_result = visit.action_end_visit()
+            if isinstance(finish_result, dict):
+                return finish_result
+
+        if visit.state == "done" and hasattr(visit, "_get_route_visit_finish_summary_action"):
+            return visit._get_route_visit_finish_summary_action()
+
+        if hasattr(visit, "_get_pda_form_action"):
+            return visit._get_pda_form_action()
+        return False
+
+    def _post_validate_route_visit_action(self):
+        done_pickings = self.filtered(lambda p: p.state == "done")
+        done_pickings._sync_related_consignment_outlet_balances()
+        for picking in done_pickings:
+            action = picking._get_route_visit_finish_return_action()
+            if action:
+                return action
+        return False
+
     def button_validate(self):
         result = super().button_validate()
-        self.filtered(lambda p: p.state == "done")._sync_related_consignment_outlet_balances()
-        return result
+        followup_action = self._post_validate_route_visit_action()
+        return followup_action or result
 
     def action_done(self):
         result = super().action_done()
-        self.filtered(lambda p: p.state == "done")._sync_related_consignment_outlet_balances()
-        return result
+        followup_action = self._post_validate_route_visit_action()
+        return followup_action or result
