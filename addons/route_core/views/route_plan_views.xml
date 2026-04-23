@@ -565,7 +565,7 @@ pending visit(s) were found for this planning area.
 <field name="res_model">route.plan</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="view_route_plan_search"/>
-<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1}</field>
+<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1, 'form_view_initial_mode': 'edit'}</field>
 </record>
 <menuitem id="menu_route_plan" name="Route Plans" parent="menu_route_visit_root" action="action_route_plan" sequence="20"/>
 </odoo>
