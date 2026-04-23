@@ -58,6 +58,7 @@
 <notebook>
 <page string="Overview">
 <group string="Planning Setup" col="2" invisible="planning_finalized">
+<separator string="Choose the planning date, salesperson, vehicle, and warehouse before finalizing the plan." colspan="2"/>
 <group>
 <field name="date"/>
 <field name="user_id"/>
@@ -69,13 +70,13 @@
 </group>
 </group>
 <div class="route_mobile_summary_grid">
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Plan Date</div>
 <div class="route_mobile_info_value">
 <field name="date" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Vehicle</div>
 <div class="route_mobile_info_value">
 <field name="vehicle_id" readonly="1" nolabel="1"/>
@@ -87,7 +88,7 @@
 <field name="weekly_schedule_id" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Source Warehouse</div>
 <div class="route_mobile_info_value">
 <field name="source_warehouse_id" readonly="1" nolabel="1"/>
@@ -255,7 +256,7 @@ pending visit(s) were found for this planning area.
 <field name="date" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Salesperson</div>
 <div class="route_mobile_info_value">
 <field name="user_id" readonly="1" nolabel="1"/>
