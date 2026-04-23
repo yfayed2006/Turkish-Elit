@@ -219,6 +219,24 @@ function isLoadingProposalPage() {
     );
 }
 
+function isRoutePlanPage() {
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    return (
+        hasVisibleButton("action_open_pda_screen")
+        && (
+            title.startsWith("plan/")
+            || rootText.includes("plan information")
+            || rootText.includes("planning readiness")
+            || rootText.includes("planned visits")
+            || pageText.includes("plan information")
+            || pageText.includes("planning readiness")
+            || pageText.includes("planned visits")
+        )
+    );
+}
+
 function isOutletCenterPage() {
     return hasAnyVisibleButton(Array.from(OUTLET_WORKSPACE_ENTRY_BUTTONS));
 }
@@ -443,6 +461,9 @@ function detectPageKind() {
 
     if (isRouteWorkspacePage()) {
         return "workspace";
+    }
+    if (isRoutePlanPage()) {
+        return "route_plan";
     }
     if (isProductCenterPage()) {
         return "product_center";
@@ -819,6 +840,13 @@ function navigateBackToOutletForm() {
     }, 1200);
 }
 
+function navigateBackToWorkspace() {
+    if (openServerButton("action_open_pda_screen")) {
+        return;
+    }
+    navigateViaWorkspace("action_open_pda_screen");
+}
+
 function navigateBackToRoutePlan() {
     if (openServerButton("action_open_route_plan")) {
         return;
@@ -1018,6 +1046,15 @@ function getBackConfig(pageKind) {
             label: "Back to Route Plan",
             href: "",
             onClick: navigateBackToRoutePlan,
+            interceptBrowser: true,
+            interceptMobileHeader: true,
+        };
+    }
+    if (pageKind === "route_plan") {
+        return {
+            label: "Back to Route Workspace",
+            href: getWorkspaceHref(),
+            onClick: navigateBackToWorkspace,
             interceptBrowser: true,
             interceptMobileHeader: true,
         };
@@ -1328,6 +1365,7 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
 
 
 
