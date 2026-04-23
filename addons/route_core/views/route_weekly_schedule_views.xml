@@ -188,6 +188,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -196,6 +197,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -257,6 +270,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -265,6 +279,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -326,6 +352,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -334,6 +361,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -395,6 +434,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -403,6 +443,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -464,6 +516,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -472,6 +525,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -533,6 +598,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -541,6 +607,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -602,6 +680,7 @@
 <field name="note"/>
 <field name="is_off_day"/>
 <field name="finalized_plan_skip"/>
+<field name="execution_status"/>
 <templates>
 <t t-name="card">
 <div class="route_mobile_visit_card">
@@ -610,6 +689,18 @@
 <field name="outlet_id"/>
 </div>
 <div class="route_mobile_visit_small_badges">
+<t t-if="record.execution_status.raw_value == 'done'">
+<span class="badge text-bg-success">Done</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'in_progress'">
+<span class="badge text-bg-warning">In Progress</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'pending'">
+<span class="badge text-bg-info">Pending</span>
+</t>
+<t t-if="record.execution_status.raw_value == 'skipped'">
+<span class="badge text-bg-secondary">Skipped</span>
+</t>
 <t t-if="record.is_off_day.raw_value">
 <span class="badge text-bg-warning">Off Day</span>
 </t>
@@ -1126,7 +1217,7 @@ OUT/
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--     Current Week filter removed to avoid XML parser issues on Odoo upgrade     -->
+<!--      Current Week filter removed to avoid XML parser issues on Odoo upgrade      -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
