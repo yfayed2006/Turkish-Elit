@@ -835,7 +835,21 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="line_count" readonly="1"/>
 </group>
 </group>
-<div class="route_mobile_summary_grid">
+<div class="route_mobile_summary_grid" invisible="state != 'draft'">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Scheduled Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Daily Plans</div>
+<div class="route_mobile_info_value">
+<field name="generated_plan_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_summary_grid" invisible="state == 'draft'">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Week Start</div>
 <div class="route_mobile_info_value">
@@ -885,7 +899,7 @@ day(s) were skipped during sync because finalized daily plans were already linke
 </div>
 </div>
 </div>
-<div class="route_mobile_detail_box" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state == 'draft' and template_id">
+<div class="route_mobile_detail_box" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not template_id">
 <div class="route_mobile_detail_label">Weekly Template</div>
 <div class="route_mobile_detail_value">
 <field name="template_id" readonly="state != 'draft'" nolabel="1" options="{'no_create': True}"/>
@@ -924,8 +938,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -942,8 +956,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -960,8 +974,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -978,8 +992,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -996,8 +1010,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -1014,8 +1028,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
@@ -1032,8 +1046,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="outlet_id" readonly="1"/>
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
-<field name="execution_status" readonly="1" widget="badge" string="Execution"/>
-<field name="generated_plan_id" readonly="1" optional="show"/>
+<field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
+<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
 <field name="note" string="Line Note" optional="show"/>
 </list>
 </field>
