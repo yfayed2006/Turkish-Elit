@@ -81,5 +81,3 @@
     "application": True,
 }
 
-
-
