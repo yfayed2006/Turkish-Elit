@@ -11,6 +11,17 @@ from odoo.exceptions import UserError, ValidationError
 
 _MAX_DATE = pydate(9999, 12, 31)
 
+LOADING_RESULT_SELECTION = [
+    ("draft_transfer_planned", "Transfer Planned"),
+    ("draft_no_transfer_needed", "No Transfer Needed"),
+    ("draft_manual_review", "Manual Review Needed"),
+    ("approved_transfer_created", "Transfer Created"),
+    ("approved_transfer_partial", "Transfer Created + Review Needed"),
+    ("approved_no_transfer_needed", "No Transfer Needed"),
+    ("approved_manual_review", "Manual Review Needed"),
+    ("cancelled", "Cancelled"),
+]
+
 
 def _is_discrete_uom(product):
     uom = getattr(product, "uom_id", False)
@@ -221,14 +232,15 @@ class RouteLoadingProposal(models.Model):
         compute="_compute_transfer_count",
         store=False,
     )
-    approval_action_mode = fields.Selection(
-        [
-            ("create_transfer", "Create Transfer"),
-            ("approve_without_transfer", "Approve Without Transfer"),
-            ("approve_without_transfer_uncovered", "Approve With Uncovered Demand"),
-        ],
-        string="Approval Action Mode",
-        compute="_compute_approval_action_mode",
+    loading_result_state = fields.Selection(
+        LOADING_RESULT_SELECTION,
+        string="Loading Result",
+        compute="_compute_loading_result",
+        store=False,
+    )
+    loading_result_message = fields.Char(
+        string="Loading Result Message",
+        compute="_compute_loading_result",
         store=False,
     )
 
@@ -267,24 +279,69 @@ class RouteLoadingProposal(models.Model):
         for rec in self:
             rec.transfer_count = 1 if rec.picking_id else 0
 
-
     @api.depends(
-        "line_ids",
-        "line_ids.approved_qty",
-        "line_ids.suggested_load_qty",
-        "line_ids.uncovered_qty",
         "state",
+        "picking_id",
+        "total_uncovered_qty",
+        "total_approved_qty",
+        "total_suggested_qty",
     )
-    def _compute_approval_action_mode(self):
+    def _compute_loading_result(self):
         for rec in self:
-            approved_qty = sum(rec.line_ids.mapped("approved_qty"))
-            uncovered_qty = sum(rec.line_ids.mapped("uncovered_qty"))
-            if approved_qty > 0:
-                rec.approval_action_mode = "create_transfer"
-            elif uncovered_qty > 0:
-                rec.approval_action_mode = "approve_without_transfer_uncovered"
+            uncovered_exists = (rec.total_uncovered_qty or 0.0) > 1e-9
+            approved_exists = (rec.total_approved_qty or 0.0) > 1e-9
+
+            if rec.state == "cancelled":
+                rec.loading_result_state = "cancelled"
+                rec.loading_result_message = _("This loading proposal was cancelled.")
+                continue
+
+            if rec.state == "draft":
+                if approved_exists:
+                    rec.loading_result_state = "draft_transfer_planned"
+                    if uncovered_exists:
+                        rec.loading_result_message = _(
+                            "This proposal can create a partial transfer, but uncovered demand will still remain for manual review."
+                        )
+                    else:
+                        rec.loading_result_message = _(
+                            "Review the suggested quantities, adjust approved quantities if needed, then approve to create the internal transfer."
+                        )
+                elif uncovered_exists:
+                    rec.loading_result_state = "draft_manual_review"
+                    rec.loading_result_message = _(
+                        "No executable transfer can be created right now. Review uncovered items or replenish the source stock first."
+                    )
+                else:
+                    rec.loading_result_state = "draft_no_transfer_needed"
+                    rec.loading_result_message = _(
+                        "Vehicle stock already covers the planned demand. No transfer is required for this route plan."
+                    )
+                continue
+
+            if rec.picking_id:
+                if uncovered_exists:
+                    rec.loading_result_state = "approved_transfer_partial"
+                    rec.loading_result_message = _(
+                        "The internal transfer has been created, but uncovered demand still remains and should be reviewed manually."
+                    )
+                else:
+                    rec.loading_result_state = "approved_transfer_created"
+                    rec.loading_result_message = _(
+                        "The internal transfer has been created from this approved loading proposal."
+                    )
+                continue
+
+            if uncovered_exists:
+                rec.loading_result_state = "approved_manual_review"
+                rec.loading_result_message = _(
+                    "This proposal was approved without a transfer. Uncovered demand still remains and should be reviewed manually."
+                )
             else:
-                rec.approval_action_mode = "approve_without_transfer"
+                rec.loading_result_state = "approved_no_transfer_needed"
+                rec.loading_result_message = _(
+                    "This proposal was approved with no transfer because the vehicle already covers the planned demand."
+                )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1186,6 +1243,22 @@ class RoutePlan(models.Model):
         compute="_compute_loading_proposal_stats",
         store=False,
     )
+    loading_result_state = fields.Selection(
+        LOADING_RESULT_SELECTION,
+        string="Loading Result",
+        compute="_compute_loading_proposal_stats",
+        store=False,
+    )
+    loading_result_message = fields.Char(
+        string="Loading Result Message",
+        compute="_compute_loading_proposal_stats",
+        store=False,
+    )
+    loading_total_uncovered_qty = fields.Float(
+        string="Uncovered Demand Qty",
+        compute="_compute_loading_proposal_stats",
+        store=False,
+    )
 
     loading_workflow_mode = fields.Selection(
         [
@@ -1241,8 +1314,12 @@ class RoutePlan(models.Model):
                 grouped.setdefault(proposal.plan_id.id, []).append(proposal)
         for rec in self:
             proposals = grouped.get(rec.id, [])
+            active_proposal = proposals[0] if proposals else False
             rec.loading_proposal_count = len(proposals)
-            rec.loading_proposal_state = proposals[0].state if proposals else False
+            rec.loading_proposal_state = active_proposal.state if active_proposal else False
+            rec.loading_result_state = active_proposal.loading_result_state if active_proposal else False
+            rec.loading_result_message = active_proposal.loading_result_message if active_proposal else False
+            rec.loading_total_uncovered_qty = active_proposal.total_uncovered_qty if active_proposal else 0.0
 
     def _get_active_loading_proposal(self):
         self.ensure_one()
