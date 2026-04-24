@@ -5,20 +5,20 @@
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
 <list string="Weekly Schedules">
-<field name="name" string="Schedule Reference"/>
-<field name="week_start_date" readonly="state != 'draft'"/>
-<field name="week_end_date"/>
+<field name="name" string="Schedule"/>
+<field name="week_start_date" string="Start" readonly="state != 'draft'"/>
+<field name="week_end_date" string="End"/>
 <field name="user_id" readonly="state != 'draft'"/>
 <field name="vehicle_id" readonly="state != 'draft'"/>
-<field name="source_warehouse_id" optional="show"/>
-<field name="template_id" string="Weekly Template" optional="show"/>
+<field name="source_warehouse_id" string="Warehouse" optional="show"/>
+<field name="template_id" string="Template" optional="show"/>
 <field name="line_count" string="Stops"/>
-<field name="generated_plan_count" string="Daily Plans"/>
-<field name="skipped_finalized_plan_count" string="Skipped Finalized Days" optional="show"/>
+<field name="generated_plan_count" string="Plans"/>
+<field name="skipped_finalized_plan_count" string="Skipped Days" optional="show"/>
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="display_state" string="Workflow Status" widget="badge" decoration-info="display_state in ('draft', 'plans_generated')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
+<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state in ('draft', 'plans_generated')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
 </list>
 </field>
 </record>
@@ -27,11 +27,11 @@
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
 <list string="My Weekly Schedule" create="0" edit="0" delete="0">
-<field name="week_start_date"/>
-<field name="week_end_date"/>
+<field name="week_start_date" string="Start"/>
+<field name="week_end_date" string="End"/>
 <field name="vehicle_id"/>
 <field name="line_count" string="Stops"/>
-<field name="generated_plan_count" string="Daily Plans"/>
+<field name="generated_plan_count" string="Plans"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'plans_generated')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
 </list>
@@ -44,7 +44,7 @@
 <kanban string="My Weekly Schedule" class="o_kanban_mobile route_mobile_schedule_kanban" create="0" edit="0" delete="0">
 <field name="name"/>
 <field name="week_start_date"/>
-<field name="week_end_date"/>
+<field name="week_end_date" string="End"/>
 <field name="vehicle_id"/>
 <field name="line_count"/>
 <field name="generated_plan_count"/>
@@ -71,7 +71,7 @@
 <div class="route_mobile_visit_meta_item">
 <div class="route_mobile_visit_meta_label">Week End</div>
 <div class="route_mobile_visit_meta_value">
-<field name="week_end_date"/>
+<field name="week_end_date" string="End"/>
 </div>
 </div>
 <div class="route_mobile_visit_meta_item">
@@ -977,9 +977,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -995,9 +995,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1013,9 +1013,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1031,9 +1031,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1049,9 +1049,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1067,9 +1067,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1085,9 +1085,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <list create="0" delete="1" decoration-warning="is_off_day" decoration-muted="finalized_plan_skip">
 <field name="visit_date" readonly="1"/>
 <field name="city_id" readonly="1" optional="show"/>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="partner_id" readonly="1" optional="show"/>
+<field name="area_id" readonly="1" options="{'no_open': True}"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="partner_id" readonly="1" optional="show" options="{'no_open': True}"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
 <field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
@@ -1114,7 +1114,7 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <sheet class="route_mobile_compact_sheet">
 <div class="oe_title route_mobile_header_title">
 <h1>
-<field name="outlet_id" readonly="1"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
 </h1>
 </div>
 <notebook>
@@ -1301,7 +1301,7 @@ OUT/
 <field name="arch" type="xml">
 <search>
 <field name="name" string="Schedule Reference"/>
-<field name="week_start_date" readonly="state != 'draft'"/>
+<field name="week_start_date" string="Start" readonly="state != 'draft'"/>
 <field name="user_id" readonly="state != 'draft'"/>
 <field name="vehicle_id" readonly="state != 'draft'"/>
 <field name="template_id"/>
@@ -1329,7 +1329,7 @@ OUT/
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--           Current Week filter removed to avoid XML parser issues on Odoo upgrade           -->
+<!--            Current Week filter removed to avoid XML parser issues on Odoo upgrade            -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
