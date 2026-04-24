@@ -5,20 +5,20 @@
 <field name="model">route.weekly.schedule</field>
 <field name="arch" type="xml">
 <list string="Weekly Schedules">
-<field name="name" string="Schedule Reference"/>
-<field name="week_start_date" readonly="state != 'draft'"/>
-<field name="week_end_date"/>
-<field name="user_id" readonly="state != 'draft'"/>
-<field name="vehicle_id" readonly="state != 'draft'"/>
-<field name="source_warehouse_id" optional="show"/>
-<field name="template_id" string="Weekly Template" optional="show"/>
+<field name="name" string="Schedule"/>
+<field name="week_start_date" string="Week Start" readonly="state != 'draft'"/>
+<field name="week_end_date" string="Week End"/>
+<field name="user_id" string="Salesperson" readonly="state != 'draft'"/>
+<field name="vehicle_id" string="Vehicle" readonly="state != 'draft'"/>
 <field name="line_count" string="Stops"/>
 <field name="generated_plan_count" string="Daily Plans"/>
-<field name="skipped_finalized_plan_count" string="Skipped Finalized Days" optional="show"/>
-<field name="city_summary" string="Cities" optional="show"/>
-<field name="area_summary" string="Areas" optional="show"/>
-<field name="outlet_summary" string="Outlets"/>
-<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'plans_generated'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
+<field name="source_warehouse_id" string="Source Warehouse" optional="hide"/>
+<field name="template_id" string="Weekly Template" optional="hide"/>
+<field name="skipped_finalized_plan_count" string="Protected Days" optional="show"/>
+<field name="city_summary" string="Cities" optional="hide"/>
+<field name="area_summary" string="Areas" optional="hide"/>
+<field name="outlet_summary" string="Planned Outlets" optional="hide"/>
+<field name="display_state" string="Status" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'plans_generated'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
 </list>
 </field>
 </record>
@@ -788,21 +788,21 @@
 <field name="arch" type="xml">
 <form string="Weekly Schedule">
 <header>
-<button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'draft'"/>
+<button name="action_generate_daily_plans" type="object" string="Generate Daily Plans" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not id or state != 'draft'"/>
 <button name="action_open_daily_plans" type="object" string="Open Daily Plans" class="btn-secondary" invisible="generated_plan_count == 0"/>
-<button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state == 'cancelled'"/>
-<button name="action_open_template" type="object" string="Open Weekly Template" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'plans_generated'"/>
-<button name="action_cancel_schedule" type="object" string="Cancel" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state == 'cancelled'"/>
+<button name="action_copy_to_next_week" type="object" string="Copy to Next Week" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not id or state == 'cancelled'"/>
+<button name="action_open_template" type="object" string="Open Weekly Template" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not id or not template_id"/>
+<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not id or state != 'plans_generated'"/>
+<button name="action_cancel_schedule" type="object" string="Cancel" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not id or state == 'cancelled'"/>
 </header>
 <sheet class="route_mobile_compact_sheet">
 <div class="oe_button_box" name="button_box">
-<button name="action_open_template" type="object" class="oe_stat_button" icon="fa-copy" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<button name="action_open_template" type="object" class="oe_stat_button" icon="fa-copy" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not template_id">
 <div class="o_stat_info">
 <span class="o_stat_text">Weekly Template</span>
 </div>
 </button>
-<button name="action_open_daily_plans" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
+<button name="action_open_daily_plans" type="object" class="oe_stat_button" icon="fa-calendar-check-o" invisible="generated_plan_count == 0">
 <field name="generated_plan_count" string="Daily Plans" widget="statinfo"/>
 </button>
 </div>
@@ -814,15 +814,16 @@
 <field name="display_state" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'plans_generated'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert" invisible="display_state != 'draft'">Review this weekly schedule, adjust the planned stops, then generate daily plans when the week is ready for execution.</div>
-<div class="alert alert-success" role="alert" invisible="display_state != 'plans_generated'">This weekly schedule is ready. Use Open Daily Plans to monitor the generated route days.</div>
-<div class="alert alert-warning" role="alert" invisible="display_state != 'in_progress'">This weekly schedule is in progress. Continue from Daily Route Plans to monitor the week.</div>
-<div class="alert alert-success" role="alert" invisible="display_state != 'done'">This weekly schedule is done. All linked daily plans are completed.</div>
-<div class="alert alert-warning" role="alert" invisible="skipped_finalized_plan_count == 0">
+<div class="alert alert-info" role="alert" invisible="id">Complete the week setup and save, then add stops or generate daily plans.</div>
+<div class="alert alert-warning" role="alert" invisible="not id or skipped_finalized_plan_count == 0">
 <strong>Protected finalized days:</strong>
 <field name="skipped_finalized_plan_count" class="oe_inline" readonly="1"/>
 day(s) were skipped during sync because finalized daily plans were already linked.
 </div>
+<div class="alert alert-info" role="alert" invisible="not id or display_state != 'draft' or skipped_finalized_plan_count != 0">Review stops, then generate daily plans when the week is ready.</div>
+<div class="alert alert-success" role="alert" invisible="not id or display_state != 'plans_generated' or skipped_finalized_plan_count != 0">This weekly schedule is ready. Use Open Daily Plans to monitor route days.</div>
+<div class="alert alert-warning" role="alert" invisible="not id or display_state != 'in_progress' or skipped_finalized_plan_count != 0">This weekly schedule is in progress. Continue from Daily Route Plans.</div>
+<div class="alert alert-success" role="alert" invisible="not id or display_state != 'done' or skipped_finalized_plan_count != 0">This weekly schedule is done. All linked daily plans are completed.</div>
 <notebook>
 <page string="Overview">
 <group string="Planning Setup" col="2" invisible="state != 'draft'" groups="route_core.group_route_supervisor,route_core.group_route_management">
@@ -839,8 +840,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="line_count" readonly="1"/>
 </group>
 </group>
-<div class="alert alert-info" role="alert" invisible="state != 'draft'"> This weekly schedule is still editable. Adjust weekdays, outlets, and route balance before generating daily plans. </div>
-<div class="route_mobile_summary_grid" invisible="state != 'draft'">
+<div class="alert alert-info" role="alert" invisible="not id or state != 'draft'">This weekly schedule is editable. Adjust stops before generating daily plans.</div>
+<div class="route_mobile_summary_grid" invisible="not id or state != 'draft'">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Scheduled Stops</div>
 <div class="route_mobile_info_value">
@@ -965,9 +966,9 @@ day(s) were skipped during sync because finalized daily plans were already linke
 </div>
 </div>
 </page>
-<page string="Weekly Stops">
-<div class="alert alert-info" role="alert" invisible="state != 'draft'"> Add or adjust weekday stops here before you generate daily plans. Use Add Stop for day-specific planning and keep each outlet only once per weekday. </div>
-<div class="alert alert-info" role="alert" invisible="state == 'draft'"> This stop list is now review-only. Use the daily plans for date-level execution follow-up. </div>
+<page string="Weekly Stops" invisible="not id">
+<div class="alert alert-info" role="alert" invisible="state != 'draft'">Add or adjust weekday stops before generating daily plans. Keep each outlet only once per weekday.</div>
+<div class="alert alert-info" role="alert" invisible="state == 'draft'">This stop list is review-only. Use Daily Plans for date-level execution follow-up.</div>
 <notebook>
 <page string="Monday">
 <div class="mb-2">
@@ -1331,7 +1332,7 @@ OUT/
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="display_state" string="Workflow"/>
-<!--            Current Week filter removed to avoid XML parser issues on Odoo upgrade            -->
+<!--             Current Week filter removed to avoid XML parser issues on Odoo upgrade             -->
 <filter name="filter_ready" string="Ready" domain="[('display_state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Draft" domain="[('display_state', '=', 'draft')]"/>
 <filter name="filter_in_progress" string="In Progress" domain="[('display_state', '=', 'in_progress')]"/>
