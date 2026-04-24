@@ -4,18 +4,20 @@
 <field name="model">route.loading.proposal</field>
 <field name="arch" type="xml">
 <list string="Vehicle Loading Proposals">
-<field name="name"/>
-<field name="plan_id"/>
-<field name="plan_date"/>
-<field name="vehicle_id"/>
-<field name="planned_outlet_count"/>
-<field name="product_count"/>
-<field name="total_required_qty" string="Required Qty"/>
-<field name="total_vehicle_balance_qty" optional="show"/>
-<field name="total_suggested_qty" string="Suggested Load Qty"/>
-<field name="total_approved_qty" string="Approved Qty"/>
-<field name="state" string="Workflow" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'cancelled'"/>
-<field name="transfer_state" widget="badge" optional="show"/>
+<field name="name" string="Proposal"/>
+<field name="plan_id" string="Daily Plan"/>
+<field name="plan_date" string="Plan Date"/>
+<field name="vehicle_id" string="Vehicle"/>
+<field name="planned_outlet_count" string="Outlets"/>
+<field name="product_count" string="Products"/>
+<field name="total_required_qty" string="Required"/>
+<field name="total_vehicle_balance_qty" string="Vehicle Stock" optional="hide"/>
+<field name="total_suggested_qty" string="Suggested Load"/>
+<field name="total_approved_qty" string="Approved Load"/>
+<field name="total_uncovered_qty" string="Uncovered" optional="show"/>
+<field name="loading_result_state" string="Loading Result" widget="badge" optional="show" decoration-info="loading_result_state == 'draft_transfer_planned'" decoration-warning="loading_result_state in ['draft_manual_review', 'approved_transfer_partial', 'approved_manual_review']" decoration-success="loading_result_state in ['draft_no_transfer_needed', 'approved_transfer_created', 'approved_no_transfer_needed']" decoration-danger="loading_result_state == 'cancelled'"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'cancelled'"/>
+<field name="transfer_state" string="Transfer" widget="badge" optional="show"/>
 </list>
 </field>
 </record>
@@ -25,24 +27,24 @@
 <field name="arch" type="xml">
 <form string="Vehicle Loading Proposal">
 <header>
-<button name="action_refresh_from_plan" type="object" string="Refresh from Final Plan" class="btn-secondary" invisible="state != 'draft'"/>
-<button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
+<button name="action_refresh_from_plan" type="object" string="Refresh from Daily Plan" class="btn-secondary" invisible="state != 'draft'"/>
+<button name="action_open_vehicle_stock_snapshot" type="object" string="Vehicle Stock" class="btn-secondary" invisible="not vehicle_id"/>
 <button name="action_approve" type="object" string="Approve and Create Transfer" class="btn-primary" invisible="state != 'draft' or total_suggested_qty == 0"/>
-<button name="action_approve" type="object" string="Approve Without Transfer" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty != 0"/>
-<button name="action_approve" type="object" string="Approve with Uncovered Demand" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty == 0"/>
+<button name="action_approve" type="object" string="Approve - No Transfer Needed" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty != 0"/>
+<button name="action_approve" type="object" string="Approve - Manual Review" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty == 0"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state == 'draft'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_route_plan" type="object" class="oe_stat_button" icon="fa-road">
-<span class="o_stat_text">Route Plan</span>
+<span class="o_stat_text">Daily Plan</span>
 </button>
 <button name="action_view_transfer" type="object" class="oe_stat_button" icon="fa-exchange" invisible="transfer_count == 0">
 <field name="transfer_count" string="Internal Transfer" widget="statinfo"/>
 </button>
 <button name="action_open_vehicle_stock_snapshot" type="object" class="oe_stat_button" icon="fa-cubes" invisible="not vehicle_id">
-<span class="o_stat_text">Vehicle Stock Snapshot</span>
+<span class="o_stat_text">Vehicle Stock</span>
 </button>
 </div>
 <div class="oe_title">
@@ -59,7 +61,7 @@
 <div class="alert alert-success" role="alert" invisible="state != 'approved' or transfer_count == 0"> The internal transfer has been created from this approved loading proposal. </div>
 <div class="alert alert-success" role="alert" invisible="state != 'approved' or transfer_count != 0 or total_approved_qty != 0 or total_uncovered_qty != 0"> This proposal was approved with no transfer because the vehicle already covers the planned demand. </div>
 <div class="alert alert-warning" role="alert" invisible="state != 'approved' or transfer_count != 0 or total_approved_qty != 0 or total_uncovered_qty == 0"> This proposal was approved without a transfer. Uncovered demand still remains and should be reviewed manually. </div>
-<group string="Proposal Information" col="2">
+<group string="Plan and Transfer" col="2">
 <group>
 <field name="plan_id" readonly="1"/>
 <field name="plan_date" readonly="1"/>
@@ -76,7 +78,7 @@
 <field name="transfer_state" string="Transfer Status" readonly="1" invisible="transfer_count == 0" widget="badge"/>
 </group>
 </group>
-<separator string="Loading Summary"/>
+<separator string="Summary"/>
 <group col="4">
 <group string="Scope">
 <field name="planned_outlet_count" readonly="1"/>
@@ -96,7 +98,7 @@
 </group>
 </group>
 <notebook>
-<page string="Proposal Lines">
+<page string="Product Loads">
 <field name="line_ids" nolabel="1">
 <list editable="bottom" create="0" delete="0">
 <field name="product_id" readonly="1"/>
