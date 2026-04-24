@@ -14,7 +14,7 @@
 <field name="visit_count" string="Executed" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" string="Status" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -30,7 +30,7 @@
 <field name="visit_count" string="Executed"/>
 <field name="planning_finalized" string="Ready"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" string="Status" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -50,7 +50,7 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This plan is still being prepared by your supervisor. Review the stops now and return after finalization to start execution.</div>
@@ -222,7 +222,7 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This daily plan is still under planning. Review the planned stops, pending outlets, and loading needs before finalizing execution.</div>
@@ -483,7 +483,7 @@ pending visit(s) were found for this planning area.
 <field name="area_id" string="Area"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="partner_id" string="Customer" optional="show"/>
-<field name="state" string="Status" widget="badge"/>
+<field name="display_state" string="Status" widget="badge"/>
 <field name="skip_reason" optional="show"/>
 <field name="visit_id" string="Visit" optional="show"/>
 <field name="note" string="Line Note" optional="hide"/>
@@ -501,7 +501,7 @@ pending visit(s) were found for this planning area.
 <field name="outlet_id" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="state" widget="badge" readonly="1"/>
+<field name="display_state" widget="badge" readonly="1"/>
 </div>
 </div>
 <group col="2">
