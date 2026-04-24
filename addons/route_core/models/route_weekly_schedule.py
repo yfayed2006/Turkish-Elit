@@ -48,7 +48,7 @@ class RouteWeeklySchedule(models.Model):
     state = fields.Selection(
         [
             ("draft", "Draft"),
-            ("plans_generated", "Daily Plans Generated"),
+            ("plans_generated", "Ready"),
             ("cancelled", "Cancelled"),
         ],
         string="Status",
@@ -59,8 +59,8 @@ class RouteWeeklySchedule(models.Model):
     display_state = fields.Selection(
         [
             ("draft", "Draft"),
-            ("plans_generated", "Plans Ready"),
-            ("in_progress", "Execution"),
+            ("plans_generated", "Ready"),
+            ("in_progress", "In Progress"),
             ("done", "Done"),
             ("cancelled", "Cancelled"),
         ],
@@ -633,7 +633,7 @@ class RouteWeeklySchedule(models.Model):
         self._cleanup_duplicate_lines()
         return {
             "type": "ir.actions.act_window",
-            "name": _("Generated Weekly Schedule"),
+            "name": _("Weekly Schedule"),
             "res_model": "route.weekly.schedule",
             "res_id": self.id,
             "view_mode": "form",
