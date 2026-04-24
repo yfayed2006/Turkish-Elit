@@ -11,10 +11,10 @@
 <field name="weekly_schedule_id" optional="show"/>
 <field name="planning_finalized" optional="show"/>
 <field name="line_count" string="Visits"/>
-<field name="visit_count" string="Executed" optional="show"/>
+<field name="visit_count" string="Created Visits" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -27,10 +27,10 @@
 <field name="vehicle_id"/>
 <field name="weekly_schedule_id" optional="show"/>
 <field name="line_count" string="Stops"/>
-<field name="visit_count" string="Executed"/>
-<field name="planning_finalized" string="Ready"/>
+<field name="visit_count" string="Created Visits"/>
+<field name="planning_finalized" string="Ready" optional="hide"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -50,21 +50,33 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This plan is still being prepared by your supervisor. Review the stops now and return after finalization to start execution.</div>
 <div class="alert alert-success" role="alert" invisible="not planning_finalized">This daily plan is ready for execution. Use the visit cards below to execute, open, or review visits.</div>
 <notebook>
 <page string="Overview">
+<group string="Planning Setup" col="2" invisible="planning_finalized">
+<separator string="Choose the planning date, salesperson, vehicle, and warehouse before finalizing the plan." colspan="2"/>
+<group>
+<field name="date"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+</group>
+<group>
+<field name="source_warehouse_id" options="{'no_create': True}"/>
+<field name="area_id"/>
+</group>
+</group>
 <div class="route_mobile_summary_grid">
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Plan Date</div>
 <div class="route_mobile_info_value">
 <field name="date" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Vehicle</div>
 <div class="route_mobile_info_value">
 <field name="vehicle_id" readonly="1" nolabel="1"/>
@@ -76,7 +88,7 @@
 <field name="weekly_schedule_id" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Source Warehouse</div>
 <div class="route_mobile_info_value">
 <field name="source_warehouse_id" readonly="1" nolabel="1"/>
@@ -114,7 +126,7 @@
 <field name="area_id"/>
 <field name="outlet_id"/>
 <field name="partner_id"/>
-<field name="state"/>
+<field name="display_state" string="Workflow"/>
 <field name="visit_id"/>
 <field name="skip_reason"/>
 <field name="note"/>
@@ -175,76 +187,25 @@
 <field name="name">route.plan.form</field>
 <field name="model">route.plan</field>
 <field name="arch" type="xml">
-<form string="Route Plan">
+<form string="Daily Route Plan">
 <header>
-<button name="action_open_pda_screen" type="object" string="Workspace Screen" class="btn-primary"/>
-<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0"/>
+<button name="action_open_pda_screen" type="object" string="Route Workspace" class="btn-primary"/>
+<button name="action_view_visits" type="object" string="Open Visits" class="btn-secondary" invisible="visit_count == 0"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
 <button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="loading_workflow_enabled == False or not planning_finalized or state == 'cancel' or loading_proposal_count > 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_workflow_enabled == False or loading_proposal_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_create_vehicle_transfer_manually" type="object" string="Create Vehicle Transfer Manually" class="btn-secondary" invisible="loading_workflow_mode == 'required' or not planning_finalized or not vehicle_id or state == 'cancel'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
+<button name="action_open_vehicle_stock_snapshot" type="object" string="Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
 <button name="action_open_vehicle_closing" type="object" string="Close Vehicle Day" class="btn-secondary" invisible="not planning_finalized or not vehicle_id or state == 'cancel'"/>
 </header>
-<sheet>
+<sheet class="route_mobile_compact_sheet">
 <field name="loading_workflow_mode" invisible="1"/>
 <field name="loading_workflow_enabled" invisible="1"/>
 <field name="loading_workflow_required" invisible="1"/>
-<field name="planning_area_display" invisible="1"/>
-<field name="execution_summary_state" invisible="1"/>
-<field name="execution_summary_message" invisible="1"/>
-<field name="loading_result_state" invisible="1"/>
-<field name="loading_result_message" invisible="1"/>
-<field name="loading_total_uncovered_qty" invisible="1"/>
-<div class="alert alert-warning" role="alert" invisible="not planning_finalized">
-<strong>Planning Locked:</strong>
-This route plan has been finalized. You cannot edit the plan, add visits, or remove visits until you click
-<strong>Reopen Daily Plan</strong>
-.
-</div>
-<div class="alert alert-info" role="alert" invisible="loading_workflow_mode != 'optional'">
-<strong>Optional Vehicle Loading:</strong>
-Loading Proposal is available for planning help only. You can continue route execution even if the vehicle transfer is created manually later by the warehouse team.
-</div>
-<div class="alert alert-info" role="alert" invisible="execution_summary_state != 'ready'">
-<strong>Execution Not Started:</strong>
-<field name="execution_summary_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-warning" role="alert" invisible="execution_summary_state != 'in_progress'">
-<strong>Execution In Progress:</strong>
-<field name="execution_summary_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-info" role="alert" invisible="execution_summary_state != 'partial'">
-<strong>Execution Update:</strong>
-<field name="execution_summary_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-success" role="alert" invisible="execution_summary_state != 'completed'">
-<strong>Execution Completed:</strong>
-<field name="execution_summary_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-warning" role="alert" invisible="loading_proposal_count == 0 or loading_result_state not in ('draft_manual_review', 'approved_manual_review', 'approved_transfer_partial')" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<strong>Loading Review Required:</strong>
-<field name="loading_result_message" readonly="1" nolabel="1" class="oe_inline"/>
-<span>
-Uncovered Qty:
-<field name="loading_total_uncovered_qty" readonly="1" nolabel="1" class="oe_inline"/>
-</span>
-</div>
-<div class="alert alert-info" role="alert" invisible="previous_pending_visit_count == 0">
-<strong>Previous pending visits detected:</strong>
-This area has
-<field name="previous_pending_visit_count" readonly="1" class="oe_inline"/>
-pending visit(s) from older route plans.
-<span invisible="not previous_pending_outlet_summary">
-Outlets:
-<field name="previous_pending_outlet_summary" readonly="1" class="oe_inline"/>
-</span>
-Please review them before today's execution.
-</div>
 <div class="oe_button_box" name="button_box">
 <button name="action_view_visits" type="object" class="oe_stat_button" icon="fa-map-marker" invisible="visit_count == 0">
-<field name="visit_count" string="Executed Visits" widget="statinfo"/>
+<field name="visit_count" string="Created Visits" widget="statinfo"/>
 </button>
 <button name="action_view_loading_proposal" type="object" class="oe_stat_button" icon="fa-truck" invisible="loading_workflow_enabled == False or loading_proposal_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <field name="loading_proposal_count" string="Loading Proposal" widget="statinfo"/>
@@ -252,157 +213,219 @@ Please review them before today's execution.
 <button name="action_open_vehicle_closing" type="object" class="oe_stat_button" icon="fa-check-square-o" invisible="vehicle_closing_count == 0">
 <field name="vehicle_closing_count" string="Vehicle Closings" widget="statinfo"/>
 </button>
-<button name="action_open_pending_visit_review_wizard" type="object" class="oe_stat_button" icon="fa-history" invisible="previous_pending_visit_count == 0">
+<button name="action_open_pending_visit_review_wizard" type="object" class="oe_stat_button" icon="fa-history" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <field name="previous_pending_visit_count" string="Previous Pending" widget="statinfo"/>
 </button>
 </div>
-<div class="oe_title">
+<div class="oe_title route_mobile_header_title">
 <h1>
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
+<field name="display_state" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
 </div>
 </div>
-<group string="Plan Information" col="2">
+<div class="alert alert-info" role="alert" invisible="planning_finalized">This daily plan is still under planning. Review the planned stops, pending outlets, and loading needs before finalizing execution.</div>
+<div class="alert alert-success" role="alert" invisible="not planning_finalized">This daily plan is finalized for execution. Use Open Visits to monitor execution progress and follow up results.</div>
+<div class="alert alert-info" role="alert" invisible="loading_workflow_mode != 'optional'">
+<strong>Optional Vehicle Loading:</strong>
+Loading Proposal is available for planning help only. The route can still continue if the warehouse team creates the transfer manually later.
+</div>
+<div class="alert alert-warning" role="alert" invisible="previous_pending_visit_count == 0">
+<strong>Previous pending visits detected:</strong>
+<field name="previous_pending_visit_count" readonly="1" class="oe_inline"/>
+pending visit(s) were found for this planning area.
+</div>
+<notebook>
+<page string="Overview">
+<group string="Planning Setup" col="2" invisible="planning_finalized">
 <group>
-<field name="date" readonly="planning_finalized"/>
-<field name="user_id" readonly="planning_finalized"/>
-<field name="vehicle_id" readonly="planning_finalized"/>
-<field name="source_warehouse_id" readonly="planning_finalized" options="{'no_create': True}"/>
+<field name="date"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
 </group>
 <group>
-<field name="area_id" readonly="planning_finalized"/>
-<field name="planning_area_display" string="Planning Area" readonly="1" invisible="not planning_area_display"/>
-<field name="area_summary" string="Areas Summary" readonly="1"/>
-<field name="outlet_summary" readonly="1"/>
+<field name="source_warehouse_id" options="{'no_create': True}"/>
+<field name="area_id"/>
 </group>
 </group>
-<separator string="Planning Readiness"/>
-<div class="route_desktop_summary_grid">
-<div class="route_desktop_info_card">
-<div class="route_desktop_info_title">Daily Planning</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Ready</span>
-<field name="planning_finalized" readonly="1" nolabel="1"/>
+<div class="alert alert-info" role="alert" invisible="planning_finalized"> Complete the planning setup first, confirm the planning area, then move to Planned Visits to build the final stop list. </div>
+<div class="route_mobile_summary_grid" invisible="planning_finalized">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Planned Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" readonly="1" nolabel="1"/>
 </div>
-<div class="route_desktop_stat_row" invisible="not planning_finalized_datetime">
-<span class="route_desktop_label">Finalized On</span>
+</div>
+<div class="route_mobile_info_card" invisible="previous_pending_visit_count == 0">
+<div class="route_mobile_info_label">Previous Pending</div>
+<div class="route_mobile_info_value">
+<field name="previous_pending_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="planning_finalized or not area_id">
+<div class="route_mobile_detail_label">Planning Area</div>
+<div class="route_mobile_detail_value">
+<field name="area_id" readonly="0" nolabel="1"/>
+</div>
+</div>
+<div class="alert alert-info" role="alert" invisible="not planning_finalized"> Supervisor execution review: monitor open visits, skipped stops, loading status, and vehicle closing from this plan. </div>
+<div class="route_mobile_summary_grid" invisible="not planning_finalized">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Plan Date</div>
+<div class="route_mobile_info_value">
+<field name="date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Salesperson</div>
+<div class="route_mobile_info_value">
+<field name="user_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Vehicle</div>
+<div class="route_mobile_info_value">
+<field name="vehicle_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Source Warehouse</div>
+<div class="route_mobile_info_value">
+<field name="source_warehouse_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="not planning_finalized_datetime">
+<div class="route_mobile_info_label">Finalized On</div>
+<div class="route_mobile_info_value">
 <field name="planning_finalized_datetime" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_desktop_info_card">
-<div class="route_desktop_info_title">Pending Review</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Pending Visits</span>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Ready for Execution</div>
+<div class="route_mobile_info_value">
+<field name="planning_finalized" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_summary_grid" invisible="not planning_finalized">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Total Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Open Stops</div>
+<div class="route_mobile_info_value">
+<field name="pending_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">In Progress</div>
+<div class="route_mobile_info_value">
+<field name="in_progress_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Done Visits</div>
+<div class="route_mobile_info_value">
+<field name="visited_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Skipped</div>
+<div class="route_mobile_info_value">
+<field name="skipped_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Created Visits</div>
+<div class="route_mobile_info_value">
+<field name="visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_summary_grid" invisible="not planning_finalized">
+<div class="route_mobile_info_card" invisible="previous_pending_visit_count == 0">
+<div class="route_mobile_info_label">Previous Pending</div>
+<div class="route_mobile_info_value">
 <field name="previous_pending_visit_count" readonly="1" nolabel="1"/>
 </div>
-<div class="mt8" invisible="previous_pending_visit_count == 0">
-<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn btn-secondary btn-sm"/>
 </div>
-</div>
-<div class="route_desktop_info_card" invisible="loading_workflow_enabled == False" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<div class="route_desktop_info_title">Vehicle Loading</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Loading Proposals</span>
+<div class="route_mobile_info_card" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="loading_workflow_enabled == False">
+<div class="route_mobile_info_label">Loading Proposals</div>
+<div class="route_mobile_info_value">
 <field name="loading_proposal_count" readonly="1" nolabel="1"/>
 </div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Proposal Status</span>
-<field name="loading_proposal_state" string="Proposal Status" readonly="1" nolabel="1" widget="badge" decoration-info="loading_proposal_state == 'draft'" decoration-success="loading_proposal_state == 'approved'" decoration-danger="loading_proposal_state == 'cancelled'"/>
 </div>
-<div class="route_desktop_stat_row" invisible="loading_proposal_count == 0">
-<span class="route_desktop_label">Loading Result</span>
-<field name="loading_result_state" string="Loading Result" readonly="1" nolabel="1" widget="badge" decoration-info="loading_result_state in ('draft_transfer_planned', 'draft_no_transfer_needed')" decoration-warning="loading_result_state in ('draft_manual_review', 'approved_manual_review', 'approved_transfer_partial')" decoration-success="loading_result_state in ('approved_transfer_created', 'approved_no_transfer_needed')" decoration-danger="loading_result_state == 'cancelled'"/>
-</div>
-<div class="route_desktop_stat_row" invisible="loading_proposal_count == 0">
-<span class="route_desktop_label">Uncovered Demand</span>
-<field name="loading_total_uncovered_qty" readonly="1" nolabel="1"/>
-</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Workflow</span>
-<field name="loading_workflow_mode" string="Workflow" readonly="1" nolabel="1" widget="badge"/>
+<div class="route_mobile_info_card" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="loading_workflow_enabled == False or loading_proposal_count == 0">
+<div class="route_mobile_info_label">Proposal Status</div>
+<div class="route_mobile_info_value">
+<field name="loading_proposal_state" readonly="1" nolabel="1" widget="badge" decoration-info="loading_proposal_state == 'draft'" decoration-success="loading_proposal_state == 'approved'" decoration-danger="loading_proposal_state == 'cancelled'"/>
 </div>
 </div>
-<div class="route_desktop_info_card">
-<div class="route_desktop_info_title">Vehicle Closing</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Vehicle Closings</span>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Vehicle Closings</div>
+<div class="route_mobile_info_value">
 <field name="vehicle_closing_count" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
-<div class="route_desktop_wide_info" invisible="not previous_pending_outlet_summary">
-<div class="route_desktop_info_title">Previous Pending Outlets</div>
-<div class="route_desktop_text_value">
+<div class="route_mobile_detail_box" invisible="not area_id">
+<div class="route_mobile_detail_label">Planning Area</div>
+<div class="route_mobile_detail_value">
+<field name="area_id" readonly="planning_finalized" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not area_summary">
+<div class="route_mobile_detail_label">Areas Summary</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="area_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not outlet_summary">
+<div class="route_mobile_detail_label">Planned Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="outlet_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not previous_pending_outlet_summary">
+<div class="route_mobile_detail_label">Previous Pending Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="previous_pending_outlet_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_desktop_wide_info" invisible="loading_proposal_count == 0 or not loading_result_message" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<div class="route_desktop_info_title">Loading Result Summary</div>
-<div class="route_desktop_text_value">
-<field name="loading_result_message" readonly="1" nolabel="1"/>
-</div>
-</div>
-<separator string="Visit Summary"/>
-<div class="route_desktop_summary_grid route_desktop_summary_grid_two">
-<div class="route_desktop_info_card">
-<div class="route_desktop_info_title">Visit Overview</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Visits Count</span>
-<field name="line_count" readonly="1" nolabel="1"/>
-</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Pending Visits</span>
-<field name="pending_count" readonly="1" nolabel="1"/>
-</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">In Progress Visits</span>
-<field name="in_progress_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_desktop_info_card">
-<div class="route_desktop_info_title">Execution Results</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Executed Visits</span>
-<field name="visit_count" readonly="1" nolabel="1"/>
-</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Completed Visits</span>
-<field name="visited_count" readonly="1" nolabel="1"/>
-</div>
-<div class="route_desktop_stat_row">
-<span class="route_desktop_label">Skipped Visits</span>
-<field name="skipped_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<notebook>
+</page>
 <page string="Planned Visits">
-<group>
-<button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized"/>
-<button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0"/>
-</group>
+<div class="alert alert-info" role="alert" invisible="planning_finalized"> Use this tab to add, reorder, and review the final stop list before daily execution is locked. </div>
+<div class="alert alert-info" role="alert" invisible="not planning_finalized"> Planning is locked after finalization. Use this tab to monitor line status, open visits, and review skipped or pending stops. </div>
+<div class="mb-2">
+<button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_open_pending_visit_review_wizard" type="object" string="Review Pending Visits" class="btn-secondary" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</div>
 <field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
-<list editable="bottom">
+<list editable="bottom" decoration-warning="state == 'pending'" decoration-info="state == 'in_progress'" decoration-success="state == 'visited'" decoration-muted="state == 'skipped'">
 <field name="sequence" widget="handle"/>
 <field name="area_id"/>
 <field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
-<field name="partner_id" readonly="1"/>
+<field name="partner_id" readonly="1" optional="show"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
-<field name="skip_reason" optional="show"/>
-<field name="visit_id" string="Follow-up Visit" readonly="1"/>
-<field name="note" string="Line Note"/>
-<button name="action_open_skip_visit_wizard" type="object" string="Skip Visit" icon="fa-step-forward" invisible="state in ('visited', 'skipped') or visit_id.state == 'done'"/>
-<button name="action_reopen_line" type="object" string="Reopen Line" icon="fa-undo" invisible="state != 'skipped'"/>
+<field name="visit_id" string="Visit" readonly="1" optional="show"/>
+<field name="skip_reason" optional="hide"/>
+<field name="note" string="Line Note" optional="hide"/>
+<button name="action_open_skip_visit_wizard" type="object" string="Skip Visit" icon="fa-step-forward" invisible="state in ('visited', 'skipped') or visit_id.state == 'done'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_reopen_line" type="object" string="Reopen Line" icon="fa-undo" invisible="state != 'skipped'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id or state == 'skipped'"/>
 <button name="action_open_or_create_visit" type="object" string="Open Visit" icon="fa-external-link" invisible="not visit_id or state in ('visited', 'skipped') or visit_id.state in ('done', 'cancel')"/>
 <button name="action_open_or_create_visit" type="object" string="View Visit" icon="fa-eye" invisible="not visit_id or (state not in ('visited', 'skipped') and visit_id.state not in ('done', 'cancel'))"/>
 </list>
 </field>
 </page>
-<page string="Notes">
-<field name="notes" placeholder="Internal notes..." readonly="planning_finalized"/>
+<page string="Planning Notes">
+<field name="notes" placeholder="Supervisor planning notes..." readonly="planning_finalized"/>
 </page>
 </notebook>
 </sheet>
@@ -421,19 +444,19 @@ Please review them before today's execution.
 <field name="area_id"/>
 <field name="area_summary" string="Areas"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="state"/>
+<field name="display_state" string="Workflow"/>
 <filter name="filter_my_plans" string="My Plans" domain="[('user_id', '=', uid)]"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
-<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
-<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_draft" string="Draft" domain="[('display_state', '=', 'draft')]"/>
+<filter name="filter_in_progress" string="In Progress" domain="[('display_state', '=', 'in_progress')]"/>
+<filter name="filter_done" string="Done" domain="[('display_state', '=', 'done')]"/>
 <filter name="filter_cancel" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
-<filter name="filter_planning_finalized" string="Planning Finalized" domain="[('planning_finalized', '=', True)]"/>
+<filter name="filter_ready" string="Ready" domain="[('display_state', '=', 'ready')]"/>
 <separator/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
-<filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_workflow" string="Workflow" context="{'group_by': 'display_state'}"/>
 <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
 <searchpanel>
 <field name="user_id" string="Salesperson"/>
@@ -453,11 +476,11 @@ Please review them before today's execution.
 <field name="date"/>
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="state"/>
+<field name="display_state" string="Workflow"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_planning_finalized" string="Ready for Execution" domain="[('planning_finalized', '=', True)]"/>
-<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
-<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_ready" string="Ready" domain="[('display_state', '=', 'ready')]"/>
+<filter name="filter_in_progress" string="In Progress" domain="[('display_state', '=', 'in_progress')]"/>
+<filter name="filter_done" string="Done" domain="[('display_state', '=', 'done')]"/>
 <searchpanel>
 <field name="vehicle_id" string="Vehicle"/>
 <field name="search_area_ids" string="Areas" select="multi"/>
@@ -478,7 +501,7 @@ Please review them before today's execution.
 <field name="area_id" string="Area"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="partner_id" string="Customer" optional="show"/>
-<field name="state" string="Status" widget="badge"/>
+<field name="state" string="Line Status" widget="badge"/>
 <field name="skip_reason" optional="show"/>
 <field name="visit_id" string="Visit" optional="show"/>
 <field name="note" string="Line Note" optional="hide"/>
@@ -574,7 +597,7 @@ Please review them before today's execution.
 <field name="res_model">route.plan</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="view_route_plan_search"/>
-<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1}</field>
+<field name="context">{'search_default_filter_my_plans': 1, 'search_default_filter_today': 1, 'form_view_initial_mode': 'edit'}</field>
 </record>
 <menuitem id="menu_route_plan" name="Route Plans" parent="menu_route_visit_root" action="action_route_plan" sequence="20"/>
 </odoo>
