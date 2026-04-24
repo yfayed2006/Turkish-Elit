@@ -839,7 +839,32 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="line_count" readonly="1"/>
 </group>
 </group>
+<div class="alert alert-info" role="alert" invisible="state != 'draft'"> This weekly schedule is still editable. Adjust weekdays, outlets, and route balance before generating daily plans. </div>
 <div class="route_mobile_summary_grid" invisible="state != 'draft'">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Week Start</div>
+<div class="route_mobile_info_value">
+<field name="week_start_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Week End</div>
+<div class="route_mobile_info_value">
+<field name="week_end_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Salesperson</div>
+<div class="route_mobile_info_value">
+<field name="user_id" readonly="0" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Vehicle</div>
+<div class="route_mobile_info_value">
+<field name="vehicle_id" readonly="0" nolabel="1"/>
+</div>
+</div>
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Scheduled Stops</div>
 <div class="route_mobile_info_value">
@@ -847,10 +872,16 @@ day(s) were skipped during sync because finalized daily plans were already linke
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Daily Plans</div>
+<div class="route_mobile_info_label">Off-Day Stops</div>
 <div class="route_mobile_info_value">
-<field name="generated_plan_count" readonly="1" nolabel="1"/>
+<field name="off_day_stop_count" readonly="1" nolabel="1"/>
 </div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="state != 'draft'">
+<div class="route_mobile_detail_label">Source Warehouse</div>
+<div class="route_mobile_detail_value">
+<field name="source_warehouse_id" readonly="0" nolabel="1" options="{'no_create': True}"/>
 </div>
 </div>
 <div class="route_mobile_summary_grid" invisible="state == 'draft'">
@@ -866,28 +897,16 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="week_end_date" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card" invisible="state == 'draft'">
+<div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Salesperson</div>
 <div class="route_mobile_info_value">
-<field name="user_id" readonly="state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="state == 'draft'">
-<div class="route_mobile_info_label">Vehicle</div>
-<div class="route_mobile_info_value">
-<field name="vehicle_id" readonly="state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="state == 'draft'">
-<div class="route_mobile_info_label">Source Warehouse</div>
-<div class="route_mobile_info_value">
-<field name="source_warehouse_id" readonly="state != 'draft'" nolabel="1" options="{'no_create': True}"/>
+<field name="user_id" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Weekly Off Day</div>
+<div class="route_mobile_info_label">Vehicle</div>
 <div class="route_mobile_info_value">
-<field name="off_day" readonly="1" nolabel="1"/>
+<field name="vehicle_id" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
@@ -901,6 +920,24 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <div class="route_mobile_info_value">
 <field name="generated_plan_count" readonly="1" nolabel="1"/>
 </div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Weekly Off Day</div>
+<div class="route_mobile_info_value">
+<field name="off_day" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="skipped_finalized_plan_count == 0">
+<div class="route_mobile_info_label">Protected Days</div>
+<div class="route_mobile_info_value">
+<field name="skipped_finalized_plan_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="state == 'draft'">
+<div class="route_mobile_detail_label">Source Warehouse</div>
+<div class="route_mobile_detail_value">
+<field name="source_warehouse_id" readonly="1" nolabel="1" options="{'no_create': True}"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not template_id">
@@ -929,6 +966,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 </div>
 </page>
 <page string="Weekly Stops">
+<div class="alert alert-info" role="alert" invisible="state != 'draft'"> Add or adjust weekday stops here before you generate daily plans. </div>
+<div class="alert alert-info" role="alert" invisible="state == 'draft'"> This stop list is now review-only. Use the daily plans for date-level execution follow-up. </div>
 <notebook>
 <page string="Monday">
 <div class="mb-2">
@@ -943,8 +982,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -961,8 +1000,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -979,8 +1018,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -997,8 +1036,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -1015,8 +1054,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -1033,8 +1072,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -1051,8 +1090,8 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="partner_id" readonly="1" optional="show"/>
 <field name="visit_mode" readonly="1" optional="show"/>
 <field name="execution_status" readonly="1" widget="badge" string="Execution" column_invisible="parent.state == 'draft'"/>
-<field name="generated_plan_id" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
-<field name="note" string="Line Note" optional="show"/>
+<field name="generated_plan_id" string="Daily Plan" readonly="1" optional="show" column_invisible="parent.state == 'draft'"/>
+<field name="note" string="Line Note" optional="hide"/>
 </list>
 </field>
 </page>
@@ -1290,7 +1329,7 @@ OUT/
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--         Current Week filter removed to avoid XML parser issues on Odoo upgrade         -->
+<!--          Current Week filter removed to avoid XML parser issues on Odoo upgrade          -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
