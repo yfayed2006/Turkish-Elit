@@ -463,6 +463,7 @@ function detectPageKind() {
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
     const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
 
     if (isRouteWorkspacePage()) {
         return "workspace";
@@ -516,6 +517,7 @@ function detectPageKind() {
     if (
         title.includes("vehicle stock")
         || title.includes("vehicle products stock")
+        || breadcrumbText.includes("vehicle stock snapshot")
         || rootText.includes("vehicle stock")
         || rootText.includes("vehicle products stock")
         || pageText.includes("vehicle stock")
@@ -784,6 +786,37 @@ function dispatchClick(element) {
     return true;
 }
 
+function openNativeBreadcrumb(matchers) {
+    const matcherList = Array.isArray(matchers) ? matchers : [matchers];
+    const selectors = [
+        ".o_control_panel .breadcrumb-item a",
+        ".o_control_panel .o_breadcrumb li a",
+        ".o_control_panel_breadcrumbs .breadcrumb-item a",
+        ".breadcrumb-item a",
+        ".o_navbar_breadcrumbs a",
+    ];
+    for (const selector of selectors) {
+        for (const element of document.querySelectorAll(selector)) {
+            if (!isElementVisible(element)) {
+                continue;
+            }
+            const text = normalizeText(element.textContent || "");
+            if (!text) {
+                continue;
+            }
+            if (matcherList.some((matcher) => typeof matcher === "function" ? matcher(text) : text === normalizeText(matcher))) {
+                isInternalRedirect = true;
+                dispatchClick(element);
+                window.setTimeout(() => {
+                    isInternalRedirect = false;
+                }, 900);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function openServerButton(buttonName) {
     if (!buttonName) {
         return false;
@@ -913,6 +946,12 @@ function navigateBackToRoutePlan() {
     if (openServerButton("action_open_route_plan")) {
         return;
     }
+    if (openNativeBreadcrumb((text) => text.startsWith("plan/"))) {
+        return;
+    }
+    if (openNativeBreadcrumb((text) => text.includes("route plans"))) {
+        return;
+    }
     isInternalRedirect = true;
     window.history.back();
     window.setTimeout(() => {
@@ -925,12 +964,21 @@ function navigateBackToStoredRoutePlan() {
     if (navigateToStoredTarget(target)) {
         return;
     }
+    if (openNativeBreadcrumb((text) => text.startsWith("plan/"))) {
+        return;
+    }
+    if (openNativeBreadcrumb((text) => text.includes("route plans"))) {
+        return;
+    }
     navigateBackToRoutePlan();
 }
 
 function navigateBackToStoredLoadingProposal() {
     const target = getLoadingProposalTarget();
     if (navigateToStoredTarget(target)) {
+        return;
+    }
+    if (openNativeBreadcrumb((text) => text.startsWith("rlp/"))) {
         return;
     }
     navigateBackToRoutePlan();
@@ -1124,10 +1172,26 @@ function syncNativeNavbarBreadcrumbVisibility(pageKind) {
     }
 }
 
+function inferStockSnapshotOriginFromBreadcrumb() {
+    const breadcrumbText = getBreadcrumbText();
+    if (!breadcrumbText) {
+        return "";
+    }
+    if (breadcrumbText.includes("route plans")) {
+        return "route_plan";
+    }
+    if (breadcrumbText.includes("rlp/") || breadcrumbText.includes("loading proposal")) {
+        return "loading_proposal";
+    }
+    return "";
+}
+
 function getSupervisorVehicleStockOrigin() {
-    return ["route_plan", "loading_proposal"].includes(getStockSnapshotOrigin())
-        ? getStockSnapshotOrigin()
-        : "";
+    const storedOrigin = getStockSnapshotOrigin();
+    if (["route_plan", "loading_proposal"].includes(storedOrigin)) {
+        return storedOrigin;
+    }
+    return inferStockSnapshotOriginFromBreadcrumb();
 }
 
 function shouldRespectNativeBreadcrumb(pageKind) {
