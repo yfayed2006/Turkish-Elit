@@ -221,6 +221,16 @@ class RouteLoadingProposal(models.Model):
         compute="_compute_transfer_count",
         store=False,
     )
+    approval_action_mode = fields.Selection(
+        [
+            ("create_transfer", "Create Transfer"),
+            ("approve_without_transfer", "Approve Without Transfer"),
+            ("approve_without_transfer_uncovered", "Approve With Uncovered Demand"),
+        ],
+        string="Approval Action Mode",
+        compute="_compute_approval_action_mode",
+        store=False,
+    )
 
     _sql_constraints = [
         (
@@ -256,6 +266,25 @@ class RouteLoadingProposal(models.Model):
     def _compute_transfer_count(self):
         for rec in self:
             rec.transfer_count = 1 if rec.picking_id else 0
+
+
+    @api.depends(
+        "line_ids",
+        "line_ids.approved_qty",
+        "line_ids.suggested_load_qty",
+        "line_ids.uncovered_qty",
+        "state",
+    )
+    def _compute_approval_action_mode(self):
+        for rec in self:
+            approved_qty = sum(rec.line_ids.mapped("approved_qty"))
+            uncovered_qty = sum(rec.line_ids.mapped("uncovered_qty"))
+            if approved_qty > 0:
+                rec.approval_action_mode = "create_transfer"
+            elif uncovered_qty > 0:
+                rec.approval_action_mode = "approve_without_transfer_uncovered"
+            else:
+                rec.approval_action_mode = "approve_without_transfer"
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1704,5 +1733,4 @@ class RoutePlan(models.Model):
                 "default_location_id": vehicle_location.id,
             },
         }
-
 
