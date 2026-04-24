@@ -24,9 +24,9 @@
 <field name="arch" type="xml">
 <form string="Weekly Visit Template">
 <header>
-<button name="action_create_current_week_schedule" type="object" string="Activate This Week" class="btn-primary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_create_next_week_schedule" type="object" string="Activate Next Week" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_current_week_schedule" type="object" string="Create This Week's Schedule" class="btn-primary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_next_week_schedule" type="object" string="Create Next Week's Schedule" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_view_weekly_schedules" type="object" string="Weekly Schedules" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </header>
 <sheet>
 <div class="oe_button_box" name="button_box">
@@ -42,7 +42,7 @@
 <field name="active" widget="boolean_toggle"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert"> This screen is for building one reusable weekly visit template. Save the template first. Then activate a dated weekly schedule from it, and finally generate daily plans. </div>
+<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly visit template. Save the template first, then create a dated weekly schedule from it and generate daily plans when the week is ready. </div>
 <div class="alert alert-warning" role="alert" invisible="off_day_stop_count == 0">
 <strong>Weekly Off Day Review:</strong>
 <field name="off_day_stop_count" class="oe_inline" readonly="1"/>
@@ -65,8 +65,46 @@ and will need supervisor review before operational use.
 <field name="outlet_summary" readonly="1"/>
 </group>
 </group>
+<div class="route_mobile_summary_grid">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Template Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Generated Weeks</div>
+<div class="route_mobile_info_value">
+<field name="schedule_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Off-Day Stops</div>
+<div class="route_mobile_info_value">
+<field name="off_day_stop_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not city_summary">
+<div class="route_mobile_detail_label">Cities</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="city_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not area_summary">
+<div class="route_mobile_detail_label">Areas</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="area_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not outlet_summary">
+<div class="route_mobile_detail_label">Planned Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="outlet_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
 <separator string="Weekly Visit Stops"/>
-<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly template. Save the template first, then use Activate This Week or Activate Next Week to create a dated weekly schedule. Under each weekday tab, Add a line opens a stop form. Select City first, then Area, then Outlet. </div>
+<div class="alert alert-info" role="alert"> Save the template first, then use Create This Week's Schedule or Create Next Week's Schedule to generate a dated weekly schedule. Under each weekday tab, Add a line opens the stop popup. Select City first, then Area, then Outlet. </div>
 <notebook>
 <page string="Monday">
 <div class="alert alert-warning" role="alert" invisible="id">
