@@ -14,9 +14,7 @@
 <field name="total_vehicle_balance_qty" optional="show"/>
 <field name="total_suggested_qty" string="Suggested Load Qty"/>
 <field name="total_approved_qty" string="Approved Qty"/>
-<field name="total_uncovered_qty" string="Uncovered Qty" optional="show"/>
-<field name="loading_result_state" string="Loading Result" widget="badge" optional="show" decoration-info="loading_result_state in ('draft_transfer_planned', 'draft_no_transfer_needed')" decoration-warning="loading_result_state in ('draft_manual_review', 'approved_manual_review', 'approved_transfer_partial')" decoration-success="loading_result_state in ('approved_transfer_created', 'approved_no_transfer_needed')" decoration-danger="loading_result_state == 'cancelled'"/>
-<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'cancelled'"/>
+<field name="state" string="Workflow" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'cancelled'"/>
 <field name="transfer_state" widget="badge" optional="show"/>
 </list>
 </field>
@@ -29,15 +27,13 @@
 <header>
 <button name="action_refresh_from_plan" type="object" string="Refresh from Final Plan" class="btn-secondary" invisible="state != 'draft'"/>
 <button name="action_open_vehicle_stock_snapshot" type="object" string="Open Vehicle Stock Snapshot" class="btn-secondary" invisible="not vehicle_id"/>
-<button name="action_approve" type="object" string="Approve and Create Transfer" class="btn-primary" invisible="state != 'draft' or total_approved_qty == 0"/>
-<button name="action_approve" type="object" string="Approve - No Transfer Needed" class="btn-primary" invisible="state != 'draft' or total_approved_qty != 0 or total_uncovered_qty != 0"/>
-<button name="action_approve" type="object" string="Approve With Uncovered Demand" class="btn-primary" invisible="state != 'draft' or total_approved_qty != 0 or total_uncovered_qty == 0"/>
+<button name="action_approve" type="object" string="Approve and Create Transfer" class="btn-primary" invisible="state != 'draft' or total_suggested_qty == 0"/>
+<button name="action_approve" type="object" string="Approve Without Transfer" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty != 0"/>
+<button name="action_approve" type="object" string="Approve with Uncovered Demand" class="btn-primary" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty == 0"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state == 'draft'"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state == 'cancelled'"/>
 </header>
 <sheet>
-<field name="loading_result_state" invisible="1"/>
-<field name="loading_result_message" invisible="1"/>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_route_plan" type="object" class="oe_stat_button" icon="fa-road">
 <span class="o_stat_text">Route Plan</span>
@@ -57,18 +53,12 @@
 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'" decoration-danger="state == 'cancelled'"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert" invisible="loading_result_state != 'draft_transfer_planned'">
-<field name="loading_result_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-success" role="alert" invisible="loading_result_state not in ('draft_no_transfer_needed', 'approved_no_transfer_needed')">
-<field name="loading_result_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-warning" role="alert" invisible="loading_result_state not in ('draft_manual_review', 'approved_manual_review', 'approved_transfer_partial')">
-<field name="loading_result_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
-<div class="alert alert-success" role="alert" invisible="loading_result_state != 'approved_transfer_created'">
-<field name="loading_result_message" readonly="1" nolabel="1" class="oe_inline"/>
-</div>
+<div class="alert alert-info" role="alert" invisible="state != 'draft' or total_suggested_qty == 0"> Review the suggested quantities, adjust approved quantities if needed, then approve to create the internal transfer. </div>
+<div class="alert alert-success" role="alert" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty != 0"> Vehicle stock already covers the planned demand. No transfer is required for this route plan. </div>
+<div class="alert alert-warning" role="alert" invisible="state != 'draft' or total_suggested_qty != 0 or total_uncovered_qty == 0"> No executable transfer can be created right now. Review uncovered items or replenish the source stock first. </div>
+<div class="alert alert-success" role="alert" invisible="state != 'approved' or transfer_count == 0"> The internal transfer has been created from this approved loading proposal. </div>
+<div class="alert alert-success" role="alert" invisible="state != 'approved' or transfer_count != 0 or total_approved_qty != 0 or total_uncovered_qty != 0"> This proposal was approved with no transfer because the vehicle already covers the planned demand. </div>
+<div class="alert alert-warning" role="alert" invisible="state != 'approved' or transfer_count != 0 or total_approved_qty != 0 or total_uncovered_qty == 0"> This proposal was approved without a transfer. Uncovered demand still remains and should be reviewed manually. </div>
 <group string="Proposal Information" col="2">
 <group>
 <field name="plan_id" readonly="1"/>
@@ -84,7 +74,6 @@
 <field name="picking_id" readonly="1" invisible="transfer_count == 0"/>
 <field name="approval_datetime" readonly="1" invisible="not approval_datetime"/>
 <field name="transfer_state" string="Transfer Status" readonly="1" invisible="transfer_count == 0" widget="badge"/>
-<field name="loading_result_state" string="Loading Result" readonly="1" invisible="not loading_result_state" widget="badge" decoration-info="loading_result_state in ('draft_transfer_planned', 'draft_no_transfer_needed')" decoration-warning="loading_result_state in ('draft_manual_review', 'approved_manual_review', 'approved_transfer_partial')" decoration-success="loading_result_state in ('approved_transfer_created', 'approved_no_transfer_needed')" decoration-danger="loading_result_state == 'cancelled'"/>
 </group>
 </group>
 <separator string="Loading Summary"/>
@@ -124,9 +113,9 @@
 <field name="source_lot_summary" readonly="1" string="Source Lots" optional="show"/>
 <field name="suggested_load_qty" readonly="1" string="Suggested Load Qty"/>
 <field name="approved_qty" readonly="parent.state != 'draft'" string="Approved Qty"/>
-<field name="unit_price" readonly="1" string="Unit Price" optional="show"/>
-<field name="required_value" readonly="1" string="Required Value" optional="show"/>
-<field name="approved_value" readonly="1" string="Approved Value" optional="show"/>
+<field name="unit_price" readonly="1" string="Unit Price" optional="hide"/>
+<field name="required_value" readonly="1" string="Required Value" optional="hide"/>
+<field name="approved_value" readonly="1" string="Approved Value" optional="hide"/>
 <field name="current_outlet_need_qty" readonly="1" string="Planned Demand" optional="hide"/>
 <field name="movement_profile" readonly="1" string="Movement Profile" optional="hide"/>
 <field name="open_shortage_qty" readonly="1" string="Open Shortages" optional="hide"/>
