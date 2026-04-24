@@ -5,16 +5,16 @@
 <field name="model">route.schedule.template</field>
 <field name="arch" type="xml">
 <list string="Weekly Visit Templates">
-<field name="name" string="Template Name"/>
-<field name="user_id"/>
-<field name="vehicle_id"/>
-<field name="source_warehouse_id" optional="show"/>
+<field name="name" string="Template"/>
+<field name="user_id" string="Salesperson"/>
+<field name="vehicle_id" string="Vehicle"/>
+<field name="source_warehouse_id" string="Source Warehouse" optional="hide"/>
 <field name="line_count" string="Stops"/>
-<field name="schedule_count" string="Generated Weeks"/>
-<field name="city_summary" string="Cities" optional="show"/>
-<field name="area_summary" string="Areas" optional="show"/>
-<field name="outlet_summary" string="Outlets"/>
-<field name="active" optional="hide"/>
+<field name="schedule_count" string="Schedules"/>
+<field name="city_summary" string="Cities" optional="hide"/>
+<field name="area_summary" string="Areas" optional="hide"/>
+<field name="outlet_summary" string="Planned Outlets" optional="hide"/>
+<field name="active" string="Active" optional="show"/>
 </list>
 </field>
 </record>
@@ -24,26 +24,27 @@
 <field name="arch" type="xml">
 <form string="Weekly Visit Template">
 <header>
-<button name="action_create_current_week_schedule" type="object" string="Create This Week's Schedule" class="btn-primary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_create_next_week_schedule" type="object" string="Create Next Week's Schedule" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_view_weekly_schedules" type="object" string="Weekly Schedules" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_current_week_schedule" type="object" string="Create This Week Schedule" class="btn-primary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_create_next_week_schedule" type="object" string="Create Next Week Schedule" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_view_weekly_schedules" type="object" string="Open Weekly Schedules" class="btn-secondary" invisible="not id" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </header>
 <sheet>
-<div class="oe_button_box" name="button_box">
+<div class="oe_button_box" name="button_box" invisible="not id">
 <button name="action_view_weekly_schedules" type="object" class="oe_stat_button" icon="fa-calendar" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<field name="schedule_count" string="Generated Weeks" widget="statinfo"/>
+<field name="schedule_count" string="Schedules" widget="statinfo"/>
 </button>
 </div>
 <div class="oe_title">
 <h1>
-<field name="name" placeholder="Weekly Visit Template Name"/>
+<field name="name" placeholder="Weekly Template Name"/>
 </h1>
 <div class="mt8">
 <field name="active" widget="boolean_toggle"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert"> Use this screen to build one reusable weekly visit template. Save the template first, then create a dated weekly schedule from it and generate daily plans when the week is ready. </div>
-<div class="alert alert-warning" role="alert" invisible="off_day_stop_count == 0">
+<div class="alert alert-info" role="alert" invisible="id">Complete the template name, salesperson, vehicle, and source warehouse, then save to add weekly stops.</div>
+<div class="alert alert-info" role="alert" invisible="not id">Build reusable weekly stops here, then create this week or next week schedule when ready.</div>
+<div class="alert alert-warning" role="alert" invisible="not id or off_day_stop_count == 0">
 <strong>Weekly Off Day Review:</strong>
 <field name="off_day_stop_count" class="oe_inline" readonly="1"/>
 stop(s) are scheduled on
@@ -59,13 +60,13 @@ and will need supervisor review before operational use.
 <group>
 <field name="company_id" readonly="1"/>
 <field name="off_day" readonly="1"/>
-<field name="off_day_stop_count" readonly="1"/>
-<field name="city_summary" readonly="1"/>
-<field name="area_summary" readonly="1"/>
-<field name="outlet_summary" readonly="1"/>
+<field name="off_day_stop_count" readonly="1" invisible="not id"/>
+<field name="city_summary" readonly="1" invisible="not id"/>
+<field name="area_summary" readonly="1" invisible="not id"/>
+<field name="outlet_summary" readonly="1" invisible="not id"/>
 </group>
 </group>
-<div class="route_mobile_summary_grid">
+<div class="route_mobile_summary_grid" invisible="not id">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Template Stops</div>
 <div class="route_mobile_info_value">
@@ -103,17 +104,12 @@ and will need supervisor review before operational use.
 <field name="outlet_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
-<separator string="Weekly Visit Stops"/>
-<div class="alert alert-info" role="alert"> Save the template first, then use Create This Week's Schedule or Create Next Week's Schedule to generate a dated weekly schedule. Under each weekday tab, Add a line opens the stop popup. Select City first, then Area, then Outlet. </div>
-<notebook>
+<separator string="Weekly Stops" invisible="not id"/>
+<div class="alert alert-info" role="alert" invisible="not id">Use Add Stop under each weekday to open the stop popup. Select City, Area, then Outlets.</div>
+<notebook invisible="not id">
 <page string="Monday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Monday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'monday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'monday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="monday_line_ids" context="{'default_weekday': 'monday'}" domain="[('weekday', '=', 'monday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -129,13 +125,8 @@ to open the stop popup for Monday.
 </field>
 </page>
 <page string="Tuesday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Tuesday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'tuesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'tuesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="tuesday_line_ids" context="{'default_weekday': 'tuesday'}" domain="[('weekday', '=', 'tuesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -151,13 +142,8 @@ to open the stop popup for Tuesday.
 </field>
 </page>
 <page string="Wednesday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Wednesday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'wednesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'wednesday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="wednesday_line_ids" context="{'default_weekday': 'wednesday'}" domain="[('weekday', '=', 'wednesday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -173,13 +159,8 @@ to open the stop popup for Wednesday.
 </field>
 </page>
 <page string="Thursday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Thursday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'thursday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'thursday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="thursday_line_ids" context="{'default_weekday': 'thursday'}" domain="[('weekday', '=', 'thursday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -195,13 +176,8 @@ to open the stop popup for Thursday.
 </field>
 </page>
 <page string="Friday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Friday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'friday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'friday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="friday_line_ids" context="{'default_weekday': 'friday'}" domain="[('weekday', '=', 'friday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -217,13 +193,8 @@ to open the stop popup for Friday.
 </field>
 </page>
 <page string="Saturday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Saturday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'saturday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'saturday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="saturday_line_ids" context="{'default_weekday': 'saturday'}" domain="[('weekday', '=', 'saturday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
@@ -239,13 +210,8 @@ to open the stop popup for Saturday.
 </field>
 </page>
 <page string="Sunday">
-<div class="alert alert-warning" role="alert" invisible="id">
-Save the template first, then use
-<strong>Add a line</strong>
-to open the stop popup for Sunday.
-</div>
-<div class="mb-2" invisible="not id">
-<button name="action_open_day_stop_wizard" type="object" string="Add a line" class="btn-primary" context="{'default_weekday': 'sunday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<div class="mb-2">
+<button name="action_open_day_stop_wizard" type="object" string="Add Stop" class="btn-primary" context="{'default_weekday': 'sunday'}" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </div>
 <field name="sunday_line_ids" context="{'default_weekday': 'sunday'}" domain="[('weekday', '=', 'sunday')]" invisible="not id">
 <list create="0" delete="1" decoration-warning="is_off_day">
