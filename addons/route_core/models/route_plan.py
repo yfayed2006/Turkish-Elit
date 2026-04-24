@@ -75,6 +75,18 @@ class RoutePlan(models.Model):
         copy=False,
         readonly=True,
     )
+    display_state = fields.Selection(
+        [
+            ("draft", "Draft"),
+            ("ready", "Ready"),
+            ("in_progress", "In Progress"),
+            ("done", "Done"),
+            ("cancel", "Cancelled"),
+        ],
+        string="Workflow Status",
+        compute="_compute_display_state",
+        store=True,
+    )
     notes = fields.Text(string="Notes")
 
     line_ids = fields.One2many(
@@ -149,6 +161,20 @@ class RoutePlan(models.Model):
         string="Has Previous Pending Visits",
         compute="_compute_pending_review_stats",
     )
+
+    @api.depends("state", "planning_finalized")
+    def _compute_display_state(self):
+        for rec in self:
+            if rec.state == "cancel":
+                rec.display_state = "cancel"
+            elif rec.state == "done":
+                rec.display_state = "done"
+            elif rec.state == "in_progress":
+                rec.display_state = "in_progress"
+            elif rec.planning_finalized:
+                rec.display_state = "ready"
+            else:
+                rec.display_state = "draft"
 
     @api.depends("line_ids", "line_ids.state", "line_ids.visit_id", "line_ids.visit_id.state")
     def _compute_line_counts(self):
