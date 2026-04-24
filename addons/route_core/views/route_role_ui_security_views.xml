@@ -112,4 +112,142 @@
 </xpath>
 </field>
 </record>
+<record id="view_route_visit_form_supervisor_review_polish" model="ir.ui.view">
+<field name="name">route.visit.form.supervisor.review.polish</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="arch" type="xml">
+<xpath expr="//page[field[@name='notes']]" position="before">
+<page string="Supervisor Review" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<div class="alert alert-info" role="alert"> Use this tab for fast supervision follow-up. Open the operational tabs only when you need line-level investigation. </div>
+<div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales'">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Previous Due</div>
+<div class="route_mobile_info_value">
+<field name="consignment_previous_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Visit Sale</div>
+<div class="route_mobile_info_value">
+<field name="consignment_current_visit_sale_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Visit Returns</div>
+<div class="route_mobile_info_value">
+<field name="consignment_current_visit_return_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_value">
+<field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Collected</div>
+<div class="route_mobile_info_value">
+<field name="collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_value">
+<field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales'">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Previous Due</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_previous_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Visit Sale</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_sales_total" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Current Visit Returns</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_returns_total" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Collected</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_value">
+<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_grid">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref">
+<div class="route_mobile_detail_label">Sale Order</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="summary_sale_order_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_refill_transfer_ref">
+<div class="route_mobile_detail_label">Refill Transfer</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="summary_refill_transfer_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs or summary_return_transfer_refs == '-'">
+<div class="route_mobile_detail_label">Return Transfers</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="summary_return_transfer_refs" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
+<div class="route_mobile_detail_label">Sale Order</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
+<div class="route_mobile_detail_label">Return</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_label">Visit Process State</div>
+<div class="route_mobile_detail_value">
+<field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
+</div>
+</div>
+<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_label">Current Step</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="ux_stage_title" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="not notes">
+<div class="route_mobile_detail_label">Internal Notes</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="notes" readonly="1" nolabel="1"/>
+</div>
+</div>
+</page>
+</xpath>
+</field>
+</record>
 </odoo>
