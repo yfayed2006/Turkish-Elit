@@ -54,3 +54,5 @@ from . import res_company_route_schedule_ext
 from . import route_schedule_template
 from . import route_weekly_schedule
 from . import route_plan_schedule_ext
+
+from . import route_geolocation
