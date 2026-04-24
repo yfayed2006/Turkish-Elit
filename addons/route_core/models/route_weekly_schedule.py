@@ -59,9 +59,9 @@ class RouteWeeklySchedule(models.Model):
     display_state = fields.Selection(
         [
             ("draft", "Draft"),
-            ("plans_generated", "Plans Generated"),
-            ("in_progress", "Execution Started"),
-            ("done", "Completed"),
+            ("plans_generated", "Plans Ready"),
+            ("in_progress", "Execution"),
+            ("done", "Done"),
             ("cancelled", "Cancelled"),
         ],
         string="Workflow Status",
