@@ -249,7 +249,21 @@ pending visit(s) were found for this planning area.
 <field name="area_id"/>
 </group>
 </group>
-<div class="route_mobile_summary_grid">
+<div class="route_mobile_summary_grid" invisible="planning_finalized">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Planned Stops</div>
+<div class="route_mobile_info_value">
+<field name="line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="previous_pending_visit_count == 0">
+<div class="route_mobile_info_label">Previous Pending</div>
+<div class="route_mobile_info_value">
+<field name="previous_pending_visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_summary_grid" invisible="not planning_finalized">
 <div class="route_mobile_info_card" invisible="not planning_finalized">
 <div class="route_mobile_info_label">Plan Date</div>
 <div class="route_mobile_info_value">
@@ -323,7 +337,7 @@ pending visit(s) were found for this planning area.
 </div>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="not planning_finalized">
+<div class="route_mobile_detail_box" invisible="not area_id">
 <div class="route_mobile_detail_label">Planning Area</div>
 <div class="route_mobile_detail_value">
 <field name="area_id" readonly="planning_finalized" nolabel="1"/>
@@ -347,7 +361,7 @@ pending visit(s) were found for this planning area.
 <field name="previous_pending_outlet_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_summary_grid" invisible="loading_workflow_enabled == False">
+<div class="route_mobile_summary_grid" invisible="loading_workflow_enabled == False or not planning_finalized">
 <div class="route_mobile_info_card" groups="route_core.group_route_supervisor,route_core.group_route_management">
 <div class="route_mobile_info_label">Loading Proposals</div>
 <div class="route_mobile_info_value">
