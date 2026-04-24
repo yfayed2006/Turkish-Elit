@@ -16,9 +16,9 @@ LOADING_RESULT_SELECTION = [
     ("draft_no_transfer_needed", "No Transfer Needed"),
     ("draft_manual_review", "Manual Review Needed"),
     ("approved_transfer_created", "Transfer Created"),
-    ("approved_transfer_partial", "Transfer Created + Review Needed"),
-    ("approved_no_transfer_needed", "No Transfer Needed"),
-    ("approved_manual_review", "Manual Review Needed"),
+    ("approved_transfer_partial", "Transfer Created + Review"),
+    ("approved_no_transfer_needed", "Approved - No Transfer"),
+    ("approved_manual_review", "Approved - Review"),
     ("cancelled", "Cancelled"),
 ]
 
