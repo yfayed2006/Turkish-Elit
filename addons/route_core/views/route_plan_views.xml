@@ -483,7 +483,7 @@ pending visit(s) were found for this planning area.
 <field name="area_id" string="Area"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="partner_id" string="Customer" optional="show"/>
-<field name="display_state" string="Status" widget="badge"/>
+<field name="state" string="Status" widget="badge"/>
 <field name="skip_reason" optional="show"/>
 <field name="visit_id" string="Visit" optional="show"/>
 <field name="note" string="Line Note" optional="hide"/>
@@ -501,7 +501,7 @@ pending visit(s) were found for this planning area.
 <field name="outlet_id" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="display_state" widget="badge" readonly="1"/>
+<field name="state" widget="badge" readonly="1"/>
 </div>
 </div>
 <group col="2">
