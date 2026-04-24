@@ -11,10 +11,10 @@
 <field name="user_id" string="Salesperson" readonly="state != 'draft'"/>
 <field name="vehicle_id" string="Vehicle" readonly="state != 'draft'"/>
 <field name="line_count" string="Stops"/>
-<field name="generated_plan_count" string="Daily Plans"/>
+<field name="generated_plan_count" string="Plans"/>
 <field name="source_warehouse_id" string="Source Warehouse" optional="hide"/>
 <field name="template_id" string="Weekly Template" optional="hide"/>
-<field name="skipped_finalized_plan_count" string="Protected Days" optional="show"/>
+<field name="skipped_finalized_plan_count" string="Locked" optional="show"/>
 <field name="city_summary" string="Cities" optional="hide"/>
 <field name="area_summary" string="Areas" optional="hide"/>
 <field name="outlet_summary" string="Planned Outlets" optional="hide"/>
