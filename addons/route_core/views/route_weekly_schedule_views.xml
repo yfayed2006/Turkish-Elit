@@ -18,7 +18,7 @@
 <field name="city_summary" string="Cities" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'plans_generated')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
+<field name="display_state" string="Workflow Status" widget="badge" decoration-info="display_state in ('draft', 'plans_generated')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancelled'"/>
 </list>
 </field>
 </record>
@@ -842,30 +842,6 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <div class="alert alert-info" role="alert" invisible="state != 'draft'"> This weekly schedule is still editable. Adjust weekdays, outlets, and route balance before generating daily plans. </div>
 <div class="route_mobile_summary_grid" invisible="state != 'draft'">
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Week Start</div>
-<div class="route_mobile_info_value">
-<field name="week_start_date" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Week End</div>
-<div class="route_mobile_info_value">
-<field name="week_end_date" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Salesperson</div>
-<div class="route_mobile_info_value">
-<field name="user_id" readonly="0" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Vehicle</div>
-<div class="route_mobile_info_value">
-<field name="vehicle_id" readonly="0" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Scheduled Stops</div>
 <div class="route_mobile_info_value">
 <field name="line_count" readonly="1" nolabel="1"/>
@@ -877,11 +853,35 @@ day(s) were skipped during sync because finalized daily plans were already linke
 <field name="off_day_stop_count" readonly="1" nolabel="1"/>
 </div>
 </div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Daily Plans</div>
+<div class="route_mobile_info_value">
+<field name="generated_plan_count" readonly="1" nolabel="1"/>
 </div>
-<div class="route_mobile_detail_box" invisible="state != 'draft'">
-<div class="route_mobile_detail_label">Source Warehouse</div>
-<div class="route_mobile_detail_value">
-<field name="source_warehouse_id" readonly="0" nolabel="1" options="{'no_create': True}"/>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Weekly Off Day</div>
+<div class="route_mobile_info_value">
+<field name="off_day" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="state != 'draft' or not city_summary">
+<div class="route_mobile_detail_label">Cities</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="city_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="state != 'draft' or not area_summary">
+<div class="route_mobile_detail_label">Areas</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="area_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="state != 'draft' or not outlet_summary">
+<div class="route_mobile_detail_label">Planned Outlets</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value">
+<field name="outlet_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_summary_grid" invisible="state == 'draft'">
@@ -966,7 +966,7 @@ day(s) were skipped during sync because finalized daily plans were already linke
 </div>
 </page>
 <page string="Weekly Stops">
-<div class="alert alert-info" role="alert" invisible="state != 'draft'"> Add or adjust weekday stops here before you generate daily plans. </div>
+<div class="alert alert-info" role="alert" invisible="state != 'draft'"> Add or adjust weekday stops here before you generate daily plans. Use Add Stop for day-specific planning and keep each outlet only once per weekday. </div>
 <div class="alert alert-info" role="alert" invisible="state == 'draft'"> This stop list is now review-only. Use the daily plans for date-level execution follow-up. </div>
 <notebook>
 <page string="Monday">
@@ -1329,7 +1329,7 @@ OUT/
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
 <field name="state"/>
-<!--          Current Week filter removed to avoid XML parser issues on Odoo upgrade          -->
+<!--           Current Week filter removed to avoid XML parser issues on Odoo upgrade           -->
 <filter name="filter_generated" string="Daily Plans Ready" domain="[('state', '=', 'plans_generated')]"/>
 <filter name="filter_draft" string="Awaiting Planning" domain="[('state', '=', 'draft')]"/>
 <searchpanel>
