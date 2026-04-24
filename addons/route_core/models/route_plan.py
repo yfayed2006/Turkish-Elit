@@ -75,18 +75,6 @@ class RoutePlan(models.Model):
         copy=False,
         readonly=True,
     )
-    display_state = fields.Selection(
-        [
-            ("draft", "Draft"),
-            ("ready", "Ready"),
-            ("in_progress", "In Progress"),
-            ("done", "Done"),
-            ("cancel", "Cancelled"),
-        ],
-        string="Workflow Status",
-        compute="_compute_display_state",
-        store=True,
-    )
     notes = fields.Text(string="Notes")
 
     line_ids = fields.One2many(
@@ -127,6 +115,11 @@ class RoutePlan(models.Model):
         compute="_compute_shortage_counts",
     )
 
+    planning_area_display = fields.Char(
+        string="Planning Area",
+        compute="_compute_plan_summaries",
+        store=False,
+    )
     area_summary = fields.Char(
         string="Areas",
         compute="_compute_plan_summaries",
@@ -135,6 +128,23 @@ class RoutePlan(models.Model):
     outlet_summary = fields.Char(
         string="Outlets",
         compute="_compute_plan_summaries",
+        store=False,
+    )
+    execution_summary_state = fields.Selection(
+        [
+            ("planning", "Planning"),
+            ("ready", "Ready to Start"),
+            ("partial", "Partially Executed"),
+            ("in_progress", "In Progress"),
+            ("completed", "Completed"),
+        ],
+        string="Execution Summary",
+        compute="_compute_execution_summary",
+        store=False,
+    )
+    execution_summary_message = fields.Char(
+        string="Execution Summary Message",
+        compute="_compute_execution_summary",
         store=False,
     )
     search_area_ids = fields.Many2many(
@@ -161,20 +171,6 @@ class RoutePlan(models.Model):
         string="Has Previous Pending Visits",
         compute="_compute_pending_review_stats",
     )
-
-    @api.depends("state", "planning_finalized")
-    def _compute_display_state(self):
-        for rec in self:
-            if rec.state == "cancel":
-                rec.display_state = "cancel"
-            elif rec.state == "done":
-                rec.display_state = "done"
-            elif rec.state == "in_progress":
-                rec.display_state = "in_progress"
-            elif rec.planning_finalized:
-                rec.display_state = "ready"
-            else:
-                rec.display_state = "draft"
 
     @api.depends("line_ids", "line_ids.state", "line_ids.visit_id", "line_ids.visit_id.state")
     def _compute_line_counts(self):
@@ -218,6 +214,11 @@ class RoutePlan(models.Model):
             unique_area_names = list(dict.fromkeys(area_names))
             unique_outlet_names = list(dict.fromkeys(outlet_names))
 
+            rec.planning_area_display = (
+                (rec.area_id.display_name or rec.area_id.name)
+                if rec.area_id
+                else self._format_summary_names(unique_area_names, max_items=1)
+            )
             rec.area_summary = self._format_summary_names(unique_area_names, max_items=2)
             rec.outlet_summary = self._format_summary_names(unique_outlet_names, max_items=2)
 
@@ -231,6 +232,58 @@ class RoutePlan(models.Model):
             rec.previous_pending_outlet_summary = rec._format_summary_names(
                 [name for name in outlet_names if name],
                 max_items=3,
+            )
+
+    @api.depends(
+        "planning_finalized",
+        "state",
+        "line_count",
+        "visit_count",
+        "pending_count",
+        "visited_count",
+        "skipped_count",
+        "in_progress_count",
+    )
+    def _compute_execution_summary(self):
+        for rec in self:
+            if not rec.planning_finalized:
+                rec.execution_summary_state = "planning"
+                rec.execution_summary_message = _(
+                    "Planning is still open. Finalize the route plan after reviewing stops and loading."
+                )
+                continue
+
+            completed_count = (rec.visited_count or 0) + (rec.skipped_count or 0)
+
+            if rec.in_progress_count > 0 or rec.state == "in_progress":
+                rec.execution_summary_state = "in_progress"
+                if rec.pending_count > 0:
+                    rec.execution_summary_message = _(
+                        "Execution is in progress. Some visits are active and other stops are still pending."
+                    )
+                else:
+                    rec.execution_summary_message = _(
+                        "Execution is in progress. Monitor the active field visits and close the remaining stop."
+                    )
+                continue
+
+            if rec.line_count and rec.pending_count == 0 and completed_count >= rec.line_count:
+                rec.execution_summary_state = "completed"
+                rec.execution_summary_message = _(
+                    "All planned visits are completed for this route plan."
+                )
+                continue
+
+            if rec.visit_count > 0 or rec.visited_count > 0 or rec.skipped_count > 0:
+                rec.execution_summary_state = "partial"
+                rec.execution_summary_message = _(
+                    "Execution has started. Some visits are completed while other stops are still pending."
+                )
+                continue
+
+            rec.execution_summary_state = "ready"
+            rec.execution_summary_message = _(
+                "Execution has not started yet. Use Execute Visit or Open Visits to begin field activity."
             )
 
     @api.depends("area_id", "line_ids.area_id", "line_ids.outlet_id")
