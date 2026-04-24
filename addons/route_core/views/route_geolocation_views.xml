@@ -1,5 +1,4 @@
 <odoo>
-<data>
 <record id="view_res_company_form_route_geolocation" model="ir.ui.view">
 <field name="name">res.company.form.route.geolocation</field>
 <field name="model">res.company</field>
@@ -147,5 +146,4 @@
 <field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
 </record>
 <menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="route_core.menu_route_configuration" action="route_core.action_route_outlet_location_setup" sequence="18" groups="route_core.group_route_management"/>
-</data>
 </odoo>
