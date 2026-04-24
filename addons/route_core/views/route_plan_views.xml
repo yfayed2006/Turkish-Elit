@@ -14,7 +14,7 @@
 <field name="visit_count" string="Created Visits" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" string="Workflow" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </list>
 </field>
 </record>
@@ -30,7 +30,7 @@
 <field name="visit_count" string="Created Visits"/>
 <field name="planning_finalized" string="Ready" optional="hide"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="display_state" string="Workflow" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" string="Workflow" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </list>
 </field>
 </record>
@@ -50,7 +50,8 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="display_state" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<span class="badge text-bg-primary" invisible="state != 'draft' or not planning_finalized">Ready</span>
+<field name="state" widget="badge" invisible="state == 'draft' and planning_finalized" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This plan is still being prepared by your supervisor. Review the stops now and return after finalization to start execution.</div>
@@ -126,7 +127,6 @@
 <field name="area_id"/>
 <field name="outlet_id"/>
 <field name="partner_id"/>
-<field name="display_state" string="Workflow"/>
 <field name="visit_id"/>
 <field name="skip_reason"/>
 <field name="note"/>
@@ -222,7 +222,8 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="display_state" widget="badge" decoration-info="display_state == 'draft'" decoration-primary="display_state == 'ready'" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<span class="badge text-bg-primary" invisible="state != 'draft' or not planning_finalized">Ready</span>
+<field name="state" widget="badge" invisible="state == 'draft' and planning_finalized" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This daily plan is still under planning. Review the planned stops, pending outlets, and loading needs before finalizing execution.</div>
@@ -444,19 +445,18 @@ pending visit(s) were found for this planning area.
 <field name="area_id"/>
 <field name="area_summary" string="Areas"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="display_state" string="Workflow"/>
 <filter name="filter_my_plans" string="My Plans" domain="[('user_id', '=', uid)]"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_draft" string="Draft" domain="[('display_state', '=', 'draft')]"/>
-<filter name="filter_in_progress" string="In Progress" domain="[('display_state', '=', 'in_progress')]"/>
-<filter name="filter_done" string="Done" domain="[('display_state', '=', 'done')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft'), ('planning_finalized', '=', False)]"/>
+<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 <filter name="filter_cancel" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
-<filter name="filter_ready" string="Ready" domain="[('display_state', '=', 'ready')]"/>
+<filter name="filter_ready" string="Ready" domain="[('state', '=', 'draft'), ('planning_finalized', '=', True)]"/>
 <separator/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
-<filter name="group_by_workflow" string="Workflow" context="{'group_by': 'display_state'}"/>
+<filter name="group_by_workflow" string="Workflow" context="{'group_by': 'state'}"/>
 <filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
 <searchpanel>
 <field name="user_id" string="Salesperson"/>
@@ -476,11 +476,10 @@ pending visit(s) were found for this planning area.
 <field name="date"/>
 <field name="vehicle_id"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="display_state" string="Workflow"/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_ready" string="Ready" domain="[('display_state', '=', 'ready')]"/>
-<filter name="filter_in_progress" string="In Progress" domain="[('display_state', '=', 'in_progress')]"/>
-<filter name="filter_done" string="Done" domain="[('display_state', '=', 'done')]"/>
+<filter name="filter_ready" string="Ready" domain="[('state', '=', 'draft'), ('planning_finalized', '=', True)]"/>
+<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
 <searchpanel>
 <field name="vehicle_id" string="Vehicle"/>
 <field name="search_area_ids" string="Areas" select="multi"/>
