@@ -56,6 +56,18 @@ class RouteWeeklySchedule(models.Model):
         required=True,
     )
     notes = fields.Text(string="Planning Notes")
+    display_state = fields.Selection(
+        [
+            ("draft", "Draft"),
+            ("plans_generated", "Plans Generated"),
+            ("in_progress", "Execution Started"),
+            ("done", "Completed"),
+            ("cancelled", "Cancelled"),
+        ],
+        string="Workflow Status",
+        compute="_compute_display_state",
+        store=True,
+    )
     line_ids = fields.One2many(
         "route.weekly.schedule.line",
         "schedule_id",
@@ -134,6 +146,31 @@ class RouteWeeklySchedule(models.Model):
         compute="_compute_search_relations",
         store=True,
     )
+
+    @api.depends(
+        "state",
+        "line_ids.generated_plan_id",
+        "line_ids.generated_plan_id.state",
+    )
+    def _compute_display_state(self):
+        for rec in self:
+            if rec.state == "cancelled":
+                rec.display_state = "cancelled"
+                continue
+
+            linked_plans = rec.line_ids.mapped("generated_plan_id").filtered(
+                lambda plan: plan and plan.state != "cancel"
+            )
+            linked_states = set(linked_plans.mapped("state"))
+
+            if linked_plans and linked_states and linked_states.issubset({"done"}):
+                rec.display_state = "done"
+            elif "in_progress" in linked_states:
+                rec.display_state = "in_progress"
+            elif rec.state == "plans_generated":
+                rec.display_state = "plans_generated"
+            else:
+                rec.display_state = "draft"
 
     @api.depends("week_start_date")
     def _compute_week_range(self):
