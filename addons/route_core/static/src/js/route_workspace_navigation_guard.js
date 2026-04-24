@@ -15,6 +15,12 @@ const STORAGE_KEYS = {
     pendingButtonTs: "route_core.v16.pending.button_ts",
     outletWorkspaceActiveTs: "route_core.v16.outlet_workspace.active_ts",
     browserGuardSignature: "route_core.v16.browser_guard_signature",
+    routePlanHash: "route_core.v16.route_plan.hash",
+    routePlanUrl: "route_core.v16.route_plan.url",
+    loadingProposalHash: "route_core.v16.loading_proposal.hash",
+    loadingProposalUrl: "route_core.v16.loading_proposal.url",
+    stockSnapshotOrigin: "route_core.v16.stock_snapshot.origin",
+    stockSnapshotOriginTs: "route_core.v16.stock_snapshot.origin_ts",
 };
 
 const INLINE_BACK_WRAPPER_ID = "route-workspace-inline-back-wrapper";
@@ -41,6 +47,7 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
 const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
+const STOCK_SNAPSHOT_ORIGIN_TTL = 15 * 60 * 1000;
 
 let isInternalRedirect = false;
 let observerStarted = false;
@@ -593,9 +600,16 @@ function rememberNavigationTargets() {
     if (pageKind === "outlet_form") {
         rememberPair(STORAGE_KEYS.outletFormHash, STORAGE_KEYS.outletFormUrl);
     }
+    if (pageKind === "route_plan") {
+        rememberPair(STORAGE_KEYS.routePlanHash, STORAGE_KEYS.routePlanUrl);
+    }
+    if (pageKind === "loading_proposal") {
+        rememberPair(STORAGE_KEYS.loadingProposalHash, STORAGE_KEYS.loadingProposalUrl);
+    }
     if (["workspace", "product_center", "snapshot_center", "collections_center", "daily_summary"].includes(pageKind) || isAppsHomePage()) {
         clearOutletWorkspaceActive();
         clearRecentOutletSubpage();
+        clearStockSnapshotOrigin();
     }
 }
 
@@ -612,6 +626,22 @@ function rememberOriginFromClick(event) {
         "action_open_outlet_center_screen",
     ].includes(name)) {
         rememberPair(STORAGE_KEYS.workspaceHash, STORAGE_KEYS.workspaceUrl);
+    }
+    if (name === "action_open_vehicle_products") {
+        rememberPair(STORAGE_KEYS.productCenterHash, STORAGE_KEYS.productCenterUrl);
+        setStockSnapshotOrigin("product_center");
+    }
+    if (name === "action_open_vehicle_stock_snapshot") {
+        const pageKind = detectPageKind();
+        if (pageKind === "route_plan") {
+            rememberPair(STORAGE_KEYS.routePlanHash, STORAGE_KEYS.routePlanUrl);
+            setStockSnapshotOrigin("route_plan");
+        } else if (pageKind === "loading_proposal") {
+            rememberPair(STORAGE_KEYS.loadingProposalHash, STORAGE_KEYS.loadingProposalUrl);
+            setStockSnapshotOrigin("loading_proposal");
+        } else {
+            clearStockSnapshotOrigin();
+        }
     }
     if (OUTLET_WORKSPACE_ENTRY_BUTTONS.has(name)) {
         markOutletWorkspaceActive();
@@ -650,6 +680,47 @@ function getOutletFormTarget() {
         hash: sessionStorage.getItem(STORAGE_KEYS.outletFormHash) || "",
         url: sessionStorage.getItem(STORAGE_KEYS.outletFormUrl) || "",
     };
+}
+
+function getRoutePlanTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.routePlanHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.routePlanUrl) || "",
+    };
+}
+
+function getLoadingProposalTarget() {
+    return {
+        hash: sessionStorage.getItem(STORAGE_KEYS.loadingProposalHash) || "",
+        url: sessionStorage.getItem(STORAGE_KEYS.loadingProposalUrl) || "",
+    };
+}
+
+function clearStockSnapshotOrigin() {
+    sessionStorage.removeItem(STORAGE_KEYS.stockSnapshotOrigin);
+    sessionStorage.removeItem(STORAGE_KEYS.stockSnapshotOriginTs);
+}
+
+function setStockSnapshotOrigin(origin) {
+    if (!origin) {
+        clearStockSnapshotOrigin();
+        return;
+    }
+    sessionStorage.setItem(STORAGE_KEYS.stockSnapshotOrigin, origin);
+    sessionStorage.setItem(STORAGE_KEYS.stockSnapshotOriginTs, String(Date.now()));
+}
+
+function getStockSnapshotOrigin() {
+    const origin = sessionStorage.getItem(STORAGE_KEYS.stockSnapshotOrigin) || "";
+    const timestamp = parseInt(sessionStorage.getItem(STORAGE_KEYS.stockSnapshotOriginTs) || "0", 10);
+    if (!origin) {
+        return "";
+    }
+    if (timestamp && Date.now() - timestamp > STOCK_SNAPSHOT_ORIGIN_TTL) {
+        clearStockSnapshotOrigin();
+        return "";
+    }
+    return origin;
 }
 
 function getProductCenterHref() {
@@ -849,6 +920,22 @@ function navigateBackToRoutePlan() {
     }, 900);
 }
 
+function navigateBackToStoredRoutePlan() {
+    const target = getRoutePlanTarget();
+    if (navigateToStoredTarget(target)) {
+        return;
+    }
+    navigateBackToRoutePlan();
+}
+
+function navigateBackToStoredLoadingProposal() {
+    const target = getLoadingProposalTarget();
+    if (navigateToStoredTarget(target)) {
+        return;
+    }
+    navigateBackToRoutePlan();
+}
+
 function navigateBackToRouteWorkspace() {
     if (openServerButton("action_open_pda_screen")) {
         return;
@@ -1037,6 +1124,16 @@ function syncNativeNavbarBreadcrumbVisibility(pageKind) {
     }
 }
 
+function getSupervisorVehicleStockOrigin() {
+    return ["route_plan", "loading_proposal"].includes(getStockSnapshotOrigin())
+        ? getStockSnapshotOrigin()
+        : "";
+}
+
+function shouldRespectNativeBreadcrumb(pageKind) {
+    return pageKind === "vehicle_stock" && !!getSupervisorVehicleStockOrigin();
+}
+
 function getDesktopBackHost() {
     const root = getActiveRoot();
     return findVisibleInRoot(root, ".o_view_controller") || root || null;
@@ -1060,6 +1157,27 @@ function getBackConfig(pageKind) {
             interceptBrowser: true,
             interceptMobileHeader: true,
         };
+    }
+    if (pageKind === "vehicle_stock") {
+        const origin = getSupervisorVehicleStockOrigin();
+        if (origin === "loading_proposal") {
+            return {
+                label: "Back to Loading Proposal",
+                href: "",
+                onClick: navigateBackToStoredLoadingProposal,
+                interceptBrowser: true,
+                interceptMobileHeader: true,
+            };
+        }
+        if (origin === "route_plan") {
+            return {
+                label: "Back to Route Plan",
+                href: "",
+                onClick: navigateBackToStoredRoutePlan,
+                interceptBrowser: true,
+                interceptMobileHeader: true,
+            };
+        }
     }
     if (STOCK_PAGE_KINDS.has(pageKind)) {
         return {
@@ -1272,6 +1390,9 @@ function interceptBreadcrumbBack(event) {
     if (!backConfig) {
         return;
     }
+    if (shouldRespectNativeBreadcrumb(pageKind)) {
+        return;
+    }
     const breadcrumb = event.target.closest(
         ".o_control_panel .breadcrumb-item a, .o_control_panel .breadcrumb-item, .o_control_panel .o_breadcrumb li a, .o_control_panel .o_breadcrumb li, .o_control_panel_breadcrumbs .breadcrumb-item a, .o_control_panel_breadcrumbs .breadcrumb-item, .breadcrumb-item a, .breadcrumb-item, .o_navbar_breadcrumbs ._o_back_button, .o_navbar_breadcrumbs ._o_back_button *, .o_navbar_breadcrumbs .o_breadcrumb, .o_navbar_breadcrumbs .o_breadcrumb *, .o_navbar_breadcrumbs .min-w-0, .o_navbar_breadcrumbs .min-w-0 *"
     );
@@ -1331,7 +1452,7 @@ function refreshNavigationUi() {
 
 function safeRefreshNavigationUi() {
     try {
-        safeRefreshNavigationUi();
+        refreshNavigationUi();
     } catch (error) {
         console.error("route_core navigation guard failed", error);
     }
@@ -1411,6 +1532,8 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
+
+
 
 
 
