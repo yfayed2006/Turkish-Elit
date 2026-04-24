@@ -3,18 +3,19 @@
 <field name="name">route.plan.list</field>
 <field name="model">route.plan</field>
 <field name="arch" type="xml">
-<list string="Route Plans">
-<field name="name" string="Plan Ref"/>
-<field name="date"/>
-<field name="user_id" optional="hide"/>
-<field name="vehicle_id"/>
-<field name="weekly_schedule_id" optional="show"/>
-<field name="planning_finalized" optional="show"/>
-<field name="line_count" string="Visits"/>
-<field name="visit_count" string="Created Visits" optional="show"/>
-<field name="area_summary" string="Areas" optional="show"/>
-<field name="outlet_summary" string="Outlets"/>
-<field name="state" string="Workflow" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
+<list string="Daily Route Plans">
+<field name="name" string="Daily Plan"/>
+<field name="date" string="Plan Date"/>
+<field name="user_id" string="Salesperson" optional="hide"/>
+<field name="vehicle_id" string="Vehicle"/>
+<field name="weekly_schedule_id" string="Weekly Schedule" optional="show"/>
+<field name="line_count" string="Stops"/>
+<field name="visit_count" string="Visits" optional="show"/>
+<field name="planning_finalized" string="Ready" optional="show"/>
+<field name="loading_result_state" string="Loading" widget="badge" optional="show" decoration-info="loading_result_state == 'draft_transfer_planned'" decoration-warning="loading_result_state in ['draft_manual_review', 'approved_transfer_partial', 'approved_manual_review']" decoration-success="loading_result_state in ['draft_no_transfer_needed', 'approved_transfer_created', 'approved_no_transfer_needed']" decoration-danger="loading_result_state == 'cancelled'"/>
+<field name="area_summary" string="Areas" optional="hide"/>
+<field name="outlet_summary" string="Planned Outlets" optional="hide"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </list>
 </field>
 </record>
@@ -226,17 +227,13 @@
 <field name="state" widget="badge" invisible="state == 'draft' and planning_finalized" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state in ['cancel', 'cancelled']"/>
 </div>
 </div>
-<div class="alert alert-info" role="alert" invisible="planning_finalized">This daily plan is still under planning. Review the planned stops, pending outlets, and loading needs before finalizing execution.</div>
-<div class="alert alert-success" role="alert" invisible="not planning_finalized">This daily plan is finalized for execution. Use Open Visits to monitor execution progress and follow up results.</div>
-<div class="alert alert-info" role="alert" invisible="loading_workflow_mode != 'optional'">
-<strong>Optional Vehicle Loading:</strong>
-Loading Proposal is available for planning help only. The route can still continue if the warehouse team creates the transfer manually later.
-</div>
 <div class="alert alert-warning" role="alert" invisible="previous_pending_visit_count == 0">
 <strong>Previous pending visits detected:</strong>
 <field name="previous_pending_visit_count" readonly="1" class="oe_inline"/>
 pending visit(s) were found for this planning area.
 </div>
+<div class="alert alert-info" role="alert" invisible="planning_finalized or previous_pending_visit_count != 0">Complete the setup, build the stop list, then finalize the daily plan.</div>
+<div class="alert alert-success" role="alert" invisible="not planning_finalized or previous_pending_visit_count != 0">This daily plan is ready for execution. Use Open Visits to monitor the route.</div>
 <notebook>
 <page string="Overview">
 <group string="Planning Setup" col="2" invisible="planning_finalized">
@@ -250,7 +247,8 @@ pending visit(s) were found for this planning area.
 <field name="area_id"/>
 </group>
 </group>
-<div class="alert alert-info" role="alert" invisible="planning_finalized"> Complete the planning setup first, confirm the planning area, then move to Planned Visits to build the final stop list. </div>
+<div class="alert alert-info" role="alert" invisible="planning_finalized or id">Complete the required setup, save the plan, then add planned visits.</div>
+<div class="alert alert-info" role="alert" invisible="planning_finalized or not id">Add or review planned visits, then finalize the daily plan.</div>
 <div class="route_mobile_summary_grid" invisible="planning_finalized">
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Planned Stops</div>
@@ -399,9 +397,9 @@ pending visit(s) were found for this planning area.
 </div>
 </div>
 </page>
-<page string="Planned Visits">
-<div class="alert alert-info" role="alert" invisible="planning_finalized"> Use this tab to add, reorder, and review the final stop list before daily execution is locked. </div>
-<div class="alert alert-info" role="alert" invisible="not planning_finalized"> Planning is locked after finalization. Use this tab to monitor line status, open visits, and review skipped or pending stops. </div>
+<page string="Planned Visits" invisible="not id">
+<div class="alert alert-info" role="alert" invisible="planning_finalized">Add, reorder, and review the final stop list before daily execution is locked.</div>
+<div class="alert alert-info" role="alert" invisible="not planning_finalized">Planning is locked after finalization. Monitor line status, open visits, and skipped stops here.</div>
 <div class="mb-2">
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
