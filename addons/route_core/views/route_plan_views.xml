@@ -9,12 +9,12 @@
 <field name="user_id" optional="hide"/>
 <field name="vehicle_id"/>
 <field name="weekly_schedule_id" optional="show"/>
-<field name="planning_finalized" string="Ready for Execution" optional="show"/>
+<field name="planning_finalized" optional="show"/>
 <field name="line_count" string="Visits"/>
 <field name="visit_count" string="Executed" optional="show"/>
 <field name="area_summary" string="Areas" optional="show"/>
 <field name="outlet_summary" string="Outlets"/>
-<field name="display_state" string="Status" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -28,9 +28,9 @@
 <field name="weekly_schedule_id" optional="show"/>
 <field name="line_count" string="Stops"/>
 <field name="visit_count" string="Executed"/>
-<field name="planning_finalized" string="Ready for Execution"/>
+<field name="planning_finalized" string="Ready"/>
 <field name="outlet_summary" string="Planned Outlets"/>
-<field name="display_state" string="Status" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </list>
 </field>
 </record>
@@ -50,7 +50,7 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This plan is still being prepared by your supervisor. Review the stops now and return after finalization to start execution.</div>
@@ -222,11 +222,11 @@
 <field name="name" readonly="1"/>
 </h1>
 <div class="mt8">
-<field name="display_state" widget="badge" decoration-info="display_state in ('draft', 'ready')" decoration-warning="display_state == 'in_progress'" decoration-success="display_state == 'done'" decoration-danger="display_state == 'cancel'"/>
+<field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'in_progress'" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized">This daily plan is still under planning. Review the planned stops, pending outlets, and loading needs before finalizing execution.</div>
-<div class="alert alert-success" role="alert" invisible="not planning_finalized">This daily plan is finalized for execution. Use Open Visits to monitor execution progress and follow-up results.</div>
+<div class="alert alert-success" role="alert" invisible="not planning_finalized">This daily plan is finalized for execution. Use Open Visits to monitor execution progress and follow up results.</div>
 <div class="alert alert-info" role="alert" invisible="loading_workflow_mode != 'optional'">
 <strong>Optional Vehicle Loading:</strong>
 Loading Proposal is available for planning help only. The route can still continue if the warehouse team creates the transfer manually later.
@@ -268,18 +268,6 @@ pending visit(s) were found for this planning area.
 <div class="route_mobile_detail_label">Planning Area</div>
 <div class="route_mobile_detail_value">
 <field name="area_id" readonly="0" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="planning_finalized or not area_summary">
-<div class="route_mobile_detail_label">Areas in This Plan</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="area_summary" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="planning_finalized or not outlet_summary">
-<div class="route_mobile_detail_label">Current Planned Outlets</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="outlet_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="alert alert-info" role="alert" invisible="not planning_finalized"> Supervisor execution review: monitor open visits, skipped stops, loading status, and vehicle closing from this plan. </div>
@@ -358,24 +346,6 @@ pending visit(s) were found for this planning area.
 <field name="visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Loading Proposals</div>
-<div class="route_mobile_info_value">
-<field name="loading_proposal_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Vehicle Closings</div>
-<div class="route_mobile_info_value">
-<field name="vehicle_closing_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="previous_pending_visit_count == 0">
-<div class="route_mobile_info_label">Previous Pending</div>
-<div class="route_mobile_info_value">
-<field name="previous_pending_visit_count" readonly="1" nolabel="1"/>
-</div>
-</div>
 </div>
 <div class="route_mobile_summary_grid" invisible="not planning_finalized">
 <div class="route_mobile_info_card" invisible="previous_pending_visit_count == 0">
@@ -431,9 +401,6 @@ pending visit(s) were found for this planning area.
 <page string="Planned Visits">
 <div class="alert alert-info" role="alert" invisible="planning_finalized"> Use this tab to add, reorder, and review the final stop list before daily execution is locked. </div>
 <div class="alert alert-info" role="alert" invisible="not planning_finalized"> Planning is locked after finalization. Use this tab to monitor line status, open visits, and review skipped or pending stops. </div>
-<div class="alert alert-info" role="alert" invisible="line_count != 0"> No visits are planned yet. Use Add Visits by Area or Add a line to build the route. </div>
-<div class="alert alert-info" role="alert" invisible="not planning_finalized or line_count == 0 or visit_count != 0"> Execution has not started yet. Finalize the route, then use Execute Visit or Open Visits to begin field activity. </div>
-<div class="alert alert-info" role="alert" invisible="not planning_finalized or visit_count == 0 or pending_count == 0"> Some stops are still pending. Review the open lines below and continue execution follow-up from this plan. </div>
 <div class="mb-2">
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
