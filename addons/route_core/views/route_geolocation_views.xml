@@ -1,0 +1,151 @@
+<odoo>
+<data>
+<record id="view_res_company_form_route_geolocation" model="ir.ui.view">
+<field name="name">res.company.form.route.geolocation</field>
+<field name="model">res.company</field>
+<field name="inherit_id" ref="route_core.view_res_company_form_route_return_settings"/>
+<field name="arch" type="xml">
+<xpath expr="//group[@string='Route Product Settings']" position="before">
+<group string="Route Location Settings">
+<group>
+<field name="route_enable_outlet_geolocation"/>
+<field name="route_map_provider" invisible="route_enable_outlet_geolocation == False"/>
+<field name="route_google_maps_api_key" invisible="route_enable_outlet_geolocation == False or route_map_provider != 'google'"/>
+<field name="route_geo_checkin_radius_m" invisible="route_enable_outlet_geolocation == False"/>
+<div class="text-muted" colspan="2">Basic map buttons work without an API key. The API key is reserved for future embedded maps and live monitoring screens.</div>
+</group>
+</group>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_list_geolocation" model="ir.ui.view">
+<field name="name">route.outlet.list.geolocation</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_list"/>
+<field name="arch" type="xml">
+<xpath expr="//list/field[@name='route_area_name']" position="after">
+<field name="geo_status" string="Location" widget="badge" optional="show" decoration-success="geo_status == 'verified'" decoration-warning="geo_status == 'unverified'" decoration-danger="geo_status == 'missing'"/>
+<field name="geo_display_coordinates" string="Coordinates" optional="hide"/>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_pda_list_geolocation" model="ir.ui.view">
+<field name="name">route.outlet.pda.list.geolocation</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_pda_list"/>
+<field name="arch" type="xml">
+<xpath expr="//list/field[@name='summary_alert_level']" position="after">
+<field name="geo_status" string="Location" widget="badge" optional="hide" decoration-success="geo_status == 'verified'" decoration-warning="geo_status == 'unverified'" decoration-danger="geo_status == 'missing'"/>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_search_geolocation" model="ir.ui.view">
+<field name="name">route.outlet.search.geolocation</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_pda_search"/>
+<field name="arch" type="xml">
+<xpath expr="//filter[@name='filter_consignment']" position="after">
+<separator/>
+<filter name="filter_geo_missing" string="Missing Location" domain="[('geo_status', '=', 'missing')]"/>
+<filter name="filter_geo_unverified" string="Unverified Location" domain="[('geo_status', '=', 'unverified')]"/>
+<filter name="filter_geo_verified" string="Verified Location" domain="[('geo_status', '=', 'verified')]"/>
+</xpath>
+<xpath expr="//filter[@name='group_by_area']" position="after">
+<filter name="group_by_geo_status" string="Location Status" context="{'group_by': 'geo_status'}"/>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_form_geolocation" model="ir.ui.view">
+<field name="name">route.outlet.form.geolocation</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_form"/>
+<field name="arch" type="xml">
+<xpath expr="//div[@name='button_box']" position="inside">
+<button name="action_open_outlet_map" type="object" class="oe_stat_button" icon="fa-map-marker" invisible="geo_status == 'missing'">
+<field name="geo_status" string="Map" widget="statinfo"/>
+</button>
+</xpath>
+<xpath expr="//form/sheet/group/group[1]/field[@name='active']" position="after">
+<field name="geo_status" widget="badge" readonly="1" decoration-success="geo_status == 'verified'" decoration-warning="geo_status == 'unverified'" decoration-danger="geo_status == 'missing'"/>
+</xpath>
+<xpath expr="//page[@string='Address']" position="after">
+<page string="Location">
+<group string="Map Location" col="2">
+<group>
+<field name="geo_status" widget="badge" readonly="1" decoration-success="geo_status == 'verified'" decoration-warning="geo_status == 'unverified'" decoration-danger="geo_status == 'missing'"/>
+<field name="geo_latitude"/>
+<field name="geo_longitude"/>
+<field name="geo_display_coordinates" readonly="1"/>
+<field name="geo_accuracy_m"/>
+</group>
+<group>
+<field name="geo_address" placeholder="Optional map/search address..."/>
+<field name="geo_source"/>
+<field name="geo_place_id"/>
+<field name="geo_verified"/>
+<field name="geo_last_update" readonly="1"/>
+</group>
+</group>
+<group string="Map Actions" col="4">
+<button name="action_search_outlet_address_on_map" type="object" string="Search Address on Map" class="btn-secondary"/>
+<button name="action_open_outlet_map" type="object" string="Open Map" class="btn-primary" invisible="geo_status == 'missing'"/>
+<button name="action_open_outlet_navigation" type="object" string="Navigate" class="btn-secondary" invisible="geo_status == 'missing'"/>
+<button name="action_verify_outlet_location" type="object" string="Verify Location" class="btn-secondary" invisible="geo_status == 'verified'"/>
+<button name="action_mark_outlet_location_unverified" type="object" string="Mark Unverified" class="btn-secondary" invisible="geo_status != 'verified'"/>
+<button name="action_clear_outlet_location" type="object" string="Clear Location" class="btn-secondary" invisible="geo_status == 'missing'"/>
+</group>
+<group string="Usage Notes">
+<div class="text-muted" colspan="4">Set Latitude and Longitude for the real outlet position, then verify the location. These coordinates will be used later for geo check-in, route maps, live monitoring, and route playback.</div>
+</group>
+</page>
+</xpath>
+</field>
+</record>
+<record id="view_route_outlet_pda_form_geolocation" model="ir.ui.view">
+<field name="name">route.outlet.pda.form.geolocation</field>
+<field name="model">route.outlet</field>
+<field name="inherit_id" ref="route_core.view_route_outlet_pda_form"/>
+<field name="arch" type="xml">
+<xpath expr="//group[@string='Quick Snapshot']" position="inside">
+<group>
+<field name="geo_status" string="Location" readonly="1" widget="badge" decoration-success="geo_status == 'verified'" decoration-warning="geo_status == 'unverified'" decoration-danger="geo_status == 'missing'"/>
+</group>
+</xpath>
+<xpath expr="//page[@string='Details']/group[@string='Outlet Details']/group[1]" position="inside">
+<field name="geo_display_coordinates" string="Coordinates" readonly="1" invisible="geo_status == 'missing'"/>
+</xpath>
+<xpath expr="//page[@string='Details']/group[@string='Outlet Details']" position="after">
+<group string="Map Actions" col="4">
+<button name="action_search_outlet_address_on_map" type="object" string="Search Address on Map" class="btn-secondary"/>
+<button name="action_open_outlet_map" type="object" string="Open Map" class="btn-primary" invisible="geo_status == 'missing'"/>
+<button name="action_open_outlet_navigation" type="object" string="Navigate" class="btn-secondary" invisible="geo_status == 'missing'"/>
+</group>
+</xpath>
+</field>
+</record>
+<record id="action_route_outlet_location_setup" model="ir.actions.act_window">
+<field name="name">Outlet Location Setup</field>
+<field name="res_model">route.outlet</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_outlet_pda_search"/>
+<field name="context">{'search_default_filter_geo_missing': 1}</field>
+<help type="html">
+<p class="o_view_nocontent_smiling_face">Review outlets that need GPS coordinates.</p>
+<p>Set Latitude and Longitude, verify the location, then use map actions for navigation and future geo check-in.</p>
+</help>
+</record>
+<record id="action_route_outlet_location_setup_list" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_outlet_list"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
+</record>
+<record id="action_route_outlet_location_setup_form" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_outlet_form"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
+</record>
+<menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="route_core.menu_route_configuration" action="route_core.action_route_outlet_location_setup" sequence="18" groups="route_core.group_route_management"/>
+</data>
+</odoo>
