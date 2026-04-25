@@ -3,7 +3,7 @@
 <field name="name">route.visit.geo.control.kanban</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<kanban string="Geo Visit Cards" class="o_kanban_mobile route_geo_control_visit_kanban" create="0" delete="0" quick_create="0">
+<kanban string="Geo Visit Cards" class="o_kanban_mobile route_geo_control_visit_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -25,7 +25,7 @@
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record p-3">
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-<div>
+<div class="flex-grow-1">
 <strong class="d-block fs-5">
 <field name="outlet_id"/>
 </strong>
@@ -68,24 +68,50 @@
 </strong>
 </div>
 </div>
-<div class="small text-muted mb-2" t-if="record.geo_checkin_datetime.raw_value">
-Check-in:
+<div class="row g-2 small mb-2">
+<div class="col-6">
+<span class="text-muted d-block">Check-in Time</span>
+<strong>
 <field name="geo_checkin_datetime"/>
-| Accuracy:
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted d-block">Accuracy</span>
+<strong>
 <field name="geo_checkin_accuracy_m"/>
 m
+</strong>
+</div>
 </div>
 <div class="alert alert-warning py-1 px-2 mb-2" t-if="record.geo_checkin_outside_zone_reason.raw_value">
 <strong>Reason:</strong>
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm" t-if="record.outlet_geo_status.raw_value != 'missing'">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm" t-if="record.geo_review_state.raw_value not in ['disabled', 'pending_checkin', 'outlet_missing']">Check-in Map</button>
-<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm" t-if="record.geo_review_required.raw_value and record.geo_review_supervisor_decision.raw_value != 'accepted'">Accept</button>
-<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm" t-if="record.geo_review_required.raw_value and record.geo_review_supervisor_decision.raw_value != 'needs_correction'">Needs Correction</button>
-<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm" t-if="record.geo_review_supervisor_decision.raw_value">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">
+<i class="fa fa-external-link me-1"/>
+Open Visit
+</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm" t-if="record.outlet_geo_status.raw_value !== 'missing'">
+<i class="fa fa-map-marker me-1"/>
+Outlet Map
+</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm" t-if="!['disabled', 'pending_checkin', 'outlet_missing'].includes(record.geo_review_state.raw_value)">
+<i class="fa fa-location-arrow me-1"/>
+Check-in Map
+</button>
+<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm" t-if="record.geo_review_required.raw_value && record.geo_review_supervisor_decision.raw_value !== 'accepted'">
+<i class="fa fa-check me-1"/>
+Accept
+</button>
+<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm" t-if="record.geo_review_required.raw_value && record.geo_review_supervisor_decision.raw_value !== 'needs_correction'">
+<i class="fa fa-exclamation-triangle me-1"/>
+Needs Correction
+</button>
+<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm" t-if="record.geo_review_supervisor_decision.raw_value">
+<i class="fa fa-undo me-1"/>
+Reset
+</button>
 </div>
 </div>
 </t>
@@ -100,8 +126,8 @@ m
 <form string="Geo Control Center" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
-<button name="action_open_filtered_visits" type="object" string="Open Filtered Cards/List" class="btn-primary" icon="fa-th-large"/>
-<button name="action_open_geo_review" type="object" string="Open Geo Review" icon="fa-list"/>
+<button name="action_open_filtered_visits" type="object" string="Open Filtered Cards" class="btn-primary" icon="fa-th-large"/>
+<button name="action_open_geo_review" type="object" string="Open Geo Review List" icon="fa-list"/>
 </header>
 <sheet>
 <div class="oe_title">
@@ -169,8 +195,8 @@ m
 </div>
 <notebook>
 <page string="Today Geo Visit Cards">
-<field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban,list" context="{'create': 0, 'edit': 0, 'delete': 0}">
-<kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0">
+<field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
+<kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -191,12 +217,14 @@ m
 <t t-name="card">
 <div class="o_kanban_record p-3">
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-<div>
-<strong class="d-block">
+<div class="flex-grow-1">
+<strong class="d-block fs-5">
 <field name="outlet_id"/>
 </strong>
 <span class="text-muted">
 <field name="name"/>
+•
+<field name="date"/>
 </span>
 </div>
 <div class="text-end">
@@ -232,51 +260,55 @@ m
 </strong>
 </div>
 </div>
-<div class="small text-muted mb-2" t-if="record.geo_checkin_datetime.raw_value">
-Check-in:
+<div class="row g-2 small mb-2">
+<div class="col-6">
+<span class="text-muted d-block">Check-in Time</span>
+<strong>
 <field name="geo_checkin_datetime"/>
-| Accuracy:
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted d-block">Accuracy</span>
+<strong>
 <field name="geo_checkin_accuracy_m"/>
 m
+</strong>
+</div>
 </div>
 <div class="alert alert-warning py-1 px-2 mb-2" t-if="record.geo_checkin_outside_zone_reason.raw_value">
 <strong>Reason:</strong>
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm" t-if="record.outlet_geo_status.raw_value != 'missing'">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm" t-if="record.geo_review_state.raw_value not in ['disabled', 'pending_checkin', 'outlet_missing']">Check-in Map</button>
-<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm" t-if="record.geo_review_required.raw_value and record.geo_review_supervisor_decision.raw_value != 'accepted'">Accept</button>
-<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm" t-if="record.geo_review_required.raw_value and record.geo_review_supervisor_decision.raw_value != 'needs_correction'">Needs Correction</button>
-<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm" t-if="record.geo_review_supervisor_decision.raw_value">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">
+<i class="fa fa-external-link me-1"/>
+Open Visit
+</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm" t-if="record.outlet_geo_status.raw_value !== 'missing'">
+<i class="fa fa-map-marker me-1"/>
+Outlet Map
+</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm" t-if="!['disabled', 'pending_checkin', 'outlet_missing'].includes(record.geo_review_state.raw_value)">
+<i class="fa fa-location-arrow me-1"/>
+Check-in Map
+</button>
+<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm" t-if="record.geo_review_required.raw_value && record.geo_review_supervisor_decision.raw_value !== 'accepted'">
+<i class="fa fa-check me-1"/>
+Accept
+</button>
+<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm" t-if="record.geo_review_required.raw_value && record.geo_review_supervisor_decision.raw_value !== 'needs_correction'">
+<i class="fa fa-exclamation-triangle me-1"/>
+Needs Correction
+</button>
+<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm" t-if="record.geo_review_supervisor_decision.raw_value">
+<i class="fa fa-undo me-1"/>
+Reset
+</button>
 </div>
 </div>
 </t>
 </templates>
 </kanban>
-<list string="Filtered Geo Visits" create="0" delete="0">
-<field name="outlet_geo_status" column_invisible="1"/>
-<field name="geo_review_required" column_invisible="1"/>
-<field name="geo_review_supervisor_decision" column_invisible="1"/>
-<button name="action_open_geo_review_visit" type="object" string="Open Visit" icon="fa-external-link"/>
-<button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
-<button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
-<button name="action_geo_review_accept" type="object" string="Accept" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
-<button name="action_geo_review_needs_correction" type="object" string="Needs Correction" icon="fa-exclamation-triangle" invisible="not geo_review_required or geo_review_supervisor_decision == 'needs_correction'"/>
-<button name="action_geo_review_reset_decision" type="object" string="Reset" icon="fa-undo" invisible="not geo_review_supervisor_decision"/>
-<field name="name" string="Visit"/>
-<field name="date"/>
-<field name="user_id" string="Salesperson"/>
-<field name="vehicle_id"/>
-<field name="outlet_id"/>
-<field name="area_id"/>
-<field name="geo_review_state" widget="badge"/>
-<field name="geo_checkin_distance_display" string="Distance"/>
-<field name="geo_checkin_datetime" string="Check-in Time"/>
-<field name="geo_checkin_outside_zone_reason" string="Reason"/>
-<field name="visit_process_state" string="Process"/>
-</list>
 </field>
 </page>
 </notebook>
