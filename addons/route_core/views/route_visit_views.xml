@@ -353,6 +353,7 @@
 <page string="Geo Check-in">
 <div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
 <div class="route_geo_action_grid">
+<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
 <button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
@@ -934,6 +935,7 @@
 <page string="Geo Check-in">
 <div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
 <div class="route_geo_action_grid">
+<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
 <button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
