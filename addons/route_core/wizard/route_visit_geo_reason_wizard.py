@@ -59,19 +59,24 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
             return "%s: %s" % (reason, note)
         return reason
 
+    def _return_visit_action_after_confirm(self, result):
+        self.ensure_one()
+        if isinstance(result, dict):
+            return result
+        if hasattr(self.visit_id, "_get_pda_form_action"):
+            return self.visit_id._get_pda_form_action()
+        return {"type": "ir.actions.act_window_close"}
+
     def action_confirm_and_start_visit(self):
         self.ensure_one()
         if not self.visit_id:
             raise ValidationError(_("Visit is required."))
         if self.visit_id.geo_checkin_status != "outside":
-            return self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
+            result = self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
+            return self._return_visit_action_after_confirm(result)
 
         self.visit_id.write({
             "geo_checkin_outside_zone_reason": self._prepare_reason_text(),
         })
         result = self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
-        if result:
-            return result
-        if hasattr(self.visit_id, "_get_pda_form_action"):
-            return self.visit_id._get_pda_form_action()
-        return {"type": "ir.actions.act_window_close"}
+        return self._return_visit_action_after_confirm(result)
