@@ -2408,3 +2408,9 @@
     }
 }
 
+/* Route Geo Check-in outside-zone warning */
+.route_geo_outside_warning {
+    margin: 8px 0 12px;
+    font-weight: 600;
+}
+
