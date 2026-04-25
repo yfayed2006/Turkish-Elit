@@ -1,6 +1,6 @@
 {
     "name": "Route Core",
-    "version": "19.0.1.0.104",
+    "version": "19.0.1.0.84",
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
@@ -33,7 +33,6 @@
         "views/route_return_settings_views.xml",
         "views/route_geolocation_views.xml",
         "views/route_visit_views.xml",
-        "views/route_visit_geo_checkin_views.xml",
         "views/route_visit_payment_views.xml",
         "views/route_visit_workflow_ux_views.xml",
         "views/route_visit_payment_ux_views.xml",
@@ -55,10 +54,8 @@
         "views/route_pda_home_views.xml",
         "views/sale_order_direct_sale_views.xml",
         "views/route_role_actions_menus.xml",
-        "views/route_geo_review_views.xml",
         "views/route_role_ui_security_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
-        "wizard/route_visit_geo_reason_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
         "wizard/route_plan_skip_visit_wizard_views.xml",
         "wizard/route_visit_scan_wizard_views.xml",
@@ -77,13 +74,16 @@
         "web.assets_backend": [
             "route_core/static/src/js/route_visit_scan_focus.js",
             "route_core/static/src/js/route_workspace_navigation_guard.js",
-            "route_core/static/src/js/route_visit_geo_capture.js",
             "route_core/static/src/css/route_pda_home.css",
         ],
     },
     "installable": True,
     "application": True,
 }
+
+
+
+
 
 
 
