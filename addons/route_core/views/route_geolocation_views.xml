@@ -4,11 +4,11 @@
 <field name="model">route.outlet</field>
 <field name="arch" type="xml">
 <search string="Outlet Locations">
-<field name="name" string="Outlet"/>
+<field name="name"/>
 <field name="partner_id" string="Customer"/>
 <field name="route_city_id" string="City"/>
-<field name="area_id" string="Area"/>
-<field name="geo_status" string="Location Status"/>
+<field name="area_id"/>
+<field name="geo_status"/>
 <separator/>
 <filter name="filter_geo_missing" string="Missing Location" domain="[('geo_status', '=', 'missing')]"/>
 <filter name="filter_geo_unverified" string="Unverified Location" domain="[('geo_status', '=', 'unverified')]"/>
@@ -52,14 +52,14 @@
 </header>
 <sheet>
 <div class="oe_title">
-<label for="name"/>
+<label for="name" string="Outlet Name"/>
 <h1>
 <field name="name" readonly="1"/>
 </h1>
 </div>
 <group string="Outlet">
 <group>
-<field name="partner_id" readonly="1"/>
+<field name="partner_id" string="Related Contact" readonly="1"/>
 <field name="route_country_id" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
@@ -84,7 +84,7 @@
 </group>
 </group>
 <group string="Usage Notes">
-<div class="text-muted">Set Latitude and Longitude for the real outlet position, then verify the location. These coordinates will be used later for geo check-in, route maps, live monitoring, and route playback.</div>
+<div class="alert alert-info" colspan="2">Use Search Address on Map to open the outlet name/address in the selected map provider. After confirming the exact outlet position, enter Latitude and Longitude, then click Verify Location. Open Map and Navigate appear only after coordinates are available. These coordinates will be used later for geo check-in, route maps, live monitoring, and route playback.</div>
 </group>
 </sheet>
 </form>
@@ -94,20 +94,20 @@
 <field name="name">Outlet Location Setup</field>
 <field name="res_model">route.outlet</field>
 <field name="view_mode">list,form</field>
-<field name="search_view_id" ref="view_route_outlet_location_setup_search"/>
+<field name="search_view_id" ref="route_core.view_route_outlet_location_setup_search"/>
 <field name="context">{'search_default_filter_geo_missing': 1}</field>
 </record>
 <record id="action_route_outlet_location_setup_list" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
 <field name="view_mode">list</field>
-<field name="view_id" ref="view_route_outlet_location_setup_list"/>
-<field name="act_window_id" ref="action_route_outlet_location_setup"/>
+<field name="view_id" ref="route_core.view_route_outlet_location_setup_list"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
 </record>
 <record id="action_route_outlet_location_setup_form" model="ir.actions.act_window.view">
 <field name="sequence" eval="2"/>
 <field name="view_mode">form</field>
-<field name="view_id" ref="view_route_outlet_location_setup_form"/>
-<field name="act_window_id" ref="action_route_outlet_location_setup"/>
+<field name="view_id" ref="route_core.view_route_outlet_location_setup_form"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
 </record>
-<menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="menu_route_configuration" action="action_route_outlet_location_setup" sequence="18" groups="route_core.group_route_management"/>
+<menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="route_core.menu_route_configuration" action="route_core.action_route_outlet_location_setup" sequence="18" groups="route_core.group_route_management"/>
 </odoo>
