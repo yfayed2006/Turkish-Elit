@@ -12,20 +12,26 @@
 <field name="vehicle_id"/>
 <field name="user_id" string="Salesperson"/>
 <field name="geo_review_state"/>
+<field name="geo_review_supervisor_decision" string="Supervisor Decision"/>
 <field name="geo_checkin_outside_zone_reason" string="Reason"/>
 <separator/>
 <filter name="filter_geo_outside" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
+<filter name="filter_needs_supervisor_review" string="Needs Supervisor Review" domain="[('geo_review_required', '=', True), ('geo_review_supervisor_decision', '=', False)]"/>
 <filter name="filter_missing_reason" string="Missing Reason" domain="[('geo_review_state', '=', 'outside_no_reason')]"/>
 <filter name="filter_reason_recorded" string="Reason Recorded" domain="[('geo_review_state', '=', 'outside_with_reason')]"/>
 <filter name="filter_inside_zone" string="Inside Zone" domain="[('geo_review_state', '=', 'inside_zone')]"/>
 <filter name="filter_pending_checkin" string="Pending Check-in" domain="[('geo_review_state', '=', 'pending_checkin')]"/>
 <filter name="filter_missing_outlet_location" string="Missing Outlet Location" domain="[('geo_review_state', '=', 'outlet_missing')]"/>
 <separator/>
+<filter name="filter_decision_accepted" string="Accepted by Supervisor" domain="[('geo_review_supervisor_decision', '=', 'accepted')]"/>
+<filter name="filter_decision_needs_correction" string="Needs Correction" domain="[('geo_review_supervisor_decision', '=', 'needs_correction')]"/>
+<separator/>
 <filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
 <filter name="filter_started" string="Started Visits" domain="[('visit_process_state', '!=', 'draft')]"/>
 <filter name="filter_active" string="Active Visits" domain="[('visit_process_state', 'not in', ['done', 'cancel'])]"/>
 <separator/>
 <filter name="group_by_geo_review" string="Geo Review" context="{'group_by': 'geo_review_state'}"/>
+<filter name="group_by_supervisor_decision" string="Supervisor Decision" context="{'group_by': 'geo_review_supervisor_decision'}"/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
@@ -46,9 +52,14 @@
 <field name="arch" type="xml">
 <list string="Geo Check-in Review" create="0" delete="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="outlet_geo_status" column_invisible="1"/>
+<field name="geo_review_required" column_invisible="1"/>
+<field name="geo_review_supervisor_decision" column_invisible="1"/>
 <button name="action_open_geo_review_visit" type="object" string="Open Visit" icon="fa-external-link"/>
 <button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
 <button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
+<button name="action_geo_review_accept" type="object" string="Accept" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
+<button name="action_geo_review_needs_correction" type="object" string="Needs Correction" icon="fa-exclamation-triangle" invisible="not geo_review_required or geo_review_supervisor_decision == 'needs_correction'"/>
+<button name="action_geo_review_reset_decision" type="object" string="Reset Review" icon="fa-undo" invisible="not geo_review_supervisor_decision"/>
 <field name="name" string="Visit"/>
 <field name="date"/>
 <field name="user_id" string="Salesperson" optional="show"/>
@@ -59,14 +70,87 @@
 <field name="geo_review_state" string="Geo Review" widget="badge" optional="show"/>
 <field name="geo_checkin_distance_display" string="Distance" optional="show"/>
 <field name="geo_checkin_datetime" string="Check-in Time" optional="show"/>
-<field name="geo_checkin_accuracy_m" string="Accuracy (m)" optional="hide"/>
+<field name="geo_checkin_accuracy_m" string="Accuracy (m)" optional="show"/>
 <field name="geo_checkin_outside_zone_reason" string="Outside Reason" optional="show"/>
-<field name="outlet_geo_coordinates" string="Outlet GPS" optional="hide"/>
-<field name="geo_checkin_latitude" string="Check-in Lat" optional="hide"/>
-<field name="geo_checkin_longitude" string="Check-in Lon" optional="hide"/>
+<field name="geo_review_supervisor_decision" string="Supervisor Decision" widget="badge" optional="show"/>
+<field name="geo_review_supervisor_user_id" string="Reviewed By" optional="hide"/>
+<field name="geo_review_supervisor_datetime" string="Reviewed On" optional="hide"/>
 <field name="visit_process_state" string="Process" optional="show"/>
 <field name="state" string="Status" optional="hide"/>
 </list>
+</field>
+</record>
+<record id="view_route_geo_review_form" model="ir.ui.view">
+<field name="name">route.visit.geo.review.form</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<form string="Geo Check-in Review" create="0" delete="0">
+<header>
+<button name="action_open_geo_review_visit" type="object" string="Open Full Visit" class="btn-primary" icon="fa-external-link"/>
+<button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
+<button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
+<button name="action_geo_review_accept" type="object" string="Accept Geo Review" class="btn-primary" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
+<button name="action_geo_review_needs_correction" type="object" string="Needs Correction" icon="fa-exclamation-triangle" invisible="not geo_review_required or geo_review_supervisor_decision == 'needs_correction'"/>
+<button name="action_geo_review_reset_decision" type="object" string="Reset Review" icon="fa-undo" invisible="not geo_review_supervisor_decision"/>
+</header>
+<sheet>
+<field name="outlet_geo_status" invisible="1"/>
+<field name="geo_review_required" invisible="1"/>
+<div class="oe_title">
+<label for="name"/>
+<h1>
+<field name="name" readonly="1"/>
+</h1>
+</div>
+<group string="Visit Context" col="4">
+<group>
+<field name="date" readonly="1"/>
+<field name="user_id" string="Salesperson" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+</group>
+<group>
+<field name="outlet_id" readonly="1"/>
+<field name="partner_id" string="Customer" readonly="1"/>
+<field name="area_id" readonly="1"/>
+</group>
+</group>
+<group string="Geo Review Snapshot" col="4">
+<group>
+<field name="geo_review_state" widget="badge" readonly="1"/>
+<field name="geo_review_missing_reason" readonly="1"/>
+<field name="visit_process_state" string="Visit Process" readonly="1"/>
+</group>
+<group>
+<field name="geo_checkin_distance_display" string="Distance" readonly="1"/>
+<field name="geo_checkin_accuracy_m" string="Accuracy (m)" readonly="1"/>
+<field name="geo_checkin_datetime" string="Check-in Time" readonly="1"/>
+</group>
+</group>
+<group string="Map Coordinates" col="4">
+<group>
+<field name="outlet_geo_coordinates" string="Outlet GPS" readonly="1"/>
+<field name="route_geo_checkin_radius_m" string="Allowed Radius (m)" readonly="1"/>
+</group>
+<group>
+<field name="geo_checkin_latitude" string="Check-in Latitude" readonly="1"/>
+<field name="geo_checkin_longitude" string="Check-in Longitude" readonly="1"/>
+</group>
+</group>
+<group string="Outside-Zone Reason" col="4">
+<group>
+<field name="geo_checkin_outside_zone_reason" string="Salesperson Reason" placeholder="Reason captured from the salesperson when outside the outlet radius."/>
+</group>
+<group>
+<field name="geo_review_supervisor_decision" string="Supervisor Decision" widget="radio"/>
+<field name="geo_review_supervisor_user_id" string="Reviewed By" readonly="1"/>
+<field name="geo_review_supervisor_datetime" string="Reviewed On" readonly="1"/>
+</group>
+</group>
+<group string="Supervisor Notes">
+<field name="geo_review_supervisor_note" nolabel="1" placeholder="Add a supervisor note, correction instruction, or acceptance comment."/>
+</group>
+</sheet>
+</form>
 </field>
 </record>
 <record id="action_route_geo_review" model="ir.actions.act_window">
@@ -88,7 +172,7 @@
 <record id="action_route_geo_review_form_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="2"/>
 <field name="view_mode">form</field>
-<field name="view_id" ref="route_core.view_route_visit_form"/>
+<field name="view_id" ref="route_core.view_route_geo_review_form"/>
 <field name="act_window_id" ref="route_core.action_route_geo_review"/>
 </record>
 <menuitem id="menu_route_geo_review" name="Geo Check-in Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
