@@ -60,9 +60,9 @@ class RouteGeoCaptureCheckinAction extends Component {
                 coords.accuracy || 0,
             ]);
 
-            const distance = result && result.distance_m !== undefined ? result.distance_m : false;
-            const message = distance !== false
-                ? _t("Current location captured. Distance from outlet:") + " " + Math.round(distance) + " m"
+            const distanceLabel = result && result.distance_display ? result.distance_display : false;
+            const message = distanceLabel
+                ? _t("Current location captured. Distance from outlet:") + " " + distanceLabel
                 : _t("Current location captured.");
             this.notification.add(message, { title: _t("Geo Check-in"), type: "success" });
         } catch (error) {
@@ -104,3 +104,4 @@ RouteGeoCaptureCheckinAction.template = xml`
 `;
 
 registry.category("actions").add("route_core_capture_geo_checkin", RouteGeoCaptureCheckinAction);
+
