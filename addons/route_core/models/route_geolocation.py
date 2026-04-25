@@ -40,6 +40,19 @@ class ResCompany(models.Model):
         readonly=False,
         help="Default allowed distance from outlet location for future Geo Check-in rules.",
     )
+    route_geo_checkin_policy = fields.Selection(
+        [
+            ("disabled", "Disabled"),
+            ("review_only", "Review Only"),
+            ("require_reason", "Require Reason"),
+            ("block_start", "Block Start"),
+        ],
+        string="Geo Check-in Policy",
+        compute="_compute_route_geo_checkin_policy",
+        inverse="_inverse_route_geo_checkin_policy",
+        readonly=False,
+        help="Controls how outside-zone check-ins will be handled. B4.1 only displays the selected policy; enforcement is introduced in the next phase.",
+    )
 
     def _compute_route_enable_outlet_geolocation(self):
         for company in self:
