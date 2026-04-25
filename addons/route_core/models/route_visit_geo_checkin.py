@@ -60,6 +60,11 @@ class RouteVisit(models.Model):
         digits=(16, 2),
         store=False,
     )
+    geo_checkin_distance_display = fields.Char(
+        string="Distance",
+        compute="_compute_geo_checkin_distance_and_status",
+        store=False,
+    )
     geo_checkin_status = fields.Selection(
         [
             ("disabled", "Disabled"),
@@ -93,16 +98,19 @@ class RouteVisit(models.Model):
 
             if not visit.route_geo_enabled:
                 visit.geo_checkin_distance_m = distance
+                visit.geo_checkin_distance_display = visit._format_geo_distance(distance)
                 visit.geo_checkin_status = status
                 continue
 
             if not visit._has_outlet_geo_coordinates():
                 visit.geo_checkin_distance_m = distance
+                visit.geo_checkin_distance_display = visit._format_geo_distance(distance)
                 visit.geo_checkin_status = "outlet_missing"
                 continue
 
             if not visit._has_geo_checkin_coordinates():
                 visit.geo_checkin_distance_m = distance
+                visit.geo_checkin_distance_display = visit._format_geo_distance(distance)
                 visit.geo_checkin_status = "pending"
                 continue
 
@@ -116,6 +124,7 @@ class RouteVisit(models.Model):
             status = "inside" if radius <= 0 or distance <= radius else "outside"
 
             visit.geo_checkin_distance_m = distance
+            visit.geo_checkin_distance_display = visit._format_geo_distance(distance)
             visit.geo_checkin_status = status
 
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
@@ -157,6 +166,13 @@ class RouteVisit(models.Model):
         )
         c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
         return earth_radius_m * c
+
+    def _format_geo_distance(self, distance_m):
+        """Return a compact distance label for PDA cards and notifications."""
+        distance_m = float(distance_m or 0.0)
+        if distance_m >= 1000.0:
+            return _("%s km") % ("{:,.2f}".format(distance_m / 1000.0))
+        return _("%s m") % ("{:,.0f}".format(distance_m))
 
     def action_geo_checkin_from_outlet_location(self):
         """Safe foundation helper: copy outlet coordinates into the visit check-in fields.
@@ -273,4 +289,5 @@ class RouteVisit(models.Model):
         return {
             "status": first.geo_checkin_status if first else False,
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
+            "distance_display": first.geo_checkin_distance_display if first else False,
         }
