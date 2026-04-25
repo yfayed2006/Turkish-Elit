@@ -19,6 +19,12 @@ class RouteVisit(models.Model):
         readonly=True,
         store=False,
     )
+    route_geo_checkin_policy = fields.Selection(
+        related="company_id.route_geo_checkin_policy",
+        string="Geo Check-in Policy",
+        readonly=True,
+        store=False,
+    )
     outlet_geo_status = fields.Selection(
         related="outlet_id.geo_status",
         string="Outlet Location Status",
