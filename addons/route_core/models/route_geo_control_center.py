@@ -346,4 +346,12 @@ class RouteGeoControlCenter(models.TransientModel):
         )
 
     def action_open_geo_review(self):
-        return self._action_open_geo_visits(_("Geo Check-in Review"), self._get_base_visit_domain(include_process_filter=True))
+        self.ensure_one()
+        action_ref = self.env.ref("route_core.action_route_geo_review", raise_if_not_found=False)
+        domain = self._get_base_visit_domain(include_process_filter=True)
+        if action_ref:
+            action = action_ref.read()[0]
+            action["domain"] = domain
+            action["context"] = {"create": False, "edit": True, "delete": False}
+            return action
+        return self._action_open_geo_visits(_("Geo Check-in Review"), domain)
