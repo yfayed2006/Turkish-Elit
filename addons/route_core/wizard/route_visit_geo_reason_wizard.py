@@ -5,6 +5,7 @@ from odoo.exceptions import ValidationError
 class RouteVisitGeoReasonWizard(models.TransientModel):
     _name = "route.visit.geo.reason.wizard"
     _description = "Route Visit Geo Outside Zone Reason"
+    _rec_name = "visit_id"
 
     visit_id = fields.Many2one(
         "route.visit",
@@ -61,11 +62,10 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
 
     def _return_visit_action_after_confirm(self, result):
         self.ensure_one()
-        if isinstance(result, dict):
-            return result
-        if hasattr(self.visit_id, "_get_pda_form_action"):
-            return self.visit_id._get_pda_form_action()
-        return {"type": "ir.actions.act_window_close"}
+        # Avoid adding the transient wizard as an extra breadcrumb such as "Unnamed".
+        # The visit form is already open behind the modal, so a lightweight client reload
+        # refreshes the current visit in place after the start action succeeds.
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_confirm_and_start_visit(self):
         self.ensure_one()
