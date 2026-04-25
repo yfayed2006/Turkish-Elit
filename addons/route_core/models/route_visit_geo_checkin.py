@@ -118,6 +118,34 @@ class RouteVisit(models.Model):
         copy=False,
         index=True,
     )
+    geo_review_supervisor_decision = fields.Selection(
+        [
+            ("accepted", "Accepted"),
+            ("needs_correction", "Needs Correction"),
+        ],
+        string="Supervisor Decision",
+        copy=False,
+        index=True,
+        help="Supervisor decision for outside-zone or unusual geo check-ins.",
+    )
+    geo_review_supervisor_note = fields.Text(
+        string="Supervisor Review Note",
+        copy=False,
+        help="Optional supervisor note explaining the review decision or requested correction.",
+    )
+    geo_review_supervisor_user_id = fields.Many2one(
+        "res.users",
+        string="Reviewed By",
+        readonly=True,
+        copy=False,
+        index=True,
+    )
+    geo_review_supervisor_datetime = fields.Datetime(
+        string="Reviewed On",
+        readonly=True,
+        copy=False,
+    )
+
 
     @api.depends(
         "company_id.route_enable_outlet_geolocation",
@@ -225,6 +253,45 @@ class RouteVisit(models.Model):
             action["views"] = [(view.id, "form")]
         return action
 
+    def _geo_review_reset_supervisor_decision_values(self):
+        """Return values used when a fresh check-in replaces the previous review context."""
+        return {
+            "geo_review_supervisor_decision": False,
+            "geo_review_supervisor_note": False,
+            "geo_review_supervisor_user_id": False,
+            "geo_review_supervisor_datetime": False,
+        }
+
+    def _geo_review_refresh_action(self):
+        """Refresh the current review screen without creating extra breadcrumbs."""
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_geo_review_accept(self):
+        for visit in self:
+            if not visit.geo_review_required:
+                raise ValidationError(_("Only visits that need geo review can be marked as accepted."))
+        self.write({
+            "geo_review_supervisor_decision": "accepted",
+            "geo_review_supervisor_user_id": self.env.user.id,
+            "geo_review_supervisor_datetime": fields.Datetime.now(),
+        })
+        return self._geo_review_refresh_action()
+
+    def action_geo_review_needs_correction(self):
+        for visit in self:
+            if not visit.geo_review_required:
+                raise ValidationError(_("Only visits that need geo review can be marked as needs correction."))
+        self.write({
+            "geo_review_supervisor_decision": "needs_correction",
+            "geo_review_supervisor_user_id": self.env.user.id,
+            "geo_review_supervisor_datetime": fields.Datetime.now(),
+        })
+        return self._geo_review_refresh_action()
+
+    def action_geo_review_reset_decision(self):
+        self.write(self._geo_review_reset_supervisor_decision_values())
+        return self._geo_review_refresh_action()
+
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
     def _check_geo_checkin_values(self):
         for visit in self:
@@ -293,27 +360,27 @@ class RouteVisit(models.Model):
                 raise ValidationError(_("Please set an outlet before recording a geo check-in."))
             if not visit._has_outlet_geo_coordinates():
                 raise ValidationError(_("Please set outlet Latitude and Longitude before recording a geo check-in."))
-            visit.write(
-                {
-                    "geo_checkin_latitude": visit.outlet_id.geo_latitude,
-                    "geo_checkin_longitude": visit.outlet_id.geo_longitude,
-                    "geo_checkin_accuracy_m": visit.outlet_id.geo_accuracy_m or 0.0,
-                    "geo_checkin_datetime": now,
-                }
-            )
+            vals = {
+                "geo_checkin_latitude": visit.outlet_id.geo_latitude,
+                "geo_checkin_longitude": visit.outlet_id.geo_longitude,
+                "geo_checkin_accuracy_m": visit.outlet_id.geo_accuracy_m or 0.0,
+                "geo_checkin_datetime": now,
+            }
+            vals.update(visit._geo_review_reset_supervisor_decision_values())
+            visit.write(vals)
         return True
 
     def action_clear_geo_checkin_location(self):
         self._geo_checkin_edit_allowed()
-        self.write(
-            {
-                "geo_checkin_latitude": 0.0,
-                "geo_checkin_longitude": 0.0,
-                "geo_checkin_accuracy_m": 0.0,
-                "geo_checkin_datetime": False,
-                "geo_checkin_outside_zone_reason": False,
-            }
-        )
+        vals = {
+            "geo_checkin_latitude": 0.0,
+            "geo_checkin_longitude": 0.0,
+            "geo_checkin_accuracy_m": 0.0,
+            "geo_checkin_datetime": False,
+            "geo_checkin_outside_zone_reason": False,
+        }
+        vals.update(self._geo_review_reset_supervisor_decision_values())
+        self.write(vals)
         return True
 
     def action_open_visit_outlet_map(self):
@@ -451,14 +518,14 @@ class RouteVisit(models.Model):
             accuracy = 0.0
 
         for visit in self:
-            visit.write(
-                {
-                    "geo_checkin_latitude": latitude,
-                    "geo_checkin_longitude": longitude,
-                    "geo_checkin_accuracy_m": accuracy,
-                    "geo_checkin_datetime": now,
-                }
-            )
+            vals = {
+                "geo_checkin_latitude": latitude,
+                "geo_checkin_longitude": longitude,
+                "geo_checkin_accuracy_m": accuracy,
+                "geo_checkin_datetime": now,
+            }
+            vals.update(visit._geo_review_reset_supervisor_decision_values())
+            visit.write(vals)
 
         self.flush_recordset([
             "geo_checkin_latitude",
