@@ -55,6 +55,7 @@
         "views/route_pda_home_views.xml",
         "views/sale_order_direct_sale_views.xml",
         "views/route_role_actions_menus.xml",
+        "views/route_geo_review_views.xml",
         "views/route_role_ui_security_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_visit_geo_reason_wizard_views.xml",
@@ -83,6 +84,19 @@
     "installable": True,
     "application": True,
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
