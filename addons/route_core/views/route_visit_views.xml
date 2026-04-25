@@ -369,6 +369,12 @@
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Policy</div>
+<div class="route_mobile_detail_value route_geo_value">
+<field name="route_geo_checkin_policy" readonly="1" nolabel="1" widget="badge"/>
+</div>
+</div>
+<div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Radius</div>
 <div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_checkin_radius_m" readonly="1" nolabel="1"/>
@@ -949,6 +955,12 @@
 <div class="route_mobile_detail_label">Geo Enabled</div>
 <div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_enabled" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Policy</div>
+<div class="route_mobile_detail_value route_geo_value">
+<field name="route_geo_checkin_policy" readonly="1" nolabel="1" widget="badge"/>
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
