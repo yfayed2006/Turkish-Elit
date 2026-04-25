@@ -60,23 +60,45 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
             return "%s: %s" % (reason, note)
         return reason
 
-    def _return_visit_action_after_confirm(self, result):
+    def _return_visit_action_after_confirm(self, result=None):
         self.ensure_one()
-        # Avoid adding the transient wizard as an extra breadcrumb such as "Unnamed".
-        # The visit form is already open behind the modal, so a lightweight client reload
-        # refreshes the current visit in place after the start action succeeds.
-        return {"type": "ir.actions.client", "tag": "reload"}
+
+        # Do not return a client reload here.
+        # The browser may currently be sitting on the geo-capture client action URL.
+        # Returning "reload" can re-run route_core_capture_geo_checkin without an active visit
+        # and causes repeated "Missing visit reference for geo check-in" errors.
+        visit_form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        if not visit_form_view:
+            visit_form_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
+
+        views = [(False, "form")]
+        if visit_form_view:
+            views = [(visit_form_view.id, "form")]
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": self.visit_id.display_name or _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.visit_id.id,
+            "view_mode": "form",
+            "views": views,
+            "target": "current",
+            "context": {
+                "create": False,
+                "route_geo_reason_confirmed": True,
+            },
+        }
 
     def action_confirm_and_start_visit(self):
         self.ensure_one()
         if not self.visit_id:
             raise ValidationError(_("Visit is required."))
-        if self.visit_id.geo_checkin_status != "outside":
-            result = self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
-            return self._return_visit_action_after_confirm(result)
 
-        self.visit_id.write({
-            "geo_checkin_outside_zone_reason": self._prepare_reason_text(),
-        })
+        if self.visit_id.geo_checkin_status == "outside":
+            self.visit_id.write({
+                "geo_checkin_outside_zone_reason": self._prepare_reason_text(),
+            })
+
         result = self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
         return self._return_visit_action_after_confirm(result)
+
