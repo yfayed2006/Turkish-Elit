@@ -2286,3 +2286,95 @@
     }
 }
 
+
+/* Route Core Geo Check-in mobile polish */
+.route_geo_card_grid {
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+}
+
+.route_geo_card {
+    min-height: 104px;
+    padding: 11px 12px !important;
+    margin-bottom: 0 !important;
+    overflow: hidden;
+}
+
+.route_geo_card_full {
+    min-height: 94px;
+}
+
+.route_geo_card .route_mobile_detail_label {
+    font-size: 0.72rem;
+    line-height: 1.18;
+    letter-spacing: 0.015em;
+    margin-bottom: 6px;
+    overflow-wrap: anywhere;
+}
+
+.route_geo_value,
+.route_geo_value .o_field_widget,
+.route_geo_value .o_input {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 0.98rem !important;
+    line-height: 1.18 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+.route_geo_value .badge,
+.route_geo_value .o_badge,
+.route_geo_value .o_field_badge,
+.route_geo_value .badge-pill {
+    display: inline-block !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    line-height: 1.12 !important;
+    font-size: 0.82rem !important;
+    padding: 4px 8px !important;
+    text-align: center;
+}
+
+.route_geo_wrap_value,
+.route_geo_wrap_value .o_field_widget,
+.route_geo_wrap_value .o_input {
+    font-size: 0.92rem !important;
+    color: #374151;
+}
+
+@media (max-width: 767.98px) {
+    .route_geo_card_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 9px !important;
+    }
+
+    .route_geo_card {
+        min-height: 98px;
+        padding: 10px 10px !important;
+        border-radius: 12px;
+    }
+
+    .route_geo_card .route_mobile_detail_label {
+        font-size: 0.68rem;
+        line-height: 1.15;
+    }
+
+    .route_geo_value,
+    .route_geo_value .o_field_widget,
+    .route_geo_value .o_input {
+        font-size: 0.92rem !important;
+    }
+
+    .route_geo_value .badge,
+    .route_geo_value .o_badge,
+    .route_geo_value .o_field_badge,
+    .route_geo_value .badge-pill {
+        font-size: 0.74rem !important;
+        padding: 3px 6px !important;
+    }
+}
+
