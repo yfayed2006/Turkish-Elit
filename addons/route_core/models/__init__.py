@@ -56,3 +56,4 @@ from . import route_weekly_schedule
 from . import route_plan_schedule_ext
 
 from . import route_geolocation
+from . import route_visit_geo_checkin
