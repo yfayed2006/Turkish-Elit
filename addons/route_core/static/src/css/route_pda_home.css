@@ -2378,3 +2378,33 @@
     }
 }
 
+/* Route Geo Check-in action buttons */
+.route_geo_action_grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin: 10px 0 18px;
+}
+
+.route_geo_action_grid .route_geo_action_btn {
+    min-height: 42px;
+    white-space: normal;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .route_geo_action_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 12px 0 18px;
+    }
+
+    .route_geo_action_grid .route_geo_action_btn {
+        min-height: 54px;
+        border-radius: 12px;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+}
+
