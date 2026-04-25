@@ -257,6 +257,58 @@ class RouteVisit(models.Model):
             },
         }
 
+    def _should_require_geo_reason_before_start(self):
+        """Return True when policy requires an outside-zone reason before Start Visit.
+
+        B4.2 only enforces the `Require Reason` policy. `Review Only` remains
+        non-blocking and `Block Start` is intentionally reserved for the next
+        implementation round.
+        """
+        self.ensure_one()
+        if self.env.context.get("route_geo_reason_confirmed"):
+            return False
+        if self.state != "draft":
+            return False
+        if not self.route_geo_enabled:
+            return False
+        if self.route_geo_checkin_policy != "require_reason":
+            return False
+        if self.geo_checkin_status != "outside":
+            return False
+        return not bool((self.geo_checkin_outside_zone_reason or "").strip())
+
+    def _action_open_geo_reason_wizard(self):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_visit_geo_reason_wizard_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Outside Zone Reason"),
+            "res_model": "route.visit.geo.reason.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def action_start_visit(self):
+        for visit in self:
+            if visit._should_require_geo_reason_before_start():
+                return visit._action_open_geo_reason_wizard()
+        return super().action_start_visit()
+
+    def action_ux_start_visit(self):
+        self.ensure_one()
+        action = self.action_start_visit()
+        if action:
+            return action
+        if hasattr(self, "_get_pda_form_action"):
+            return self._get_pda_form_action()
+        return action
+
     def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
         """Save GPS coordinates captured by the browser/mobile device."""
         now = fields.Datetime.now()
