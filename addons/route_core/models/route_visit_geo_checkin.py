@@ -36,14 +36,12 @@ class RouteVisit(models.Model):
         string="Check-in Latitude",
         digits=(10, 7),
         copy=False,
-        tracking=True,
         help="GPS latitude captured at visit check-in. This foundation field does not block visit execution yet.",
     )
     geo_checkin_longitude = fields.Float(
         string="Check-in Longitude",
         digits=(10, 7),
         copy=False,
-        tracking=True,
         help="GPS longitude captured at visit check-in. This foundation field does not block visit execution yet.",
     )
     geo_checkin_accuracy_m = fields.Float(
@@ -55,7 +53,6 @@ class RouteVisit(models.Model):
     geo_checkin_datetime = fields.Datetime(
         string="Geo Check-in Time",
         copy=False,
-        tracking=True,
     )
     geo_checkin_distance_m = fields.Float(
         string="Distance from Outlet (m)",
