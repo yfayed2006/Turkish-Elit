@@ -176,4 +176,9 @@
 <field name="act_window_id" ref="route_core.action_route_geo_review"/>
 </record>
 <menuitem id="menu_route_geo_review" name="Geo Check-in Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<!--  Force the menu back to active in case a previous uploaded patch left the existing menu inactive in the database.  -->
+<record id="menu_route_geo_review" model="ir.ui.menu">
+<field name="active" eval="True"/>
+<field name="sequence" eval="12"/>
+</record>
 </odoo>
