@@ -1,0 +1,32 @@
+<odoo>
+<record id="view_route_visit_geo_reason_wizard_form" model="ir.ui.view">
+<field name="name">route.visit.geo.reason.wizard.form</field>
+<field name="model">route.visit.geo.reason.wizard</field>
+<field name="arch" type="xml">
+<form string="Outside Zone Reason">
+<sheet>
+<div class="alert alert-warning" role="alert"> You are outside the allowed outlet radius. Select a reason to continue starting the visit. </div>
+<group string="Visit Location Review" col="2">
+<group>
+<field name="visit_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+</group>
+<group>
+<field name="geo_checkin_status" readonly="1" widget="badge"/>
+<field name="geo_checkin_distance_display" readonly="1"/>
+<field name="route_geo_checkin_radius_m" readonly="1"/>
+</group>
+</group>
+<group string="Required Reason">
+<field name="reason_code" required="1"/>
+<field name="reason_note" placeholder="Optional details. Required when reason is Other."/>
+</group>
+</sheet>
+<footer>
+<button name="action_confirm_and_start_visit" string="Confirm Reason and Start Visit" type="object" class="btn-primary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
