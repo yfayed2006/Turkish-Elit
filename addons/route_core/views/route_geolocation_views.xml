@@ -109,5 +109,5 @@
 <field name="view_id" ref="route_core.view_route_outlet_location_setup_form"/>
 <field name="act_window_id" ref="route_core.action_route_outlet_location_setup"/>
 </record>
-<menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="route_core.menu_route_configuration" action="route_core.action_route_outlet_location_setup" sequence="18" groups="route_core.group_route_management"/>
+<menuitem id="menu_route_outlet_location_setup" name="Outlet Location Setup" parent="route_core.menu_route_management_workspace" action="route_core.action_route_outlet_location_setup" sequence="16" groups="route_core.group_route_management"/>
 </odoo>
