@@ -1,0 +1,95 @@
+<odoo>
+<record id="view_route_geo_review_search" model="ir.ui.view">
+<field name="name">route.visit.geo.review.search</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<search string="Geo Check-in Review">
+<field name="name" string="Visit"/>
+<field name="date"/>
+<field name="outlet_id"/>
+<field name="partner_id" string="Customer"/>
+<field name="area_id"/>
+<field name="vehicle_id"/>
+<field name="user_id" string="Salesperson"/>
+<field name="geo_review_state"/>
+<field name="geo_checkin_outside_zone_reason" string="Reason"/>
+<separator/>
+<filter name="filter_geo_outside" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
+<filter name="filter_missing_reason" string="Missing Reason" domain="[('geo_review_state', '=', 'outside_no_reason')]"/>
+<filter name="filter_reason_recorded" string="Reason Recorded" domain="[('geo_review_state', '=', 'outside_with_reason')]"/>
+<filter name="filter_inside_zone" string="Inside Zone" domain="[('geo_review_state', '=', 'inside_zone')]"/>
+<filter name="filter_pending_checkin" string="Pending Check-in" domain="[('geo_review_state', '=', 'pending_checkin')]"/>
+<filter name="filter_missing_outlet_location" string="Missing Outlet Location" domain="[('geo_review_state', '=', 'outlet_missing')]"/>
+<separator/>
+<filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
+<filter name="filter_started" string="Started Visits" domain="[('visit_process_state', '!=', 'draft')]"/>
+<filter name="filter_active" string="Active Visits" domain="[('visit_process_state', 'not in', ['done', 'cancel'])]"/>
+<separator/>
+<filter name="group_by_geo_review" string="Geo Review" context="{'group_by': 'geo_review_state'}"/>
+<filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+<searchpanel>
+<field name="user_id" string="Salesperson"/>
+<field name="vehicle_id" string="Vehicle"/>
+<field name="area_id" string="Area"/>
+<field name="outlet_id" string="Outlet"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="view_route_geo_review_list" model="ir.ui.view">
+<field name="name">route.visit.geo.review.list</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<list string="Geo Check-in Review" create="0" delete="0" default_order="date desc, geo_checkin_datetime desc, id desc">
+<field name="outlet_geo_status" column_invisible="1"/>
+<button name="action_open_geo_review_visit" type="object" string="Open Visit" icon="fa-external-link"/>
+<button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
+<button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
+<field name="name" string="Visit"/>
+<field name="date"/>
+<field name="user_id" string="Salesperson" optional="show"/>
+<field name="vehicle_id" optional="show"/>
+<field name="outlet_id" optional="show"/>
+<field name="partner_id" string="Customer" optional="show"/>
+<field name="area_id" optional="show"/>
+<field name="geo_review_state" string="Geo Review" widget="badge" optional="show"/>
+<field name="geo_checkin_distance_display" string="Distance" optional="show"/>
+<field name="geo_checkin_datetime" string="Check-in Time" optional="show"/>
+<field name="geo_checkin_accuracy_m" string="Accuracy (m)" optional="hide"/>
+<field name="geo_checkin_outside_zone_reason" string="Outside Reason" optional="show"/>
+<field name="outlet_geo_coordinates" string="Outlet GPS" optional="hide"/>
+<field name="geo_checkin_latitude" string="Check-in Lat" optional="hide"/>
+<field name="geo_checkin_longitude" string="Check-in Lon" optional="hide"/>
+<field name="visit_process_state" string="Process" optional="show"/>
+<field name="state" string="Status" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="action_route_geo_review" model="ir.actions.act_window">
+<field name="name">Geo Check-in Review</field>
+<field name="res_model">route.visit</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_geo_review_search"/>
+<field name="context">{'search_default_filter_geo_outside': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+<field name="help" type="html">
+<p class="o_view_nocontent_smiling_face">Review geo check-ins, outside-zone reasons, and map positions from this supervisor screen.</p>
+</field>
+</record>
+<record id="action_route_geo_review_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_geo_review_list"/>
+<field name="act_window_id" ref="route_core.action_route_geo_review"/>
+</record>
+<record id="action_route_geo_review_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_visit_form"/>
+<field name="act_window_id" ref="route_core.action_route_geo_review"/>
+</record>
+<menuitem id="menu_route_geo_review" name="Geo Check-in Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</odoo>
