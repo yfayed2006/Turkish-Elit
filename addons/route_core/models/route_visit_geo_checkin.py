@@ -88,6 +88,36 @@ class RouteVisit(models.Model):
         copy=False,
         help="Reserved for the next enforcement phase when a reason may be required for outside-zone check-ins.",
     )
+    geo_review_state = fields.Selection(
+        [
+            ("disabled", "Disabled"),
+            ("pending_checkin", "Pending Check-in"),
+            ("outlet_missing", "Outlet Location Missing"),
+            ("inside_zone", "Inside Zone"),
+            ("outside_no_reason", "Outside - Missing Reason"),
+            ("outside_with_reason", "Outside - Reason Recorded"),
+        ],
+        string="Geo Review",
+        compute="_compute_geo_review_fields",
+        store=True,
+        copy=False,
+        index=True,
+        help="Supervisor review status for visit geo check-ins.",
+    )
+    geo_review_required = fields.Boolean(
+        string="Needs Geo Review",
+        compute="_compute_geo_review_fields",
+        store=True,
+        copy=False,
+        index=True,
+    )
+    geo_review_missing_reason = fields.Boolean(
+        string="Missing Outside-Zone Reason",
+        compute="_compute_geo_review_fields",
+        store=True,
+        copy=False,
+        index=True,
+    )
 
     @api.depends(
         "company_id.route_enable_outlet_geolocation",
@@ -132,6 +162,68 @@ class RouteVisit(models.Model):
             visit.geo_checkin_distance_m = distance
             visit.geo_checkin_distance_display = visit._format_geo_distance(distance)
             visit.geo_checkin_status = status
+
+    @api.depends(
+        "company_id",
+        "company_id.route_enable_outlet_geolocation",
+        "company_id.route_geo_checkin_radius_m",
+        "outlet_id.geo_latitude",
+        "outlet_id.geo_longitude",
+        "geo_checkin_latitude",
+        "geo_checkin_longitude",
+        "geo_checkin_outside_zone_reason",
+    )
+    def _compute_geo_review_fields(self):
+        for visit in self:
+            review_state = "disabled"
+            review_required = False
+            missing_reason = False
+
+            if visit.route_geo_enabled:
+                if not visit._has_outlet_geo_coordinates():
+                    review_state = "outlet_missing"
+                elif not visit._has_geo_checkin_coordinates():
+                    review_state = "pending_checkin"
+                else:
+                    distance = visit._geo_distance_meters(
+                        visit.geo_checkin_latitude,
+                        visit.geo_checkin_longitude,
+                        visit.outlet_id.geo_latitude,
+                        visit.outlet_id.geo_longitude,
+                    )
+                    radius = max(visit.route_geo_checkin_radius_m or 0, 0)
+                    if radius <= 0 or distance <= radius:
+                        review_state = "inside_zone"
+                    elif (visit.geo_checkin_outside_zone_reason or "").strip():
+                        review_state = "outside_with_reason"
+                        review_required = True
+                    else:
+                        review_state = "outside_no_reason"
+                        review_required = True
+                        missing_reason = True
+
+            visit.geo_review_state = review_state
+            visit.geo_review_required = review_required
+            visit.geo_review_missing_reason = missing_reason
+
+    def action_open_geo_review_visit(self):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": self.display_name or _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "create": False,
+                "edit": True,
+            },
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
     def _check_geo_checkin_values(self):
