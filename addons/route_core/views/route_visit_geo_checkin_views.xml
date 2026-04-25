@@ -3,8 +3,9 @@
 <field name="name">route.visit.form.geo.checkin.b1</field>
 <field name="model">route.visit</field>
 <field name="inherit_id" ref="route_core.view_route_visit_form"/>
+<field name="priority">125</field>
 <field name="arch" type="xml">
-<xpath expr="//notebook" position="inside">
+<xpath expr="//notebook/page[field[@name='notes']]" position="after">
 <page string="Geo Check-in">
 <group string="Outlet Location" col="4">
 <group>
@@ -32,6 +33,44 @@
 <field name="geo_checkin_outside_zone_reason" placeholder="Reserved for outside-zone reason in the enforcement phase."/>
 </group>
 <div class="alert alert-info" role="alert"> Geo Check-in is currently in foundation mode. These fields do not block visit execution yet. </div>
+</page>
+</xpath>
+</field>
+</record>
+<record id="view_route_visit_pda_form_geo_checkin_b1_1" model="ir.ui.view">
+<field name="name">route.visit.pda.form.geo.checkin.b1.1</field>
+<field name="model">route.visit</field>
+<field name="inherit_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="priority">125</field>
+<field name="arch" type="xml">
+<xpath expr="//notebook[@class='route_pda_visit_notebook']/page[field[@name='notes']]" position="after">
+<page string="Geo Check-in">
+<div class="alert alert-info" role="alert"> Geo Check-in is currently in foundation mode. These fields do not block visit execution yet. </div>
+<group string="Outlet Location" col="2">
+<group>
+<field name="route_geo_enabled" readonly="1"/>
+<field name="route_geo_checkin_radius_m" readonly="1"/>
+</group>
+<group>
+<field name="outlet_geo_status" readonly="1" widget="badge"/>
+<field name="outlet_geo_coordinates" readonly="1"/>
+</group>
+</group>
+<group string="Check-in Snapshot" col="2">
+<group>
+<field name="geo_checkin_status" readonly="1" widget="badge"/>
+<field name="geo_checkin_distance_m" readonly="1"/>
+<field name="geo_checkin_datetime" readonly="1"/>
+</group>
+<group>
+<field name="geo_checkin_latitude"/>
+<field name="geo_checkin_longitude"/>
+<field name="geo_checkin_accuracy_m"/>
+</group>
+</group>
+<group string="Review Notes">
+<field name="geo_checkin_outside_zone_reason" placeholder="Reserved for outside-zone reason in the enforcement phase."/>
+</group>
 </page>
 </xpath>
 </field>
