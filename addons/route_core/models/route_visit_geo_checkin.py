@@ -63,8 +63,8 @@ class RouteVisit(models.Model):
     geo_checkin_status = fields.Selection(
         [
             ("disabled", "Disabled"),
-            ("outlet_missing", "Outlet Location Missing"),
-            ("pending", "Check-in Pending"),
+            ("outlet_missing", "Missing Location"),
+            ("pending", "Pending"),
             ("inside", "Inside Zone"),
             ("outside", "Outside Zone"),
         ],
