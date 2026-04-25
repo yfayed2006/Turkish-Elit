@@ -27,7 +27,9 @@
 <field name="route_map_provider" invisible="route_enable_outlet_geolocation == False"/>
 <field name="route_google_maps_api_key" password="True" invisible="route_enable_outlet_geolocation == False or route_map_provider != 'google'"/>
 <field name="route_geo_checkin_radius_m" invisible="route_enable_outlet_geolocation == False"/>
+<field name="route_geo_checkin_policy" invisible="route_enable_outlet_geolocation == False"/>
 <div class="text-muted" colspan="2"> Enable outlet location setup before using geo check-in, route maps, live monitoring, and route playback. Basic map links work without a Google API key; the key is reserved for future embedded map and live control center screens. </div>
+<div class="text-muted" colspan="2"> Geo Check-in Policy is displayed on visits in this phase. Enforcement options such as requiring a reason or blocking Start Visit will be activated in the next implementation round. </div>
 </group>
 </group>
 <group string="Route Product Settings">
