@@ -351,79 +351,79 @@
 <field name="notes" placeholder="Internal notes..."/>
 </page>
 <page string="Geo Check-in">
-<div class="alert alert-info" role="alert"> Geo Check-in is currently in foundation mode. These fields do not block visit execution yet. </div>
+<div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
 <separator string="Outlet Location"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Location Enabled</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Geo Enabled</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_enabled" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Allowed Radius</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Radius</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_checkin_radius_m" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Outlet Location Status</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Outlet Status</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="outlet_geo_status" readonly="1" nolabel="1" widget="badge"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Outlet Coordinates</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Outlet GPS</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
 <field name="outlet_geo_coordinates" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
 <separator string="Check-in Snapshot"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Check-in Status</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Check-in Status</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_status" readonly="1" nolabel="1" widget="badge"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Distance from Outlet</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Distance</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_distance_m" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Check-in Time</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Check-in Time</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
 <field name="geo_checkin_datetime" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Accuracy</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Accuracy</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_accuracy_m" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Latitude</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Latitude</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_latitude" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Longitude</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Longitude</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_longitude" nolabel="1"/>
 </div>
 </div>
 </div>
 <separator string="Review Notes"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box route_mobile_detail_box_full">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
 <div class="route_mobile_detail_label">Outside Zone Reason</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Reserved for outside-zone reason in the enforcement phase."/>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
+<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Optional reason for later enforcement."/>
 </div>
 </div>
 </div>
@@ -926,79 +926,79 @@
 <field name="notes" placeholder="Internal notes..."/>
 </page>
 <page string="Geo Check-in">
-<div class="alert alert-info" role="alert"> Geo Check-in is currently in foundation mode. These fields do not block visit execution yet. </div>
+<div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
 <separator string="Outlet Location"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Location Enabled</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Geo Enabled</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_enabled" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Allowed Radius</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Radius</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="route_geo_checkin_radius_m" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Outlet Location Status</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Outlet Status</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="outlet_geo_status" readonly="1" nolabel="1" widget="badge"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Outlet Coordinates</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Outlet GPS</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
 <field name="outlet_geo_coordinates" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
 <separator string="Check-in Snapshot"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Check-in Status</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Check-in Status</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_status" readonly="1" nolabel="1" widget="badge"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Distance from Outlet</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Distance</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_distance_m" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Geo Check-in Time</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Check-in Time</div>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
 <field name="geo_checkin_datetime" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Accuracy</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Accuracy</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_accuracy_m" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Latitude</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Latitude</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_latitude" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
-<div class="route_mobile_detail_label">Check-in Longitude</div>
-<div class="route_mobile_detail_value">
+<div class="route_mobile_detail_box route_geo_card">
+<div class="route_mobile_detail_label">Longitude</div>
+<div class="route_mobile_detail_value route_geo_value">
 <field name="geo_checkin_longitude" nolabel="1"/>
 </div>
 </div>
 </div>
 <separator string="Review Notes"/>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box route_mobile_detail_box_full">
+<div class="route_mobile_detail_grid route_geo_card_grid">
+<div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
 <div class="route_mobile_detail_label">Outside Zone Reason</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Reserved for outside-zone reason in the enforcement phase."/>
+<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
+<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Optional reason for later enforcement."/>
 </div>
 </div>
 </div>
