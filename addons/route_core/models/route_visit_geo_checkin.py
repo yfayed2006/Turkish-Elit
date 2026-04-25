@@ -180,11 +180,21 @@ class RouteVisit(models.Model):
             return _("%s km") % ("{:,.2f}".format(distance_m / 1000.0))
         return _("%s m") % ("{:,.0f}".format(distance_m))
 
+    def _geo_checkin_edit_allowed(self):
+        """Geo check-in is a visit-start audit record once the visit begins."""
+        for visit in self:
+            if visit.visit_process_state and visit.visit_process_state != "draft":
+                raise ValidationError(
+                    _("Geo Check-in is locked after the visit starts. Ask a supervisor to correct the audit record if needed.")
+                )
+        return True
+
     def action_geo_checkin_from_outlet_location(self):
         """Safe foundation helper: copy outlet coordinates into the visit check-in fields.
 
         This does not enforce geo rules. The browser/device capture flow will be added in the next phase.
         """
+        self._geo_checkin_edit_allowed()
         now = fields.Datetime.now()
         for visit in self:
             if not visit.outlet_id:
@@ -202,6 +212,7 @@ class RouteVisit(models.Model):
         return True
 
     def action_clear_geo_checkin_location(self):
+        self._geo_checkin_edit_allowed()
         self.write(
             {
                 "geo_checkin_latitude": 0.0,
@@ -242,6 +253,7 @@ class RouteVisit(models.Model):
         the browser geolocation API directly. This remains foundation mode: it records
         the location and calculates inside/outside zone, but it does not block Start Visit.
         """
+        self._geo_checkin_edit_allowed()
         self.ensure_one()
         if not self.route_geo_enabled:
             raise ValidationError(_("Geo location is disabled in Route Settings."))
@@ -257,21 +269,37 @@ class RouteVisit(models.Model):
             },
         }
 
-    def _should_require_geo_reason_before_start(self):
-        """Return True when policy requires an outside-zone reason before Start Visit.
-
-        B4.2 only enforces the `Require Reason` policy. `Review Only` remains
-        non-blocking and `Block Start` is intentionally reserved for the next
-        implementation round.
-        """
+    def _is_geo_start_policy_active(self):
+        """Return True when Start Visit should evaluate geo check-in requirements."""
         self.ensure_one()
         if self.env.context.get("route_geo_reason_confirmed"):
             return False
-        if self.state != "draft":
+        if self.visit_process_state and self.visit_process_state != "draft":
             return False
         if not self.route_geo_enabled:
             return False
-        if self.route_geo_checkin_policy != "require_reason":
+        return self.route_geo_checkin_policy == "require_reason"
+
+    def _geo_start_missing_checkin_message(self):
+        """Return a user-facing message when Require Reason needs a check-in first."""
+        self.ensure_one()
+        if not self._is_geo_start_policy_active():
+            return False
+        if self.geo_checkin_status == "pending":
+            return _("Please capture your location before starting the visit.")
+        if self.geo_checkin_status == "outlet_missing":
+            return _("Please set and verify the outlet location before starting the visit.")
+        return False
+
+    def _should_require_geo_reason_before_start(self):
+        """Return True when policy requires an outside-zone reason before Start Visit.
+
+        `Require Reason` now means a geo check-in is required before Start Visit.
+        If the check-in is outside the outlet radius, the salesperson must provide
+        an operational reason before the visit can move to Checked In.
+        """
+        self.ensure_one()
+        if not self._is_geo_start_policy_active():
             return False
         if self.geo_checkin_status != "outside":
             return False
@@ -296,6 +324,9 @@ class RouteVisit(models.Model):
 
     def action_start_visit(self):
         for visit in self:
+            missing_message = visit._geo_start_missing_checkin_message()
+            if missing_message:
+                raise ValidationError(missing_message)
             if visit._should_require_geo_reason_before_start():
                 return visit._action_open_geo_reason_wizard()
         return super().action_start_visit()
@@ -303,7 +334,7 @@ class RouteVisit(models.Model):
     def action_ux_start_visit(self):
         self.ensure_one()
         action = self.action_start_visit()
-        if action:
+        if isinstance(action, dict):
             return action
         if hasattr(self, "_get_pda_form_action"):
             return self._get_pda_form_action()
@@ -311,6 +342,7 @@ class RouteVisit(models.Model):
 
     def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
         """Save GPS coordinates captured by the browser/mobile device."""
+        self._geo_checkin_edit_allowed()
         now = fields.Datetime.now()
         try:
             latitude = float(latitude)
