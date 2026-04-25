@@ -113,6 +113,25 @@ class ResCompany(models.Model):
             radius = max(int(company.route_geo_checkin_radius_m or 0), 0)
             icp.set_param(company._route_feature_param_key("geo_checkin_radius_m"), str(radius))
 
+    def _compute_route_geo_checkin_policy(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        allowed = {"disabled", "review_only", "require_reason", "block_start"}
+        for company in self:
+            value = icp.get_param(
+                company._route_feature_param_key("geo_checkin_policy"),
+                default="review_only",
+            )
+            company.route_geo_checkin_policy = value if value in allowed else "review_only"
+
+    def _inverse_route_geo_checkin_policy(self):
+        icp = self.env["ir.config_parameter"].sudo()
+        allowed = {"disabled", "review_only", "require_reason", "block_start"}
+        for company in self:
+            value = company.route_geo_checkin_policy or "review_only"
+            if value not in allowed:
+                value = "review_only"
+            icp.set_param(company._route_feature_param_key("geo_checkin_policy"), value)
+
 
 class RouteOutlet(models.Model):
     _inherit = "route.outlet"
