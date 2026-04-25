@@ -21,6 +21,15 @@
 <div class="text-muted" colspan="2"> Disable Vehicle Closing in Route Workspace when end-of-day vehicle reconciliation is handled by warehouse or supervisor users instead of the salesperson. </div>
 </group>
 </group>
+<group string="Location and Map Settings">
+<group>
+<field name="route_enable_outlet_geolocation"/>
+<field name="route_map_provider" invisible="route_enable_outlet_geolocation == False"/>
+<field name="route_google_maps_api_key" password="True" invisible="route_enable_outlet_geolocation == False or route_map_provider != 'google'"/>
+<field name="route_geo_checkin_radius_m" invisible="route_enable_outlet_geolocation == False"/>
+<div class="text-muted" colspan="2"> Enable outlet location setup before using geo check-in, route maps, live monitoring, and route playback. Basic map links work without a Google API key; the key is reserved for future embedded map and live control center screens. </div>
+</group>
+</group>
 <group string="Route Product Settings">
 <group>
 <field name="route_enable_lot_serial_tracking"/>
