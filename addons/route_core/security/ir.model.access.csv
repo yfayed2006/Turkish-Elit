@@ -125,3 +125,5 @@ access_route_schedule_stop_wizard_management,access.route.schedule.stop.wizard.m
 access_route_visit_geo_reason_wizard_salesperson,access.route.visit.geo.reason.wizard.salesperson,model_route_visit_geo_reason_wizard,route_core.group_route_salesperson,1,1,1,1
 access_route_visit_geo_reason_wizard_supervisor,access.route.visit.geo.reason.wizard.supervisor,model_route_visit_geo_reason_wizard,route_core.group_route_supervisor,1,1,1,1
 access_route_visit_geo_reason_wizard_management,access.route.visit.geo.reason.wizard.management,model_route_visit_geo_reason_wizard,route_core.group_route_management,1,1,1,1
+access_route_geo_control_center_supervisor,access.route.geo.control.center.supervisor,model_route_geo_control_center,route_core.group_route_supervisor,1,1,1,1
+access_route_geo_control_center_management,access.route.geo.control.center.management,model_route_geo_control_center,route_core.group_route_management,1,1,1,1
