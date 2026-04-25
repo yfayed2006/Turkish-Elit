@@ -351,14 +351,21 @@
 <field name="notes" placeholder="Internal notes..."/>
 </page>
 <page string="Geo Check-in">
-<div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside'"> You are outside the allowed outlet radius. This is recorded for review only in the current foundation mode. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason'"> Geo check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start'"> Geo check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
+<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Geo location is disabled in Route Settings. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy != 'require_reason'"> Please capture your location before starting the visit. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason'"> You are outside the allowed outlet radius. A reason is required before starting the visit. </div>
+<div class="alert alert-danger route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'block_start'"> You are outside the allowed outlet radius. This visit cannot start under the current policy. </div>
+<div class="alert alert-info" role="alert" invisible="visit_process_state == 'draft'"> Geo Check-in is locked because this visit has already started. </div>
 <div class="route_geo_action_grid">
-<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled"/>
+<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="not geo_checkin_latitude and not geo_checkin_longitude"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
+<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
 <div class="route_mobile_detail_grid route_geo_card_grid">
@@ -416,19 +423,19 @@
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Accuracy</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_accuracy_m" nolabel="1"/>
+<field name="geo_checkin_accuracy_m" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Latitude</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_latitude" nolabel="1"/>
+<field name="geo_checkin_latitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Longitude</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_longitude" nolabel="1"/>
+<field name="geo_checkin_longitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 </div>
@@ -437,7 +444,7 @@
 <div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
 <div class="route_mobile_detail_label">Outside Zone Reason</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Optional reason for later enforcement."/>
+<field name="geo_checkin_outside_zone_reason" readonly="visit_process_state != 'draft'" nolabel="1" placeholder="Optional reason for later enforcement."/>
 </div>
 </div>
 </div>
@@ -940,14 +947,21 @@
 <field name="notes" placeholder="Internal notes..."/>
 </page>
 <page string="Geo Check-in">
-<div class="alert alert-info" role="alert"> Foundation mode: geo fields are recorded for review only and do not block visit execution yet. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside'"> You are outside the allowed outlet radius. This is recorded for review only in the current foundation mode. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason'"> Geo check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
+<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start'"> Geo check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
+<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Geo location is disabled in Route Settings. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy != 'require_reason'"> Please capture your location before starting the visit. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
+<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason'"> You are outside the allowed outlet radius. A reason is required before starting the visit. </div>
+<div class="alert alert-danger route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'block_start'"> You are outside the allowed outlet radius. This visit cannot start under the current policy. </div>
+<div class="alert alert-info" role="alert" invisible="visit_process_state == 'draft'"> Geo Check-in is locked because this visit has already started. </div>
 <div class="route_geo_action_grid">
-<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled"/>
+<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="not geo_checkin_latitude and not geo_checkin_longitude"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
+<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
 <div class="route_mobile_detail_grid route_geo_card_grid">
@@ -1005,19 +1019,19 @@
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Accuracy</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_accuracy_m" nolabel="1"/>
+<field name="geo_checkin_accuracy_m" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Latitude</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_latitude" nolabel="1"/>
+<field name="geo_checkin_latitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box route_geo_card">
 <div class="route_mobile_detail_label">Longitude</div>
 <div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_longitude" nolabel="1"/>
+<field name="geo_checkin_longitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
 </div>
 </div>
 </div>
@@ -1026,7 +1040,7 @@
 <div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
 <div class="route_mobile_detail_label">Outside Zone Reason</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_outside_zone_reason" nolabel="1" placeholder="Optional reason for later enforcement."/>
+<field name="geo_checkin_outside_zone_reason" readonly="visit_process_state != 'draft'" nolabel="1" placeholder="Optional reason for later enforcement."/>
 </div>
 </div>
 </div>
