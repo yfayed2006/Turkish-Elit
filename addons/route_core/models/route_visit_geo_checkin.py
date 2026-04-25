@@ -212,3 +212,65 @@ class RouteVisit(models.Model):
             self.geo_checkin_longitude,
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
+
+    def action_capture_current_geo_checkin(self):
+        """Ask the browser/mobile device to capture the salesperson's current GPS location.
+
+        The actual GPS prompt runs in a small client action because Python cannot access
+        the browser geolocation API directly. This remains foundation mode: it records
+        the location and calculates inside/outside zone, but it does not block Start Visit.
+        """
+        self.ensure_one()
+        if not self.route_geo_enabled:
+            raise ValidationError(_("Geo location is disabled in Route Settings."))
+        pda_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.client",
+            "tag": "route_core_capture_geo_checkin",
+            "target": "current",
+            "params": {
+                "visit_id": self.id,
+                "visit_name": self.display_name,
+                "view_id": pda_view.id if pda_view else False,
+            },
+        }
+
+    def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
+        """Save GPS coordinates captured by the browser/mobile device."""
+        now = fields.Datetime.now()
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+            accuracy = float(accuracy or 0.0)
+        except (TypeError, ValueError):
+            raise ValidationError(_("Invalid GPS coordinates received from the device."))
+
+        if latitude < -90.0 or latitude > 90.0:
+            raise ValidationError(_("Captured Latitude must be between -90 and 90."))
+        if longitude < -180.0 or longitude > 180.0:
+            raise ValidationError(_("Captured Longitude must be between -180 and 180."))
+        if accuracy < 0:
+            accuracy = 0.0
+
+        for visit in self:
+            visit.write(
+                {
+                    "geo_checkin_latitude": latitude,
+                    "geo_checkin_longitude": longitude,
+                    "geo_checkin_accuracy_m": accuracy,
+                    "geo_checkin_datetime": now,
+                }
+            )
+
+        self.flush_recordset([
+            "geo_checkin_latitude",
+            "geo_checkin_longitude",
+            "geo_checkin_accuracy_m",
+            "geo_checkin_datetime",
+        ])
+        self.invalidate_recordset()
+        first = self[:1]
+        return {
+            "status": first.geo_checkin_status if first else False,
+            "distance_m": first.geo_checkin_distance_m if first else 0.0,
+        }
