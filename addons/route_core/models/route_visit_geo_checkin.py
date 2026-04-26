@@ -518,7 +518,14 @@ class RouteVisit(models.Model):
         return action
 
     def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
-        """Save location coordinates captured by the browser/mobile device."""
+        """Save location coordinates captured by the browser/mobile device.
+
+        This method is called from a browser client action. In salesperson/PDA mode,
+        the visit form can be opened with restricted record rules, so the actual
+        coordinate write is done with sudo after the visit-start lock check. This
+        keeps the operational lock intact while avoiding RPC-only access failures
+        when saving the GPS audit fields.
+        """
         self._geo_checkin_edit_allowed()
         now = fields.Datetime.now()
         try:
@@ -543,16 +550,22 @@ class RouteVisit(models.Model):
                 "geo_checkin_datetime": now,
             }
             vals.update(visit._geo_review_reset_supervisor_decision_values())
-            visit.write(vals)
+            visit.with_context(route_visit_force_write=True).sudo().write(vals)
 
-        self.flush_recordset([
-            "geo_checkin_latitude",
-            "geo_checkin_longitude",
-            "geo_checkin_accuracy_m",
-            "geo_checkin_datetime",
-        ])
-        self.invalidate_recordset()
-        first = self[:1]
+        first = self[:1].sudo()
+        if first:
+            first.invalidate_recordset([
+                "geo_checkin_latitude",
+                "geo_checkin_longitude",
+                "geo_checkin_accuracy_m",
+                "geo_checkin_datetime",
+                "geo_checkin_distance_m",
+                "geo_checkin_distance_display",
+                "geo_checkin_status",
+                "geo_review_state",
+                "geo_review_required",
+                "geo_review_missing_reason",
+            ])
         return {
             "status": first.geo_checkin_status if first else False,
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
