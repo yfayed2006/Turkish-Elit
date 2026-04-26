@@ -1,0 +1,17 @@
+<odoo>
+<!--  Re-assert Supervisor Daily Closing menu after role/menu security files.  -->
+<record id="server_action_open_route_supervisor_daily_closing" model="ir.actions.server">
+<field name="name">Supervisor Daily Closing</field>
+<field name="model_id" ref="route_core.model_route_supervisor_daily_closing"/>
+<field name="state">code</field>
+<field name="code">action = env["route.supervisor.daily.closing"].action_open_daily_closing_dashboard()</field>
+</record>
+<record id="menu_route_supervisor_daily_closing" model="ir.ui.menu">
+<field name="name">Supervisor Daily Closing</field>
+<field name="parent_id" ref="route_core.menu_route_control_workspace"/>
+<field name="action" ref="route_core.server_action_open_route_supervisor_daily_closing"/>
+<field name="sequence">6</field>
+<field name="active" eval="True"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_supervisor'), ref('route_core.group_route_management')])]"/>
+</record>
+</odoo>
