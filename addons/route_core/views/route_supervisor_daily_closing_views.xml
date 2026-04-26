@@ -1,0 +1,330 @@
+<odoo>
+<record id="view_route_supervisor_daily_closing_issue_kanban" model="ir.ui.view">
+<field name="name">route.supervisor.daily.closing.issue.kanban</field>
+<field name="model">route.supervisor.daily.closing.issue</field>
+<field name="arch" type="xml">
+<kanban string="Closing Checks" class="o_kanban_mobile route-supervisor-closing-issue-kanban" create="0" delete="0" quick_create="0">
+<field name="title"/>
+<field name="subtitle"/>
+<field name="count"/>
+<field name="amount"/>
+<field name="currency_id"/>
+<field name="severity"/>
+<field name="button_label"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm h-100">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+<strong class="d-block text-truncate">
+<field name="title"/>
+</strong>
+<t t-if="record.severity.raw_value == 'success'">
+<span class="badge rounded-pill text-bg-success">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'info'">
+<span class="badge rounded-pill text-bg-info">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'warning'">
+<span class="badge rounded-pill text-bg-warning">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'danger'">
+<span class="badge rounded-pill text-bg-danger">
+<field name="count"/>
+</span>
+</t>
+</div>
+<div class="text-muted small mb-2">
+<field name="subtitle"/>
+</div>
+<t t-if="record.amount.raw_value">
+<div class="mb-2">
+<span class="text-muted small d-block">Amount</span>
+<strong>
+<field name="amount" widget="monetary"/>
+</strong>
+</div>
+</t>
+<button name="action_open_issue_details" type="object" class="btn btn-primary btn-sm px-2 py-1">
+<field name="button_label"/>
+</button>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_supervisor_daily_closing_form" model="ir.ui.view">
+<field name="name">route.supervisor.daily.closing.form</field>
+<field name="model">route.supervisor.daily.closing</field>
+<field name="arch" type="xml">
+<form string="Supervisor Daily Closing" create="0" delete="0">
+<header>
+<button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_open_daily_control" type="object" string="Daily Control" icon="fa-dashboard"/>
+<button name="action_open_unfinished_visits" type="object" string="Unfinished Visits" icon="fa-exclamation-circle" class="btn-primary"/>
+<button name="action_open_vehicle_closings" type="object" string="Vehicle Closing" icon="fa-truck"/>
+<button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-check-o"/>
+<button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
+<button name="action_open_loading_proposals" type="object" string="Loading" icon="fa-cubes"/>
+<button name="action_open_pending_transfers" type="object" string="Transfers" icon="fa-exchange"/>
+<button name="action_open_all_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
+<field name="total_visit_count" widget="statinfo" string="Visits"/>
+</button>
+<button name="action_open_unfinished_visits" type="object" class="oe_stat_button" icon="fa-warning">
+<field name="unfinished_visit_count" widget="statinfo" string="Unfinished"/>
+</button>
+<button name="action_open_location_issues" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="location_issue_count" widget="statinfo" string="Location"/>
+</button>
+<button name="action_open_open_due_visits" type="object" class="oe_stat_button" icon="fa-money">
+<field name="open_due_amount" widget="statinfo" string="Open Due"/>
+</button>
+</header>
+<sheet>
+<div class="oe_title mb-2">
+<span class="text-muted">Supervisor Daily Closing</span>
+<h1>Operations Closing Control</h1>
+<p class="text-muted">End-of-day readiness review for route execution, collections, location review, vehicle closing, loading, and transfers.</p>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-12 col-lg-4">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Closing Readiness</span>
+<strong class="fs-3 text-success" invisible="not ready_to_close">
+<field name="readiness_label" nolabel="1"/>
+</strong>
+<strong class="fs-3 text-danger" invisible="ready_to_close">
+<field name="readiness_label" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+<field name="readiness_note" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Blockers</span>
+<strong class="fs-4">
+<field name="blocker_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">Must be resolved</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Visits</span>
+<strong class="fs-4">
+<field name="total_visit_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Done:
+<field name="done_visit_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Vehicle Closing</span>
+<strong class="fs-4">
+<field name="vehicle_closing_closed_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending:
+<field name="vehicle_closing_pending_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Open Due</span>
+<strong class="fs-4">
+<field name="open_due_amount" nolabel="1" widget="monetary"/>
+</strong>
+<span class="text-muted small d-block">
+Promises:
+<field name="open_promise_count" nolabel="1"/>
+</span>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Closing Snapshot</h3>
+<div class="row g-2 mb-3">
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Daily Plans</span>
+<strong class="fs-5">
+<field name="total_plan_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Not finalized:
+<field name="not_finalized_plan_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Unfinished</span>
+<strong class="fs-5">
+<field name="unfinished_visit_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Not started:
+<field name="not_started_visit_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Location Issues</span>
+<strong class="fs-5">
+<field name="location_issue_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">Needs review</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Loading</span>
+<strong class="fs-5">
+<field name="loading_proposal_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending:
+<field name="loading_pending_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Transfers</span>
+<strong class="fs-5">
+<field name="pending_transfer_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">Pending stock moves</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Returns / Refill</span>
+<strong class="fs-5">
+<field name="return_transfer_count" nolabel="1"/>
+/
+<field name="refill_transfer_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">Transfers</span>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Closing Checks</h3>
+<field name="issue_line_ids" mode="kanban" nolabel="1" class="mb-4">
+<kanban string="Closing Checks" class="o_kanban_mobile" create="0" delete="0" quick_create="0">
+<field name="title"/>
+<field name="subtitle"/>
+<field name="count"/>
+<field name="amount"/>
+<field name="currency_id"/>
+<field name="severity"/>
+<field name="button_label"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm h-100">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+<strong class="d-block text-truncate">
+<field name="title"/>
+</strong>
+<t t-if="record.severity.raw_value == 'success'">
+<span class="badge rounded-pill text-bg-success">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'info'">
+<span class="badge rounded-pill text-bg-info">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'warning'">
+<span class="badge rounded-pill text-bg-warning">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'danger'">
+<span class="badge rounded-pill text-bg-danger">
+<field name="count"/>
+</span>
+</t>
+</div>
+<div class="text-muted small mb-2">
+<field name="subtitle"/>
+</div>
+<t t-if="record.amount.raw_value">
+<div class="mb-2">
+<span class="text-muted small d-block">Amount</span>
+<strong>
+<field name="amount" widget="monetary"/>
+</strong>
+</div>
+</t>
+<button name="action_open_issue_details" type="object" class="btn btn-primary btn-sm px-2 py-1">
+<field name="button_label"/>
+</button>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+<h3 class="mb-2">Closing Filters</h3>
+<div class="row g-2 mb-3">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="closing_date" nolabel="0"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="salesperson_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="vehicle_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="city_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="area_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="outlet_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<field name="company_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_supervisor_daily_closing" model="ir.actions.server">
+<field name="name">Supervisor Daily Closing</field>
+<field name="model_id" ref="route_core.model_route_supervisor_daily_closing"/>
+<field name="state">code</field>
+<field name="code">action = env["route.supervisor.daily.closing"].action_open_daily_closing_dashboard()</field>
+</record>
+<menuitem id="menu_route_supervisor_daily_closing" name="Supervisor Daily Closing" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_supervisor_daily_closing" sequence="6" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</odoo>
