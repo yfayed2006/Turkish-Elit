@@ -163,7 +163,7 @@ class RouteGeoLiveMapController(http.Controller):
         payload = [self._visit_payload(center, visit) for visit in visits]
         mapped = [visit for visit in payload if visit.get("lat") or visit.get("lng")]
         data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
-        title = escape(center.name or "Geo Live Map")
+        title = escape(center.name or "Visit Location Map")
         subtitle = escape("%s • %s filtered visits • %s mapped" % (center.visit_date or "", len(payload), len(mapped)))
         message_html = ""
         if message:
@@ -192,10 +192,6 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
 .visit-card:hover {{ border-color:var(--route-primary); cursor:pointer; }}
 .visit-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }}
 .visit-title {{ font-weight:800; font-size:15px; }}
-.title-link {{ color:#111827; text-decoration:none; font-weight:900; }}
-.title-link:hover {{ color:var(--route-primary); text-decoration:underline; }}
-.popup-link {{ color:var(--route-primary); text-decoration:none; font-weight:900; }}
-.popup-link:hover {{ text-decoration:underline; }}
 .visit-ref {{ color:#6b7280; font-size:13px; margin-top:2px; }}
 .badge {{ display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; border:1px solid transparent; }}
 .badge-gray {{ color:#111827; background:#eef0f2; border-color:#d8dbe0; }}
@@ -225,47 +221,22 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
 .popup-actions {{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; color:#6b7280; font-weight:700; }}
 @media (max-width: 900px) {{
-  html, body {{ height:auto; min-height:100%; overflow-x:hidden; }}
-  .route-map-page {{ height:auto; min-height:0; display:block; }}
-  .route-map-header {{ align-items:flex-start; flex-direction:column; gap:6px; padding:7px 8px; }}
-  .route-map-title {{ font-size:14px; line-height:1.15; }}
-  .route-map-subtitle {{ font-size:10px; margin-top:1px; }}
-  .route-map-legend {{ justify-content:flex-start; gap:4px; width:100%; }}
-  .legend-pill {{ font-size:10px; padding:3px 6px; gap:4px; }}
-  .legend-dot {{ width:8px; height:8px; }}
-  .toast-note {{ margin:6px 8px; padding:6px 8px; font-size:13px; }}
-  .route-map-body {{ display:flex; flex-direction:column; min-height:0; height:auto; }}
-  #map {{ height:52vh; min-height:300px; max-height:430px; width:100%; flex:none; }}
-  .route-map-side {{ border-left:0; border-top:1px solid #d9dee3; overflow:visible; max-height:none; padding:8px; background:#f5f6f7; }}
-  .visit-card {{ margin:0 0 8px 0; padding:9px; border-radius:10px; }}
-  .visit-top {{ gap:6px; }}
-  .visit-title {{ font-size:14px; }}
-  .visit-ref {{ font-size:12px; }}
-  .badge {{ font-size:10px; padding:3px 7px; }}
-  .visit-grid {{ grid-template-columns:1fr 1fr; gap:5px 8px; margin-top:8px; font-size:12px; }}
-  .popup-row {{ font-size:11px; }}
-  .actions {{ gap:5px; margin-top:8px; }}
-  .map-btn {{ font-size:11px; padding:6px 7px; border-radius:5px; }}
-  .leaflet-popup-content {{ max-width:240px; }}
-}}
-@media (max-width: 480px) {{
-  #map {{ height:48vh; min-height:280px; max-height:390px; }}
-  .route-map-header {{ padding:6px 7px; }}
-  .route-map-subtitle {{ display:none; }}
-  .legend-pill {{ font-size:9.5px; padding:3px 5px; }}
-  .visit-grid {{ grid-template-columns:1fr 1fr; }}
+  .route-map-header {{ align-items:flex-start; flex-direction:column; }}
+  .route-map-legend {{ justify-content:flex-start; }}
+  .route-map-body {{ grid-template-columns:1fr; grid-template-rows:55vh auto; }}
+  .route-map-side {{ border-left:0; border-top:1px solid #d9dee3; max-height:none; }}
 }}
 </style>
 </head>
 <body>
 <div class="route-map-page">
   <div class="route-map-header">
-    <div><div class="route-map-title">Geo Live Map</div><div class="route-map-subtitle">{subtitle}</div></div>
+    <div><div class="route-map-title">Visit Location Map</div><div class="route-map-subtitle">{subtitle}</div></div>
     <div class="route-map-legend">
       <span class="legend-pill"><span class="legend-dot" style="background:var(--route-green)"></span>Inside/Accepted</span>
       <span class="legend-pill"><span class="legend-dot" style="background:var(--route-orange)"></span>Outside/Correction</span>
       <span class="legend-pill"><span class="legend-dot" style="background:var(--route-blue)"></span>No Check-in</span>
-      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-gray)"></span>No GPS</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-gray)"></span>No Location</span>
     </div>
   </div>
   {message_html}
@@ -294,7 +265,7 @@ function badgeClass(v) {{
   if (v.geo_state === 'pending_checkin') return 'badge-blue';
   return 'badge-gray';
 }}
-function statusText(v) {{ return v.decision_label || v.geo_state_label || 'Geo Status'; }}
+function statusText(v) {{ return v.decision_label || v.geo_state_label || 'Location Status'; }}
 function actionButtons(v) {{
   let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
   if (v.has_outlet) html += `<a class="map-btn" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a>`;
@@ -306,7 +277,7 @@ function actionButtons(v) {{
 }}
 function visitCard(v) {{
   return `<article class="visit-card" data-visit-id="${{v.id}}">
-    <div class="visit-top"><div><div class="visit-title"><a class="title-link" href="${{v.visit_url}}" target="_top" title="Open visit">${{escapeHtml(v.outlet || v.name)}}</a></div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
+    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
     <div class="visit-grid">
       <div><span class="label">Salesperson</span><span class="value">${{escapeHtml(v.salesperson)}}</span></div>
       <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle)}}</span></div>
@@ -320,7 +291,7 @@ function visitCard(v) {{
   </article>`;
 }}
 function popupHtml(v) {{
-  return `<div><div class="popup-title"><a class="popup-link" href="${{v.visit_url}}" target="_top" title="Open visit">${{escapeHtml(v.outlet || v.name)}}</a></div>
+  return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div>
     <div class="popup-row"><b>${{escapeHtml(v.name)}}</b></div>
     <div class="popup-row">${{escapeHtml(statusText(v))}}</div>
     <div class="popup-row">Salesperson: ${{escapeHtml(v.salesperson)}}</div>
@@ -352,7 +323,7 @@ function initMap() {{
     markerByVisit[v.id] = marker;
     bounds.push([v.lat, v.lng]);
     if (v.has_checkin && v.has_outlet) {{
-      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet GPS</b><br/><a class="popup-link" href="${{v.outlet_map_url}}" target="_blank" title="Open outlet in Google Maps">${{escapeHtml(v.outlet)}}</a><div class="popup-actions"><a class="map-btn" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a><a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a></div>`);
+      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet Location</b><br/>${{escapeHtml(v.outlet)}}`);
       L.polyline([[v.checkin_lat, v.checkin_lng], [v.outlet_lat, v.outlet_lng]], {{ color:'#7b4b6f', weight:2, opacity:.55, dashArray:'5,6' }}).addTo(map);
       bounds.push([v.outlet_lat, v.outlet_lng]);
     }}
@@ -380,49 +351,28 @@ window.addEventListener('load', () => {{
 </html>'''
         return request.make_response(html, headers=[("Content-Type", "text/html; charset=utf-8")])
 
-    @http.route(
-        [
-            "/route_core/geo/live_map/frame/<int:center_id>",
-            "/route_core/geo_live_map/<int:center_id>",
-            "/route_core/geo-live-map/<int:center_id>",
-        ],
-        type="http",
-        auth="user",
-        website=False,
-        sitemap=False,
-    )
+    @http.route("/route_core/geo/live_map/frame/<int:center_id>", type="http", auth="user", website=False)
     def route_core_geo_live_map_frame(self, center_id, **kwargs):
         center = request.env["route.geo.control.center"].browse(center_id).exists()
         if not center:
             return request.make_response(
-                "<html><body><p>Geo Live Map session was not found. Please reopen Geo Control Center.</p></body></html>",
+                "<html><body><p>Visit Location Map session was not found. Please reopen Visit Location Control.</p></body></html>",
                 headers=[("Content-Type", "text/html; charset=utf-8")],
             )
         return self._render_live_map_html(center, message=kwargs.get("message") or "")
 
-    @http.route(
-        [
-            "/route_core/geo/live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
-            "/route_core/geo_live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
-            "/route_core/geo-live-map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
-        ],
-        type="http",
-        auth="user",
-        website=False,
-        csrf=False,
-        sitemap=False,
-    )
+    @http.route("/route_core/geo/live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>", type="http", auth="user", website=False, csrf=False)
     def route_core_geo_live_map_decision(self, center_id, visit_id, decision, **kwargs):
         visit = request.env["route.visit"].browse(visit_id).exists()
-        message = "Geo review updated."
+        message = "Location review updated."
         if visit:
             if decision == "accept":
                 visit.action_geo_review_accept()
-                message = "Geo review accepted."
+                message = "Location review accepted."
             elif decision == "needs_correction":
                 visit.action_geo_review_needs_correction()
-                message = "Geo review marked as needs correction."
+                message = "Location review marked as needs correction."
             elif decision == "reset":
                 visit.action_geo_review_reset_decision()
-                message = "Geo review decision reset."
+                message = "Location review decision reset."
         return redirect("/route_core/geo/live_map/frame/%s?message=%s&ts=%s" % (center_id, quote_plus(message), int(time.time())))
