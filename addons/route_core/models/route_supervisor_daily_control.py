@@ -1,6 +1,10 @@
 from datetime import datetime, time, timedelta
+import logging
 
 from odoo import _, api, fields, models
+
+
+_logger = logging.getLogger(__name__)
 
 
 class RouteSupervisorDailyControl(models.TransientModel):
@@ -151,6 +155,43 @@ class RouteSupervisorDailyControl(models.TransientModel):
         compute="_compute_dashboard",
         readonly=True,
     )
+
+    def _assign_dashboard_defaults(self):
+        """Assign every computed dashboard field before any heavier search logic.
+
+        Transient dashboards can be re-read from breadcrumbs after opening a
+        child action. If one downstream search/helper fails, Odoo still expects
+        every computed field in the form to have a value. These safe defaults
+        prevent the whole page from crashing and let the real values overwrite
+        them when computation succeeds.
+        """
+        for dashboard in self:
+            dashboard.plan_count = 0
+            dashboard.finalized_plan_count = 0
+            dashboard.not_finalized_plan_count = 0
+            dashboard.total_visit_count = 0
+            dashboard.filtered_visit_count = 0
+            dashboard.not_started_count = 0
+            dashboard.active_visit_count = 0
+            dashboard.done_visit_count = 0
+            dashboard.cancelled_visit_count = 0
+            dashboard.no_checkin_count = 0
+            dashboard.no_outlet_location_count = 0
+            dashboard.outside_zone_count = 0
+            dashboard.needs_location_review_count = 0
+            dashboard.location_accepted_count = 0
+            dashboard.location_correction_count = 0
+            dashboard.net_due_amount = 0.0
+            dashboard.collected_amount = 0.0
+            dashboard.remaining_due_amount = 0.0
+            dashboard.promise_amount = 0.0
+            dashboard.confirmed_payment_count = 0
+            dashboard.open_promise_count = 0
+            dashboard.daily_visit_ids = [(6, 0, [])]
+            dashboard.daily_plan_ids = [(6, 0, [])]
+            dashboard.daily_payment_ids = [(6, 0, [])]
+            dashboard.salesperson_control_ids = [(5, 0, 0)]
+            dashboard.vehicle_control_ids = [(5, 0, 0)]
 
     def _get_base_visit_domain(self, include_status_filter=True, include_location_filter=True):
         self.ensure_one()
@@ -427,74 +468,82 @@ class RouteSupervisorDailyControl(models.TransientModel):
         Plan = self.env["route.plan"]
         Payment = self.env["route.visit.payment"]
         for dashboard in self:
-            counter_visits = Visit.search(
-                dashboard._get_base_visit_domain(include_status_filter=False, include_location_filter=False)
-            )
-            filtered_visits = Visit.search(
-                dashboard._get_base_visit_domain(include_status_filter=True, include_location_filter=True),
-                order="date desc, start_datetime desc, id desc",
-            )
-            plans = Plan.search(dashboard._get_plan_domain(), order="date desc, id desc")
-            payments = Payment.search(dashboard._get_payment_domain(), order="payment_date desc, id desc")
-            if dashboard.vehicle_id:
-                payments = payments.filtered(
-                    lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
-                    or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
+            dashboard._assign_dashboard_defaults()
+            try:
+                counter_visits = Visit.search(
+                    dashboard._get_base_visit_domain(include_status_filter=False, include_location_filter=False)
                 )
-
-            promise_payments = Payment.search([
-                ("company_id", "=", dashboard.company_id.id or dashboard.env.company.id),
-                ("state", "!=", "cancelled"),
-                ("promise_amount", ">", 0),
-            ])
-            if dashboard.salesperson_id:
-                promise_payments = promise_payments.filtered(lambda payment: payment.salesperson_id == dashboard.salesperson_id)
-            if dashboard.vehicle_id:
-                promise_payments = promise_payments.filtered(
-                    lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
-                    or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
+                filtered_visits = Visit.search(
+                    dashboard._get_base_visit_domain(include_status_filter=True, include_location_filter=True),
+                    order="date desc, start_datetime desc, id desc",
                 )
-            if dashboard.city_id:
-                promise_payments = promise_payments.filtered(
-                    lambda payment: (payment.area_id and payment.area_id.city_id == dashboard.city_id)
-                    or (payment.outlet_id and payment.outlet_id.route_city_id == dashboard.city_id)
+                plans = Plan.search(dashboard._get_plan_domain(), order="date desc, id desc")
+                payments = Payment.search(dashboard._get_payment_domain(), order="payment_date desc, id desc")
+                if dashboard.vehicle_id:
+                    payments = payments.filtered(
+                        lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
+                        or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
+                    )
+
+                promise_payments = Payment.search([
+                    ("company_id", "=", dashboard.company_id.id or dashboard.env.company.id),
+                    ("state", "!=", "cancelled"),
+                    ("promise_amount", ">", 0),
+                ])
+                if dashboard.salesperson_id:
+                    promise_payments = promise_payments.filtered(lambda payment: payment.salesperson_id == dashboard.salesperson_id)
+                if dashboard.vehicle_id:
+                    promise_payments = promise_payments.filtered(
+                        lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
+                        or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
+                    )
+                if dashboard.city_id:
+                    promise_payments = promise_payments.filtered(
+                        lambda payment: (payment.area_id and payment.area_id.city_id == dashboard.city_id)
+                        or (payment.outlet_id and payment.outlet_id.route_city_id == dashboard.city_id)
+                    )
+                if dashboard.area_id:
+                    promise_payments = promise_payments.filtered(lambda payment: payment.area_id == dashboard.area_id)
+                if dashboard.outlet_id:
+                    promise_payments = promise_payments.filtered(lambda payment: payment.outlet_id == dashboard.outlet_id)
+                open_promises = promise_payments.filtered(lambda payment: payment.promise_status in ("open", "due_today", "overdue"))
+
+                dashboard.plan_count = len(plans)
+                dashboard.finalized_plan_count = len(plans.filtered(lambda plan: plan.planning_finalized))
+                dashboard.not_finalized_plan_count = len(plans.filtered(lambda plan: not plan.planning_finalized))
+
+                dashboard.total_visit_count = len(counter_visits)
+                dashboard.filtered_visit_count = len(filtered_visits)
+                dashboard.not_started_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "draft"))
+                dashboard.active_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state not in ["draft", "done", "cancel"]))
+                dashboard.done_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "done"))
+                dashboard.cancelled_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "cancel"))
+
+                dashboard.no_checkin_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state == "pending_checkin"))
+                dashboard.no_outlet_location_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state == "outlet_missing"))
+                dashboard.outside_zone_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state in ["outside_no_reason", "outside_with_reason"]))
+                dashboard.needs_location_review_count = len(counter_visits.filtered(lambda visit: visit.geo_review_required and not visit.geo_review_supervisor_decision))
+                dashboard.location_accepted_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "accepted"))
+                dashboard.location_correction_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction"))
+
+                dashboard.net_due_amount = sum(counter_visits.mapped("net_due_amount")) if counter_visits else 0.0
+                dashboard.collected_amount = sum(counter_visits.mapped("collected_amount")) if counter_visits else 0.0
+                dashboard.remaining_due_amount = sum(counter_visits.mapped("remaining_due_amount")) if counter_visits else 0.0
+                dashboard.promise_amount = sum(open_promises.mapped("promise_amount")) if open_promises else 0.0
+                dashboard.confirmed_payment_count = len(payments)
+                dashboard.open_promise_count = len(open_promises)
+
+                dashboard.daily_visit_ids = [(6, 0, filtered_visits.ids)]
+                dashboard.daily_plan_ids = [(6, 0, plans.ids)]
+                dashboard.daily_payment_ids = [(6, 0, payments.ids)]
+                dashboard._sync_salesperson_control_lines(filtered_visits, open_promises)
+                dashboard._sync_vehicle_control_lines(filtered_visits, open_promises, plans)
+
+            except Exception:
+                _logger.exception(
+                    "Failed to compute Supervisor Daily Control dashboard %s",
+                    dashboard.id or "new",
                 )
-            if dashboard.area_id:
-                promise_payments = promise_payments.filtered(lambda payment: payment.area_id == dashboard.area_id)
-            if dashboard.outlet_id:
-                promise_payments = promise_payments.filtered(lambda payment: payment.outlet_id == dashboard.outlet_id)
-            open_promises = promise_payments.filtered(lambda payment: payment.promise_status in ("open", "due_today", "overdue"))
-
-            dashboard.plan_count = len(plans)
-            dashboard.finalized_plan_count = len(plans.filtered(lambda plan: plan.planning_finalized))
-            dashboard.not_finalized_plan_count = len(plans.filtered(lambda plan: not plan.planning_finalized))
-
-            dashboard.total_visit_count = len(counter_visits)
-            dashboard.filtered_visit_count = len(filtered_visits)
-            dashboard.not_started_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "draft"))
-            dashboard.active_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state not in ["draft", "done", "cancel"]))
-            dashboard.done_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "done"))
-            dashboard.cancelled_visit_count = len(counter_visits.filtered(lambda visit: visit.visit_process_state == "cancel"))
-
-            dashboard.no_checkin_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state == "pending_checkin"))
-            dashboard.no_outlet_location_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state == "outlet_missing"))
-            dashboard.outside_zone_count = len(counter_visits.filtered(lambda visit: visit.geo_review_state in ["outside_no_reason", "outside_with_reason"]))
-            dashboard.needs_location_review_count = len(counter_visits.filtered(lambda visit: visit.geo_review_required and not visit.geo_review_supervisor_decision))
-            dashboard.location_accepted_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "accepted"))
-            dashboard.location_correction_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction"))
-
-            dashboard.net_due_amount = sum(counter_visits.mapped("net_due_amount")) if counter_visits else 0.0
-            dashboard.collected_amount = sum(counter_visits.mapped("collected_amount")) if counter_visits else 0.0
-            dashboard.remaining_due_amount = sum(counter_visits.mapped("remaining_due_amount")) if counter_visits else 0.0
-            dashboard.promise_amount = sum(open_promises.mapped("promise_amount")) if open_promises else 0.0
-            dashboard.confirmed_payment_count = len(payments)
-            dashboard.open_promise_count = len(open_promises)
-
-            dashboard.daily_visit_ids = [(6, 0, filtered_visits.ids)]
-            dashboard.daily_plan_ids = [(6, 0, plans.ids)]
-            dashboard.daily_payment_ids = [(6, 0, payments.ids)]
-            dashboard._sync_salesperson_control_lines(filtered_visits, open_promises)
-            dashboard._sync_vehicle_control_lines(filtered_visits, open_promises, plans)
 
     @api.model
     def action_open_daily_control_dashboard(self):
