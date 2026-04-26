@@ -4,7 +4,13 @@ from odoo import _, api, fields, models
 class RouteGeoControlCenter(models.TransientModel):
     _name = "route.geo.control.center"
     _description = "Route Geo Control Center"
+    _rec_name = "name"
 
+    name = fields.Char(
+        string="Name",
+        default=lambda self: _("Geo Control Center"),
+        readonly=True,
+    )
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -194,7 +200,7 @@ class RouteGeoControlCenter(models.TransientModel):
     def _compute_geo_dashboard(self):
         Visit = self.env["route.visit"]
         for center in self:
-            counter_domain = center._get_base_visit_domain(include_process_filter=True)
+            counter_domain = center._get_base_visit_domain(include_process_filter=False)
             counter_visits = Visit.search(counter_domain)
             filtered_visits = Visit.search(
                 center._get_filtered_visit_domain(),
@@ -215,14 +221,13 @@ class RouteGeoControlCenter(models.TransientModel):
             center.needs_correction_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction"))
             center.filtered_visit_count = len(filtered_visits)
             center.geo_visit_ids = [(6, 0, filtered_visits.ids)]
-            center.live_map_note = _(
-                "B6.1 uses mobile cards and filtered visit lists. B6.2 can reuse these filtered visits for the live map layer."
-            )
+            center.live_map_note = _("Ready for B6.2 Live Map.")
 
     @api.model
     def action_open_geo_control_center(self):
         center = self.create(
             {
+                "name": _("Geo Control Center"),
                 "company_id": self.env.company.id,
                 "visit_date": fields.Date.context_today(self),
                 "visit_process_filter": "all",
@@ -268,7 +273,7 @@ class RouteGeoControlCenter(models.TransientModel):
         }
         if views:
             action["views"] = views
-        search_view = self.env.ref("route_core.view_route_geo_review_search", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_geo_control_card_search", raise_if_not_found=False)
         if search_view:
             action["search_view_id"] = search_view.id
         return action
@@ -313,7 +318,7 @@ class RouteGeoControlCenter(models.TransientModel):
         return self._action_open_geo_visits(_("Filtered Geo Visit Cards"), self._get_filtered_visit_domain())
 
     def action_open_total_visits(self):
-        return self._action_open_geo_visits(_("Today's Geo Visits"), self._get_base_visit_domain(include_process_filter=True))
+        return self._action_open_geo_visits(_("Today's Geo Visits"), self._get_base_visit_domain(include_process_filter=False))
 
     def action_open_not_started_visits(self):
         return self._action_open_geo_visits(
@@ -336,51 +341,51 @@ class RouteGeoControlCenter(models.TransientModel):
     def action_open_pending_checkin_visits(self):
         return self._action_open_geo_visits(
             _("Pending Geo Check-in"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_state", "=", "pending_checkin")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "=", "pending_checkin")],
         )
 
     def action_open_outlet_missing_visits(self):
         return self._action_open_geo_visits(
             _("Missing Outlet Location"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_state", "=", "outlet_missing")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "=", "outlet_missing")],
         )
 
     def action_open_inside_zone_visits(self):
         return self._action_open_geo_visits(
             _("Inside Zone Visits"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_state", "=", "inside_zone")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "=", "inside_zone")],
         )
 
     def action_open_outside_zone_visits(self):
         return self._action_open_geo_visits(
             _("Outside Zone Visits"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_state", "in", ["outside_no_reason", "outside_with_reason"])],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "in", ["outside_no_reason", "outside_with_reason"])],
         )
 
     def action_open_outside_missing_reason_visits(self):
         return self._action_open_geo_visits(
             _("Outside Zone - Missing Reason"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_state", "=", "outside_no_reason")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "=", "outside_no_reason")],
         )
 
     def action_open_needs_review_visits(self):
         return self._action_open_geo_visits(
             _("Needs Supervisor Review"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_required", "=", True), ("geo_review_supervisor_decision", "=", False)],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_required", "=", True), ("geo_review_supervisor_decision", "=", False)],
         )
 
     def action_open_accepted_visits(self):
         return self._action_open_geo_visits(
             _("Accepted Geo Reviews"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_supervisor_decision", "=", "accepted")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_supervisor_decision", "=", "accepted")],
         )
 
     def action_open_needs_correction_visits(self):
         return self._action_open_geo_visits(
             _("Geo Reviews Needing Correction"),
-            self._get_base_visit_domain(include_process_filter=True) + [("geo_review_supervisor_decision", "=", "needs_correction")],
+            self._get_base_visit_domain(include_process_filter=False) + [("geo_review_supervisor_decision", "=", "needs_correction")],
         )
 
     def action_open_geo_review(self):
-        return self._action_open_geo_review_list(_("Geo Check-in Review"), self._get_base_visit_domain(include_process_filter=True))
+        return self._action_open_geo_visits(_("Geo Check-in Review Cards"), self._get_base_visit_domain(include_process_filter=False))
 
