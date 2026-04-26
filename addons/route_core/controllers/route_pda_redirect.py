@@ -192,6 +192,10 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
 .visit-card:hover {{ border-color:var(--route-primary); cursor:pointer; }}
 .visit-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }}
 .visit-title {{ font-weight:800; font-size:15px; }}
+.title-link {{ color:#111827; text-decoration:none; font-weight:900; }}
+.title-link:hover {{ color:var(--route-primary); text-decoration:underline; }}
+.popup-link {{ color:var(--route-primary); text-decoration:none; font-weight:900; }}
+.popup-link:hover {{ text-decoration:underline; }}
 .visit-ref {{ color:#6b7280; font-size:13px; margin-top:2px; }}
 .badge {{ display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; border:1px solid transparent; }}
 .badge-gray {{ color:#111827; background:#eef0f2; border-color:#d8dbe0; }}
@@ -277,7 +281,7 @@ function actionButtons(v) {{
 }}
 function visitCard(v) {{
   return `<article class="visit-card" data-visit-id="${{v.id}}">
-    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
+    <div class="visit-top"><div><div class="visit-title"><a class="title-link" href="${{v.visit_url}}" target="_top" title="Open visit">${{escapeHtml(v.outlet || v.name)}}</a></div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
     <div class="visit-grid">
       <div><span class="label">Salesperson</span><span class="value">${{escapeHtml(v.salesperson)}}</span></div>
       <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle)}}</span></div>
@@ -291,7 +295,7 @@ function visitCard(v) {{
   </article>`;
 }}
 function popupHtml(v) {{
-  return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div>
+  return `<div><div class="popup-title"><a class="popup-link" href="${{v.visit_url}}" target="_top" title="Open visit">${{escapeHtml(v.outlet || v.name)}}</a></div>
     <div class="popup-row"><b>${{escapeHtml(v.name)}}</b></div>
     <div class="popup-row">${{escapeHtml(statusText(v))}}</div>
     <div class="popup-row">Salesperson: ${{escapeHtml(v.salesperson)}}</div>
@@ -323,7 +327,7 @@ function initMap() {{
     markerByVisit[v.id] = marker;
     bounds.push([v.lat, v.lng]);
     if (v.has_checkin && v.has_outlet) {{
-      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet GPS</b><br/>${{escapeHtml(v.outlet)}}`);
+      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet GPS</b><br/><a class="popup-link" href="${{v.outlet_map_url}}" target="_blank" title="Open outlet in Google Maps">${{escapeHtml(v.outlet)}}</a><div class="popup-actions"><a class="map-btn" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a><a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a></div>`);
       L.polyline([[v.checkin_lat, v.checkin_lng], [v.outlet_lat, v.outlet_lng]], {{ color:'#7b4b6f', weight:2, opacity:.55, dashArray:'5,6' }}).addTo(map);
       bounds.push([v.outlet_lat, v.outlet_lng]);
     }}
