@@ -137,6 +137,20 @@ class RouteSupervisorDailyControl(models.TransientModel):
         compute="_compute_dashboard",
         readonly=True,
     )
+    salesperson_control_ids = fields.One2many(
+        "route.supervisor.daily.salesperson.control",
+        "dashboard_id",
+        string="Salesperson Control",
+        compute="_compute_dashboard",
+        readonly=True,
+    )
+    vehicle_control_ids = fields.One2many(
+        "route.supervisor.daily.vehicle.control",
+        "dashboard_id",
+        string="Vehicle Control",
+        compute="_compute_dashboard",
+        readonly=True,
+    )
 
     def _get_base_visit_domain(self, include_status_filter=True, include_location_filter=True):
         self.ensure_one()
@@ -269,6 +283,102 @@ class RouteSupervisorDailyControl(models.TransientModel):
             domain.append(("outlet_id", "=", self.outlet_id.id))
         return domain
 
+    def _is_active_visit(self, visit):
+        return visit.visit_process_state not in ["draft", "done", "cancel"]
+
+    def _is_location_attention_visit(self, visit):
+        return (
+            visit.geo_review_state in ["pending_checkin", "outlet_missing", "outside_no_reason", "outside_with_reason"]
+            or bool(visit.geo_review_required and not visit.geo_review_supervisor_decision)
+            or visit.geo_review_supervisor_decision == "needs_correction"
+        )
+
+    def _promise_amount_for_salesperson(self, open_promises, salesperson):
+        return sum(open_promises.filtered(lambda payment: payment.salesperson_id == salesperson).mapped("promise_amount"))
+
+    def _promise_amount_for_vehicle(self, open_promises, vehicle):
+        def _matches_vehicle(payment):
+            return (payment.visit_id and payment.visit_id.vehicle_id == vehicle) or (
+                payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == vehicle
+            )
+        return sum(open_promises.filtered(_matches_vehicle).mapped("promise_amount"))
+
+    def _prepare_salesperson_control_commands(self, filtered_visits, open_promises):
+        self.ensure_one()
+        commands = [(5, 0, 0)]
+        salespersons = filtered_visits.mapped("user_id").sorted(lambda user: (user.name or "").lower())
+        for sequence, salesperson in enumerate(salespersons, start=1):
+            visits = filtered_visits.filtered(lambda visit: visit.user_id == salesperson)
+            commands.append((
+                0,
+                0,
+                {
+                    "sequence": sequence,
+                    "salesperson_id": salesperson.id,
+                    "visit_count": len(visits),
+                    "not_started_count": len(visits.filtered(lambda visit: visit.visit_process_state == "draft")),
+                    "active_visit_count": len(visits.filtered(self._is_active_visit)),
+                    "done_visit_count": len(visits.filtered(lambda visit: visit.visit_process_state == "done")),
+                    "location_attention_count": len(visits.filtered(self._is_location_attention_visit)),
+                    "outside_zone_count": len(visits.filtered(lambda visit: visit.geo_review_state in ["outside_no_reason", "outside_with_reason"])),
+                    "collected_amount": sum(visits.mapped("collected_amount")) if visits else 0.0,
+                    "remaining_due_amount": sum(visits.mapped("remaining_due_amount")) if visits else 0.0,
+                    "promise_amount": self._promise_amount_for_salesperson(open_promises, salesperson),
+                },
+            ))
+        return commands
+
+    def _prepare_vehicle_control_commands(self, filtered_visits, open_promises, plans):
+        self.ensure_one()
+        Proposal = self.env["route.loading.proposal"]
+        commands = [(5, 0, 0)]
+        vehicles = filtered_visits.mapped("vehicle_id").sorted(lambda vehicle: (vehicle.name or "").lower())
+        for sequence, vehicle in enumerate(vehicles, start=1):
+            visits = filtered_visits.filtered(lambda visit: visit.vehicle_id == vehicle)
+            vehicle_plans = plans.filtered(lambda plan: plan.vehicle_id == vehicle)
+            salesperson_names = ", ".join(sorted(set(visits.mapped("user_id.name"))))
+            proposal_domain = [
+                ("company_id", "=", self.company_id.id or self.env.company.id),
+                ("vehicle_id", "=", vehicle.id),
+                ("plan_date", "=", self.control_date or fields.Date.context_today(self)),
+            ]
+            if self.salesperson_id:
+                proposal_domain.append(("user_id", "=", self.salesperson_id.id))
+            proposals = Proposal.search(proposal_domain)
+            commands.append((
+                0,
+                0,
+                {
+                    "sequence": sequence,
+                    "vehicle_id": vehicle.id,
+                    "salesperson_names": salesperson_names,
+                    "visit_count": len(visits),
+                    "active_visit_count": len(visits.filtered(self._is_active_visit)),
+                    "done_visit_count": len(visits.filtered(lambda visit: visit.visit_process_state == "done")),
+                    "location_attention_count": len(visits.filtered(self._is_location_attention_visit)),
+                    "plan_count": len(vehicle_plans),
+                    "loading_proposal_count": len(proposals),
+                    "collected_amount": sum(visits.mapped("collected_amount")) if visits else 0.0,
+                    "remaining_due_amount": sum(visits.mapped("remaining_due_amount")) if visits else 0.0,
+                    "promise_amount": self._promise_amount_for_vehicle(open_promises, vehicle),
+                },
+            ))
+        return commands
+
+    def _geo_review_filter_for_location_control(self):
+        self.ensure_one()
+        mapping = {
+            "all": "all",
+            "attention": "needs_review",
+            "pending_checkin": "pending_checkin",
+            "outlet_missing": "outlet_missing",
+            "inside_zone": "inside_zone",
+            "outside_zone": "outside_zone",
+            "accepted": "accepted",
+            "needs_correction": "needs_correction",
+        }
+        return mapping.get(self.location_status_filter or "all", "all")
+
     @api.depends(
         "company_id",
         "control_date",
@@ -351,6 +461,8 @@ class RouteSupervisorDailyControl(models.TransientModel):
             dashboard.daily_visit_ids = [(6, 0, filtered_visits.ids)]
             dashboard.daily_plan_ids = [(6, 0, plans.ids)]
             dashboard.daily_payment_ids = [(6, 0, payments.ids)]
+            dashboard.salesperson_control_ids = dashboard._prepare_salesperson_control_commands(filtered_visits, open_promises)
+            dashboard.vehicle_control_ids = dashboard._prepare_vehicle_control_commands(filtered_visits, open_promises, plans)
 
     @api.model
     def action_open_daily_control_dashboard(self):
@@ -498,7 +610,7 @@ class RouteSupervisorDailyControl(models.TransientModel):
             "company_id": self.company_id.id,
             "visit_date": self.control_date,
             "visit_process_filter": self.visit_status_filter,
-            "geo_review_filter": "all",
+            "geo_review_filter": self._geo_review_filter_for_location_control(),
         }
         if self.salesperson_id:
             values["salesperson_id"] = self.salesperson_id.id
@@ -521,6 +633,175 @@ class RouteSupervisorDailyControl(models.TransientModel):
         }
         if view:
             action["views"] = [(view.id, "form")]
+        return action
+
+
+
+
+class RouteSupervisorDailyControlMixin(models.AbstractModel):
+    _name = "route.supervisor.daily.control.mixin"
+    _description = "Supervisor Daily Control Card Helpers"
+
+    def _get_dashboard(self):
+        self.ensure_one()
+        return self.dashboard_id
+
+    def _get_line_visit_domain(self):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        return dashboard._get_base_visit_domain(include_status_filter=True, include_location_filter=True)
+
+    def _open_line_visits(self, title, extra_domain):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        return dashboard._action_open_visits(title, self._get_line_visit_domain() + extra_domain)
+
+    def _open_line_location_control(self, extra_values=None):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        values = {
+            "name": _("Visit Location Control"),
+            "company_id": dashboard.company_id.id,
+            "visit_date": dashboard.control_date,
+            "visit_process_filter": dashboard.visit_status_filter,
+            "geo_review_filter": dashboard._geo_review_filter_for_location_control(),
+        }
+        if dashboard.salesperson_id:
+            values["salesperson_id"] = dashboard.salesperson_id.id
+        if dashboard.vehicle_id:
+            values["vehicle_id"] = dashboard.vehicle_id.id
+        if dashboard.area_id:
+            values["area_id"] = dashboard.area_id.id
+        if dashboard.outlet_id:
+            values["outlet_id"] = dashboard.outlet_id.id
+        if extra_values:
+            values.update(extra_values)
+        center = self.env["route.geo.control.center"].create(values)
+        view = self.env.ref("route_core.view_route_geo_control_center_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Visit Location Control"),
+            "res_model": "route.geo.control.center",
+            "res_id": center.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+
+class RouteSupervisorDailySalespersonControl(models.TransientModel):
+    _name = "route.supervisor.daily.salesperson.control"
+    _description = "Supervisor Daily Salesperson Control Card"
+    _inherit = "route.supervisor.daily.control.mixin"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(default=10)
+    dashboard_id = fields.Many2one(
+        "route.supervisor.daily.control",
+        string="Dashboard",
+        required=True,
+        ondelete="cascade",
+    )
+    currency_id = fields.Many2one("res.currency", related="dashboard_id.currency_id", readonly=True)
+    salesperson_id = fields.Many2one("res.users", string="Salesperson", required=True)
+    visit_count = fields.Integer(string="Visits")
+    not_started_count = fields.Integer(string="Not Started")
+    active_visit_count = fields.Integer(string="Active")
+    done_visit_count = fields.Integer(string="Done")
+    location_attention_count = fields.Integer(string="Location Attention")
+    outside_zone_count = fields.Integer(string="Outside Zone")
+    collected_amount = fields.Monetary(string="Collected", currency_field="currency_id")
+    remaining_due_amount = fields.Monetary(string="Open Due", currency_field="currency_id")
+    promise_amount = fields.Monetary(string="Promises", currency_field="currency_id")
+
+    def action_open_salesperson_visits(self):
+        self.ensure_one()
+        return self._open_line_visits(
+            _("Visits for %s") % (self.salesperson_id.display_name,),
+            [("user_id", "=", self.salesperson_id.id)],
+        )
+
+    def action_open_salesperson_location_control(self):
+        self.ensure_one()
+        return self._open_line_location_control({"salesperson_id": self.salesperson_id.id})
+
+
+class RouteSupervisorDailyVehicleControl(models.TransientModel):
+    _name = "route.supervisor.daily.vehicle.control"
+    _description = "Supervisor Daily Vehicle Control Card"
+    _inherit = "route.supervisor.daily.control.mixin"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(default=10)
+    dashboard_id = fields.Many2one(
+        "route.supervisor.daily.control",
+        string="Dashboard",
+        required=True,
+        ondelete="cascade",
+    )
+    currency_id = fields.Many2one("res.currency", related="dashboard_id.currency_id", readonly=True)
+    vehicle_id = fields.Many2one("route.vehicle", string="Vehicle", required=True)
+    salesperson_names = fields.Char(string="Salespersons")
+    visit_count = fields.Integer(string="Visits")
+    active_visit_count = fields.Integer(string="Active")
+    done_visit_count = fields.Integer(string="Done")
+    location_attention_count = fields.Integer(string="Location Attention")
+    plan_count = fields.Integer(string="Daily Plans")
+    loading_proposal_count = fields.Integer(string="Loading Proposals")
+    collected_amount = fields.Monetary(string="Collected", currency_field="currency_id")
+    remaining_due_amount = fields.Monetary(string="Open Due", currency_field="currency_id")
+    promise_amount = fields.Monetary(string="Promises", currency_field="currency_id")
+
+    def action_open_vehicle_visits(self):
+        self.ensure_one()
+        return self._open_line_visits(
+            _("Visits for %s") % (self.vehicle_id.display_name,),
+            [("vehicle_id", "=", self.vehicle_id.id)],
+        )
+
+    def action_open_vehicle_location_control(self):
+        self.ensure_one()
+        return self._open_line_location_control({"vehicle_id": self.vehicle_id.id})
+
+    def action_open_vehicle_daily_plans(self):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        domain = dashboard._get_plan_domain() + [("vehicle_id", "=", self.vehicle_id.id)]
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Daily Plans for %s") % (self.vehicle_id.display_name,),
+            "res_model": "route.plan",
+            "view_mode": "list,form",
+            "domain": domain,
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+
+    def action_open_vehicle_loading_proposals(self):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        domain = [
+            ("company_id", "=", dashboard.company_id.id or dashboard.env.company.id),
+            ("vehicle_id", "=", self.vehicle_id.id),
+            ("plan_date", "=", dashboard.control_date or fields.Date.context_today(dashboard)),
+        ]
+        if dashboard.salesperson_id:
+            domain.append(("user_id", "=", dashboard.salesperson_id.id))
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Loading Proposals for %s") % (self.vehicle_id.display_name,),
+            "res_model": "route.loading.proposal",
+            "view_mode": "list,form",
+            "domain": domain,
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        base_action = self.env.ref("route_core.action_route_loading_proposal", raise_if_not_found=False)
+        if base_action:
+            loaded = base_action.read()[0]
+            loaded.update(action)
+            action = loaded
         return action
 
 
