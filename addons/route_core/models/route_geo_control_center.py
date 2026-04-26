@@ -7,12 +7,12 @@ from odoo import _, api, fields, models
 
 class RouteGeoControlCenter(models.TransientModel):
     _name = "route.geo.control.center"
-    _description = "Route Geo Control Center"
+    _description = "Route Visit Location Control"
     _rec_name = "name"
 
     name = fields.Char(
         string="Name",
-        default=lambda self: _("Geo Control Center"),
+        default=lambda self: _("Visit Location Control"),
         readonly=True,
     )
     company_id = fields.Many2one(
@@ -56,7 +56,7 @@ class RouteGeoControlCenter(models.TransientModel):
     )
     geo_review_filter = fields.Selection(
         [
-            ("all", "All Geo States"),
+            ("all", "All Location Statuss"),
             ("pending_checkin", "Pending Check-in"),
             ("outlet_missing", "Outlet Location Missing"),
             ("inside_zone", "Inside Zone"),
@@ -67,7 +67,7 @@ class RouteGeoControlCenter(models.TransientModel):
             ("accepted", "Accepted by Supervisor"),
             ("needs_correction", "Needs Correction"),
         ],
-        string="Geo State",
+        string="Location Status",
         default="all",
         required=True,
     )
@@ -133,13 +133,13 @@ class RouteGeoControlCenter(models.TransientModel):
         compute="_compute_geo_dashboard",
     )
     live_map_iframe_html = fields.Html(
-        string="Geo Live Map",
+        string="Visit Location Map",
         compute="_compute_geo_dashboard",
         sanitize=False,
     )
     geo_visit_ids = fields.Many2many(
         "route.visit",
-        string="Today Geo Visits",
+        string="Today Visit Locations",
         compute="_compute_geo_dashboard",
         readonly=True,
     )
@@ -267,7 +267,7 @@ class RouteGeoControlCenter(models.TransientModel):
     def action_open_geo_control_center(self):
         center = self.create(
             {
-                "name": _("Geo Control Center"),
+                "name": _("Visit Location Control"),
                 "company_id": self.env.company.id,
                 "visit_date": fields.Date.context_today(self),
                 "visit_process_filter": "all",
@@ -277,7 +277,7 @@ class RouteGeoControlCenter(models.TransientModel):
         view = self.env.ref("route_core.view_route_geo_control_center_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
-            "name": _("Geo Control Center"),
+            "name": _("Visit Location Control"),
             "res_model": "route.geo.control.center",
             "res_id": center.id,
             "view_mode": "form",
@@ -293,7 +293,7 @@ class RouteGeoControlCenter(models.TransientModel):
         view = self.env.ref(view_xmlid, raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
-            "name": name or _("Geo Control Center"),
+            "name": name or _("Visit Location Control"),
             "res_model": "route.geo.control.center",
             "res_id": self.id,
             "view_mode": "form",
@@ -305,10 +305,10 @@ class RouteGeoControlCenter(models.TransientModel):
         return action
 
     def action_open_live_map(self):
-        return self._open_center_form("route_core.view_route_geo_control_center_live_map_form", _("Geo Live Map"))
+        return self._open_center_form("route_core.view_route_geo_control_center_live_map_form", _("Visit Location Map"))
 
     def action_back_to_dashboard(self):
-        return self._open_center_form("route_core.view_route_geo_control_center_form", _("Geo Control Center"))
+        return self._open_center_form("route_core.view_route_geo_control_center_form", _("Visit Location Control"))
 
     def action_refresh_dashboard(self):
         return {"type": "ir.actions.client", "tag": "reload"}
@@ -377,12 +377,12 @@ class RouteGeoControlCenter(models.TransientModel):
         return action
 
     def action_open_filtered_visits(self):
-        return self._action_open_geo_visits(_("Filtered Geo Visit Cards"), self._get_filtered_visit_domain())
+        return self._action_open_geo_visits(_("Filtered Visit Location Cards"), self._get_filtered_visit_domain())
 
     def action_open_mapped_visits(self):
         self.ensure_one()
         visits = self.geo_visit_ids.filtered(lambda visit: self._visit_has_map_point(visit))
-        return self._action_open_geo_visits(_("Mapped Geo Visits"), [("id", "in", visits.ids)])
+        return self._action_open_geo_visits(_("Mapped Visit Locations"), [("id", "in", visits.ids)])
 
     def action_open_no_map_point_visits(self):
         self.ensure_one()
@@ -390,7 +390,7 @@ class RouteGeoControlCenter(models.TransientModel):
         return self._action_open_geo_visits(_("Visits Without Map Point"), [("id", "in", visits.ids)])
 
     def action_open_total_visits(self):
-        return self._action_open_geo_visits(_("Today's Geo Visits"), self._get_base_visit_domain(include_process_filter=False))
+        return self._action_open_geo_visits(_("Today's Visit Locations"), self._get_base_visit_domain(include_process_filter=False))
 
     def action_open_not_started_visits(self):
         return self._action_open_geo_visits(
@@ -400,19 +400,19 @@ class RouteGeoControlCenter(models.TransientModel):
 
     def action_open_active_visits(self):
         return self._action_open_geo_visits(
-            _("Active Geo Visits"),
+            _("Active Visit Locations"),
             self._get_base_visit_domain(include_process_filter=False) + [("visit_process_state", "not in", ["draft", "done", "cancel"])],
         )
 
     def action_open_done_visits(self):
         return self._action_open_geo_visits(
-            _("Done Geo Visits"),
+            _("Done Visit Locations"),
             self._get_base_visit_domain(include_process_filter=False) + [("visit_process_state", "=", "done")],
         )
 
     def action_open_pending_checkin_visits(self):
         return self._action_open_geo_visits(
-            _("Pending Geo Check-in"),
+            _("Pending Location Check-in"),
             self._get_base_visit_domain(include_process_filter=False) + [("geo_review_state", "=", "pending_checkin")],
         )
 
@@ -448,15 +448,16 @@ class RouteGeoControlCenter(models.TransientModel):
 
     def action_open_accepted_visits(self):
         return self._action_open_geo_visits(
-            _("Accepted Geo Reviews"),
+            _("Accepted Location Reviews"),
             self._get_base_visit_domain(include_process_filter=False) + [("geo_review_supervisor_decision", "=", "accepted")],
         )
 
     def action_open_needs_correction_visits(self):
         return self._action_open_geo_visits(
-            _("Geo Reviews Needing Correction"),
+            _("Location Reviews Needing Correction"),
             self._get_base_visit_domain(include_process_filter=False) + [("geo_review_supervisor_decision", "=", "needs_correction")],
         )
 
     def action_open_geo_review(self):
-        return self._action_open_geo_visits(_("Geo Check-in Review Cards"), self._get_base_visit_domain(include_process_filter=False))
+        return self._action_open_geo_visits(_("Visit Location Review Cards"), self._get_base_visit_domain(include_process_filter=False))
+
