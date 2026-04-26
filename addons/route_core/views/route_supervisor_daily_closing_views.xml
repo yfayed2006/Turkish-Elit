@@ -70,8 +70,6 @@
 <button name="action_open_unfinished_visits" type="object" string="Unfinished Visits" icon="fa-exclamation-circle" class="btn-primary"/>
 <button name="action_open_vehicle_closings" type="object" string="Vehicle Closing" icon="fa-truck"/>
 <button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-check-o"/>
-<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
-<button name="action_open_direct_returns" type="object" string="Returns" icon="fa-undo"/>
 <button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
 <button name="action_open_loading_proposals" type="object" string="Loading" icon="fa-cubes"/>
 <button name="action_open_pending_transfers" type="object" string="Transfers" icon="fa-exchange"/>
@@ -86,12 +84,6 @@
 </button>
 <button name="action_open_open_due_visits" type="object" class="oe_stat_button" icon="fa-money">
 <field name="open_due_amount" widget="statinfo" string="Open Due"/>
-</button>
-<button name="action_open_sales_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
-<field name="sale_order_count" widget="statinfo" string="Sales Orders"/>
-</button>
-<button name="action_open_direct_returns" type="object" class="oe_stat_button" icon="fa-undo">
-<field name="direct_return_count" widget="statinfo" string="Returns"/>
 </button>
 </header>
 <sheet>
@@ -157,30 +149,6 @@ Pending:
 <span class="text-muted small d-block">
 Promises:
 <field name="open_promise_count" nolabel="1"/>
-</span>
-</div>
-</div>
-<div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
-<span class="text-muted small d-block">Sales Orders</span>
-<strong class="fs-4">
-<field name="sale_order_count" nolabel="1"/>
-</strong>
-<span class="text-muted small d-block">
-Pending:
-<field name="pending_sale_order_count" nolabel="1"/>
-</span>
-</div>
-</div>
-<div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
-<span class="text-muted small d-block">Return Orders</span>
-<strong class="fs-4">
-<field name="direct_return_count" nolabel="1"/>
-</strong>
-<span class="text-muted small d-block">
-Pending:
-<field name="pending_direct_return_count" nolabel="1"/>
 </span>
 </div>
 </div>
@@ -252,30 +220,6 @@ Pending:
 <span class="text-muted small d-block">Transfers</span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
-<div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Sales Orders</span>
-<strong class="fs-5">
-<field name="sale_order_count" nolabel="1"/>
-</strong>
-<span class="text-muted small d-block">
-Amount:
-<field name="sale_order_amount" nolabel="1" widget="monetary"/>
-</span>
-</div>
-</div>
-<div class="col-6 col-lg-2">
-<div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Return Orders</span>
-<strong class="fs-5">
-<field name="direct_return_count" nolabel="1"/>
-</strong>
-<span class="text-muted small d-block">
-Amount:
-<field name="direct_return_amount" nolabel="1" widget="monetary"/>
-</span>
-</div>
-</div>
 </div>
 <h3 class="mb-2">Closing Checks</h3>
 <field name="issue_line_ids" mode="kanban" nolabel="1" class="mb-4">
@@ -335,40 +279,47 @@ Amount:
 </kanban>
 </field>
 <h3 class="mb-2">Closing Filters</h3>
-<div class="row g-2 mb-3">
+<div class="row g-2 mb-3 route-closing-filter-cards">
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="closing_date" nolabel="0"/>
-</div>
-</div>
-<div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
-<field name="salesperson_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Closing Date</span>
+<field name="closing_date" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="vehicle_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="city_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="area_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">City</span>
+<field name="city_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="outlet_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Area</span>
+<field name="area_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-3 bg-white h-100">
-<field name="company_id" nolabel="0" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Outlet</span>
+<field name="outlet_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Company</span>
+<field name="company_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 </div>
