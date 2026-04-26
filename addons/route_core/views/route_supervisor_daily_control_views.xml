@@ -49,7 +49,7 @@
 <field name="latest_promise_status"/>
 <templates>
 <t t-name="card">
-<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm route-supervisor-daily-card">
 <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
 <div class="min-w-0">
 <strong class="d-block fs-5 text-truncate">
@@ -171,35 +171,25 @@ Open Promise:
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
 <button name="action_open_filtered_visits" type="object" string="Open Visits" icon="fa-th-large" class="btn-primary"/>
-<button name="action_open_visit_location_control" type="object" string="Visit Location Control" icon="fa-map-marker"/>
+<button name="action_open_visit_location_control" type="object" string="Location Control" icon="fa-map-marker"/>
 <button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
 <button name="action_open_daily_collections" type="object" string="Collections" icon="fa-money"/>
-<button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
-<field name="total_visit_count" widget="statinfo" string="Visits"/>
-</button>
-<button name="action_open_active_visits" type="object" class="oe_stat_button" icon="fa-play-circle">
-<field name="active_visit_count" widget="statinfo" string="Active"/>
-</button>
-<button name="action_open_done_visits" type="object" class="oe_stat_button" icon="fa-check-circle">
-<field name="done_visit_count" widget="statinfo" string="Done"/>
-</button>
-<button name="action_open_location_attention_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
-<field name="needs_location_review_count" widget="statinfo" string="Location Review"/>
-</button>
-<button name="action_open_open_due_visits" type="object" class="oe_stat_button" icon="fa-warning">
-<field name="remaining_due_amount" widget="statinfo" string="Open Due"/>
-</button>
+<button name="action_open_total_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
+<button name="action_open_active_visits" type="object" string="Active" icon="fa-play-circle"/>
+<button name="action_open_done_visits" type="object" string="Done" icon="fa-check-circle"/>
+<button name="action_open_location_attention_visits" type="object" string="Location Review" icon="fa-map-marker"/>
+<button name="action_open_open_due_visits" type="object" string="Open Due" icon="fa-warning"/>
 </header>
 <sheet>
-<div class="oe_title mb-3">
-<span class="text-muted">Supervisor Daily Control</span>
-<h1>Daily Control Dashboard</h1>
-<p class="text-muted">A mobile-friendly supervisor dashboard for today's route execution, visit location status, and collections.</p>
+<div class="oe_title mb-2">
+<span class="text-muted small">Supervisor Daily Control</span>
+<h1 class="mb-1">Daily Control Dashboard</h1>
+<p class="text-muted mb-0">Today’s route execution, visit location status, collections, and exceptions.</p>
 </div>
-<h3 class="mb-2">Daily Snapshot</h3>
-<div class="row g-2 mb-4 route_supervisor_snapshot_cards">
+<h4 class="mb-2 mt-2">Daily Snapshot</h4>
+<div class="row g-2 mb-3 route_supervisor_snapshot_cards">
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Daily Plans</span>
 <strong class="fs-4">
 <field name="plan_count" nolabel="1"/>
@@ -211,7 +201,7 @@ Finalized:
 </div>
 </div>
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Visits</span>
 <strong class="fs-4">
 <field name="total_visit_count" nolabel="1"/>
@@ -223,7 +213,7 @@ Filtered:
 </div>
 </div>
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Active</span>
 <strong class="fs-4">
 <field name="active_visit_count" nolabel="1"/>
@@ -235,7 +225,7 @@ Not started:
 </div>
 </div>
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Location Attention</span>
 <strong class="fs-4">
 <field name="needs_location_review_count" nolabel="1"/>
@@ -247,7 +237,7 @@ Outside:
 </div>
 </div>
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Collected</span>
 <strong class="fs-4">
 <field name="collected_amount" nolabel="1" widget="monetary"/>
@@ -259,7 +249,7 @@ Payments:
 </div>
 </div>
 <div class="col-6 col-lg-2">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Open Due</span>
 <strong class="fs-4">
 <field name="remaining_due_amount" nolabel="1" widget="monetary"/>
@@ -271,7 +261,7 @@ Promises:
 </div>
 </div>
 </div>
-<h3 class="mb-2">Attention / Exceptions</h3>
+<h4 class="mb-2 mt-3">Attention / Exceptions</h4>
 <field name="exception_control_line_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Attention / Exceptions" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0">
 <field name="currency_id"/>
@@ -284,7 +274,7 @@ Promises:
 <field name="button_label"/>
 <templates>
 <t t-name="card">
-<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm route-supervisor-daily-card">
 <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
 <div class="min-w-0">
 <strong class="d-block text-truncate">
@@ -337,64 +327,66 @@ Promises:
 </templates>
 </kanban>
 </field>
-<h3 class="mb-2">Control Filters</h3>
-<div class="row g-2 mb-4 route_supervisor_filter_cards">
+<h4 class="mb-2 mt-3">Control Filters</h4>
+<div class="row g-2 mb-3 route_supervisor_filter_cards">
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Visit Date</span>
 <field name="control_date" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Visit Status</span>
 <field name="visit_status_filter" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Location Status</span>
 <field name="location_status_filter" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Salesperson</span>
 <field name="salesperson_id" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Vehicle</span>
 <field name="vehicle_id" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">City</span>
 <field name="city_id" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Area</span>
 <field name="area_id" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Outlet</span>
 <field name="outlet_id" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 h-100 bg-white">
+<div class="border rounded p-2 h-100 bg-white">
 <span class="text-muted small d-block">Company</span>
 <field name="company_id" nolabel="1"/>
 </div>
 </div>
 </div>
-<h3 class="mb-2">Salesperson Control</h3>
+<div class="row g-3 mb-3 route_supervisor_control_sections">
+<div class="col-12 col-xl-6">
+<h4 class="mb-2 mt-3">Salesperson Control</h4>
 <field name="salesperson_control_line_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Salesperson Control" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0">
 <field name="currency_id"/>
@@ -410,7 +402,7 @@ Promises:
 <field name="promise_amount"/>
 <templates>
 <t t-name="card">
-<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm route-supervisor-daily-card">
 <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
 <div class="min-w-0">
 <span class="text-muted small d-block">Salesperson</span>
@@ -420,7 +412,7 @@ Promises:
 </div>
 <span class="badge rounded-pill text-bg-primary">
 <field name="visit_count"/>
-Visits
+<span> Visits</span>
 </span>
 </div>
 <div class="row g-2 mb-2">
@@ -477,14 +469,16 @@ Visits
 </div>
 <div class="d-flex flex-wrap gap-1 mt-2 route-supervisor-daily-card-actions">
 <button name="action_open_salesperson_visits" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visits</button>
-<button name="action_open_salesperson_location_control" type="object" class="btn btn-light btn-sm px-2 py-1">Location Control</button>
+<button name="action_open_salesperson_location_control" type="object" class="btn btn-light btn-sm px-2 py-1">Location</button>
 </div>
 </div>
 </t>
 </templates>
 </kanban>
 </field>
-<h3 class="mb-2 mt-4">Vehicle Control</h3>
+</div>
+<div class="col-12 col-xl-6">
+<h4 class="mb-2 mt-3">Vehicle Control</h4>
 <field name="vehicle_control_line_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Vehicle Control" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0">
 <field name="currency_id"/>
@@ -501,7 +495,7 @@ Visits
 <field name="promise_amount"/>
 <templates>
 <t t-name="card">
-<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm route-supervisor-daily-card">
 <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
 <div class="min-w-0">
 <span class="text-muted small d-block">Vehicle</span>
@@ -514,7 +508,7 @@ Visits
 </div>
 <span class="badge rounded-pill text-bg-primary">
 <field name="visit_count"/>
-Visits
+<span> Visits</span>
 </span>
 </div>
 <div class="row g-2 mb-2">
@@ -571,8 +565,8 @@ Visits
 </div>
 <div class="d-flex flex-wrap gap-1 mt-2 route-supervisor-daily-card-actions">
 <button name="action_open_vehicle_visits" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visits</button>
-<button name="action_open_vehicle_location_control" type="object" class="btn btn-light btn-sm px-2 py-1">Location Control</button>
-<button name="action_open_vehicle_daily_plans" type="object" class="btn btn-light btn-sm px-2 py-1">Daily Plans</button>
+<button name="action_open_vehicle_location_control" type="object" class="btn btn-light btn-sm px-2 py-1">Location</button>
+<button name="action_open_vehicle_daily_plans" type="object" class="btn btn-light btn-sm px-2 py-1">Plans</button>
 <button name="action_open_vehicle_loading_proposals" type="object" class="btn btn-light btn-sm px-2 py-1">Loading</button>
 </div>
 </div>
@@ -580,7 +574,9 @@ Visits
 </templates>
 </kanban>
 </field>
-<h3 class="mb-2">Today's Visit Cards</h3>
+</div>
+</div>
+<h4 class="mb-2 mt-3">Today’s Visit Cards</h4>
 <field name="daily_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Daily Visit Cards" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, start_datetime desc, id desc">
 <field name="name"/>
@@ -603,7 +599,7 @@ Visits
 <field name="latest_promise_status"/>
 <templates>
 <t t-name="card">
-<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="kanban-box p-2 border rounded bg-white shadow-sm route-supervisor-daily-card">
 <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
 <div class="min-w-0">
 <strong class="d-block fs-5 text-truncate">
