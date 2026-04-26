@@ -271,6 +271,72 @@ Promises:
 </div>
 </div>
 </div>
+<h3 class="mb-2">Attention / Exceptions</h3>
+<field name="exception_control_line_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
+<kanban string="Attention / Exceptions" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0">
+<field name="currency_id"/>
+<field name="code"/>
+<field name="severity"/>
+<field name="title"/>
+<field name="subtitle"/>
+<field name="count"/>
+<field name="amount"/>
+<field name="button_label"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+<div class="min-w-0">
+<strong class="d-block text-truncate">
+<field name="title"/>
+</strong>
+<span class="text-muted small d-block">
+<field name="subtitle"/>
+</span>
+</div>
+<div class="text-end">
+<t t-if="record.severity.raw_value == 'danger'">
+<span class="badge rounded-pill text-bg-danger">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'warning'">
+<span class="badge rounded-pill text-bg-warning">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'info'">
+<span class="badge rounded-pill text-bg-info">
+<field name="count"/>
+</span>
+</t>
+<t t-if="record.severity.raw_value == 'success'">
+<span class="badge rounded-pill text-bg-success">
+<field name="count"/>
+</span>
+</t>
+</div>
+</div>
+<t t-if="record.amount.raw_value">
+<div class="mb-2">
+<span class="text-muted small d-block">Amount</span>
+<strong>
+<field name="amount" widget="monetary"/>
+</strong>
+</div>
+</t>
+<div class="d-flex flex-wrap gap-1 mt-2 route-supervisor-daily-card-actions">
+<t t-if="record.code.raw_value != 'all_clear'">
+<button name="action_open_exception_details" type="object" class="btn btn-primary btn-sm px-2 py-1">
+<field name="button_label"/>
+</button>
+</t>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
 <h3 class="mb-2">Control Filters</h3>
 <div class="row g-2 mb-4 route_supervisor_filter_cards">
 <div class="col-6 col-lg-3">
