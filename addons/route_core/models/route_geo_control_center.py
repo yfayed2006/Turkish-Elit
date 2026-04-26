@@ -1,3 +1,7 @@
+import time
+
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
 
 
@@ -120,24 +124,23 @@ class RouteGeoControlCenter(models.TransientModel):
         string="Filtered Visits",
         compute="_compute_geo_dashboard",
     )
+    mapped_visit_count = fields.Integer(
+        string="Mapped",
+        compute="_compute_geo_dashboard",
+    )
+    no_map_point_count = fields.Integer(
+        string="No Map Point",
+        compute="_compute_geo_dashboard",
+    )
+    live_map_iframe_html = fields.Html(
+        string="Geo Live Map",
+        compute="_compute_geo_dashboard",
+        sanitize=False,
+    )
     geo_visit_ids = fields.Many2many(
         "route.visit",
         string="Today Geo Visits",
         compute="_compute_geo_dashboard",
-        readonly=True,
-    )
-    mapped_visit_count = fields.Integer(
-        string="Mapped Visits",
-        compute="_compute_geo_dashboard",
-    )
-    unmapped_visit_count = fields.Integer(
-        string="No Map Point",
-        compute="_compute_geo_dashboard",
-    )
-    live_map_html = fields.Html(
-        string="Live Map",
-        compute="_compute_live_map_html",
-        sanitize=False,
         readonly=True,
     )
     live_map_note = fields.Char(
@@ -145,31 +148,24 @@ class RouteGeoControlCenter(models.TransientModel):
         compute="_compute_geo_dashboard",
     )
 
-    def _geo_live_map_url(self):
-        self.ensure_one()
-        return "/route_core/geo/live_map/frame/%s" % self.id
+    def _visit_has_map_point(self, visit):
+        outlet = visit.outlet_id
+        return bool(
+            visit.geo_checkin_latitude
+            or visit.geo_checkin_longitude
+            or (outlet and (outlet.geo_latitude or outlet.geo_longitude))
+        )
 
-    @api.depends(
-        "company_id",
-        "visit_date",
-        "salesperson_id",
-        "vehicle_id",
-        "area_id",
-        "outlet_id",
-        "visit_process_filter",
-        "geo_review_filter",
-    )
-    def _compute_live_map_html(self):
-        for center in self:
-            if not center.id:
-                center.live_map_html = _("Save the Geo Control Center before opening the live map.")
-                continue
-            center.live_map_html = (
-                '<iframe src="%s" '
-                'style="width:100%%; min-height:680px; height:calc(100vh - 230px); '
-                'border:0; border-radius:12px; overflow:hidden;" '
-                'loading="lazy" referrerpolicy="same-origin"></iframe>'
-            ) % center._geo_live_map_url()
+    def _get_live_map_iframe_html(self):
+        self.ensure_one()
+        if not self.id:
+            return ""
+        url = "/route_core/geo/live_map/frame/%s?ts=%s" % (self.id, int(time.time()))
+        return Markup(
+            '<iframe src="%s" '
+            'style="width:100%%; min-height:720px; border:0; border-radius:12px; background:#f5f6f7;" '
+            'loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' % url
+        )
 
     def _get_base_visit_domain(self, include_process_filter=True):
         self.ensure_one()
@@ -260,16 +256,12 @@ class RouteGeoControlCenter(models.TransientModel):
             center.accepted_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "accepted"))
             center.needs_correction_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction"))
             center.filtered_visit_count = len(filtered_visits)
-            center.mapped_visit_count = len(filtered_visits.filtered(
-                lambda visit: bool(
-                    visit.geo_checkin_latitude
-                    or visit.geo_checkin_longitude
-                    or (visit.outlet_id and (visit.outlet_id.geo_latitude or visit.outlet_id.geo_longitude))
-                )
-            ))
-            center.unmapped_visit_count = center.filtered_visit_count - center.mapped_visit_count
+            mapped_visits = filtered_visits.filtered(lambda visit: center._visit_has_map_point(visit))
+            center.mapped_visit_count = len(mapped_visits)
+            center.no_map_point_count = len(filtered_visits) - len(mapped_visits)
             center.geo_visit_ids = [(6, 0, filtered_visits.ids)]
-            center.live_map_note = _("Ready for B6.2 Live Map.")
+            center.live_map_note = _("Live map uses the current filtered visit set.")
+            center.live_map_iframe_html = center._get_live_map_iframe_html()
 
     @api.model
     def action_open_geo_control_center(self):
@@ -296,40 +288,30 @@ class RouteGeoControlCenter(models.TransientModel):
             action["views"] = [(view.id, "form")]
         return action
 
-    def action_refresh_dashboard(self):
-        return {"type": "ir.actions.client", "tag": "reload"}
+    def _open_center_form(self, view_xmlid, name=None):
+        self.ensure_one()
+        view = self.env.ref(view_xmlid, raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": name or _("Geo Control Center"),
+            "res_model": "route.geo.control.center",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     def action_open_live_map(self):
-        self.ensure_one()
-        view = self.env.ref("route_core.view_route_geo_control_center_live_map_form", raise_if_not_found=False)
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Geo Live Map"),
-            "res_model": "route.geo.control.center",
-            "res_id": self.id,
-            "view_mode": "form",
-            "target": "current",
-            "context": {"create": False, "edit": True, "delete": False},
-        }
-        if view:
-            action["views"] = [(view.id, "form")]
-        return action
+        return self._open_center_form("route_core.view_route_geo_control_center_live_map_form", _("Geo Live Map"))
 
-    def action_back_to_geo_dashboard(self):
-        self.ensure_one()
-        view = self.env.ref("route_core.view_route_geo_control_center_form", raise_if_not_found=False)
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Geo Control Center"),
-            "res_model": "route.geo.control.center",
-            "res_id": self.id,
-            "view_mode": "form",
-            "target": "current",
-            "context": {"create": False, "edit": True, "delete": False},
-        }
-        if view:
-            action["views"] = [(view.id, "form")]
-        return action
+    def action_back_to_dashboard(self):
+        return self._open_center_form("route_core.view_route_geo_control_center_form", _("Geo Control Center"))
+
+    def action_refresh_dashboard(self):
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def _action_open_geo_visits(self, name, domain):
         self.ensure_one()
@@ -396,6 +378,16 @@ class RouteGeoControlCenter(models.TransientModel):
 
     def action_open_filtered_visits(self):
         return self._action_open_geo_visits(_("Filtered Geo Visit Cards"), self._get_filtered_visit_domain())
+
+    def action_open_mapped_visits(self):
+        self.ensure_one()
+        visits = self.geo_visit_ids.filtered(lambda visit: self._visit_has_map_point(visit))
+        return self._action_open_geo_visits(_("Mapped Geo Visits"), [("id", "in", visits.ids)])
+
+    def action_open_no_map_point_visits(self):
+        self.ensure_one()
+        visits = self.geo_visit_ids.filtered(lambda visit: not self._visit_has_map_point(visit))
+        return self._action_open_geo_visits(_("Visits Without Map Point"), [("id", "in", visits.ids)])
 
     def action_open_total_visits(self):
         return self._action_open_geo_visits(_("Today's Geo Visits"), self._get_base_visit_domain(include_process_filter=False))
