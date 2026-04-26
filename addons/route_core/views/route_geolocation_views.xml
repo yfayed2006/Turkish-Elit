@@ -84,7 +84,7 @@
 </group>
 </group>
 <group string="Usage Notes">
-<div class="alert alert-info" colspan="2">Use Search Address on Map to open the outlet name/address in the selected map provider. After confirming the exact outlet position, enter Latitude and Longitude, then click Verify Location. Open Map and Navigate appear only after coordinates are available. These coordinates will be used later for geo check-in, route maps, live monitoring, and route playback.</div>
+<div class="alert alert-info" colspan="2">Use Search Address on Map to open the outlet name/address in the selected map provider. After confirming the exact outlet position, enter Latitude and Longitude, then click Verify Location. Open Map and Navigate appear only after coordinates are available. These coordinates will be used later for location check-in, route maps, live monitoring, and route playback.</div>
 </group>
 </sheet>
 </form>
