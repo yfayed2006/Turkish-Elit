@@ -983,26 +983,38 @@ class RouteSupervisorDailyExceptionControl(models.TransientModel):
     def _get_open_promise_domain(self):
         self.ensure_one()
         dashboard = self._get_dashboard()
+
+        # promise_status is computed and not stored on route.visit.payment, so it
+        # cannot be used directly in an action/search domain. Build a safe stored
+        # pre-domain first, then filter in Python and return an id-based domain.
+        # This keeps the Open Promises exception card stable in list/kanban views.
         domain = [
             ("company_id", "=", dashboard.company_id.id or dashboard.env.company.id),
+            ("state", "!=", "cancelled"),
             ("promise_amount", ">", 0.0),
-            ("promise_status", "in", ["open", "due_today", "overdue"]),
         ]
         if dashboard.salesperson_id:
             domain.append(("salesperson_id", "=", dashboard.salesperson_id.id))
         if dashboard.city_id:
-            domain += ["|", ("area_id.city_id", "=", dashboard.city_id.id), ("outlet_id.route_city_id", "=", dashboard.city_id.id)]
+            domain += [
+                "|",
+                ("area_id.city_id", "=", dashboard.city_id.id),
+                ("outlet_id.route_city_id", "=", dashboard.city_id.id),
+            ]
         if dashboard.area_id:
             domain.append(("area_id", "=", dashboard.area_id.id))
         if dashboard.outlet_id:
             domain.append(("outlet_id", "=", dashboard.outlet_id.id))
+
+        payments = self.env["route.visit.payment"].search(domain).filtered(
+            lambda payment: payment.promise_status in ("open", "due_today", "overdue")
+        )
         if dashboard.vehicle_id:
-            payments = self.env["route.visit.payment"].search(domain).filtered(
+            payments = payments.filtered(
                 lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
                 or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
             )
-            return [("id", "in", payments.ids)]
-        return domain
+        return [("id", "in", payments.ids)]
 
     def action_open_exception_details(self):
         self.ensure_one()
