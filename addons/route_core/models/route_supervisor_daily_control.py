@@ -142,14 +142,12 @@ class RouteSupervisorDailyControl(models.TransientModel):
         "route.supervisor.daily.salesperson.control",
         "dashboard_id",
         string="Salesperson Control",
-        compute="_compute_dashboard",
         readonly=True,
     )
     vehicle_control_line_ids = fields.One2many(
         "route.supervisor.daily.vehicle.control",
         "dashboard_id",
         string="Vehicle Control",
-        compute="_compute_dashboard",
         readonly=True,
     )
 
@@ -238,6 +236,109 @@ class RouteSupervisorDailyControl(models.TransientModel):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.route_city_id:
                     rec.city_id = rec.outlet_id.route_city_id
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._rebuild_control_lines()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        watched_fields = {
+            "company_id",
+            "control_date",
+            "salesperson_id",
+            "vehicle_id",
+            "city_id",
+            "area_id",
+            "outlet_id",
+            "visit_status_filter",
+            "location_status_filter",
+        }
+        if not self.env.context.get("skip_supervisor_daily_control_rebuild") and watched_fields.intersection(vals):
+            self._rebuild_control_lines()
+        return result
+
+    @api.onchange(
+        "company_id",
+        "control_date",
+        "salesperson_id",
+        "vehicle_id",
+        "city_id",
+        "area_id",
+        "outlet_id",
+        "visit_status_filter",
+        "location_status_filter",
+    )
+    def _onchange_rebuild_control_lines(self):
+        for dashboard in self:
+            try:
+                salesperson_lines, vehicle_lines = dashboard._prepare_current_control_line_values()
+                dashboard.salesperson_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in salesperson_lines]
+                dashboard.vehicle_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in vehicle_lines]
+            except Exception:
+                dashboard.salesperson_control_line_ids = [(5, 0, 0)]
+                dashboard.vehicle_control_line_ids = [(5, 0, 0)]
+
+    def _prepare_current_control_line_values(self):
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        Plan = self.env["route.plan"]
+        Payment = self.env["route.visit.payment"]
+        LoadingProposal = self.env["route.loading.proposal"]
+
+        counter_visits = Visit.search(
+            self._get_base_visit_domain(include_status_filter=False, include_location_filter=False)
+        )
+        plans = Plan.search(self._get_plan_domain(), order="date desc, id desc")
+        payments = Payment.search(self._get_payment_domain(), order="payment_date desc, id desc")
+
+        if self.vehicle_id:
+            payments = payments.filtered(
+                lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == self.vehicle_id)
+                or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == self.vehicle_id)
+            )
+
+        promise_payments = Payment.search([
+            ("company_id", "=", self.company_id.id or self.env.company.id),
+            ("promise_amount", ">", 0.0),
+        ])
+        if self.salesperson_id:
+            promise_payments = promise_payments.filtered(lambda payment: payment.salesperson_id == self.salesperson_id)
+        if self.vehicle_id:
+            promise_payments = promise_payments.filtered(
+                lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == self.vehicle_id)
+                or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == self.vehicle_id)
+            )
+        if self.city_id:
+            promise_payments = promise_payments.filtered(
+                lambda payment: (payment.area_id and payment.area_id.city_id == self.city_id)
+                or (payment.outlet_id and payment.outlet_id.route_city_id == self.city_id)
+            )
+        if self.area_id:
+            promise_payments = promise_payments.filtered(lambda payment: payment.area_id == self.area_id)
+        if self.outlet_id:
+            promise_payments = promise_payments.filtered(lambda payment: payment.outlet_id == self.outlet_id)
+        open_promises = promise_payments.filtered(lambda payment: payment.promise_status in ("open", "due_today", "overdue"))
+
+        salesperson_lines = self._prepare_salesperson_control_lines(counter_visits, payments, open_promises)
+        vehicle_lines = self._prepare_vehicle_control_lines(counter_visits, plans, payments, open_promises, LoadingProposal)
+        return salesperson_lines, vehicle_lines
+
+    def _rebuild_control_lines(self):
+        for dashboard in self:
+            try:
+                salesperson_lines, vehicle_lines = dashboard._prepare_current_control_line_values()
+                dashboard.with_context(skip_supervisor_daily_control_rebuild=True).write({
+                    "salesperson_control_line_ids": [(5, 0, 0)] + [(0, 0, vals) for vals in salesperson_lines],
+                    "vehicle_control_line_ids": [(5, 0, 0)] + [(0, 0, vals) for vals in vehicle_lines],
+                })
+            except Exception:
+                dashboard.with_context(skip_supervisor_daily_control_rebuild=True).write({
+                    "salesperson_control_line_ids": [(5, 0, 0)],
+                    "vehicle_control_line_ids": [(5, 0, 0)],
+                })
 
     def _get_plan_domain(self):
         self.ensure_one()
@@ -366,15 +467,9 @@ class RouteSupervisorDailyControl(models.TransientModel):
                 dashboard.promise_amount = sum(open_promises.mapped("promise_amount")) if open_promises else 0.0
                 dashboard.confirmed_payment_count = len(payments)
                 dashboard.open_promise_count = len(open_promises)
-
-                salesperson_lines = dashboard._prepare_salesperson_control_lines(counter_visits, payments, open_promises)
-                vehicle_lines = dashboard._prepare_vehicle_control_lines(counter_visits, plans, payments, open_promises, LoadingProposal)
-
                 dashboard.daily_visit_ids = [(6, 0, filtered_visits.ids)]
                 dashboard.daily_plan_ids = [(6, 0, plans.ids)]
                 dashboard.daily_payment_ids = [(6, 0, payments.ids)]
-                dashboard.salesperson_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in salesperson_lines]
-                dashboard.vehicle_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in vehicle_lines]
             except Exception:
                 dashboard._reset_dashboard_computed_values()
 
@@ -404,8 +499,6 @@ class RouteSupervisorDailyControl(models.TransientModel):
             dashboard.daily_visit_ids = [(6, 0, [])]
             dashboard.daily_plan_ids = [(6, 0, [])]
             dashboard.daily_payment_ids = [(6, 0, [])]
-            dashboard.salesperson_control_line_ids = [(5, 0, 0)]
-            dashboard.vehicle_control_line_ids = [(5, 0, 0)]
 
     def _prepare_salesperson_control_lines(self, visits, payments, open_promises):
         self.ensure_one()
