@@ -351,7 +351,17 @@ window.addEventListener('load', () => {{
 </html>'''
         return request.make_response(html, headers=[("Content-Type", "text/html; charset=utf-8")])
 
-    @http.route("/route_core/geo/live_map/frame/<int:center_id>", type="http", auth="user", website=False)
+    @http.route(
+        [
+            "/route_core/geo/live_map/frame/<int:center_id>",
+            "/route_core/geo_live_map/<int:center_id>",
+            "/route_core/geo-live-map/<int:center_id>",
+        ],
+        type="http",
+        auth="user",
+        website=False,
+        sitemap=False,
+    )
     def route_core_geo_live_map_frame(self, center_id, **kwargs):
         center = request.env["route.geo.control.center"].browse(center_id).exists()
         if not center:
@@ -361,7 +371,18 @@ window.addEventListener('load', () => {{
             )
         return self._render_live_map_html(center, message=kwargs.get("message") or "")
 
-    @http.route("/route_core/geo/live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>", type="http", auth="user", website=False, csrf=False)
+    @http.route(
+        [
+            "/route_core/geo/live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
+            "/route_core/geo_live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
+            "/route_core/geo-live-map/decision/<int:center_id>/<int:visit_id>/<string:decision>",
+        ],
+        type="http",
+        auth="user",
+        website=False,
+        csrf=False,
+        sitemap=False,
+    )
     def route_core_geo_live_map_decision(self, center_id, visit_id, decision, **kwargs):
         visit = request.env["route.visit"].browse(visit_id).exists()
         message = "Geo review updated."
