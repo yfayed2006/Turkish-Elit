@@ -8,7 +8,7 @@ class ResCompany(models.Model):
     _inherit = "res.company"
 
     route_enable_outlet_geolocation = fields.Boolean(
-        string="Enable Outlet Geo Locations",
+        string="Enable Outlet Locations",
         compute="_compute_route_enable_outlet_geolocation",
         inverse="_inverse_route_enable_outlet_geolocation",
         readonly=False,
@@ -34,11 +34,11 @@ class ResCompany(models.Model):
         help="Reserved for advanced map widgets and future live map screens. Basic Open in Maps buttons work without an API key.",
     )
     route_geo_checkin_radius_m = fields.Integer(
-        string="Default Geo Check-in Radius (m)",
+        string="Default Location Check-in Radius (m)",
         compute="_compute_route_geo_checkin_radius_m",
         inverse="_inverse_route_geo_checkin_radius_m",
         readonly=False,
-        help="Default allowed distance from outlet location for future Geo Check-in rules.",
+        help="Default allowed distance from outlet location for future Location Check-in rules.",
     )
     route_geo_checkin_policy = fields.Selection(
         [
@@ -47,7 +47,7 @@ class ResCompany(models.Model):
             ("require_reason", "Require Reason"),
             ("block_start", "Block Start"),
         ],
-        string="Geo Check-in Policy",
+        string="Location Check-in Policy",
         compute="_compute_route_geo_checkin_policy",
         inverse="_inverse_route_geo_checkin_policy",
         readonly=False,
@@ -139,15 +139,15 @@ class RouteOutlet(models.Model):
     geo_latitude = fields.Float(
         string="Latitude",
         digits=(10, 7),
-        help="Outlet GPS latitude used for route maps and future geo check-in.",
+        help="Outlet Location latitude used for route maps and future location check-in.",
     )
     geo_longitude = fields.Float(
         string="Longitude",
         digits=(10, 7),
-        help="Outlet GPS longitude used for route maps and future geo check-in.",
+        help="Outlet Location longitude used for route maps and future location check-in.",
     )
     geo_address = fields.Char(
-        string="Geo Address",
+        string="Location Address",
         help="Map/search address used for this outlet. When empty, the normal outlet address is used for map search.",
     )
     geo_place_id = fields.Char(
@@ -155,7 +155,7 @@ class RouteOutlet(models.Model):
         help="Optional Google Place ID reserved for future Google Maps integration.",
     )
     geo_accuracy_m = fields.Float(
-        string="Geo Accuracy (m)",
+        string="Location Accuracy (m)",
         digits=(16, 2),
         help="Optional accuracy radius for the stored outlet coordinates.",
     )
@@ -166,7 +166,7 @@ class RouteOutlet(models.Model):
             ("google", "Google Maps"),
             ("import", "Import"),
         ],
-        string="Geo Source",
+        string="Location Source",
         default="manual",
         help="How the outlet location was captured or maintained.",
     )
@@ -220,7 +220,7 @@ class RouteOutlet(models.Model):
                 if outlet.geo_longitude < -180.0 or outlet.geo_longitude > 180.0:
                     raise ValidationError(_("Longitude must be between -180 and 180."))
             if outlet.geo_accuracy_m and outlet.geo_accuracy_m < 0:
-                raise ValidationError(_("Geo Accuracy cannot be negative."))
+                raise ValidationError(_("Location Accuracy cannot be negative."))
 
     @api.onchange("street", "street2", "city", "state_id", "country_id", "route_city_id", "area_id")
     def _onchange_geo_address_from_address(self):
