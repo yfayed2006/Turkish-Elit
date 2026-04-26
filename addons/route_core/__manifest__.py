@@ -1,6 +1,6 @@
 {
     "name": "Route Core",
-    "version": "19.0.1.0.110",
+    "version": "19.0.1.0.112",
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
@@ -57,6 +57,7 @@
         "views/route_geo_review_views.xml",
         "views/route_geo_control_center_views.xml",
         "views/route_supervisor_daily_control_views.xml",
+        "views/route_supervisor_daily_closing_views.xml",
         "views/route_role_ui_security_views.xml",
         "wizard/route_visit_end_wizard_views.xml",
         "wizard/route_plan_add_area_outlets_wizard_views.xml",
