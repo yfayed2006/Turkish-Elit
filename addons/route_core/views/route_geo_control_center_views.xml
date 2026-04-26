@@ -64,6 +64,9 @@
 <div class="text-end">
 <field name="geo_review_state" widget="badge"/>
 <div class="mt-1">
+<field name="geo_review_supervisor_decision" widget="badge"/>
+</div>
+<div class="mt-1">
 <field name="visit_process_state" widget="badge"/>
 </div>
 </div>
@@ -206,6 +209,9 @@ m
 </div>
 <div class="text-end">
 <field name="geo_review_state" widget="badge"/>
+<div class="mt-1">
+<field name="geo_review_supervisor_decision" widget="badge"/>
+</div>
 <div class="mt-1">
 <field name="visit_process_state" widget="badge"/>
 </div>
