@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class RouteSupervisorDailyClosing(models.TransientModel):
@@ -466,7 +467,6 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         return visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns
 
     @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
-    @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
     def _compute_closing_dashboard(self):
         for dashboard in self:
             dashboard._reset_computed_values()
@@ -602,10 +602,12 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         add(60, "pending_sale_orders", _("Pending Sales Orders"), len(pending_sale_orders), _("Direct sale orders still need confirmation."), "warning", sum(pending_sale_orders.mapped("amount_total")) if pending_sale_orders else 0.0, button_label=_("Open Orders"))
         add(70, "pending_direct_returns", _("Pending Return Orders"), len(pending_direct_returns), _("Direct return orders still need processing."), "warning", sum(pending_direct_returns.mapped("amount_total")) if pending_direct_returns else 0.0, button_label=_("Open Returns"))
         add(80, "not_finalized_plans", _("Plans Not Finalized"), len(not_finalized), _("Daily route plans still need finalization."), "warning", button_label=_("Open Plans"))
-        add(90, "vehicle_closing_pending", _("Vehicle Closing Pending"), len(pending_closings) + len(missing_closings), _("Vehicle closing is missing or still draft."), "danger", button_label=_("Open Closings"))
-        add(100, "loading_pending", _("Loading / Transfer Pending"), len(pending_loading) + len(pending_transfers), _("Loading proposals or related transfers are not fully completed."), "warning", button_label=_("Open Loading"))
+        add(90, "vehicle_closing_missing", _("Vehicle Closing Missing"), len(missing_closings), _("Daily plans have a vehicle but no closing record yet."), "danger", button_label=_("Open Plans"))
+        add(100, "vehicle_closing_pending", _("Vehicle Closing Pending"), len(pending_closings), _("Vehicle closing records are still not closed."), "danger", button_label=_("Open Closings"))
+        add(110, "loading_pending", _("Loading Pending"), len(pending_loading), _("Loading proposals are not fully approved or transferred."), "warning", button_label=_("Open Loading"))
+        add(120, "pending_transfers", _("Transfer Pending"), len(pending_transfers), _("Related stock transfers are not fully completed."), "warning", button_label=_("Open Transfers"))
         if not lines:
-            add(110, "ready", _("Ready to Close Day"), 0, _("No blocking items were found."), "success", button_label=_("Refresh"))
+            add(130, "ready", _("Ready to Close Day"), 0, _("No blocking items were found."), "success", button_label=_("Refresh"))
         return lines
 
     def _rebuild_issue_lines(self):
@@ -638,6 +640,27 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
+    def action_validate_daily_closing(self):
+        self.ensure_one()
+        issue_values = [
+            vals
+            for vals in self._prepare_issue_line_values()
+            if vals.get("code") != "ready" and vals.get("count")
+        ]
+        if not issue_values:
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {
+                    "title": _("Ready to Close"),
+                    "message": _("No blocking items were found for the selected filters."),
+                    "type": "success",
+                    "sticky": False,
+                },
+            }
+        message_lines = ["%s: %s" % (vals.get("title"), vals.get("count")) for vals in issue_values]
+        raise UserError(_("The day is not ready to close. Resolve these blocking items first:\n%s") % "\n".join(message_lines))
 
     def action_refresh_dashboard(self):
         return {"type": "ir.actions.client", "tag": "reload"}
@@ -741,6 +764,18 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         })
         return result
 
+    def action_open_missing_vehicle_closing_plans(self):
+        self.ensure_one()
+        missing_plans = self.daily_plan_ids.filtered(
+            lambda plan: plan.vehicle_id and plan not in self.vehicle_closing_ids.mapped("plan_id")
+        )
+        action = self.action_open_daily_plans()
+        action.update({
+            "name": _("Plans Missing Vehicle Closing"),
+            "domain": [("id", "in", missing_plans.ids or [0])],
+        })
+        return action
+
     def action_open_loading_proposals(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_loading_proposal", raise_if_not_found=False)
@@ -756,6 +791,19 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "context": {"create": False, "edit": True, "delete": False},
         })
         return result
+
+    def action_open_pending_loading_proposals(self):
+        self.ensure_one()
+        pending_loading = self.loading_proposal_ids.filtered(
+            lambda proposal: proposal.state not in ["approved", "cancelled"]
+            or (proposal.picking_id and proposal.picking_id.state not in ["done", "cancel"])
+        )
+        action = self.action_open_loading_proposals()
+        action.update({
+            "name": _("Pending Loading Proposals"),
+            "domain": [("id", "in", pending_loading.ids or [0])],
+        })
+        return action
 
     def action_open_pending_transfers(self):
         self.ensure_one()
@@ -865,8 +913,10 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
             ("pending_sale_orders", "Pending Sales Orders"),
             ("pending_direct_returns", "Pending Return Orders"),
             ("not_finalized_plans", "Plans Not Finalized"),
+            ("vehicle_closing_missing", "Vehicle Closing Missing"),
             ("vehicle_closing_pending", "Vehicle Closing Pending"),
             ("loading_pending", "Loading Pending"),
+            ("pending_transfers", "Pending Transfers"),
             ("ready", "Ready"),
         ],
         string="Issue Type",
@@ -908,8 +958,12 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
             return dashboard.action_open_pending_direct_returns()
         if self.code == "not_finalized_plans":
             return dashboard.action_open_daily_plans()
+        if self.code == "vehicle_closing_missing":
+            return dashboard.action_open_missing_vehicle_closing_plans()
         if self.code == "vehicle_closing_pending":
             return dashboard.action_open_vehicle_closings()
         if self.code == "loading_pending":
-            return dashboard.action_open_loading_proposals()
+            return dashboard.action_open_pending_loading_proposals()
+        if self.code == "pending_transfers":
+            return dashboard.action_open_pending_transfers()
         return dashboard.action_refresh_dashboard()
