@@ -523,3 +523,4 @@ class RouteSupervisorDailyControl(models.TransientModel):
             action["views"] = [(view.id, "form")]
         return action
 
+
