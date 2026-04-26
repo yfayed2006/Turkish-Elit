@@ -1210,8 +1210,12 @@ class RouteDailyClosing(models.Model):
     def _find_closed_closing_for_values(self, company_id, closing_date, salesperson_id=False, vehicle_id=False, city_id=False, area_id=False, outlet_id=False):
         if not closing_date:
             return self.browse()
-        return self.search(
-            self._route_closed_closing_domain_for_values(
+        # Salespeople do not need direct menu access to Route Daily Closing records,
+        # but visit/plan write guards must still be able to check whether the day
+        # is closed. Use sudo for the internal lock lookup only.
+        closing_model = self.sudo()
+        return closing_model.search(
+            closing_model._route_closed_closing_domain_for_values(
                 company_id=company_id,
                 closing_date=closing_date,
                 salesperson_id=salesperson_id,
@@ -1234,7 +1238,8 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
     @api.depends("daily_closing_id", "daily_closing_id.state")
     def _compute_is_daily_closed(self):
         for rec in self:
-            rec.is_daily_closed = bool(rec.daily_closing_id and rec.daily_closing_id.state == "closed")
+            closing = rec.sudo().daily_closing_id
+            rec.is_daily_closed = bool(closing and closing.state == "closed")
 
     def _route_daily_closing_values(self, vals=None):
         self.ensure_one()
@@ -1262,10 +1267,11 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
     def _find_route_daily_closed_record(self, vals=None):
         self.ensure_one()
-        if self.daily_closing_id and self.daily_closing_id.state == "closed":
-            return self.daily_closing_id
+        linked_closing = self.sudo().daily_closing_id
+        if linked_closing and linked_closing.state == "closed":
+            return linked_closing
         closing_values = self._route_daily_closing_values(vals=vals)
-        return self.env["route.daily.closing"]._find_closed_closing_for_values(**closing_values)
+        return self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
 
     def _ensure_not_route_daily_closed(self, vals=None):
         if self.env.context.get("bypass_daily_closing_lock"):
@@ -1283,7 +1289,6 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
 
 class RouteVisitDailyClosingLock(models.Model):
-    _name = "route.visit"
     _inherit = ["route.visit", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1321,7 +1326,6 @@ class RouteVisitDailyClosingLock(models.Model):
 
 
 class RoutePlanDailyClosingLock(models.Model):
-    _name = "route.plan"
     _inherit = ["route.plan", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1382,7 +1386,6 @@ class RoutePlanLineDailyClosingLock(models.Model):
 
 
 class RouteVehicleClosingDailyClosingLock(models.Model):
-    _name = "route.vehicle.closing"
     _inherit = ["route.vehicle.closing", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
