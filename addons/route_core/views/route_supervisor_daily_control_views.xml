@@ -1,0 +1,469 @@
+<odoo>
+<record id="view_route_supervisor_daily_visit_search" model="ir.ui.view">
+<field name="name">route.visit.supervisor.daily.search</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<search string="Daily Visits">
+<field name="name"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+<field name="area_id"/>
+<filter name="filter_not_started" string="Not Started" domain="[('visit_process_state', '=', 'draft')]"/>
+<filter name="filter_active" string="Active" domain="[('visit_process_state', 'not in', ['draft', 'done', 'cancel'])]"/>
+<filter name="filter_done" string="Done" domain="[('visit_process_state', '=', 'done')]"/>
+<separator/>
+<filter name="filter_location_attention" string="Location Attention" domain="['|','|',('geo_review_state', 'in', ['pending_checkin', 'outlet_missing', 'outside_no_reason', 'outside_with_reason']),('geo_review_required', '=', True),('geo_review_supervisor_decision', '=', 'needs_correction')]"/>
+<filter name="filter_open_due" string="Open Due" domain="[]"/>
+<separator/>
+<filter name="group_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+<filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_status" string="Visit Status" context="{'group_by': 'visit_process_state'}"/>
+</search>
+</field>
+</record>
+<record id="view_route_supervisor_daily_visit_kanban" model="ir.ui.view">
+<field name="name">route.visit.supervisor.daily.kanban</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<kanban string="Daily Visit Cards" class="o_kanban_mobile route_supervisor_daily_visit_kanban" create="0" delete="0" quick_create="0" default_order="date desc, start_datetime desc, id desc">
+<field name="name"/>
+<field name="date"/>
+<field name="currency_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+<field name="area_id"/>
+<field name="visit_process_state"/>
+<field name="geo_review_state"/>
+<field name="geo_review_required"/>
+<field name="geo_review_supervisor_decision"/>
+<field name="geo_checkin_distance_display"/>
+<field name="collected_amount"/>
+<field name="remaining_due_amount"/>
+<field name="net_due_amount"/>
+<field name="promise_to_pay_count"/>
+<field name="latest_promise_status"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+<div class="min-w-0">
+<strong class="d-block fs-5 text-truncate">
+<field name="outlet_id"/>
+</strong>
+<span class="text-muted d-block">
+<field name="name"/>
+</span>
+</div>
+<div class="text-end d-flex flex-column gap-1 align-items-end">
+<t t-if="record.visit_process_state.raw_value == 'draft'">
+<span class="badge rounded-pill text-bg-secondary">Not Started</span>
+</t>
+<t t-if="record.visit_process_state.raw_value != 'draft' and record.visit_process_state.raw_value != 'done' and record.visit_process_state.raw_value != 'cancel'">
+<span class="badge rounded-pill text-bg-primary">Active</span>
+</t>
+<t t-if="record.visit_process_state.raw_value == 'done'">
+<span class="badge rounded-pill text-bg-success">Done</span>
+</t>
+<t t-if="record.visit_process_state.raw_value == 'cancel'">
+<span class="badge rounded-pill text-bg-danger">Cancelled</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
+<span class="badge rounded-pill text-bg-success">Location Accepted</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
+<span class="badge rounded-pill text-bg-warning">Location Correction</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
+<span class="badge rounded-pill text-bg-info">No Check-in</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
+<span class="badge rounded-pill text-bg-secondary">No Outlet Location</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
+<span class="badge rounded-pill text-bg-warning">Outside - No Reason</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
+<span class="badge rounded-pill text-bg-warning">Outside - Reason</span>
+</t>
+</div>
+</div>
+<div class="row g-2 mb-2">
+<div class="col-6">
+<span class="text-muted small d-block">Salesperson</span>
+<strong>
+<field name="user_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Vehicle</span>
+<strong>
+<field name="vehicle_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Area</span>
+<strong>
+<field name="area_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Distance</span>
+<strong>
+<field name="geo_checkin_distance_display"/>
+</strong>
+</div>
+</div>
+<div class="row g-2 mb-2">
+<div class="col-4">
+<span class="text-muted small d-block">Due</span>
+<strong>
+<field name="net_due_amount" widget="monetary"/>
+</strong>
+</div>
+<div class="col-4">
+<span class="text-muted small d-block">Collected</span>
+<strong>
+<field name="collected_amount" widget="monetary"/>
+</strong>
+</div>
+<div class="col-4">
+<span class="text-muted small d-block">Open</span>
+<strong>
+<field name="remaining_due_amount" widget="monetary"/>
+</strong>
+</div>
+</div>
+<t t-if="record.promise_to_pay_count.raw_value">
+<div class="mb-2">
+<span class="badge rounded-pill text-bg-light border">
+Open Promise:
+<field name="promise_to_pay_count"/>
+</span>
+<t t-if="record.latest_promise_status.raw_value">
+<span class="badge rounded-pill text-bg-light border">
+<field name="latest_promise_status"/>
+</span>
+</t>
+</div>
+</t>
+<div class="d-flex flex-wrap gap-1 mt-2 route-supervisor-daily-card-actions">
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-light btn-sm px-2 py-1">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-light btn-sm px-2 py-1">Check-in Map</button>
+<button name="action_open_statement_of_account" type="object" class="btn btn-light btn-sm px-2 py-1">Statement</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_supervisor_daily_control_form" model="ir.ui.view">
+<field name="name">route.supervisor.daily.control.form</field>
+<field name="model">route.supervisor.daily.control</field>
+<field name="arch" type="xml">
+<form string="Supervisor Daily Control" create="0" delete="0">
+<header>
+<button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_open_filtered_visits" type="object" string="Open Visits" icon="fa-th-large" class="btn-primary"/>
+<button name="action_open_visit_location_control" type="object" string="Visit Location Control" icon="fa-map-marker"/>
+<button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
+<button name="action_open_daily_collections" type="object" string="Collections" icon="fa-money"/>
+<button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
+<field name="total_visit_count" widget="statinfo" string="Visits"/>
+</button>
+<button name="action_open_active_visits" type="object" class="oe_stat_button" icon="fa-play-circle">
+<field name="active_visit_count" widget="statinfo" string="Active"/>
+</button>
+<button name="action_open_done_visits" type="object" class="oe_stat_button" icon="fa-check-circle">
+<field name="done_visit_count" widget="statinfo" string="Done"/>
+</button>
+<button name="action_open_location_attention_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="needs_location_review_count" widget="statinfo" string="Location Review"/>
+</button>
+<button name="action_open_open_due_visits" type="object" class="oe_stat_button" icon="fa-warning">
+<field name="remaining_due_amount" widget="statinfo" string="Open Due"/>
+</button>
+</header>
+<sheet>
+<div class="oe_title mb-3">
+<span class="text-muted">Supervisor Daily Control</span>
+<h1>Daily Control Dashboard</h1>
+<p class="text-muted">A mobile-friendly supervisor dashboard for today's route execution, visit location status, and collections.</p>
+</div>
+<h3 class="mb-2">Daily Snapshot</h3>
+<div class="row g-2 mb-4 route_supervisor_snapshot_cards">
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Daily Plans</span>
+<strong class="fs-4">
+<field name="plan_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Finalized:
+<field name="finalized_plan_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Visits</span>
+<strong class="fs-4">
+<field name="total_visit_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Filtered:
+<field name="filtered_visit_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Active</span>
+<strong class="fs-4">
+<field name="active_visit_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Not started:
+<field name="not_started_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Location Attention</span>
+<strong class="fs-4">
+<field name="needs_location_review_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Outside:
+<field name="outside_zone_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Collected</span>
+<strong class="fs-4">
+<field name="collected_amount" nolabel="1" widget="monetary"/>
+</strong>
+<span class="text-muted small d-block">
+Payments:
+<field name="confirmed_payment_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-3 bg-white h-100">
+<span class="text-muted small d-block">Open Due</span>
+<strong class="fs-4">
+<field name="remaining_due_amount" nolabel="1" widget="monetary"/>
+</strong>
+<span class="text-muted small d-block">
+Promises:
+<field name="open_promise_count" nolabel="1"/>
+</span>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Control Filters</h3>
+<div class="row g-2 mb-4 route_supervisor_filter_cards">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Visit Date</span>
+<field name="control_date" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Visit Status</span>
+<field name="visit_status_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Location Status</span>
+<field name="location_status_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Area</span>
+<field name="area_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Outlet</span>
+<field name="outlet_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-3 h-100 bg-white">
+<span class="text-muted small d-block">Company</span>
+<field name="company_id" nolabel="1"/>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Today's Visit Cards</h3>
+<field name="daily_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
+<kanban string="Daily Visit Cards" class="o_kanban_mobile route_supervisor_daily_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, start_datetime desc, id desc">
+<field name="name"/>
+<field name="date"/>
+<field name="currency_id"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+<field name="area_id"/>
+<field name="visit_process_state"/>
+<field name="geo_review_state"/>
+<field name="geo_review_required"/>
+<field name="geo_review_supervisor_decision"/>
+<field name="geo_checkin_distance_display"/>
+<field name="collected_amount"/>
+<field name="remaining_due_amount"/>
+<field name="net_due_amount"/>
+<field name="promise_to_pay_count"/>
+<field name="latest_promise_status"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-3 border rounded bg-white shadow-sm route-supervisor-daily-card">
+<div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+<div class="min-w-0">
+<strong class="d-block fs-5 text-truncate">
+<field name="outlet_id"/>
+</strong>
+<span class="text-muted d-block">
+<field name="name"/>
+</span>
+</div>
+<div class="text-end d-flex flex-column gap-1 align-items-end">
+<t t-if="record.visit_process_state.raw_value == 'draft'">
+<span class="badge rounded-pill text-bg-secondary">Not Started</span>
+</t>
+<t t-if="record.visit_process_state.raw_value != 'draft' and record.visit_process_state.raw_value != 'done' and record.visit_process_state.raw_value != 'cancel'">
+<span class="badge rounded-pill text-bg-primary">Active</span>
+</t>
+<t t-if="record.visit_process_state.raw_value == 'done'">
+<span class="badge rounded-pill text-bg-success">Done</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
+<span class="badge rounded-pill text-bg-success">Location Accepted</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
+<span class="badge rounded-pill text-bg-warning">Location Correction</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
+<span class="badge rounded-pill text-bg-info">No Check-in</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
+<span class="badge rounded-pill text-bg-secondary">No Outlet Location</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
+<span class="badge rounded-pill text-bg-warning">Outside - No Reason</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
+<span class="badge rounded-pill text-bg-warning">Outside - Reason</span>
+</t>
+</div>
+</div>
+<div class="row g-2 mb-2">
+<div class="col-6">
+<span class="text-muted small d-block">Salesperson</span>
+<strong>
+<field name="user_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Vehicle</span>
+<strong>
+<field name="vehicle_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Area</span>
+<strong>
+<field name="area_id"/>
+</strong>
+</div>
+<div class="col-6">
+<span class="text-muted small d-block">Distance</span>
+<strong>
+<field name="geo_checkin_distance_display"/>
+</strong>
+</div>
+</div>
+<div class="row g-2 mb-2">
+<div class="col-4">
+<span class="text-muted small d-block">Due</span>
+<strong>
+<field name="net_due_amount" widget="monetary"/>
+</strong>
+</div>
+<div class="col-4">
+<span class="text-muted small d-block">Collected</span>
+<strong>
+<field name="collected_amount" widget="monetary"/>
+</strong>
+</div>
+<div class="col-4">
+<span class="text-muted small d-block">Open</span>
+<strong>
+<field name="remaining_due_amount" widget="monetary"/>
+</strong>
+</div>
+</div>
+<t t-if="record.promise_to_pay_count.raw_value">
+<div class="mb-2">
+<span class="badge rounded-pill text-bg-light border">
+Open Promise:
+<field name="promise_to_pay_count"/>
+</span>
+<t t-if="record.latest_promise_status.raw_value">
+<span class="badge rounded-pill text-bg-light border">
+<field name="latest_promise_status"/>
+</span>
+</t>
+</div>
+</t>
+<div class="d-flex flex-wrap gap-1 mt-2 route-supervisor-daily-card-actions">
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-light btn-sm px-2 py-1">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-light btn-sm px-2 py-1">Check-in Map</button>
+<button name="action_open_statement_of_account" type="object" class="btn btn-light btn-sm px-2 py-1">Statement</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_supervisor_daily_control" model="ir.actions.server">
+<field name="name">Supervisor Daily Control</field>
+<field name="model_id" ref="route_core.model_route_supervisor_daily_control"/>
+<field name="state">code</field>
+<field name="code">action = env["route.supervisor.daily.control"].action_open_daily_control_dashboard()</field>
+</record>
+<menuitem id="menu_route_supervisor_daily_control" name="Supervisor Daily Control" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_supervisor_daily_control" sequence="5" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</odoo>
