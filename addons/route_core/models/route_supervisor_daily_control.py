@@ -365,6 +365,38 @@ class RouteSupervisorDailyControl(models.TransientModel):
             ))
         return commands
 
+    def _sync_salesperson_control_lines(self, filtered_visits, open_promises):
+        self.ensure_one()
+        Line = self.env["route.supervisor.daily.salesperson.control"]
+        if not self.id:
+            self.salesperson_control_ids = self._prepare_salesperson_control_commands(filtered_visits, open_promises)
+            return
+        Line.search([("dashboard_id", "=", self.id)]).unlink()
+        values_list = []
+        for command in self._prepare_salesperson_control_commands(filtered_visits, open_promises):
+            if command and command[0] == 0 and command[2]:
+                values = dict(command[2])
+                values["dashboard_id"] = self.id
+                values_list.append(values)
+        lines = Line.create(values_list) if values_list else Line.browse()
+        self.salesperson_control_ids = [(6, 0, lines.ids)]
+
+    def _sync_vehicle_control_lines(self, filtered_visits, open_promises, plans):
+        self.ensure_one()
+        Line = self.env["route.supervisor.daily.vehicle.control"]
+        if not self.id:
+            self.vehicle_control_ids = self._prepare_vehicle_control_commands(filtered_visits, open_promises, plans)
+            return
+        Line.search([("dashboard_id", "=", self.id)]).unlink()
+        values_list = []
+        for command in self._prepare_vehicle_control_commands(filtered_visits, open_promises, plans):
+            if command and command[0] == 0 and command[2]:
+                values = dict(command[2])
+                values["dashboard_id"] = self.id
+                values_list.append(values)
+        lines = Line.create(values_list) if values_list else Line.browse()
+        self.vehicle_control_ids = [(6, 0, lines.ids)]
+
     def _geo_review_filter_for_location_control(self):
         self.ensure_one()
         mapping = {
@@ -461,8 +493,8 @@ class RouteSupervisorDailyControl(models.TransientModel):
             dashboard.daily_visit_ids = [(6, 0, filtered_visits.ids)]
             dashboard.daily_plan_ids = [(6, 0, plans.ids)]
             dashboard.daily_payment_ids = [(6, 0, payments.ids)]
-            dashboard.salesperson_control_ids = dashboard._prepare_salesperson_control_commands(filtered_visits, open_promises)
-            dashboard.vehicle_control_ids = dashboard._prepare_vehicle_control_commands(filtered_visits, open_promises, plans)
+            dashboard._sync_salesperson_control_lines(filtered_visits, open_promises)
+            dashboard._sync_vehicle_control_lines(filtered_visits, open_promises, plans)
 
     @api.model
     def action_open_daily_control_dashboard(self):
@@ -803,5 +835,4 @@ class RouteSupervisorDailyVehicleControl(models.TransientModel):
             loaded.update(action)
             action = loaded
         return action
-
 
