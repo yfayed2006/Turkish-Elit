@@ -851,4 +851,3 @@ class RouteSupervisorDailyVehicleControl(models.TransientModel):
             "domain": domain,
             "context": {"create": False, "edit": True, "delete": False},
         }
-
