@@ -262,8 +262,26 @@ class RouteVisit(models.Model):
             "geo_review_supervisor_datetime": False,
         }
 
-    def _geo_review_refresh_action(self):
-        """Refresh the current review screen without creating extra breadcrumbs."""
+    def _geo_review_refresh_action(self, message=False, notification_type="success"):
+        """Refresh the current review screen without creating extra breadcrumbs.
+
+        Kanban cards in the Geo Control Center need visible feedback after
+        supervisor actions. Returning a notification with a reload makes the
+        result clear on both desktop and mobile while keeping the existing
+        Geo Review list/form behavior unchanged.
+        """
+        if message:
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {
+                    "title": _("Geo Review"),
+                    "message": message,
+                    "type": notification_type,
+                    "sticky": False,
+                    "next": {"type": "ir.actions.client", "tag": "reload"},
+                },
+            }
         return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_geo_review_accept(self):
@@ -275,7 +293,7 @@ class RouteVisit(models.Model):
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
         })
-        return self._geo_review_refresh_action()
+        return self._geo_review_refresh_action(_("Geo review accepted."))
 
     def action_geo_review_needs_correction(self):
         for visit in self:
@@ -286,11 +304,11 @@ class RouteVisit(models.Model):
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
         })
-        return self._geo_review_refresh_action()
+        return self._geo_review_refresh_action(_("Geo review marked as needs correction."), notification_type="warning")
 
     def action_geo_review_reset_decision(self):
         self.write(self._geo_review_reset_supervisor_decision_values())
-        return self._geo_review_refresh_action()
+        return self._geo_review_refresh_action(_("Geo review decision reset."), notification_type="info")
 
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
     def _check_geo_checkin_values(self):
