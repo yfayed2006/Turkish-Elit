@@ -347,7 +347,7 @@ m
 <field name="arch" type="xml">
 <form string="Geo Live Map" create="0" delete="0">
 <header>
-<button name="action_back_to_geo_dashboard" type="object" string="Back to Dashboard" icon="fa-arrow-left"/>
+<button name="action_back_to_dashboard" type="object" string="Back to Dashboard" class="btn-primary" icon="fa-arrow-left"/>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
 <button name="action_open_filtered_visits" type="object" string="Open Cards" icon="fa-th-large"/>
 <button name="action_open_geo_review" type="object" string="Review Cards" icon="fa-list"/>
@@ -356,17 +356,17 @@ m
 <field name="name" invisible="1"/>
 <div class="oe_title">
 <h2>Geo Live Map</h2>
-<p class="text-muted">Live supervisor map for the filtered geo visits. Markers use the check-in point when available, otherwise the outlet GPS point.</p>
+<p class="text-muted">Live supervisor map for filtered geo visits. Markers use the check-in point when available, otherwise the outlet GPS point.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
 <field name="total_visit_count" widget="statinfo" string="Today"/>
 </button>
-<button name="action_open_filtered_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<button name="action_open_mapped_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
 <field name="mapped_visit_count" widget="statinfo" string="Mapped"/>
 </button>
-<button name="action_open_filtered_visits" type="object" class="oe_stat_button" icon="fa-map-o">
-<field name="unmapped_visit_count" widget="statinfo" string="No Map Point"/>
+<button name="action_open_no_map_point_visits" type="object" class="oe_stat_button" icon="fa-map-o">
+<field name="no_map_point_count" widget="statinfo" string="No Map Point"/>
 </button>
 <button name="action_open_outside_zone_visits" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
 <field name="outside_zone_count" widget="statinfo" string="Outside"/>
@@ -381,24 +381,59 @@ m
 <field name="needs_correction_count" widget="statinfo" string="Correction"/>
 </button>
 </div>
-<group string="Map Filters" col="4">
-<group>
-<field name="company_id" readonly="1"/>
-<field name="visit_date" readonly="1"/>
-<field name="visit_process_filter" readonly="1"/>
-</group>
-<group>
-<field name="geo_review_filter" readonly="1"/>
-<field name="salesperson_id" readonly="1"/>
-<field name="vehicle_id" readonly="1"/>
-</group>
-<group>
-<field name="area_id" readonly="1"/>
-<field name="outlet_id" readonly="1"/>
-<field name="filtered_visit_count" readonly="1"/>
-</group>
-</group>
-<field name="live_map_html" nolabel="1" widget="html" readonly="1"/>
+<separator string="Map Details"/>
+<div class="row g-2 mb-3 route_geo_live_filter_cards">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Visit Date</span>
+<field name="visit_date" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Filtered Visits</span>
+<field name="filtered_visit_count" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Visit Status</span>
+<field name="visit_process_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Geo State</span>
+<field name="geo_review_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Area</span>
+<field name="area_id" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 h-100 bg-white">
+<span class="text-muted small d-block">Outlet</span>
+<field name="outlet_id" nolabel="1"/>
+</div>
+</div>
+</div>
+<field name="company_id" invisible="1"/>
+<field name="live_map_iframe_html" nolabel="1" readonly="1" widget="html"/>
 </sheet>
 </form>
 </field>
