@@ -150,6 +150,12 @@ class RouteSupervisorDailyControl(models.TransientModel):
         string="Vehicle Control",
         readonly=True,
     )
+    exception_control_line_ids = fields.One2many(
+        "route.supervisor.daily.exception.control",
+        "dashboard_id",
+        string="Attention / Exceptions",
+        readonly=True,
+    )
 
     def _get_base_visit_domain(self, include_status_filter=True, include_location_filter=True):
         self.ensure_one()
@@ -274,12 +280,14 @@ class RouteSupervisorDailyControl(models.TransientModel):
     def _onchange_rebuild_control_lines(self):
         for dashboard in self:
             try:
-                salesperson_lines, vehicle_lines = dashboard._prepare_current_control_line_values()
+                salesperson_lines, vehicle_lines, exception_lines = dashboard._prepare_current_control_line_values()
                 dashboard.salesperson_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in salesperson_lines]
                 dashboard.vehicle_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in vehicle_lines]
+                dashboard.exception_control_line_ids = [(5, 0, 0)] + [(0, 0, vals) for vals in exception_lines]
             except Exception:
                 dashboard.salesperson_control_line_ids = [(5, 0, 0)]
                 dashboard.vehicle_control_line_ids = [(5, 0, 0)]
+                dashboard.exception_control_line_ids = [(5, 0, 0)]
 
     def _prepare_current_control_line_values(self):
         self.ensure_one()
@@ -324,20 +332,23 @@ class RouteSupervisorDailyControl(models.TransientModel):
 
         salesperson_lines = self._prepare_salesperson_control_lines(counter_visits, payments, open_promises)
         vehicle_lines = self._prepare_vehicle_control_lines(counter_visits, plans, payments, open_promises, LoadingProposal)
-        return salesperson_lines, vehicle_lines
+        exception_lines = self._prepare_exception_control_lines(counter_visits, open_promises)
+        return salesperson_lines, vehicle_lines, exception_lines
 
     def _rebuild_control_lines(self):
         for dashboard in self:
             try:
-                salesperson_lines, vehicle_lines = dashboard._prepare_current_control_line_values()
+                salesperson_lines, vehicle_lines, exception_lines = dashboard._prepare_current_control_line_values()
                 dashboard.with_context(skip_supervisor_daily_control_rebuild=True).write({
                     "salesperson_control_line_ids": [(5, 0, 0)] + [(0, 0, vals) for vals in salesperson_lines],
                     "vehicle_control_line_ids": [(5, 0, 0)] + [(0, 0, vals) for vals in vehicle_lines],
+                    "exception_control_line_ids": [(5, 0, 0)] + [(0, 0, vals) for vals in exception_lines],
                 })
             except Exception:
                 dashboard.with_context(skip_supervisor_daily_control_rebuild=True).write({
                     "salesperson_control_line_ids": [(5, 0, 0)],
                     "vehicle_control_line_ids": [(5, 0, 0)],
+                    "exception_control_line_ids": [(5, 0, 0)],
                 })
 
     def _get_plan_domain(self):
@@ -566,6 +577,45 @@ class RouteSupervisorDailyControl(models.TransientModel):
                 "remaining_due_amount": sum(vehicle_visits.mapped("remaining_due_amount")) if vehicle_visits else 0.0,
                 "promise_amount": sum(vehicle_promises.mapped("promise_amount")) if vehicle_promises else 0.0,
             })
+        return lines
+
+    def _prepare_exception_control_lines(self, visits, open_promises):
+        self.ensure_one()
+        lines = []
+
+        def add_line(sequence, code, title, count, subtitle=False, severity="warning", amount=0.0, button_label="Open"):
+            if not count and code != "all_clear":
+                return
+            lines.append({
+                "sequence": sequence,
+                "code": code,
+                "title": title,
+                "count": count,
+                "subtitle": subtitle or "",
+                "severity": severity,
+                "amount": amount or 0.0,
+                "button_label": button_label,
+            })
+
+        outside_visits = visits.filtered(lambda visit: visit.geo_review_state in ["outside_no_reason", "outside_with_reason"])
+        correction_visits = visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction")
+        no_checkin_visits = visits.filtered(lambda visit: visit.geo_review_state == "pending_checkin")
+        no_outlet_location_visits = visits.filtered(lambda visit: visit.geo_review_state == "outlet_missing")
+        not_started_visits = visits.filtered(lambda visit: visit.visit_process_state == "draft")
+        done_visits = visits.filtered(lambda visit: visit.visit_process_state == "done")
+        open_due_visits = visits.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
+
+        add_line(10, "outside_zone", _("Outside Zone Visits"), len(outside_visits), _("Visits checked in outside the allowed outlet radius."), "warning", button_label=_("Open Visits"))
+        add_line(20, "location_correction", _("Location Correction Needed"), len(correction_visits), _("Supervisor marked these visits as needing correction."), "danger", button_label=_("Open Visits"))
+        add_line(30, "no_checkin", _("No Location Check-in"), len(no_checkin_visits), _("Visits without captured salesperson location."), "danger", button_label=_("Open Visits"))
+        add_line(40, "no_outlet_location", _("No Outlet Location"), len(no_outlet_location_visits), _("Outlets missing GPS coordinates."), "warning", button_label=_("Open Visits"))
+        add_line(50, "not_started", _("Not Started Visits"), len(not_started_visits), _("Planned visits not started yet."), "info", button_label=_("Open Visits"))
+        add_line(60, "open_due", _("Open Due"), len(open_due_visits), _("Visits with remaining due amount."), "warning", sum(open_due_visits.mapped("remaining_due_amount")) if open_due_visits else 0.0, button_label=_("Open Visits"))
+        add_line(70, "open_promises", _("Open Promises"), len(open_promises), _("Open, due today, or overdue promises."), "warning", sum(open_promises.mapped("promise_amount")) if open_promises else 0.0, button_label=_("Open Promises"))
+        add_line(80, "done", _("Done Visits"), len(done_visits), _("Visits already completed today."), "success", button_label=_("Open Visits"))
+
+        if not lines:
+            add_line(90, "all_clear", _("No urgent exceptions"), 0, _("No attention items match the current filters."), "success", button_label=_("Refresh"))
         return lines
 
     @api.model
@@ -871,3 +921,113 @@ class RouteSupervisorDailyVehicleControl(models.TransientModel):
             loaded.update(action)
             action = loaded
         return action
+
+
+class RouteSupervisorDailyExceptionControl(models.TransientModel):
+    _name = "route.supervisor.daily.exception.control"
+    _description = "Supervisor Daily Attention / Exception Card"
+    _inherit = "route.supervisor.daily.control.line.mixin"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(default=10)
+    dashboard_id = fields.Many2one("route.supervisor.daily.control", string="Dashboard", required=True, ondelete="cascade")
+    currency_id = fields.Many2one("res.currency", related="dashboard_id.currency_id", readonly=True)
+    code = fields.Selection(
+        [
+            ("outside_zone", "Outside Zone"),
+            ("location_correction", "Location Correction"),
+            ("no_checkin", "No Check-in"),
+            ("no_outlet_location", "No Outlet Location"),
+            ("not_started", "Not Started"),
+            ("open_due", "Open Due"),
+            ("open_promises", "Open Promises"),
+            ("done", "Done"),
+            ("all_clear", "All Clear"),
+        ],
+        string="Type",
+        required=True,
+    )
+    severity = fields.Selection(
+        [("success", "Success"), ("info", "Info"), ("warning", "Warning"), ("danger", "Danger")],
+        string="Severity",
+        default="warning",
+        required=True,
+    )
+    title = fields.Char(string="Title", required=True)
+    subtitle = fields.Char(string="Subtitle")
+    count = fields.Integer(string="Count")
+    amount = fields.Monetary(string="Amount", currency_field="currency_id")
+    button_label = fields.Char(string="Button Label", default="Open")
+
+    def _get_exception_visit_domain(self):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        base_domain = dashboard._get_base_visit_domain(include_status_filter=False, include_location_filter=False)
+        if self.code == "outside_zone":
+            return base_domain + [("geo_review_state", "in", ["outside_no_reason", "outside_with_reason"])]
+        if self.code == "location_correction":
+            return base_domain + [("geo_review_supervisor_decision", "=", "needs_correction")]
+        if self.code == "no_checkin":
+            return base_domain + [("geo_review_state", "=", "pending_checkin")]
+        if self.code == "no_outlet_location":
+            return base_domain + [("geo_review_state", "=", "outlet_missing")]
+        if self.code == "not_started":
+            return base_domain + [("visit_process_state", "=", "draft")]
+        if self.code == "done":
+            return base_domain + [("visit_process_state", "=", "done")]
+        if self.code == "open_due":
+            visits = self.env["route.visit"].search(base_domain).filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
+            return [("id", "in", visits.ids)]
+        return base_domain
+
+    def _get_open_promise_domain(self):
+        self.ensure_one()
+        dashboard = self._get_dashboard()
+        domain = [
+            ("company_id", "=", dashboard.company_id.id or dashboard.env.company.id),
+            ("promise_amount", ">", 0.0),
+            ("promise_status", "in", ["open", "due_today", "overdue"]),
+        ]
+        if dashboard.salesperson_id:
+            domain.append(("salesperson_id", "=", dashboard.salesperson_id.id))
+        if dashboard.city_id:
+            domain += ["|", ("area_id.city_id", "=", dashboard.city_id.id), ("outlet_id.route_city_id", "=", dashboard.city_id.id)]
+        if dashboard.area_id:
+            domain.append(("area_id", "=", dashboard.area_id.id))
+        if dashboard.outlet_id:
+            domain.append(("outlet_id", "=", dashboard.outlet_id.id))
+        if dashboard.vehicle_id:
+            payments = self.env["route.visit.payment"].search(domain).filtered(
+                lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == dashboard.vehicle_id)
+                or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == dashboard.vehicle_id)
+            )
+            return [("id", "in", payments.ids)]
+        return domain
+
+    def action_open_exception_details(self):
+        self.ensure_one()
+        if self.code == "all_clear":
+            return {"type": "ir.actions.client", "tag": "reload"}
+        if self.code == "open_promises":
+            views = []
+            kanban_view = self.env.ref("route_core.view_route_visit_collection_kanban", raise_if_not_found=False)
+            list_view = self.env.ref("route_core.view_route_visit_payment_list", raise_if_not_found=False)
+            form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
+            if kanban_view:
+                views.append((kanban_view.id, "kanban"))
+            if list_view:
+                views.append((list_view.id, "list"))
+            if form_view:
+                views.append((form_view.id, "form"))
+            action = {
+                "type": "ir.actions.act_window",
+                "name": self.title,
+                "res_model": "route.visit.payment",
+                "view_mode": "kanban,list,form",
+                "domain": self._get_open_promise_domain(),
+                "context": {"create": False, "edit": True, "delete": False},
+            }
+            if views:
+                action["views"] = views
+            return action
+        return self._get_dashboard()._action_open_visits(self.title, self._get_exception_visit_domain())
