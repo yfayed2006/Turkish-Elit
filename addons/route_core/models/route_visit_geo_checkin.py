@@ -8,7 +8,7 @@ class RouteVisit(models.Model):
     _inherit = "route.visit"
 
     route_geo_enabled = fields.Boolean(
-        string="Geo Location Enabled",
+        string="Visit Location Enabled",
         related="company_id.route_enable_outlet_geolocation",
         readonly=True,
         store=False,
@@ -21,7 +21,7 @@ class RouteVisit(models.Model):
     )
     route_geo_checkin_policy = fields.Selection(
         related="company_id.route_geo_checkin_policy",
-        string="Geo Check-in Policy",
+        string="Location Check-in Policy",
         readonly=True,
         store=False,
     )
@@ -42,13 +42,13 @@ class RouteVisit(models.Model):
         string="Check-in Latitude",
         digits=(10, 7),
         copy=False,
-        help="GPS latitude captured at visit check-in. This foundation field does not block visit execution yet.",
+        help="Location latitude captured at visit check-in. This foundation field does not block visit execution yet.",
     )
     geo_checkin_longitude = fields.Float(
         string="Check-in Longitude",
         digits=(10, 7),
         copy=False,
-        help="GPS longitude captured at visit check-in. This foundation field does not block visit execution yet.",
+        help="Location longitude captured at visit check-in. This foundation field does not block visit execution yet.",
     )
     geo_checkin_accuracy_m = fields.Float(
         string="Check-in Accuracy (m)",
@@ -57,7 +57,7 @@ class RouteVisit(models.Model):
         help="Optional device accuracy reported with the check-in location.",
     )
     geo_checkin_datetime = fields.Datetime(
-        string="Geo Check-in Time",
+        string="Location Check-in Time",
         copy=False,
     )
     geo_checkin_distance_m = fields.Float(
@@ -79,7 +79,7 @@ class RouteVisit(models.Model):
             ("inside", "Inside Zone"),
             ("outside", "Outside Zone"),
         ],
-        string="Geo Check-in Status",
+        string="Location Check-in Status",
         compute="_compute_geo_checkin_distance_and_status",
         store=False,
     )
@@ -97,15 +97,15 @@ class RouteVisit(models.Model):
             ("outside_no_reason", "Outside - Missing Reason"),
             ("outside_with_reason", "Outside - Reason Recorded"),
         ],
-        string="Geo Review",
+        string="Location Review",
         compute="_compute_geo_review_fields",
         store=True,
         copy=False,
         index=True,
-        help="Supervisor review status for visit geo check-ins.",
+        help="Supervisor review status for visit location check-ins.",
     )
     geo_review_required = fields.Boolean(
-        string="Needs Geo Review",
+        string="Needs Location Review",
         compute="_compute_geo_review_fields",
         store=True,
         copy=False,
@@ -126,7 +126,7 @@ class RouteVisit(models.Model):
         string="Supervisor Decision",
         copy=False,
         index=True,
-        help="Supervisor decision for outside-zone or unusual geo check-ins.",
+        help="Supervisor decision for outside-zone or unusual location check-ins.",
     )
     geo_review_supervisor_note = fields.Text(
         string="Supervisor Review Note",
@@ -265,17 +265,17 @@ class RouteVisit(models.Model):
     def _geo_review_refresh_action(self, message=False, notification_type="success"):
         """Refresh the current review screen without creating extra breadcrumbs.
 
-        Kanban cards in the Geo Control Center need visible feedback after
+        Kanban cards in the Visit Location Control need visible feedback after
         supervisor actions. Returning a notification with a reload makes the
         result clear on both desktop and mobile while keeping the existing
-        Geo Review list/form behavior unchanged.
+        Location Review list/form behavior unchanged.
         """
         if message:
             return {
                 "type": "ir.actions.client",
                 "tag": "display_notification",
                 "params": {
-                    "title": _("Geo Review"),
+                    "title": _("Location Review"),
                     "message": message,
                     "type": notification_type,
                     "sticky": False,
@@ -293,7 +293,7 @@ class RouteVisit(models.Model):
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
         })
-        return self._geo_review_refresh_action(_("Geo review accepted."))
+        return self._geo_review_refresh_action(_("Location review accepted."))
 
     def action_geo_review_needs_correction(self):
         for visit in self:
@@ -304,11 +304,11 @@ class RouteVisit(models.Model):
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
         })
-        return self._geo_review_refresh_action(_("Geo review marked as needs correction."), notification_type="warning")
+        return self._geo_review_refresh_action(_("Location review marked as needs correction."), notification_type="warning")
 
     def action_geo_review_reset_decision(self):
         self.write(self._geo_review_reset_supervisor_decision_values())
-        return self._geo_review_refresh_action(_("Geo review decision reset."), notification_type="info")
+        return self._geo_review_refresh_action(_("Location review decision reset."), notification_type="info")
 
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
     def _check_geo_checkin_values(self):
@@ -358,11 +358,11 @@ class RouteVisit(models.Model):
         return _("%s m") % ("{:,.0f}".format(distance_m))
 
     def _geo_checkin_edit_allowed(self):
-        """Geo check-in is a visit-start audit record once the visit begins."""
+        """Location check-in is a visit-start audit record once the visit begins."""
         for visit in self:
             if visit.visit_process_state and visit.visit_process_state != "draft":
                 raise ValidationError(
-                    _("Geo Check-in is locked after the visit starts. Ask a supervisor to correct the audit record if needed.")
+                    _("Location Check-in is locked after the visit starts. Ask a supervisor to correct the audit record if needed.")
                 )
         return True
 
@@ -375,9 +375,9 @@ class RouteVisit(models.Model):
         now = fields.Datetime.now()
         for visit in self:
             if not visit.outlet_id:
-                raise ValidationError(_("Please set an outlet before recording a geo check-in."))
+                raise ValidationError(_("Please set an outlet before recording a location check-in."))
             if not visit._has_outlet_geo_coordinates():
-                raise ValidationError(_("Please set outlet Latitude and Longitude before recording a geo check-in."))
+                raise ValidationError(_("Please set outlet Latitude and Longitude before recording a location check-in."))
             vals = {
                 "geo_checkin_latitude": visit.outlet_id.geo_latitude,
                 "geo_checkin_longitude": visit.outlet_id.geo_longitude,
@@ -426,14 +426,14 @@ class RouteVisit(models.Model):
     def action_capture_current_geo_checkin(self):
         """Ask the browser/mobile device to capture the salesperson's current GPS location.
 
-        The actual GPS prompt runs in a small client action because Python cannot access
+        The actual location prompt runs in a small client action because Python cannot access
         the browser geolocation API directly. This remains foundation mode: it records
         the location and calculates inside/outside zone, but it does not block Start Visit.
         """
         self._geo_checkin_edit_allowed()
         self.ensure_one()
         if not self.route_geo_enabled:
-            raise ValidationError(_("Geo location is disabled in Route Settings."))
+            raise ValidationError(_("Visit location tracking is disabled in Route Settings."))
         pda_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
         return {
             "type": "ir.actions.client",
@@ -447,7 +447,7 @@ class RouteVisit(models.Model):
         }
 
     def _is_geo_start_policy_active(self):
-        """Return True when Start Visit should evaluate geo check-in requirements."""
+        """Return True when Start Visit should evaluate location check-in requirements."""
         self.ensure_one()
         if self.env.context.get("route_geo_reason_confirmed"):
             return False
@@ -471,7 +471,7 @@ class RouteVisit(models.Model):
     def _should_require_geo_reason_before_start(self):
         """Return True when policy requires an outside-zone reason before Start Visit.
 
-        `Require Reason` now means a geo check-in is required before Start Visit.
+        `Require Reason` now means a location check-in is required before Start Visit.
         If the check-in is outside the outlet radius, the salesperson must provide
         an operational reason before the visit can move to Checked In.
         """
@@ -518,7 +518,7 @@ class RouteVisit(models.Model):
         return action
 
     def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
-        """Save GPS coordinates captured by the browser/mobile device."""
+        """Save location coordinates captured by the browser/mobile device."""
         self._geo_checkin_edit_allowed()
         now = fields.Datetime.now()
         try:
@@ -526,7 +526,7 @@ class RouteVisit(models.Model):
             longitude = float(longitude)
             accuracy = float(accuracy or 0.0)
         except (TypeError, ValueError):
-            raise ValidationError(_("Invalid GPS coordinates received from the device."))
+            raise ValidationError(_("Invalid location coordinates received from the device."))
 
         if latitude < -90.0 or latitude > 90.0:
             raise ValidationError(_("Captured Latitude must be between -90 and 90."))
