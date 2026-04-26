@@ -1,8 +1,11 @@
+import json
+import time
+from html import escape
 from urllib.parse import quote_plus
 
 from werkzeug.utils import redirect
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 
 
@@ -82,3 +85,294 @@ class RoutePdaRedirectController(http.Controller):
             action_xmlid="route_core.action_route_outlet",
             menu_xmlid="route_core.menu_route_outlet",
         )
+
+
+class RouteGeoLiveMapController(http.Controller):
+    def _selection_label(self, record, field_name, value):
+        if not value or field_name not in record._fields:
+            return ""
+        selection = record._fields[field_name].selection
+        if callable(selection):
+            selection = selection(record.env[record._name])
+        return dict(selection or []).get(value, value)
+
+    def _has_point(self, latitude, longitude):
+        return bool(latitude or longitude)
+
+    def _format_datetime(self, env, value):
+        if not value:
+            return ""
+        try:
+            user_dt = fields.Datetime.context_timestamp(env.user, value)
+            return user_dt.strftime("%b %d, %I:%M %p")
+        except Exception:
+            return str(value)
+
+    def _google_map_url(self, latitude, longitude):
+        if not self._has_point(latitude, longitude):
+            return "#"
+        return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
+
+    def _visit_payload(self, center, visit):
+        checkin_lat = visit.geo_checkin_latitude or 0.0
+        checkin_lng = visit.geo_checkin_longitude or 0.0
+        outlet = visit.outlet_id
+        outlet_lat = outlet.geo_latitude if outlet else 0.0
+        outlet_lng = outlet.geo_longitude if outlet else 0.0
+        has_checkin = self._has_point(checkin_lat, checkin_lng)
+        has_outlet = self._has_point(outlet_lat, outlet_lng)
+        geo_state = visit.geo_review_state or ""
+        decision = visit.geo_review_supervisor_decision or ""
+        main_lat = checkin_lat if has_checkin else outlet_lat
+        main_lng = checkin_lng if has_checkin else outlet_lng
+        return {
+            "id": visit.id,
+            "name": visit.display_name or visit.name or "",
+            "outlet": outlet.display_name if outlet else "",
+            "salesperson": visit.user_id.display_name or "",
+            "vehicle": visit.vehicle_id.display_name or "",
+            "area": visit.area_id.display_name or "",
+            "customer": visit.partner_id.display_name or "",
+            "distance": visit.geo_checkin_distance_display or "",
+            "accuracy": "%.2f m" % (visit.geo_checkin_accuracy_m or 0.0) if visit.geo_checkin_accuracy_m else "",
+            "reason": visit.geo_checkin_outside_zone_reason or "",
+            "checkin_time": self._format_datetime(center.env, visit.geo_checkin_datetime),
+            "geo_state": geo_state,
+            "geo_state_label": self._selection_label(visit, "geo_review_state", geo_state),
+            "decision": decision,
+            "decision_label": self._selection_label(visit, "geo_review_supervisor_decision", decision),
+            "process": self._selection_label(visit, "visit_process_state", visit.visit_process_state) or visit.visit_process_state or "",
+            "has_checkin": has_checkin,
+            "has_outlet": has_outlet,
+            "lat": main_lat,
+            "lng": main_lng,
+            "checkin_lat": checkin_lat,
+            "checkin_lng": checkin_lng,
+            "outlet_lat": outlet_lat,
+            "outlet_lng": outlet_lng,
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
+            "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
+            "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
+            "correction_url": "/route_core/geo/live_map/decision/%s/%s/needs_correction" % (center.id, visit.id),
+            "reset_url": "/route_core/geo/live_map/decision/%s/%s/reset" % (center.id, visit.id),
+        }
+
+    def _render_live_map_html(self, center, message=""):
+        visits = center.geo_visit_ids
+        payload = [self._visit_payload(center, visit) for visit in visits]
+        mapped = [visit for visit in payload if visit.get("lat") or visit.get("lng")]
+        data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+        title = escape(center.name or "Geo Live Map")
+        subtitle = escape("%s • %s filtered visits • %s mapped" % (center.visit_date or "", len(payload), len(mapped)))
+        message_html = ""
+        if message:
+            message_html = '<div class="toast-note">%s</div>' % escape(message)
+        html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{title}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root {{ --route-primary:#7b4b6f; --route-green:#28a745; --route-orange:#f0a000; --route-red:#dc3545; --route-gray:#6c757d; --route-blue:#0d6efd; }}
+html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:#111827; background:#f5f6f7; }}
+.route-map-page {{ height:100vh; display:flex; flex-direction:column; }}
+.route-map-header {{ padding:10px 12px; background:#fff; border-bottom:1px solid #d9dee3; display:flex; justify-content:space-between; gap:12px; align-items:center; }}
+.route-map-title {{ font-size:17px; font-weight:800; line-height:1.2; }}
+.route-map-subtitle {{ font-size:12px; color:#6b7280; margin-top:2px; }}
+.route-map-legend {{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }}
+.legend-pill {{ display:inline-flex; align-items:center; gap:5px; border:1px solid #e5e7eb; background:#fff; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:700; }}
+.legend-dot {{ width:10px; height:10px; border-radius:999px; display:inline-block; }}
+.route-map-body {{ flex:1; display:grid; grid-template-columns:minmax(0,1fr) 340px; min-height:0; }}
+#map {{ min-height:480px; height:100%; background:#e5e7eb; }}
+.route-map-side {{ background:#fff; border-left:1px solid #d9dee3; overflow:auto; padding:10px; }}
+.visit-card {{ border:1px solid #e5e7eb; border-radius:12px; padding:10px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); }}
+.visit-card:hover {{ border-color:var(--route-primary); cursor:pointer; }}
+.visit-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }}
+.visit-title {{ font-weight:800; font-size:15px; }}
+.visit-ref {{ color:#6b7280; font-size:13px; margin-top:2px; }}
+.badge {{ display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; white-space:nowrap; border:1px solid transparent; }}
+.badge-gray {{ color:#111827; background:#eef0f2; border-color:#d8dbe0; }}
+.badge-green {{ color:#fff; background:var(--route-green); }}
+.badge-orange {{ color:#111827; background:var(--route-orange); }}
+.badge-red {{ color:#fff; background:var(--route-red); }}
+.badge-blue {{ color:#fff; background:var(--route-blue); }}
+.visit-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:7px 10px; margin-top:10px; font-size:13px; }}
+.label {{ color:#6b7280; display:block; }}
+.value {{ font-weight:750; }}
+.actions {{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }}
+.map-btn {{ display:inline-flex; align-items:center; text-decoration:none; color:#111827; background:#e9ecef; border:0; border-radius:6px; padding:6px 8px; font-weight:800; font-size:12px; }}
+.map-btn.primary {{ color:#fff; background:var(--route-primary); }}
+.map-btn.green {{ color:#fff; background:var(--route-green); }}
+.map-btn.orange {{ color:#111827; background:var(--route-orange); }}
+.map-btn.light {{ background:#fff; border:1px solid #d9dee3; }}
+.toast-note {{ background:#e8f5e9; color:#14532d; border:1px solid #bbf7d0; border-radius:8px; margin:8px 12px; padding:8px 10px; font-weight:700; }}
+.marker-dot {{ width:28px; height:28px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }}
+.marker-dot span {{ transform:rotate(45deg); font-size:12px; }}
+.marker-green {{ background:var(--route-green); }}
+.marker-orange {{ background:var(--route-orange); color:#111827; }}
+.marker-red {{ background:var(--route-red); }}
+.marker-blue {{ background:var(--route-blue); }}
+.marker-gray {{ background:var(--route-gray); }}
+.popup-title {{ font-weight:900; font-size:15px; margin-bottom:4px; }}
+.popup-row {{ font-size:12px; margin:2px 0; }}
+.popup-actions {{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }}
+.no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; color:#6b7280; font-weight:700; }}
+@media (max-width: 900px) {{
+  .route-map-header {{ align-items:flex-start; flex-direction:column; }}
+  .route-map-legend {{ justify-content:flex-start; }}
+  .route-map-body {{ grid-template-columns:1fr; grid-template-rows:55vh auto; }}
+  .route-map-side {{ border-left:0; border-top:1px solid #d9dee3; max-height:none; }}
+}}
+</style>
+</head>
+<body>
+<div class="route-map-page">
+  <div class="route-map-header">
+    <div><div class="route-map-title">Geo Live Map</div><div class="route-map-subtitle">{subtitle}</div></div>
+    <div class="route-map-legend">
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-green)"></span>Inside/Accepted</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-orange)"></span>Outside/Correction</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-blue)"></span>No Check-in</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-gray)"></span>No GPS</span>
+    </div>
+  </div>
+  {message_html}
+  <div class="route-map-body">
+    <div id="map"><div class="no-map">Loading map...</div></div>
+    <aside class="route-map-side" id="visitList"></aside>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const visits = {data_json};
+function escapeHtml(value) {{ return String(value || '').replace(/[&<>'"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}}[c])); }}
+function markerColor(v) {{
+  if (v.decision === 'needs_correction') return 'orange';
+  if (v.decision === 'accepted') return 'green';
+  if (v.geo_state === 'inside_zone') return 'green';
+  if (v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'orange';
+  if (v.geo_state === 'pending_checkin') return 'blue';
+  return 'gray';
+}}
+function badgeClass(v) {{
+  if (v.decision === 'needs_correction') return 'badge-orange';
+  if (v.decision === 'accepted') return 'badge-green';
+  if (v.geo_state === 'inside_zone') return 'badge-green';
+  if (v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'badge-orange';
+  if (v.geo_state === 'pending_checkin') return 'badge-blue';
+  return 'badge-gray';
+}}
+function statusText(v) {{ return v.decision_label || v.geo_state_label || 'Geo Status'; }}
+function actionButtons(v) {{
+  let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
+  if (v.has_outlet) html += `<a class="map-btn" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a>`;
+  if (v.has_checkin) html += `<a class="map-btn" href="${{v.checkin_map_url}}" target="_blank">Check-in Map</a>`;
+  if (v.decision !== 'accepted') html += `<a class="map-btn green" href="${{v.accept_url}}">Accept</a>`;
+  if (v.decision !== 'needs_correction') html += `<a class="map-btn orange" href="${{v.correction_url}}">Needs Correction</a>`;
+  if (v.decision) html += `<a class="map-btn light" href="${{v.reset_url}}">Reset</a>`;
+  return html;
+}}
+function visitCard(v) {{
+  return `<article class="visit-card" data-visit-id="${{v.id}}">
+    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
+    <div class="visit-grid">
+      <div><span class="label">Salesperson</span><span class="value">${{escapeHtml(v.salesperson)}}</span></div>
+      <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle)}}</span></div>
+      <div><span class="label">Area</span><span class="value">${{escapeHtml(v.area)}}</span></div>
+      <div><span class="label">Distance</span><span class="value">${{escapeHtml(v.distance)}}</span></div>
+      <div><span class="label">Check-in</span><span class="value">${{escapeHtml(v.checkin_time || 'No check-in')}}</span></div>
+      <div><span class="label">Accuracy</span><span class="value">${{escapeHtml(v.accuracy || '-')}}</span></div>
+    </div>
+    ${{v.reason ? `<div class="popup-row" style="margin-top:8px"><span class="label">Reason</span>${{escapeHtml(v.reason)}}</div>` : ''}}
+    <div class="actions">${{actionButtons(v)}}</div>
+  </article>`;
+}}
+function popupHtml(v) {{
+  return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div>
+    <div class="popup-row"><b>${{escapeHtml(v.name)}}</b></div>
+    <div class="popup-row">${{escapeHtml(statusText(v))}}</div>
+    <div class="popup-row">Salesperson: ${{escapeHtml(v.salesperson)}}</div>
+    <div class="popup-row">Vehicle: ${{escapeHtml(v.vehicle)}}</div>
+    <div class="popup-row">Distance: ${{escapeHtml(v.distance)}}</div>
+    ${{v.reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.reason)}}</div>` : ''}}
+    <div class="popup-actions">${{actionButtons(v)}}</div></div>`;
+}}
+function renderList() {{
+  const list = document.getElementById('visitList');
+  if (!visits.length) {{ list.innerHTML = '<div class="no-map">No visits match the current filters.</div>'; return; }}
+  list.innerHTML = visits.map(visitCard).join('');
+}}
+function initMap() {{
+  renderList();
+  const mappable = visits.filter(v => v.lat || v.lng);
+  if (!mappable.length) {{
+    document.getElementById('map').innerHTML = '<div class="no-map">No map coordinates for the current filtered visits.</div>';
+    return;
+  }}
+  const map = L.map('map', {{ zoomControl: true }});
+  L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{ maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }}).addTo(map);
+  const bounds = [];
+  const markerByVisit = {{}};
+  for (const v of mappable) {{
+    const color = markerColor(v);
+    const icon = L.divIcon({{ className:'', html:`<div class="marker-dot marker-${{color}}"><span>${{v.decision === 'needs_correction' ? '!' : (v.decision === 'accepted' ? '✓' : '•')}}</span></div>`, iconSize:[28,28], iconAnchor:[14,28], popupAnchor:[0,-25] }});
+    const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popupHtml(v));
+    markerByVisit[v.id] = marker;
+    bounds.push([v.lat, v.lng]);
+    if (v.has_checkin && v.has_outlet) {{
+      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet GPS</b><br/>${{escapeHtml(v.outlet)}}`);
+      L.polyline([[v.checkin_lat, v.checkin_lng], [v.outlet_lat, v.outlet_lng]], {{ color:'#7b4b6f', weight:2, opacity:.55, dashArray:'5,6' }}).addTo(map);
+      bounds.push([v.outlet_lat, v.outlet_lng]);
+    }}
+  }}
+  if (bounds.length === 1) {{ map.setView(bounds[0], 15); }} else {{ map.fitBounds(bounds, {{ padding:[28,28] }}); }}
+  document.querySelectorAll('[data-visit-id]').forEach(el => {{
+    el.addEventListener('click', (ev) => {{
+      if (ev.target.closest('a')) return;
+      const id = parseInt(el.getAttribute('data-visit-id'), 10);
+      const marker = markerByVisit[id];
+      if (marker) {{ map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15)); marker.openPopup(); }}
+    }});
+  }});
+}}
+window.addEventListener('load', () => {{
+  renderList();
+  if (!window.L) {{
+    document.getElementById('map').innerHTML = '<div class="no-map">The map library could not load. Visit cards and Google Map buttons are still available.</div>';
+    return;
+  }}
+  initMap();
+}});
+</script>
+</body>
+</html>'''
+        return request.make_response(html, headers=[("Content-Type", "text/html; charset=utf-8")])
+
+    @http.route("/route_core/geo/live_map/frame/<int:center_id>", type="http", auth="user", website=False)
+    def route_core_geo_live_map_frame(self, center_id, **kwargs):
+        center = request.env["route.geo.control.center"].browse(center_id).exists()
+        if not center:
+            return request.make_response(
+                "<html><body><p>Geo Live Map session was not found. Please reopen Geo Control Center.</p></body></html>",
+                headers=[("Content-Type", "text/html; charset=utf-8")],
+            )
+        return self._render_live_map_html(center, message=kwargs.get("message") or "")
+
+    @http.route("/route_core/geo/live_map/decision/<int:center_id>/<int:visit_id>/<string:decision>", type="http", auth="user", website=False, csrf=False)
+    def route_core_geo_live_map_decision(self, center_id, visit_id, decision, **kwargs):
+        visit = request.env["route.visit"].browse(visit_id).exists()
+        message = "Geo review updated."
+        if visit:
+            if decision == "accept":
+                visit.action_geo_review_accept()
+                message = "Geo review accepted."
+            elif decision == "needs_correction":
+                visit.action_geo_review_needs_correction()
+                message = "Geo review marked as needs correction."
+            elif decision == "reset":
+                visit.action_geo_review_reset_decision()
+                message = "Geo review decision reset."
+        return redirect("/route_core/geo/live_map/frame/%s?message=%s&ts=%s" % (center_id, quote_plus(message), int(time.time())))
