@@ -79,12 +79,14 @@
         "web.assets_backend": [
             "route_core/static/src/js/route_visit_scan_focus.js",
             "route_core/static/src/js/route_workspace_navigation_guard.js",
+            "route_core/static/src/js/route_visit_geo_capture.js",
             "route_core/static/src/css/route_pda_home.css",
         ],
     },
     "installable": True,
     "application": True,
 }
+
 
 
 
