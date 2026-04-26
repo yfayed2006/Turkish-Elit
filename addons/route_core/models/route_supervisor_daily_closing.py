@@ -63,6 +63,13 @@ class RouteSupervisorDailyClosing(models.TransientModel):
     return_transfer_count = fields.Integer(string="Return Transfers", compute="_compute_closing_dashboard")
     refill_transfer_count = fields.Integer(string="Refill Transfers", compute="_compute_closing_dashboard")
 
+    sale_order_count = fields.Integer(string="Sales Orders", compute="_compute_closing_dashboard")
+    pending_sale_order_count = fields.Integer(string="Pending Sales Orders", compute="_compute_closing_dashboard")
+    sale_order_amount = fields.Monetary(string="Sales Order Amount", currency_field="currency_id", compute="_compute_closing_dashboard")
+    direct_return_count = fields.Integer(string="Return Orders", compute="_compute_closing_dashboard")
+    pending_direct_return_count = fields.Integer(string="Pending Return Orders", compute="_compute_closing_dashboard")
+    direct_return_amount = fields.Monetary(string="Return Order Amount", currency_field="currency_id", compute="_compute_closing_dashboard")
+
     blocker_count = fields.Integer(string="Closing Blockers", compute="_compute_closing_dashboard")
     ready_to_close = fields.Boolean(string="Ready to Close", compute="_compute_closing_dashboard")
     readiness_label = fields.Char(string="Readiness", compute="_compute_closing_dashboard")
@@ -101,6 +108,18 @@ class RouteSupervisorDailyClosing(models.TransientModel):
     pending_transfer_ids = fields.Many2many(
         "stock.picking",
         string="Pending Transfers",
+        compute="_compute_closing_dashboard",
+        readonly=True,
+    )
+    sale_order_ids = fields.Many2many(
+        "sale.order",
+        string="Sales Orders",
+        compute="_compute_closing_dashboard",
+        readonly=True,
+    )
+    direct_return_ids = fields.Many2many(
+        "route.direct.return",
+        string="Return Orders",
         compute="_compute_closing_dashboard",
         readonly=True,
     )
@@ -189,6 +208,12 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             rec.pending_transfer_count = 0
             rec.return_transfer_count = 0
             rec.refill_transfer_count = 0
+            rec.sale_order_count = 0
+            rec.pending_sale_order_count = 0
+            rec.sale_order_amount = 0.0
+            rec.direct_return_count = 0
+            rec.pending_direct_return_count = 0
+            rec.direct_return_amount = 0.0
             rec.blocker_count = 0
             rec.ready_to_close = False
             rec.readiness_label = _("Not Ready")
@@ -199,6 +224,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             rec.loading_proposal_ids = [fields.Command.clear()]
             rec.open_promise_payment_ids = [fields.Command.clear()]
             rec.pending_transfer_ids = [fields.Command.clear()]
+            rec.sale_order_ids = [fields.Command.clear()]
+            rec.direct_return_ids = [fields.Command.clear()]
 
     def _base_visit_domain(self):
         self.ensure_one()
@@ -266,6 +293,48 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             domain.append(("vehicle_id", "=", self.vehicle_id.id))
         return domain
 
+    def _day_datetime_range(self):
+        self.ensure_one()
+        closing_date = self.closing_date or fields.Date.context_today(self)
+        day_start = datetime.combine(closing_date, time.min)
+        day_end = day_start + timedelta(days=1)
+        return fields.Datetime.to_string(day_start), fields.Datetime.to_string(day_end)
+
+    def _sale_order_domain(self, visits=None):
+        self.ensure_one()
+        day_start, day_end = self._day_datetime_range()
+        visit_names = (visits or self.env["route.visit"]).mapped("name")
+        domain = [
+            ("company_id", "=", self.company_id.id or self.env.company.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("state", "!=", "cancel"),
+            "|",
+            "&",
+            ("date_order", ">=", day_start),
+            ("date_order", "<", day_end),
+            ("origin", "in", visit_names or ["__no_route_visit__"]),
+        ]
+        if self.salesperson_id:
+            domain.append(("user_id", "=", self.salesperson_id.id))
+        if self.outlet_id:
+            domain.append(("route_outlet_id", "=", self.outlet_id.id))
+        return domain
+
+    def _direct_return_domain(self):
+        self.ensure_one()
+        domain = [
+            ("company_id", "=", self.company_id.id or self.env.company.id),
+            ("return_date", "=", self.closing_date or fields.Date.context_today(self)),
+            ("state", "!=", "cancel"),
+        ]
+        if self.salesperson_id:
+            domain.append(("user_id", "=", self.salesperson_id.id))
+        if self.vehicle_id:
+            domain.append(("vehicle_id", "=", self.vehicle_id.id))
+        if self.outlet_id:
+            domain.append(("outlet_id", "=", self.outlet_id.id))
+        return domain
+
     def _promise_domain_stored(self):
         self.ensure_one()
         domain = [
@@ -280,7 +349,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             domain.append(("outlet_id", "=", self.outlet_id.id))
         return domain
 
-    def _filter_recordsets_for_city_area_outlet(self, visits, plans, payments, closings, proposals):
+    def _filter_recordsets_for_city_area_outlet(self, visits, plans, payments, closings, proposals, sale_orders, direct_returns):
         self.ensure_one()
         if self.city_id:
             visits = visits.filtered(
@@ -305,6 +374,16 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 and ((proposal.plan_id.area_id and proposal.plan_id.area_id.city_id == self.city_id)
                      or bool(proposal.plan_id.search_area_ids.filtered(lambda area: area.city_id == self.city_id)))
             )
+            sale_orders = sale_orders.filtered(
+                lambda order: (order.route_outlet_id and order.route_outlet_id.route_city_id == self.city_id)
+                or (order.route_visit_id and ((order.route_visit_id.area_id and order.route_visit_id.area_id.city_id == self.city_id)
+                    or (order.route_visit_id.outlet_id and order.route_visit_id.outlet_id.route_city_id == self.city_id)))
+            )
+            direct_returns = direct_returns.filtered(
+                lambda direct_return: (direct_return.outlet_id and direct_return.outlet_id.route_city_id == self.city_id)
+                or (direct_return.visit_id and ((direct_return.visit_id.area_id and direct_return.visit_id.area_id.city_id == self.city_id)
+                    or (direct_return.visit_id.outlet_id and direct_return.visit_id.outlet_id.route_city_id == self.city_id)))
+            )
         if self.area_id:
             visits = visits.filtered(lambda visit: visit.area_id == self.area_id)
             plans = plans.filtered(lambda plan: plan.area_id == self.area_id or self.area_id in plan.search_area_ids)
@@ -315,9 +394,19 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             proposals = proposals.filtered(
                 lambda proposal: proposal.plan_id and (proposal.plan_id.area_id == self.area_id or self.area_id in proposal.plan_id.search_area_ids)
             )
+            sale_orders = sale_orders.filtered(
+                lambda order: (order.route_outlet_id and order.route_outlet_id.area_id == self.area_id)
+                or (order.route_visit_id and order.route_visit_id.area_id == self.area_id)
+            )
+            direct_returns = direct_returns.filtered(
+                lambda direct_return: (direct_return.outlet_id and direct_return.outlet_id.area_id == self.area_id)
+                or (direct_return.visit_id and direct_return.visit_id.area_id == self.area_id)
+            )
         if self.outlet_id:
             payments = payments.filtered(lambda payment: payment.outlet_id == self.outlet_id)
-        return visits, plans, payments, closings, proposals
+            sale_orders = sale_orders.filtered(lambda order: order.route_outlet_id == self.outlet_id)
+            direct_returns = direct_returns.filtered(lambda direct_return: direct_return.outlet_id == self.outlet_id)
+        return visits, plans, payments, closings, proposals, sale_orders, direct_returns
 
     def _collect_dashboard_data(self):
         self.ensure_one()
@@ -327,19 +416,29 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         Closing = self.env["route.vehicle.closing"]
         Proposal = self.env["route.loading.proposal"]
         Picking = self.env["stock.picking"]
+        SaleOrder = self.env["sale.order"]
+        DirectReturn = self.env["route.direct.return"]
 
         visits = Visit.search(self._base_visit_domain(), order="date desc, start_datetime desc, id desc")
         plans = Plan.search(self._plan_domain(), order="date desc, id desc")
         closings = Closing.search(self._vehicle_closing_domain(), order="plan_date desc, id desc")
         proposals = Proposal.search(self._loading_domain(), order="plan_date desc, id desc")
         payments = Payment.search(self._promise_domain_stored(), order="promise_date asc, id desc")
+        sale_orders = SaleOrder.search(self._sale_order_domain(visits), order="date_order desc, id desc")
+        direct_returns = DirectReturn.search(self._direct_return_domain(), order="return_date desc, id desc")
 
         if self.vehicle_id:
             payments = payments.filtered(
                 lambda payment: (payment.visit_id and payment.visit_id.vehicle_id == self.vehicle_id)
                 or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == self.vehicle_id)
             )
-        visits, plans, payments, closings, proposals = self._filter_recordsets_for_city_area_outlet(visits, plans, payments, closings, proposals)
+            sale_orders = sale_orders.filtered(
+                lambda order: (order.route_visit_id and order.route_visit_id.vehicle_id == self.vehicle_id)
+                or bool(order.picking_ids.filtered(lambda picking: picking.location_id == self.vehicle_id.stock_location_id))
+            )
+        visits, plans, payments, closings, proposals, sale_orders, direct_returns = self._filter_recordsets_for_city_area_outlet(
+            visits, plans, payments, closings, proposals, sale_orders, direct_returns
+        )
         open_promises = payments.filtered(lambda payment: payment.promise_status in ("open", "due_today", "overdue"))
 
         related_picking_ids = set()
@@ -354,18 +453,25 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         for closing in closings:
             for picking in closing.reconciliation_picking_ids:
                 related_picking_ids.add(picking.id)
+        for order in sale_orders:
+            for picking in order.picking_ids:
+                related_picking_ids.add(picking.id)
+        for direct_return in direct_returns:
+            for picking in direct_return.picking_ids:
+                related_picking_ids.add(picking.id)
         pending_transfers = Picking.search([
             ("id", "in", list(related_picking_ids) or [0]),
             ("state", "not in", ["done", "cancel"]),
         ])
-        return visits, plans, closings, proposals, open_promises, pending_transfers
+        return visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns
 
+    @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
     @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
     def _compute_closing_dashboard(self):
         for dashboard in self:
             dashboard._reset_computed_values()
             try:
-                visits, plans, closings, proposals, open_promises, pending_transfers = dashboard._collect_dashboard_data()
+                visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = dashboard._collect_dashboard_data()
                 done_visits = visits.filtered(lambda visit: visit.visit_process_state == "done")
                 not_started_visits = visits.filtered(lambda visit: visit.visit_process_state == "draft")
                 active_visits = visits.filtered(lambda visit: visit.visit_process_state not in ["draft", "done", "cancel"])
@@ -384,8 +490,10 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                     lambda proposal: proposal.state not in ["approved", "cancelled"]
                     or (proposal.picking_id and proposal.picking_id.state not in ["done", "cancel"])
                 )
-                return_pickings = visits.mapped("return_picking_ids").filtered(lambda picking: picking.state != "cancel")
+                return_pickings = (visits.mapped("return_picking_ids") | direct_returns.mapped("picking_ids")).filtered(lambda picking: picking.state != "cancel")
                 refill_pickings = visits.mapped("refill_picking_id").filtered(lambda picking: picking.state != "cancel")
+                pending_sale_orders = sale_orders.filtered(lambda order: order.state in ["draft", "sent"])
+                pending_direct_returns = direct_returns.filtered(lambda direct_return: direct_return.state == "draft")
 
                 blocker_count = (
                     len(unfinished_visits)
@@ -397,6 +505,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                     + missing_closings_count
                     + len(pending_loading)
                     + len(pending_transfers)
+                    + len(pending_sale_orders)
+                    + len(pending_direct_returns)
                 )
 
                 dashboard.daily_visit_ids = [fields.Command.set(visits.ids)]
@@ -405,6 +515,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 dashboard.loading_proposal_ids = [fields.Command.set(proposals.ids)]
                 dashboard.open_promise_payment_ids = [fields.Command.set(open_promises.ids)]
                 dashboard.pending_transfer_ids = [fields.Command.set(pending_transfers.ids)]
+                dashboard.sale_order_ids = [fields.Command.set(sale_orders.ids)]
+                dashboard.direct_return_ids = [fields.Command.set(direct_returns.ids)]
 
                 dashboard.total_plan_count = len(plans)
                 dashboard.finalized_plan_count = len(plans.filtered("planning_finalized"))
@@ -428,6 +540,12 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 dashboard.pending_transfer_count = len(pending_transfers)
                 dashboard.return_transfer_count = len(return_pickings)
                 dashboard.refill_transfer_count = len(refill_pickings)
+                dashboard.sale_order_count = len(sale_orders)
+                dashboard.pending_sale_order_count = len(pending_sale_orders)
+                dashboard.sale_order_amount = sum(sale_orders.mapped("amount_total")) if sale_orders else 0.0
+                dashboard.direct_return_count = len(direct_returns)
+                dashboard.pending_direct_return_count = len(pending_direct_returns)
+                dashboard.direct_return_amount = sum(direct_returns.mapped("amount_total")) if direct_returns else 0.0
                 dashboard.blocker_count = blocker_count
                 dashboard.ready_to_close = blocker_count == 0
                 if dashboard.ready_to_close:
@@ -441,7 +559,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
 
     def _prepare_issue_line_values(self):
         self.ensure_one()
-        visits, plans, closings, proposals, open_promises, pending_transfers = self._collect_dashboard_data()
+        visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = self._collect_dashboard_data()
         lines = []
 
         def add(sequence, code, title, count, subtitle, severity="warning", amount=0.0, button_label="Open"):
@@ -473,17 +591,21 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             lambda proposal: proposal.state not in ["approved", "cancelled"]
             or (proposal.picking_id and proposal.picking_id.state not in ["done", "cancel"])
         )
+        pending_sale_orders = sale_orders.filtered(lambda order: order.state in ["draft", "sent"])
+        pending_direct_returns = direct_returns.filtered(lambda direct_return: direct_return.state == "draft")
 
         add(10, "unfinished_visits", _("Unfinished Visits"), len(unfinished), _("Visits that are not done or cancelled."), "danger", button_label=_("Open Visits"))
         add(20, "not_started_visits", _("Not Started Visits"), len(not_started), _("Planned visits not started yet."), "warning", button_label=_("Open Visits"))
         add(30, "location_issues", _("Location Review Pending"), len(location_issues), _("Location issues need supervisor review."), "warning", button_label=_("Open Location"))
         add(40, "open_due", _("Open Due"), len(open_due), _("Visits with remaining due amount."), "danger", sum(open_due.mapped("remaining_due_amount")) if open_due else 0.0, button_label=_("Open Visits"))
         add(50, "open_promises", _("Open Promises"), len(open_promises), _("Open, due today, or overdue promises."), "warning", sum(open_promises.mapped("promise_amount")) if open_promises else 0.0, button_label=_("Open Promises"))
-        add(60, "not_finalized_plans", _("Plans Not Finalized"), len(not_finalized), _("Daily route plans still need finalization."), "warning", button_label=_("Open Plans"))
-        add(70, "vehicle_closing_pending", _("Vehicle Closing Pending"), len(pending_closings) + len(missing_closings), _("Vehicle closing is missing or still draft."), "danger", button_label=_("Open Closings"))
-        add(80, "loading_pending", _("Loading / Transfer Pending"), len(pending_loading) + len(pending_transfers), _("Loading proposals or related transfers are not fully completed."), "warning", button_label=_("Open Loading"))
+        add(60, "pending_sale_orders", _("Pending Sales Orders"), len(pending_sale_orders), _("Direct sale orders still need confirmation."), "warning", sum(pending_sale_orders.mapped("amount_total")) if pending_sale_orders else 0.0, button_label=_("Open Orders"))
+        add(70, "pending_direct_returns", _("Pending Return Orders"), len(pending_direct_returns), _("Direct return orders still need processing."), "warning", sum(pending_direct_returns.mapped("amount_total")) if pending_direct_returns else 0.0, button_label=_("Open Returns"))
+        add(80, "not_finalized_plans", _("Plans Not Finalized"), len(not_finalized), _("Daily route plans still need finalization."), "warning", button_label=_("Open Plans"))
+        add(90, "vehicle_closing_pending", _("Vehicle Closing Pending"), len(pending_closings) + len(missing_closings), _("Vehicle closing is missing or still draft."), "danger", button_label=_("Open Closings"))
+        add(100, "loading_pending", _("Loading / Transfer Pending"), len(pending_loading) + len(pending_transfers), _("Loading proposals or related transfers are not fully completed."), "warning", button_label=_("Open Loading"))
         if not lines:
-            add(90, "ready", _("Ready to Close Day"), 0, _("No blocking items were found."), "success", button_label=_("Refresh"))
+            add(110, "ready", _("Ready to Close Day"), 0, _("No blocking items were found."), "success", button_label=_("Refresh"))
         return lines
 
     def _rebuild_issue_lines(self):
@@ -668,6 +790,59 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         return result
 
 
+    def action_open_sales_orders(self):
+        self.ensure_one()
+        action = self.env.ref("sale.action_orders", raise_if_not_found=False)
+        result = action.read()[0] if action else {
+            "type": "ir.actions.act_window",
+            "name": _("Sales Orders"),
+            "res_model": "sale.order",
+            "view_mode": "list,form",
+        }
+        result.update({
+            "name": _("Sales Orders to Review"),
+            "domain": [("id", "in", self.sale_order_ids.ids or [0])],
+            "context": {"create": False, "edit": True, "delete": False},
+        })
+        return result
+
+    def action_open_direct_returns(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_direct_return", raise_if_not_found=False)
+        result = action.read()[0] if action else {
+            "type": "ir.actions.act_window",
+            "name": _("Return Orders"),
+            "res_model": "route.direct.return",
+            "view_mode": "kanban,list,form",
+        }
+        result.update({
+            "name": _("Return Orders to Review"),
+            "domain": [("id", "in", self.direct_return_ids.ids or [0])],
+            "context": {"create": False, "edit": True, "delete": False},
+        })
+        return result
+
+    def action_open_pending_sale_orders(self):
+        self.ensure_one()
+        sale_orders = self.sale_order_ids.filtered(lambda order: order.state in ["draft", "sent"])
+        action = self.action_open_sales_orders()
+        action.update({
+            "name": _("Pending Sales Orders"),
+            "domain": [("id", "in", sale_orders.ids or [0])],
+        })
+        return action
+
+    def action_open_pending_direct_returns(self):
+        self.ensure_one()
+        direct_returns = self.direct_return_ids.filtered(lambda direct_return: direct_return.state == "draft")
+        action = self.action_open_direct_returns()
+        action.update({
+            "name": _("Pending Return Orders"),
+            "domain": [("id", "in", direct_returns.ids or [0])],
+        })
+        return action
+
+
 class RouteSupervisorDailyClosingIssue(models.TransientModel):
     _name = "route.supervisor.daily.closing.issue"
     _description = "Daily Closing Issue Card"
@@ -687,6 +862,8 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
             ("location_issues", "Location Issues"),
             ("open_due", "Open Due"),
             ("open_promises", "Open Promises"),
+            ("pending_sale_orders", "Pending Sales Orders"),
+            ("pending_direct_returns", "Pending Return Orders"),
             ("not_finalized_plans", "Plans Not Finalized"),
             ("vehicle_closing_pending", "Vehicle Closing Pending"),
             ("loading_pending", "Loading Pending"),
@@ -725,6 +902,10 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
             return dashboard.action_open_open_due_visits()
         if self.code == "open_promises":
             return dashboard.action_open_promises()
+        if self.code == "pending_sale_orders":
+            return dashboard.action_open_pending_sale_orders()
+        if self.code == "pending_direct_returns":
+            return dashboard.action_open_pending_direct_returns()
         if self.code == "not_finalized_plans":
             return dashboard.action_open_daily_plans()
         if self.code == "vehicle_closing_pending":
