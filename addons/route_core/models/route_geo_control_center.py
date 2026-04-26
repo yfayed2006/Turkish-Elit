@@ -126,10 +126,50 @@ class RouteGeoControlCenter(models.TransientModel):
         compute="_compute_geo_dashboard",
         readonly=True,
     )
+    mapped_visit_count = fields.Integer(
+        string="Mapped Visits",
+        compute="_compute_geo_dashboard",
+    )
+    unmapped_visit_count = fields.Integer(
+        string="No Map Point",
+        compute="_compute_geo_dashboard",
+    )
+    live_map_html = fields.Html(
+        string="Live Map",
+        compute="_compute_live_map_html",
+        sanitize=False,
+        readonly=True,
+    )
     live_map_note = fields.Char(
         string="Live Map Readiness",
         compute="_compute_geo_dashboard",
     )
+
+    def _geo_live_map_url(self):
+        self.ensure_one()
+        return "/route_core/geo/live_map/frame/%s" % self.id
+
+    @api.depends(
+        "company_id",
+        "visit_date",
+        "salesperson_id",
+        "vehicle_id",
+        "area_id",
+        "outlet_id",
+        "visit_process_filter",
+        "geo_review_filter",
+    )
+    def _compute_live_map_html(self):
+        for center in self:
+            if not center.id:
+                center.live_map_html = _("Save the Geo Control Center before opening the live map.")
+                continue
+            center.live_map_html = (
+                '<iframe src="%s" '
+                'style="width:100%%; min-height:680px; height:calc(100vh - 230px); '
+                'border:0; border-radius:12px; overflow:hidden;" '
+                'loading="lazy" referrerpolicy="same-origin"></iframe>'
+            ) % center._geo_live_map_url()
 
     def _get_base_visit_domain(self, include_process_filter=True):
         self.ensure_one()
@@ -220,6 +260,14 @@ class RouteGeoControlCenter(models.TransientModel):
             center.accepted_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "accepted"))
             center.needs_correction_count = len(counter_visits.filtered(lambda visit: visit.geo_review_supervisor_decision == "needs_correction"))
             center.filtered_visit_count = len(filtered_visits)
+            center.mapped_visit_count = len(filtered_visits.filtered(
+                lambda visit: bool(
+                    visit.geo_checkin_latitude
+                    or visit.geo_checkin_longitude
+                    or (visit.outlet_id and (visit.outlet_id.geo_latitude or visit.outlet_id.geo_longitude))
+                )
+            ))
+            center.unmapped_visit_count = center.filtered_visit_count - center.mapped_visit_count
             center.geo_visit_ids = [(6, 0, filtered_visits.ids)]
             center.live_map_note = _("Ready for B6.2 Live Map.")
 
@@ -250,6 +298,38 @@ class RouteGeoControlCenter(models.TransientModel):
 
     def action_refresh_dashboard(self):
         return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_open_live_map(self):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_geo_control_center_live_map_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Geo Live Map"),
+            "res_model": "route.geo.control.center",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def action_back_to_geo_dashboard(self):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_geo_control_center_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Geo Control Center"),
+            "res_model": "route.geo.control.center",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     def _action_open_geo_visits(self, name, domain):
         self.ensure_one()
@@ -388,4 +468,3 @@ class RouteGeoControlCenter(models.TransientModel):
 
     def action_open_geo_review(self):
         return self._action_open_geo_visits(_("Geo Check-in Review Cards"), self._get_base_visit_domain(include_process_filter=False))
-
