@@ -1,4 +1,32 @@
 <odoo>
+<record id="view_route_geo_control_card_search" model="ir.ui.view">
+<field name="name">route.visit.geo.control.card.search</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<search string="Geo Visit Cards">
+<field name="name"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="user_id"/>
+<field name="vehicle_id"/>
+<field name="area_id"/>
+<filter name="geo_pending_checkin" string="Pending Check-in" domain="[('geo_review_state','=','pending_checkin')]"/>
+<filter name="geo_outlet_missing" string="Missing Outlet GPS" domain="[('geo_review_state','=','outlet_missing')]"/>
+<filter name="geo_inside_zone" string="Inside Zone" domain="[('geo_review_state','=','inside_zone')]"/>
+<filter name="geo_outside_zone" string="Outside Zone" domain="[('geo_review_state','in',['outside_no_reason','outside_with_reason'])]"/>
+<filter name="geo_needs_review" string="Needs Review" domain="[('geo_review_required','=',True),('geo_review_supervisor_decision','=',False)]"/>
+<filter name="geo_accepted" string="Accepted" domain="[('geo_review_supervisor_decision','=','accepted')]"/>
+<filter name="geo_needs_correction" string="Needs Correction" domain="[('geo_review_supervisor_decision','=','needs_correction')]"/>
+<group expand="0" string="Group By">
+<filter name="group_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
+<filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
+<filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_geo_state" string="Geo State" context="{'group_by': 'geo_review_state'}"/>
+</group>
+</search>
+</field>
+</record>
 <record id="view_route_geo_control_visit_kanban" model="ir.ui.view">
 <field name="name">route.visit.geo.control.kanban</field>
 <field name="model">route.visit</field>
@@ -25,11 +53,11 @@
 <t t-name="card">
 <div class="o_kanban_record p-3">
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-<div>
+<div class="min-w-0">
 <strong class="d-block">
 <field name="outlet_id"/>
 </strong>
-<span class="text-muted">
+<span class="text-muted d-block text-nowrap">
 <field name="name"/>
 </span>
 </div>
@@ -104,21 +132,18 @@ m
 <form string="Geo Control Center" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
-<button name="action_open_filtered_visits" type="object" string="Open Filtered Cards" class="btn-primary" icon="fa-th-large"/>
-<button name="action_open_geo_review" type="object" string="Open Geo Review List" icon="fa-list"/>
+<button name="action_open_filtered_visits" type="object" string="Open Cards" class="btn-primary" icon="fa-th-large"/>
+<button name="action_open_geo_review" type="object" string="Review Cards" icon="fa-list"/>
 </header>
 <sheet>
+<field name="name" invisible="1"/>
 <div class="oe_title">
-<label for="visit_date" string="Geo Control Center"/>
-<h1>Daily Geo Control</h1>
-<p class="text-muted">Supervisor dashboard for today's route geo check-ins, review status, and map quick actions.</p>
+<h2>Daily Geo Control</h2>
+<p class="text-muted">Today's geo check-ins, supervisor review, and map actions.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
-<field name="total_visit_count" widget="statinfo" string="Today's Visits"/>
-</button>
-<button name="action_open_not_started_visits" type="object" class="oe_stat_button" icon="fa-clock-o">
-<field name="not_started_count" widget="statinfo" string="Not Started"/>
+<field name="total_visit_count" widget="statinfo" string="Today"/>
 </button>
 <button name="action_open_active_visits" type="object" class="oe_stat_button" icon="fa-play-circle">
 <field name="active_visit_count" widget="statinfo" string="Active"/>
@@ -127,28 +152,25 @@ m
 <field name="done_visit_count" widget="statinfo" string="Done"/>
 </button>
 <button name="action_open_pending_checkin_visits" type="object" class="oe_stat_button" icon="fa-map-o">
-<field name="pending_checkin_count" widget="statinfo" string="Pending Check-in"/>
+<field name="pending_checkin_count" widget="statinfo" string="No Check-in"/>
 </button>
 <button name="action_open_outlet_missing_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
-<field name="outlet_missing_count" widget="statinfo" string="Missing Outlet GPS"/>
+<field name="outlet_missing_count" widget="statinfo" string="No Outlet GPS"/>
 </button>
 <button name="action_open_inside_zone_visits" type="object" class="oe_stat_button" icon="fa-bullseye">
-<field name="inside_zone_count" widget="statinfo" string="Inside Zone"/>
+<field name="inside_zone_count" widget="statinfo" string="Inside"/>
 </button>
 <button name="action_open_outside_zone_visits" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
-<field name="outside_zone_count" widget="statinfo" string="Outside Zone"/>
-</button>
-<button name="action_open_outside_missing_reason_visits" type="object" class="oe_stat_button" icon="fa-question-circle">
-<field name="outside_missing_reason_count" widget="statinfo" string="Missing Reason"/>
+<field name="outside_zone_count" widget="statinfo" string="Outside"/>
 </button>
 <button name="action_open_needs_review_visits" type="object" class="oe_stat_button" icon="fa-user-md">
-<field name="needs_review_count" widget="statinfo" string="Needs Review"/>
+<field name="needs_review_count" widget="statinfo" string="Review"/>
 </button>
 <button name="action_open_accepted_visits" type="object" class="oe_stat_button" icon="fa-thumbs-up">
 <field name="accepted_count" widget="statinfo" string="Accepted"/>
 </button>
 <button name="action_open_needs_correction_visits" type="object" class="oe_stat_button" icon="fa-edit">
-<field name="needs_correction_count" widget="statinfo" string="Needs Correction"/>
+<field name="needs_correction_count" widget="statinfo" string="Correction"/>
 </button>
 </div>
 <group string="Filters" col="4">
@@ -167,12 +189,8 @@ m
 <field name="outlet_id"/>
 <field name="filtered_visit_count" readonly="1"/>
 </group>
-<group>
-<field name="live_map_note" readonly="1" nolabel="1"/>
 </group>
-</group>
-<notebook>
-<page string="Today Geo Visit Cards">
+<separator string="Today Geo Visit Cards"/>
 <field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="name"/>
@@ -195,11 +213,11 @@ m
 <t t-name="card">
 <div class="o_kanban_record p-3">
 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-<div>
+<div class="min-w-0">
 <strong class="d-block">
 <field name="outlet_id"/>
 </strong>
-<span class="text-muted">
+<span class="text-muted d-block text-nowrap">
 <field name="name"/>
 </span>
 </div>
@@ -266,8 +284,6 @@ m
 </templates>
 </kanban>
 </field>
-</page>
-</notebook>
 </sheet>
 </form>
 </field>
