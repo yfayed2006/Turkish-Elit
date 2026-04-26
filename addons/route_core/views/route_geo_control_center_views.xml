@@ -4,26 +4,26 @@
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
 <search string="Geo Visit Cards">
-<field name="name"/>
+<field name="name" string="Visit"/>
 <field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="user_id"/>
+<field name="partner_id" string="Customer"/>
+<field name="user_id" string="Salesperson"/>
 <field name="vehicle_id"/>
 <field name="area_id"/>
-<filter name="geo_pending_checkin" string="Pending Check-in" domain="[('geo_review_state','=','pending_checkin')]"/>
-<filter name="geo_outlet_missing" string="Missing Outlet GPS" domain="[('geo_review_state','=','outlet_missing')]"/>
-<filter name="geo_inside_zone" string="Inside Zone" domain="[('geo_review_state','=','inside_zone')]"/>
-<filter name="geo_outside_zone" string="Outside Zone" domain="[('geo_review_state','in',['outside_no_reason','outside_with_reason'])]"/>
-<filter name="geo_needs_review" string="Needs Review" domain="[('geo_review_required','=',True),('geo_review_supervisor_decision','=',False)]"/>
-<filter name="geo_accepted" string="Accepted" domain="[('geo_review_supervisor_decision','=','accepted')]"/>
-<filter name="geo_needs_correction" string="Needs Correction" domain="[('geo_review_supervisor_decision','=','needs_correction')]"/>
-<group expand="0" string="Group By">
+<separator/>
+<filter name="geo_pending_checkin" string="Pending Check-in" domain="[('geo_review_state', '=', 'pending_checkin')]"/>
+<filter name="geo_outlet_missing" string="Missing Outlet GPS" domain="[('geo_review_state', '=', 'outlet_missing')]"/>
+<filter name="geo_inside_zone" string="Inside Zone" domain="[('geo_review_state', '=', 'inside_zone')]"/>
+<filter name="geo_outside_zone" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
+<filter name="geo_needs_review" string="Needs Review" domain="[('geo_review_required', '=', True), ('geo_review_supervisor_decision', '=', False)]"/>
+<filter name="geo_accepted" string="Accepted" domain="[('geo_review_supervisor_decision', '=', 'accepted')]"/>
+<filter name="geo_needs_correction" string="Needs Correction" domain="[('geo_review_supervisor_decision', '=', 'needs_correction')]"/>
+<separator/>
 <filter name="group_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
 <filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
 <filter name="group_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_geo_state" string="Geo State" context="{'group_by': 'geo_review_state'}"/>
-</group>
 </search>
 </field>
 </record>
