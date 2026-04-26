@@ -216,7 +216,7 @@ class RouteGeoControlCenter(models.TransientModel):
             center.filtered_visit_count = len(filtered_visits)
             center.geo_visit_ids = [(6, 0, filtered_visits.ids)]
             center.live_map_note = _(
-                "B6.1 uses list/card monitoring. B6.2 can reuse the same filtered visits to feed the live map layer."
+                "B6.1 uses mobile cards and filtered visit lists. B6.2 can reuse these filtered visits for the live map layer."
             )
 
     @api.model
@@ -273,8 +273,44 @@ class RouteGeoControlCenter(models.TransientModel):
             action["search_view_id"] = search_view.id
         return action
 
+    def _action_open_geo_review_list(self, name, domain):
+        self.ensure_one()
+        action_ref = self.env.ref("route_core.action_route_geo_review", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+            action.update(
+                {
+                    "name": name,
+                    "domain": domain,
+                    "view_mode": "list,form",
+                    "context": {"create": False, "edit": True, "delete": False},
+                }
+            )
+            return action
+        views = []
+        list_view = self.env.ref("route_core.view_route_geo_review_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_geo_review_form", raise_if_not_found=False)
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        action = {
+            "type": "ir.actions.act_window",
+            "name": name,
+            "res_model": "route.visit",
+            "view_mode": "list,form",
+            "domain": domain,
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if views:
+            action["views"] = views
+        search_view = self.env.ref("route_core.view_route_geo_review_search", raise_if_not_found=False)
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
+
     def action_open_filtered_visits(self):
-        return self._action_open_geo_visits(_("Filtered Geo Visits"), self._get_filtered_visit_domain())
+        return self._action_open_geo_visits(_("Filtered Geo Visit Cards"), self._get_filtered_visit_domain())
 
     def action_open_total_visits(self):
         return self._action_open_geo_visits(_("Today's Geo Visits"), self._get_base_visit_domain(include_process_filter=True))
@@ -346,12 +382,5 @@ class RouteGeoControlCenter(models.TransientModel):
         )
 
     def action_open_geo_review(self):
-        self.ensure_one()
-        action_ref = self.env.ref("route_core.action_route_geo_review", raise_if_not_found=False)
-        domain = self._get_base_visit_domain(include_process_filter=True)
-        if action_ref:
-            action = action_ref.read()[0]
-            action["domain"] = domain
-            action["context"] = {"create": False, "edit": True, "delete": False}
-            return action
-        return self._action_open_geo_visits(_("Geo Check-in Review"), domain)
+        return self._action_open_geo_review_list(_("Geo Check-in Review"), self._get_base_visit_domain(include_process_filter=True))
+
