@@ -62,12 +62,19 @@
 </span>
 </div>
 <div class="text-end">
-<field name="geo_review_state" widget="badge"/>
-<div class="mt-1">
-<field name="geo_review_supervisor_decision" widget="badge"/>
+<span t-if="record.geo_review_state.value" class="badge rounded-pill bg-secondary text-white">
+<t t-esc="record.geo_review_state.value"/>
+</span>
+<div t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'" class="mt-1">
+<span class="badge rounded-pill bg-success text-white">Accepted</span>
 </div>
-<div class="mt-1">
-<field name="visit_process_state" widget="badge"/>
+<div t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'" class="mt-1">
+<span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
+</div>
+<div t-if="record.visit_process_state.value" class="mt-1">
+<span class="badge rounded-pill bg-light text-dark">
+<t t-esc="record.visit_process_state.value"/>
+</span>
 </div>
 </div>
 </div>
@@ -115,12 +122,12 @@ m
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm">Check-in Map</button>
-<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm">Accept</button>
-<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm">Needs Correction</button>
-<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2">Check-in Map</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'" name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2">Accept</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'" name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2">Needs Correction</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value" name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm px-2">Reset</button>
 </div>
 </div>
 </t>
@@ -208,12 +215,19 @@ m
 </span>
 </div>
 <div class="text-end">
-<field name="geo_review_state" widget="badge"/>
-<div class="mt-1">
-<field name="geo_review_supervisor_decision" widget="badge"/>
+<span t-if="record.geo_review_state.value" class="badge rounded-pill bg-secondary text-white">
+<t t-esc="record.geo_review_state.value"/>
+</span>
+<div t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'" class="mt-1">
+<span class="badge rounded-pill bg-success text-white">Accepted</span>
 </div>
-<div class="mt-1">
-<field name="visit_process_state" widget="badge"/>
+<div t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'" class="mt-1">
+<span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
+</div>
+<div t-if="record.visit_process_state.value" class="mt-1">
+<span class="badge rounded-pill bg-light text-dark">
+<t t-esc="record.visit_process_state.value"/>
+</span>
 </div>
 </div>
 </div>
@@ -261,12 +275,12 @@ m
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm">Check-in Map</button>
-<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm">Accept</button>
-<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm">Needs Correction</button>
-<button name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2">Check-in Map</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'" name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2">Accept</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'" name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2">Needs Correction</button>
+<button t-if="record.geo_review_supervisor_decision.raw_value" name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm px-2">Reset</button>
 </div>
 </div>
 </t>
