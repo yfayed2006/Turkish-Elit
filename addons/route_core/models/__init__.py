@@ -61,3 +61,4 @@ from . import route_visit_geo_checkin
 
 from . import route_geo_control_center
 from . import route_supervisor_daily_control
+
