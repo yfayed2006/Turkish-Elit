@@ -225,10 +225,35 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
 .popup-actions {{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; color:#6b7280; font-weight:700; }}
 @media (max-width: 900px) {{
-  .route-map-header {{ align-items:flex-start; flex-direction:column; }}
-  .route-map-legend {{ justify-content:flex-start; }}
-  .route-map-body {{ grid-template-columns:1fr; grid-template-rows:55vh auto; }}
-  .route-map-side {{ border-left:0; border-top:1px solid #d9dee3; max-height:none; }}
+  html, body {{ height:auto; min-height:100%; overflow-x:hidden; }}
+  .route-map-page {{ height:auto; min-height:0; display:block; }}
+  .route-map-header {{ align-items:flex-start; flex-direction:column; gap:6px; padding:7px 8px; }}
+  .route-map-title {{ font-size:14px; line-height:1.15; }}
+  .route-map-subtitle {{ font-size:10px; margin-top:1px; }}
+  .route-map-legend {{ justify-content:flex-start; gap:4px; width:100%; }}
+  .legend-pill {{ font-size:10px; padding:3px 6px; gap:4px; }}
+  .legend-dot {{ width:8px; height:8px; }}
+  .toast-note {{ margin:6px 8px; padding:6px 8px; font-size:13px; }}
+  .route-map-body {{ display:flex; flex-direction:column; min-height:0; height:auto; }}
+  #map {{ height:52vh; min-height:300px; max-height:430px; width:100%; flex:none; }}
+  .route-map-side {{ border-left:0; border-top:1px solid #d9dee3; overflow:visible; max-height:none; padding:8px; background:#f5f6f7; }}
+  .visit-card {{ margin:0 0 8px 0; padding:9px; border-radius:10px; }}
+  .visit-top {{ gap:6px; }}
+  .visit-title {{ font-size:14px; }}
+  .visit-ref {{ font-size:12px; }}
+  .badge {{ font-size:10px; padding:3px 7px; }}
+  .visit-grid {{ grid-template-columns:1fr 1fr; gap:5px 8px; margin-top:8px; font-size:12px; }}
+  .popup-row {{ font-size:11px; }}
+  .actions {{ gap:5px; margin-top:8px; }}
+  .map-btn {{ font-size:11px; padding:6px 7px; border-radius:5px; }}
+  .leaflet-popup-content {{ max-width:240px; }}
+}}
+@media (max-width: 480px) {{
+  #map {{ height:48vh; min-height:280px; max-height:390px; }}
+  .route-map-header {{ padding:6px 7px; }}
+  .route-map-subtitle {{ display:none; }}
+  .legend-pill {{ font-size:9.5px; padding:3px 5px; }}
+  .visit-grid {{ grid-template-columns:1fr 1fr; }}
 }}
 </style>
 </head>
