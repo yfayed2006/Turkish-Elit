@@ -173,23 +173,6 @@ m
 <field name="needs_correction_count" widget="statinfo" string="Correction"/>
 </button>
 </div>
-<group string="Filters" col="4">
-<group>
-<field name="company_id" readonly="1"/>
-<field name="visit_date"/>
-<field name="visit_process_filter"/>
-</group>
-<group>
-<field name="geo_review_filter"/>
-<field name="salesperson_id"/>
-<field name="vehicle_id"/>
-</group>
-<group>
-<field name="area_id"/>
-<field name="outlet_id"/>
-<field name="filtered_visit_count" readonly="1"/>
-</group>
-</group>
 <separator string="Today Geo Visit Cards"/>
 <field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
@@ -284,6 +267,23 @@ m
 </templates>
 </kanban>
 </field>
+<group string="Filters" col="4">
+<group>
+<field name="company_id" readonly="1"/>
+<field name="visit_date"/>
+<field name="visit_process_filter"/>
+</group>
+<group>
+<field name="geo_review_filter"/>
+<field name="salesperson_id"/>
+<field name="vehicle_id"/>
+</group>
+<group>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="filtered_visit_count" readonly="1"/>
+</group>
+</group>
 </sheet>
 </form>
 </field>
