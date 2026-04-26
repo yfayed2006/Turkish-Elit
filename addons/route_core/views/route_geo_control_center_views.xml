@@ -61,21 +61,31 @@
 <field name="name"/>
 </span>
 </div>
-<div class="text-end">
-<span t-if="record.geo_review_state.value" class="badge rounded-pill bg-secondary text-white">
-<t t-esc="record.geo_review_state.value"/>
-</span>
-<div t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'" class="mt-1">
+<div class="text-end d-flex flex-column align-items-end gap-1">
+<t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
+<span class="badge rounded-pill bg-light text-dark border">Pending Check-in</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
+<span class="badge rounded-pill bg-light text-dark border">Outlet Location Missing</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'inside_zone'">
+<span class="badge rounded-pill bg-light text-dark border">Inside Zone</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
+<span class="badge rounded-pill bg-warning text-dark">Outside - Missing Reason</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
+<span class="badge rounded-pill bg-light text-dark border">Outside - Reason Recorded</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
 <span class="badge rounded-pill bg-success text-white">Accepted</span>
-</div>
-<div t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'" class="mt-1">
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
 <span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
-</div>
-<div t-if="record.visit_process_state.value" class="mt-1">
-<span class="badge rounded-pill bg-light text-dark">
-<t t-esc="record.visit_process_state.value"/>
+</t>
+<span class="badge rounded-pill bg-light text-dark border">
+<field name="visit_process_state"/>
 </span>
-</div>
 </div>
 </div>
 <div class="row g-2 small mb-2">
@@ -122,12 +132,18 @@ m
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2">Check-in Map</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'" name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2">Accept</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'" name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2">Needs Correction</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value" name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm px-2">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2 py-1">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2 py-1">Check-in Map</button>
+<t t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'">
+<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2 py-1">Accept</button>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'">
+<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2 py-1">Needs Correction</button>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value">
+<button name="action_geo_review_reset_decision" type="object" class="btn btn-outline-secondary btn-sm px-2 py-1">Reset</button>
+</t>
 </div>
 </div>
 </t>
@@ -183,6 +199,23 @@ m
 <field name="needs_correction_count" widget="statinfo" string="Correction"/>
 </button>
 </div>
+<group string="Filters" col="4">
+<group>
+<field name="company_id" readonly="1"/>
+<field name="visit_date"/>
+<field name="visit_process_filter"/>
+</group>
+<group>
+<field name="geo_review_filter"/>
+<field name="salesperson_id"/>
+<field name="vehicle_id"/>
+</group>
+<group>
+<field name="area_id"/>
+<field name="outlet_id"/>
+<field name="filtered_visit_count" readonly="1"/>
+</group>
+</group>
 <separator string="Today Geo Visit Cards"/>
 <field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
 <kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
@@ -214,21 +247,31 @@ m
 <field name="name"/>
 </span>
 </div>
-<div class="text-end">
-<span t-if="record.geo_review_state.value" class="badge rounded-pill bg-secondary text-white">
-<t t-esc="record.geo_review_state.value"/>
-</span>
-<div t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'" class="mt-1">
+<div class="text-end d-flex flex-column align-items-end gap-1">
+<t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
+<span class="badge rounded-pill bg-light text-dark border">Pending Check-in</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
+<span class="badge rounded-pill bg-light text-dark border">Outlet Location Missing</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'inside_zone'">
+<span class="badge rounded-pill bg-light text-dark border">Inside Zone</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
+<span class="badge rounded-pill bg-warning text-dark">Outside - Missing Reason</span>
+</t>
+<t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
+<span class="badge rounded-pill bg-light text-dark border">Outside - Reason Recorded</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
 <span class="badge rounded-pill bg-success text-white">Accepted</span>
-</div>
-<div t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'" class="mt-1">
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
 <span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
-</div>
-<div t-if="record.visit_process_state.value" class="mt-1">
-<span class="badge rounded-pill bg-light text-dark">
-<t t-esc="record.visit_process_state.value"/>
+</t>
+<span class="badge rounded-pill bg-light text-dark border">
+<field name="visit_process_state"/>
 </span>
-</div>
 </div>
 </div>
 <div class="row g-2 small mb-2">
@@ -275,35 +318,24 @@ m
 <field name="geo_checkin_outside_zone_reason"/>
 </div>
 <div class="d-flex flex-wrap gap-1">
-<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2">Open Visit</button>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2">Outlet Map</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2">Check-in Map</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'" name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2">Accept</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'" name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2">Needs Correction</button>
-<button t-if="record.geo_review_supervisor_decision.raw_value" name="action_geo_review_reset_decision" type="object" class="btn btn-light btn-sm px-2">Reset</button>
+<button name="action_open_geo_review_visit" type="object" class="btn btn-primary btn-sm px-2 py-1">Open Visit</button>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary btn-sm px-2 py-1">Outlet Map</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary btn-sm px-2 py-1">Check-in Map</button>
+<t t-if="record.geo_review_supervisor_decision.raw_value != 'accepted'">
+<button name="action_geo_review_accept" type="object" class="btn btn-success btn-sm px-2 py-1">Accept</button>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value != 'needs_correction'">
+<button name="action_geo_review_needs_correction" type="object" class="btn btn-warning btn-sm px-2 py-1">Needs Correction</button>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value">
+<button name="action_geo_review_reset_decision" type="object" class="btn btn-outline-secondary btn-sm px-2 py-1">Reset</button>
+</t>
 </div>
 </div>
 </t>
 </templates>
 </kanban>
 </field>
-<group string="Filters" col="4">
-<group>
-<field name="company_id" readonly="1"/>
-<field name="visit_date"/>
-<field name="visit_process_filter"/>
-</group>
-<group>
-<field name="geo_review_filter"/>
-<field name="salesperson_id"/>
-<field name="vehicle_id"/>
-</group>
-<group>
-<field name="area_id"/>
-<field name="outlet_id"/>
-<field name="filtered_visit_count" readonly="1"/>
-</group>
-</group>
 </sheet>
 </form>
 </field>
