@@ -158,7 +158,8 @@ m
 <form string="Geo Control Center" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
-<button name="action_open_filtered_visits" type="object" string="Open Cards" class="btn-primary" icon="fa-th-large"/>
+<button name="action_open_live_map" type="object" string="Live Map" class="btn-primary" icon="fa-map-marker"/>
+<button name="action_open_filtered_visits" type="object" string="Open Cards" icon="fa-th-large"/>
 <button name="action_open_geo_review" type="object" string="Review Cards" icon="fa-list"/>
 </header>
 <sheet>
@@ -336,6 +337,68 @@ m
 </templates>
 </kanban>
 </field>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_geo_control_center_live_map_form" model="ir.ui.view">
+<field name="name">route.geo.control.center.live.map.form</field>
+<field name="model">route.geo.control.center</field>
+<field name="arch" type="xml">
+<form string="Geo Live Map" create="0" delete="0">
+<header>
+<button name="action_back_to_geo_dashboard" type="object" string="Back to Dashboard" icon="fa-arrow-left"/>
+<button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_open_filtered_visits" type="object" string="Open Cards" icon="fa-th-large"/>
+<button name="action_open_geo_review" type="object" string="Review Cards" icon="fa-list"/>
+</header>
+<sheet>
+<field name="name" invisible="1"/>
+<div class="oe_title">
+<h2>Geo Live Map</h2>
+<p class="text-muted">Live supervisor map for the filtered geo visits. Markers use the check-in point when available, otherwise the outlet GPS point.</p>
+</div>
+<div class="oe_button_box" name="button_box">
+<button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
+<field name="total_visit_count" widget="statinfo" string="Today"/>
+</button>
+<button name="action_open_filtered_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
+<field name="mapped_visit_count" widget="statinfo" string="Mapped"/>
+</button>
+<button name="action_open_filtered_visits" type="object" class="oe_stat_button" icon="fa-map-o">
+<field name="unmapped_visit_count" widget="statinfo" string="No Map Point"/>
+</button>
+<button name="action_open_outside_zone_visits" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
+<field name="outside_zone_count" widget="statinfo" string="Outside"/>
+</button>
+<button name="action_open_needs_review_visits" type="object" class="oe_stat_button" icon="fa-user-md">
+<field name="needs_review_count" widget="statinfo" string="Review"/>
+</button>
+<button name="action_open_accepted_visits" type="object" class="oe_stat_button" icon="fa-thumbs-up">
+<field name="accepted_count" widget="statinfo" string="Accepted"/>
+</button>
+<button name="action_open_needs_correction_visits" type="object" class="oe_stat_button" icon="fa-edit">
+<field name="needs_correction_count" widget="statinfo" string="Correction"/>
+</button>
+</div>
+<group string="Map Filters" col="4">
+<group>
+<field name="company_id" readonly="1"/>
+<field name="visit_date" readonly="1"/>
+<field name="visit_process_filter" readonly="1"/>
+</group>
+<group>
+<field name="geo_review_filter" readonly="1"/>
+<field name="salesperson_id" readonly="1"/>
+<field name="vehicle_id" readonly="1"/>
+</group>
+<group>
+<field name="area_id" readonly="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="filtered_visit_count" readonly="1"/>
+</group>
+</group>
+<field name="live_map_html" nolabel="1" widget="html" readonly="1"/>
 </sheet>
 </form>
 </field>
