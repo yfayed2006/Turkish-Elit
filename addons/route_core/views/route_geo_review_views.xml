@@ -3,7 +3,7 @@
 <field name="name">route.visit.geo.review.search</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<search string="Geo Check-in Review">
+<search string="Visit Location Review">
 <field name="name" string="Visit"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -30,7 +30,7 @@
 <filter name="filter_started" string="Started Visits" domain="[('visit_process_state', '!=', 'draft')]"/>
 <filter name="filter_active" string="Active Visits" domain="[('visit_process_state', 'not in', ['done', 'cancel'])]"/>
 <separator/>
-<filter name="group_by_geo_review" string="Geo Review" context="{'group_by': 'geo_review_state'}"/>
+<filter name="group_by_geo_review" string="Location Review" context="{'group_by': 'geo_review_state'}"/>
 <filter name="group_by_supervisor_decision" string="Supervisor Decision" context="{'group_by': 'geo_review_supervisor_decision'}"/>
 <filter name="group_by_salesperson" string="Salesperson" context="{'group_by': 'user_id'}"/>
 <filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
@@ -50,7 +50,7 @@
 <field name="name">route.visit.geo.review.list</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<list string="Geo Check-in Review" create="0" delete="0" default_order="date desc, geo_checkin_datetime desc, id desc">
+<list string="Visit Location Review" create="0" delete="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="outlet_geo_status" column_invisible="1"/>
 <field name="geo_review_required" column_invisible="1"/>
 <field name="geo_review_supervisor_decision" column_invisible="1"/>
@@ -67,7 +67,7 @@
 <field name="outlet_id" optional="show"/>
 <field name="partner_id" string="Customer" optional="show"/>
 <field name="area_id" optional="show"/>
-<field name="geo_review_state" string="Geo Review" widget="badge" optional="show"/>
+<field name="geo_review_state" string="Location Review" widget="badge" optional="show"/>
 <field name="geo_checkin_distance_display" string="Distance" optional="show"/>
 <field name="geo_checkin_datetime" string="Check-in Time" optional="show"/>
 <field name="geo_checkin_accuracy_m" string="Accuracy (m)" optional="show"/>
@@ -84,12 +84,12 @@
 <field name="name">route.visit.geo.review.form</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<form string="Geo Check-in Review" create="0" delete="0">
+<form string="Visit Location Review" create="0" delete="0">
 <header>
 <button name="action_open_geo_review_visit" type="object" string="Open Full Visit" class="btn-primary" icon="fa-external-link"/>
 <button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
 <button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
-<button name="action_geo_review_accept" type="object" string="Accept Geo Review" class="btn-primary" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
+<button name="action_geo_review_accept" type="object" string="Accept Location Review" class="btn-primary" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
 <button name="action_geo_review_needs_correction" type="object" string="Needs Correction" icon="fa-exclamation-triangle" invisible="not geo_review_required or geo_review_supervisor_decision == 'needs_correction'"/>
 <button name="action_geo_review_reset_decision" type="object" string="Reset Review" icon="fa-undo" invisible="not geo_review_supervisor_decision"/>
 </header>
@@ -114,7 +114,7 @@
 <field name="area_id" readonly="1"/>
 </group>
 </group>
-<group string="Geo Review Snapshot" col="4">
+<group string="Location Review Snapshot" col="4">
 <group>
 <field name="geo_review_state" widget="badge" readonly="1"/>
 <field name="geo_review_missing_reason" readonly="1"/>
@@ -128,7 +128,7 @@
 </group>
 <group string="Map Coordinates" col="4">
 <group>
-<field name="outlet_geo_coordinates" string="Outlet GPS" readonly="1"/>
+<field name="outlet_geo_coordinates" string="Outlet Location" readonly="1"/>
 <field name="route_geo_checkin_radius_m" string="Allowed Radius (m)" readonly="1"/>
 </group>
 <group>
@@ -154,13 +154,13 @@
 </field>
 </record>
 <record id="action_route_geo_review" model="ir.actions.act_window">
-<field name="name">Geo Check-in Review</field>
+<field name="name">Visit Location Review</field>
 <field name="res_model">route.visit</field>
 <field name="view_mode">list,form</field>
 <field name="search_view_id" ref="route_core.view_route_geo_review_search"/>
 <field name="context">{'search_default_filter_geo_outside': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 <field name="help" type="html">
-<p class="o_view_nocontent_smiling_face">Review geo check-ins, outside-zone reasons, and map positions from this supervisor screen.</p>
+<p class="o_view_nocontent_smiling_face">Review location check-ins, outside-zone reasons, and map positions from this supervisor screen.</p>
 </field>
 </record>
 <record id="action_route_geo_review_list_view" model="ir.actions.act_window.view">
@@ -175,8 +175,8 @@
 <field name="view_id" ref="route_core.view_route_geo_review_form"/>
 <field name="act_window_id" ref="route_core.action_route_geo_review"/>
 </record>
-<menuitem id="menu_route_geo_review" name="Geo Check-in Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<!--  Force the menu back to active in case a previous uploaded patch left the existing menu inactive in the database.  -->
+<menuitem id="menu_route_geo_review" name="Visit Location Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<!--   Force the menu back to active in case a previous uploaded patch left the existing menu inactive in the database.   -->
 <record id="menu_route_geo_review" model="ir.ui.menu">
 <field name="active" eval="True"/>
 <field name="sequence" eval="12"/>
