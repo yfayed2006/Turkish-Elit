@@ -3,7 +3,7 @@
 <field name="name">route.visit.geo.control.card.search</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<search string="Geo Visit Cards">
+<search string="Visit Location Cards">
 <field name="name" string="Visit"/>
 <field name="outlet_id"/>
 <field name="partner_id" string="Customer"/>
@@ -12,7 +12,7 @@
 <field name="area_id"/>
 <separator/>
 <filter name="geo_pending_checkin" string="Pending Check-in" domain="[('geo_review_state', '=', 'pending_checkin')]"/>
-<filter name="geo_outlet_missing" string="Missing Outlet GPS" domain="[('geo_review_state', '=', 'outlet_missing')]"/>
+<filter name="geo_outlet_missing" string="Missing Outlet Location" domain="[('geo_review_state', '=', 'outlet_missing')]"/>
 <filter name="geo_inside_zone" string="Inside Zone" domain="[('geo_review_state', '=', 'inside_zone')]"/>
 <filter name="geo_outside_zone" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
 <filter name="geo_needs_review" string="Needs Review" domain="[('geo_review_required', '=', True), ('geo_review_supervisor_decision', '=', False)]"/>
@@ -23,7 +23,7 @@
 <filter name="group_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
 <filter name="group_area" string="Area" context="{'group_by': 'area_id'}"/>
 <filter name="group_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
-<filter name="group_geo_state" string="Geo State" context="{'group_by': 'geo_review_state'}"/>
+<filter name="group_geo_state" string="Location Status" context="{'group_by': 'geo_review_state'}"/>
 </search>
 </field>
 </record>
@@ -31,7 +31,7 @@
 <field name="name">route.visit.geo.control.kanban</field>
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
-<kanban string="Geo Visit Cards" class="o_kanban_mobile route_geo_control_visit_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
+<kanban string="Visit Location Cards" class="o_kanban_mobile route_geo_control_visit_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -155,7 +155,7 @@ m
 <field name="name">route.geo.control.center.form</field>
 <field name="model">route.geo.control.center</field>
 <field name="arch" type="xml">
-<form string="Geo Control Center" create="0" delete="0">
+<form string="Visit Location Control" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
 <button name="action_open_live_map" type="object" string="Live Map" class="btn-primary" icon="fa-map-marker"/>
@@ -165,8 +165,8 @@ m
 <sheet>
 <field name="name" invisible="1"/>
 <div class="oe_title">
-<h2>Daily Geo Control</h2>
-<p class="text-muted">Today's geo check-ins, supervisor review, and map actions.</p>
+<h2>Daily Visit Location Control</h2>
+<p class="text-muted">Today's location check-ins, supervisor review, and map actions.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
@@ -182,7 +182,7 @@ m
 <field name="pending_checkin_count" widget="statinfo" string="No Check-in"/>
 </button>
 <button name="action_open_outlet_missing_visits" type="object" class="oe_stat_button" icon="fa-map-marker">
-<field name="outlet_missing_count" widget="statinfo" string="No Outlet GPS"/>
+<field name="outlet_missing_count" widget="statinfo" string="No Outlet Location"/>
 </button>
 <button name="action_open_inside_zone_visits" type="object" class="oe_stat_button" icon="fa-bullseye">
 <field name="inside_zone_count" widget="statinfo" string="Inside"/>
@@ -217,9 +217,9 @@ m
 <field name="filtered_visit_count" readonly="1"/>
 </group>
 </group>
-<separator string="Today Geo Visit Cards"/>
+<separator string="Today Visit Location Cards"/>
 <field name="geo_visit_ids" nolabel="1" readonly="1" mode="kanban" context="{'create': 0, 'edit': 0, 'delete': 0}">
-<kanban string="Filtered Geo Visits" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
+<kanban string="Filtered Visit Locations" class="o_kanban_mobile route_geo_control_embedded_kanban" create="0" delete="0" quick_create="0" default_order="date desc, geo_checkin_datetime desc, id desc">
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -345,7 +345,7 @@ m
 <field name="name">route.geo.control.center.live.map.form</field>
 <field name="model">route.geo.control.center</field>
 <field name="arch" type="xml">
-<form string="Geo Live Map" create="0" delete="0">
+<form string="Visit Location Map" create="0" delete="0">
 <header>
 <button name="action_back_to_dashboard" type="object" string="Back to Dashboard" class="btn-primary" icon="fa-arrow-left"/>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
@@ -355,8 +355,8 @@ m
 <sheet>
 <field name="name" invisible="1"/>
 <div class="oe_title">
-<h2>Geo Live Map</h2>
-<p class="text-muted">Live supervisor map for filtered geo visits. Markers use the check-in point when available, otherwise the outlet GPS point.</p>
+<h2>Visit Location Map</h2>
+<p class="text-muted">Live supervisor map for filtered geo visits. Markers use the check-in point when available, otherwise the outlet location point.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
@@ -403,7 +403,7 @@ m
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-2 h-100 bg-white">
-<span class="text-muted small d-block">Geo State</span>
+<span class="text-muted small d-block">Location Status</span>
 <field name="geo_review_filter" nolabel="1"/>
 </div>
 </div>
@@ -439,10 +439,10 @@ m
 </field>
 </record>
 <record id="server_action_open_route_geo_control_center" model="ir.actions.server">
-<field name="name">Geo Control Center</field>
+<field name="name">Visit Location Control</field>
 <field name="model_id" ref="route_core.model_route_geo_control_center"/>
 <field name="state">code</field>
 <field name="code">action = env["route.geo.control.center"].action_open_geo_control_center()</field>
 </record>
-<menuitem id="menu_route_geo_control_center" name="Geo Control Center" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_geo_control_center" sequence="11" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<menuitem id="menu_route_geo_control_center" name="Visit Location Control" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_geo_control_center" sequence="11" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 </odoo>
