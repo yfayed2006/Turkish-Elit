@@ -66,25 +66,19 @@
 <form string="Supervisor Daily Closing" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_validate_daily_closing" type="object" string="Validate Closing" icon="fa-check-circle" class="btn-primary"/>
 <button name="action_open_daily_control" type="object" string="Daily Control" icon="fa-dashboard"/>
-<button name="action_open_unfinished_visits" type="object" string="Unfinished Visits" icon="fa-exclamation-circle" class="btn-primary"/>
-<button name="action_open_vehicle_closings" type="object" string="Vehicle Closing" icon="fa-truck"/>
+<button name="action_open_all_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
+<button name="action_open_unfinished_visits" type="object" string="Unfinished" icon="fa-exclamation-circle"/>
+<button name="action_open_location_issues" type="object" string="Location Review" icon="fa-map-marker"/>
+<button name="action_open_open_due_visits" type="object" string="Open Due" icon="fa-money"/>
 <button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-check-o"/>
+<button name="action_open_vehicle_closings" type="object" string="Vehicle Closing" icon="fa-truck"/>
 <button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
 <button name="action_open_loading_proposals" type="object" string="Loading" icon="fa-cubes"/>
 <button name="action_open_pending_transfers" type="object" string="Transfers" icon="fa-exchange"/>
-<button name="action_open_all_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
-<field name="total_visit_count" widget="statinfo" string="Visits"/>
-</button>
-<button name="action_open_unfinished_visits" type="object" class="oe_stat_button" icon="fa-warning">
-<field name="unfinished_visit_count" widget="statinfo" string="Unfinished"/>
-</button>
-<button name="action_open_location_issues" type="object" class="oe_stat_button" icon="fa-map-marker">
-<field name="location_issue_count" widget="statinfo" string="Location"/>
-</button>
-<button name="action_open_open_due_visits" type="object" class="oe_stat_button" icon="fa-money">
-<field name="open_due_amount" widget="statinfo" string="Open Due"/>
-</button>
+<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
+<button name="action_open_direct_returns" type="object" string="Return Orders" icon="fa-undo"/>
 </header>
 <sheet>
 <div class="oe_title mb-2">
@@ -155,7 +149,7 @@ Promises:
 </div>
 <h3 class="mb-2">Closing Snapshot</h3>
 <div class="row g-2 mb-3">
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Daily Plans</span>
 <strong class="fs-5">
@@ -167,28 +161,42 @@ Not finalized:
 </span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Unfinished</span>
+<span class="text-muted small d-block">Visits</span>
 <strong class="fs-5">
-<field name="unfinished_visit_count" nolabel="1"/>
+<field name="total_visit_count" nolabel="1"/>
 </strong>
 <span class="text-muted small d-block">
-Not started:
-<field name="not_started_visit_count" nolabel="1"/>
+Unfinished:
+<field name="unfinished_visit_count" nolabel="1"/>
 </span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Location Issues</span>
+<span class="text-muted small d-block">Location Review</span>
 <strong class="fs-5">
 <field name="location_issue_count" nolabel="1"/>
 </strong>
 <span class="text-muted small d-block">Needs review</span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle Closing</span>
+<strong class="fs-5">
+<field name="vehicle_closing_closed_count" nolabel="1"/>
+/
+<field name="vehicle_closing_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Missing:
+<field name="vehicle_closing_missing_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Loading</span>
 <strong class="fs-5">
@@ -200,7 +208,7 @@ Pending:
 </span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Transfers</span>
 <strong class="fs-5">
@@ -209,7 +217,31 @@ Pending:
 <span class="text-muted small d-block">Pending stock moves</span>
 </div>
 </div>
-<div class="col-6 col-lg-2">
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Sales Orders</span>
+<strong class="fs-5">
+<field name="sale_order_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending:
+<field name="pending_sale_order_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Return Orders</span>
+<strong class="fs-5">
+<field name="direct_return_count" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending:
+<field name="pending_direct_return_count" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Returns / Refill</span>
 <strong class="fs-5">
@@ -281,43 +313,43 @@ Pending:
 <h3 class="mb-2">Closing Filters</h3>
 <div class="row g-2 mb-3 route-closing-filter-cards">
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Closing Date</span>
 <field name="closing_date" nolabel="1"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Salesperson</span>
 <field name="salesperson_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Vehicle</span>
 <field name="vehicle_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">City</span>
 <field name="city_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Area</span>
 <field name="area_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Outlet</span>
 <field name="outlet_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="col-6 col-lg-3">
-<div class="border rounded p-3 bg-white h-100">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Company</span>
 <field name="company_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
 </div>
