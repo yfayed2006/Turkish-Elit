@@ -1289,6 +1289,7 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
 
 class RouteVisitDailyClosingLock(models.Model):
+    _name = "route.visit"
     _inherit = ["route.visit", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1302,7 +1303,7 @@ class RouteVisitDailyClosingLock(models.Model):
                     city = outlet.route_city_id
                 elif area and area.exists() and area.city_id:
                     city = area.city_id
-                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(
+                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(
                     company_id=vals.get("company_id") or self.env.company.id,
                     closing_date=vals.get("date"),
                     salesperson_id=vals.get("user_id") or False,
@@ -1326,6 +1327,7 @@ class RouteVisitDailyClosingLock(models.Model):
 
 
 class RoutePlanDailyClosingLock(models.Model):
+    _name = "route.plan"
     _inherit = ["route.plan", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1344,7 +1346,7 @@ class RoutePlanDailyClosingLock(models.Model):
                 if closing_values["area_id"]:
                     area = self.env["route.area"].browse(closing_values["area_id"])
                     closing_values["city_id"] = area.city_id.id if area and area.exists() and area.city_id else False
-                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(**closing_values)
+                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
                 if closing:
                     raise UserError(_("You cannot create a route plan for a closed day. Reopen the day first."))
         return super().create(vals_list)
@@ -1386,6 +1388,7 @@ class RoutePlanLineDailyClosingLock(models.Model):
 
 
 class RouteVehicleClosingDailyClosingLock(models.Model):
+    _name = "route.vehicle.closing"
     _inherit = ["route.vehicle.closing", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1527,4 +1530,5 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
         if self.code == "pending_transfers":
             return dashboard.action_open_pending_transfers()
         return dashboard.action_refresh_dashboard()
+
 
