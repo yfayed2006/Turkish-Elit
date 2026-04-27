@@ -1,5 +1,14 @@
 <odoo>
-<!--                Admin / all payments                -->
+<record id="view_route_visit_payment_form_supervisor_promise_review_button_state" model="ir.ui.view" forcecreate="0">
+<field name="name">route.visit.payment.form.supervisor.promise.review.button.state.early-disabled</field>
+<field name="active" eval="False"/>
+<field name="arch" type="xml">
+<xpath expr="//header/field[@name='state']" position="attributes">
+<attribute name="statusbar_visible">draft,confirmed,cancelled</attribute>
+</xpath>
+</field>
+</record>
+<!--                 Admin / all payments                 -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +39,7 @@
 </list>
 </field>
 </record>
-<!--                Tailored visit list                -->
+<!--                 Tailored visit list                 -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +59,7 @@
 </list>
 </field>
 </record>
-<!--                Tailored direct sale list                -->
+<!--                 Tailored direct sale list                 -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -176,14 +185,17 @@
 </kanban>
 </field>
 </record>
-<delete id="view_route_visit_payment_form" model="ir.ui.view"/>
 <record id="view_route_visit_payment_form" model="ir.ui.view">
 <field name="name">route.visit.payment.form</field>
 <field name="model">route.visit.payment</field>
+<field name="inherit_id" eval="False"/>
+<field name="mode">primary</field>
 <field name="arch" type="xml">
 <form class="route_pda_payment_form">
 <header>
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
+<button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue')"/>
+<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or promise_review_decision not in ('reschedule', 'review_followup')"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
 <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
@@ -195,6 +207,11 @@
 <field name="statement_visit_id" invisible="1"/>
 <field name="show_settlement_reference" invisible="1"/>
 <field name="note_display_html" invisible="1"/>
+<field name="promise_review_decision" invisible="1"/>
+<field name="promise_review_for_closing_date" invisible="1"/>
+<field name="promise_review_followup_date" invisible="1"/>
+<field name="promise_reviewed_by_id" invisible="1"/>
+<field name="promise_reviewed_at" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
 <div class="route_pda_info_label">Collected</div>
@@ -318,7 +335,7 @@
 </form>
 </field>
 </record>
-<!--                Admin / all payments search                -->
+<!--                 Admin / all payments search                 -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -380,7 +397,7 @@
 </search>
 </field>
 </record>
-<!--                Visit collections search                -->
+<!--                 Visit collections search                 -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -431,7 +448,7 @@
 </search>
 </field>
 </record>
-<!--                Direct sale payments search                -->
+<!--                 Direct sale payments search                 -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
