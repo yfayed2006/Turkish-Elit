@@ -1,0 +1,261 @@
+.route_supervisor_performance_dashboard_form .o_form_sheet_bg,
+.route_supervisor_performance_dashboard_form .o_form_sheet {
+    max-width: 100%;
+}
+.route_dash_block {
+    margin: 14px 0 18px;
+}
+.route_dash_section_title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 0 12px;
+}
+.route_dash_section_title span {
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 800;
+    color: #111827;
+}
+.route_dash_section_title p {
+    margin: 4px 0 0;
+    color: #64748b;
+}
+.route_dash_scope {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+.route_dash_scope span {
+    display: inline-flex;
+    flex-direction: column;
+    min-width: 120px;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    font-weight: 700;
+}
+.route_dash_scope small {
+    color: #64748b;
+    font-weight: 500;
+}
+.route_dash_kpi_grid,
+.route_dash_chart_grid,
+.route_dash_ranking_grid {
+    display: grid;
+    gap: 12px;
+}
+.route_dash_kpi_grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.route_dash_chart_grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.route_dash_ranking_grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.route_dash_kpi,
+.route_dash_chart_card,
+.route_dash_table_card {
+    position: relative;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.route_dash_kpi {
+    min-height: 116px;
+    padding: 14px;
+    overflow: hidden;
+}
+.route_dash_kpi::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: #7c3aed;
+}
+.route_dash_kpi_label,
+.route_dash_kpi_note {
+    display: block;
+    color: #64748b;
+}
+.route_dash_kpi strong {
+    display: block;
+    margin: 7px 0 4px;
+    font-size: 25px;
+    line-height: 1.1;
+    color: #0f172a;
+}
+.route_dash_kpi_note {
+    font-size: 12px;
+}
+.route_dash_kpi_corner {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+.route_dash_tone_success::before { background: #16a34a; }
+.route_dash_tone_warning::before { background: #f59e0b; }
+.route_dash_tone_danger::before { background: #ef4444; }
+.route_dash_tone_info::before { background: #0ea5e9; }
+.route_dash_tone_sales::before { background: #8b5cf6; }
+.route_dash_tone_profit::before { background: #14b8a6; }
+.route_dash_chart_card,
+.route_dash_table_card {
+    padding: 14px;
+    min-height: 280px;
+}
+.route_dash_chart_card h3,
+.route_dash_table_card h3 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #111827;
+}
+.route_dash_chart_wide {
+    grid-column: span 2;
+}
+.route_dash_chart_body {
+    min-height: 190px;
+}
+.route_dash_chart_footer {
+    margin-top: 10px;
+    color: #64748b;
+    font-size: 12px;
+}
+.route_dash_pie {
+    width: 170px;
+    height: 170px;
+    margin: 0 auto 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 28px #fff, 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+.route_dash_pie span {
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+}
+.route_dash_legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+.route_dash_legend span,
+.route_dash_line_legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+}
+.route_dash_legend i,
+.route_dash_line_legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.route_dash_bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.route_dash_bar_meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #334155;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.route_dash_bar_meta span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.route_dash_bar_track {
+    height: 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+.route_dash_bar_track div {
+    height: 100%;
+    border-radius: 999px;
+}
+.route_dash_bar_negative .route_dash_bar_meta strong {
+    color: #ef4444;
+}
+.route_dash_line_wrap {
+    min-height: 210px;
+}
+.route_dash_line_svg {
+    width: 100%;
+    height: 185px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f8fafc, #ffffff);
+}
+.route_dash_line_legend {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 8px;
+}
+.route_dash_table {
+    margin-bottom: 0;
+}
+.route_dash_table th {
+    color: #64748b;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.route_dash_table td {
+    vertical-align: middle;
+    font-size: 13px;
+}
+.route_dash_empty_chart,
+.route_dash_empty_cell {
+    display: flex;
+    min-height: 160px;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-weight: 700;
+    background: #f8fafc;
+    border-radius: 14px;
+}
+.route_dashboard_filter_cards .o_field_widget {
+    width: 100%;
+}
+@media (max-width: 1200px) {
+    .route_dash_kpi_grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+    .route_dash_section_title span { font-size: 18px; }
+    .route_dash_kpi_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .route_dash_chart_grid,
+    .route_dash_ranking_grid { grid-template-columns: 1fr; }
+    .route_dash_chart_wide { grid-column: span 1; }
+    .route_dash_kpi { min-height: 104px; padding: 12px; }
+    .route_dash_kpi strong { font-size: 20px; }
+    .route_dash_chart_card,
+    .route_dash_table_card { padding: 12px; }
+    .route_dash_pie { width: 140px; height: 140px; box-shadow: inset 0 0 0 24px #fff, 0 12px 24px rgba(15,23,42,.07); }
+}
