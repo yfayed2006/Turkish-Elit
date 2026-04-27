@@ -1842,6 +1842,13 @@ class RoutePromiseReviewWizard(models.TransientModel):
                 "promise_date": self.new_promise_date,
                 "due_date": self.new_promise_date if payment.collection_type == "defer_date" else payment.due_date,
             })
+
+            # Normalize older deferred promise records when supervisor review updates
+            # the promise date. This keeps route.visit.payment financial validation
+            # active while fixing records that were saved as Cash before the stricter
+            # deferred-mode rule was introduced.
+            if payment.collection_type in ("defer_date", "next_visit") and payment.payment_mode != "deferred":
+                values["payment_mode"] = "deferred"
         payment.with_context(bypass_daily_closing_lock=True).write(values)
         return {"type": "ir.actions.act_window_close"}
 
