@@ -530,6 +530,36 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         ])
         return visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns
 
+    def _visit_open_promise_amount(self, visit, open_promises):
+        """Return the open promise amount that covers a specific visit."""
+        related_promises = open_promises.filtered(
+            lambda payment: (payment.visit_id and payment.visit_id == visit)
+            or (payment.settlement_visit_id and payment.settlement_visit_id == visit)
+        )
+        return sum(related_promises.mapped("promise_amount")) if related_promises else 0.0
+
+    def _visit_uncovered_due_amount(self, visit, open_promises):
+        """Return only the remaining due amount not covered by an open promise."""
+        remaining_due = visit.remaining_due_amount or 0.0
+        if remaining_due <= 0.0:
+            return 0.0
+        covered_by_promises = self._visit_open_promise_amount(visit, open_promises)
+        uncovered_due = max(remaining_due - covered_by_promises, 0.0)
+
+        currency = self.currency_id or self.env.company.currency_id
+        if "currency_id" in visit._fields and visit.currency_id:
+            currency = visit.currency_id
+        if currency and currency.is_zero(uncovered_due):
+            return 0.0
+        return currency.round(uncovered_due) if currency else uncovered_due
+
+    def _uncovered_due_visits(self, visits, open_promises):
+        """Visits that still have due amount not covered by open promises."""
+        return visits.filtered(lambda visit: self._visit_uncovered_due_amount(visit, open_promises) > 0.0)
+
+    def _uncovered_due_amount_total(self, visits, open_promises):
+        return sum(self._visit_uncovered_due_amount(visit, open_promises) for visit in visits)
+
     @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
     def _compute_closing_dashboard(self):
         for dashboard in self:
@@ -545,7 +575,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                     or visit.geo_review_supervisor_decision == "needs_correction"
                     or visit.geo_review_state in ["pending_checkin", "outlet_missing"]
                 )
-                open_due_visits = visits.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
+                open_due_visits = dashboard._uncovered_due_visits(visits, open_promises)
                 not_finalized_plans = plans.filtered(lambda plan: not plan.planning_finalized)
                 closed_closings = closings.filtered(lambda closing: closing.state == "closed")
                 pending_closings = closings.filtered(lambda closing: closing.state != "closed")
@@ -592,7 +622,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 dashboard.active_visit_count = len(active_visits)
                 dashboard.location_issue_count = len(location_issues)
                 dashboard.open_due_visit_count = len(open_due_visits)
-                dashboard.open_due_amount = sum(open_due_visits.mapped("remaining_due_amount")) if open_due_visits else 0.0
+                dashboard.open_due_amount = dashboard._uncovered_due_amount_total(open_due_visits, open_promises) if open_due_visits else 0.0
                 dashboard.open_promise_count = len(open_promises)
                 dashboard.open_promise_amount = sum(open_promises.mapped("promise_amount")) if open_promises else 0.0
                 dashboard.vehicle_closing_count = len(closings)
@@ -673,7 +703,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
 
         unfinished = visits.filtered(lambda visit: visit.visit_process_state not in ["done", "cancel"])
         not_started = visits.filtered(lambda visit: visit.visit_process_state == "draft")
-        open_due = visits.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
+        open_due = self._uncovered_due_visits(visits, open_promises)
         location_issues = visits.filtered(
             lambda visit: (visit.geo_review_required and not visit.geo_review_supervisor_decision)
             or visit.geo_review_supervisor_decision == "needs_correction"
@@ -692,7 +722,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         add(10, "unfinished_visits", _("Unfinished Visits"), len(unfinished), _("Visits that are not done or cancelled."), "danger", button_label=_("Open Visits"))
         add(20, "not_started_visits", _("Not Started Visits"), len(not_started), _("Planned visits not started yet."), "warning", button_label=_("Open Visits"))
         add(30, "location_issues", _("Location Review Pending"), len(location_issues), _("Location issues need supervisor review."), "warning", button_label=_("Open Location"))
-        add(40, "open_due", _("Open Due"), len(open_due), _("Visits with remaining due amount."), "danger", sum(open_due.mapped("remaining_due_amount")) if open_due else 0.0, button_label=_("Open Visits"))
+        add(40, "open_due", _("Open Due"), len(open_due), _("Visits with due amount not covered by an open promise."), "danger", self._uncovered_due_amount_total(open_due, open_promises) if open_due else 0.0, button_label=_("Open Visits"))
         add(50, "open_promises", _("Open Promises"), len(open_promises), _("Open, due today, or overdue promises."), "warning", sum(open_promises.mapped("promise_amount")) if open_promises else 0.0, button_label=_("Open Promises"))
         add(60, "pending_sale_orders", _("Pending Sales Orders"), len(pending_sale_orders), _("Direct sale orders still need confirmation."), "warning", sum(pending_sale_orders.mapped("amount_total")) if pending_sale_orders else 0.0, button_label=_("Open Orders"))
         add(70, "pending_direct_returns", _("Pending Return Orders"), len(pending_direct_returns), _("Direct return orders still need processing."), "warning", sum(pending_direct_returns.mapped("amount_total")) if pending_direct_returns else 0.0, button_label=_("Open Returns"))
@@ -964,50 +994,22 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         )
 
     def action_open_location_issues(self):
-        """Open location-review cards with supervisor decision actions.
-
-        These cards show Accept, Needs Correction, and Reset so the supervisor can
-        clear the Location Review Pending closing blocker from the same screen.
-        """
-        self.ensure_one()
-        domain = self._base_visit_domain() + [
-            "|",
-            "|",
-            ("geo_review_state", "in", ["pending_checkin", "outlet_missing"]),
-            ("geo_review_required", "=", True),
-            ("geo_review_supervisor_decision", "=", "needs_correction"),
-        ]
-
-        views = []
-        geo_kanban_view = self.env.ref("route_core.view_route_geo_control_visit_kanban", raise_if_not_found=False)
-        list_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
-        form_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
-        if geo_kanban_view:
-            views.append((geo_kanban_view.id, "kanban"))
-        if list_view:
-            views.append((list_view.id, "list"))
-        if form_view:
-            views.append((form_view.id, "form"))
-
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Location Review Pending"),
-            "res_model": "route.visit",
-            "view_mode": "kanban,list,form",
-            "domain": domain,
-            "context": {"create": False, "edit": True, "delete": False},
-        }
-        if views:
-            action["views"] = views
-        search_view = self.env.ref("route_core.view_route_geo_control_card_search", raise_if_not_found=False)
-        if search_view:
-            action["search_view_id"] = search_view.id
-        return action
+        return self._action_open_visits(
+            _("Location Review Pending"),
+            self._base_visit_domain()
+            + [
+                "|",
+                "|",
+                ("geo_review_state", "in", ["pending_checkin", "outlet_missing"]),
+                ("geo_review_required", "=", True),
+                ("geo_review_supervisor_decision", "=", "needs_correction"),
+            ],
+        )
 
     def action_open_open_due_visits(self):
-        visits = self.env["route.visit"].search(self._base_visit_domain()).filtered(
-            lambda visit: (visit.remaining_due_amount or 0.0) > 0.0
-        )
+        self.ensure_one()
+        visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = self._collect_dashboard_data()
+        visits = self._uncovered_due_visits(visits, open_promises)
         return self._action_open_visits(_("Visits With Open Due"), [("id", "in", visits.ids or [0])])
 
     def action_open_daily_plans(self):
@@ -1317,7 +1319,6 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
 
 class RouteVisitDailyClosingLock(models.Model):
-    _name = "route.visit"
     _inherit = ["route.visit", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1331,7 +1332,7 @@ class RouteVisitDailyClosingLock(models.Model):
                     city = outlet.route_city_id
                 elif area and area.exists() and area.city_id:
                     city = area.city_id
-                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(
+                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(
                     company_id=vals.get("company_id") or self.env.company.id,
                     closing_date=vals.get("date"),
                     salesperson_id=vals.get("user_id") or False,
@@ -1355,7 +1356,6 @@ class RouteVisitDailyClosingLock(models.Model):
 
 
 class RoutePlanDailyClosingLock(models.Model):
-    _name = "route.plan"
     _inherit = ["route.plan", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1374,7 +1374,7 @@ class RoutePlanDailyClosingLock(models.Model):
                 if closing_values["area_id"]:
                     area = self.env["route.area"].browse(closing_values["area_id"])
                     closing_values["city_id"] = area.city_id.id if area and area.exists() and area.city_id else False
-                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
+                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(**closing_values)
                 if closing:
                     raise UserError(_("You cannot create a route plan for a closed day. Reopen the day first."))
         return super().create(vals_list)
@@ -1416,7 +1416,6 @@ class RoutePlanLineDailyClosingLock(models.Model):
 
 
 class RouteVehicleClosingDailyClosingLock(models.Model):
-    _name = "route.vehicle.closing"
     _inherit = ["route.vehicle.closing", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
