@@ -66,7 +66,10 @@
 <form string="Supervisor Daily Closing" create="0" delete="0">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
-<button name="action_validate_daily_closing" type="object" string="Validate Closing" icon="fa-check-circle" class="btn-primary"/>
+<button name="action_validate_daily_closing" type="object" string="Validate Closing" icon="fa-check-circle" invisible="is_day_closed or ready_to_close"/>
+<button name="action_close_day" type="object" string="Close Day" icon="fa-lock" class="btn-primary" invisible="not ready_to_close or is_day_closed"/>
+<button name="action_open_daily_closing_record" type="object" string="Closing Record" icon="fa-folder-open-o" invisible="not daily_closing_id"/>
+<button name="action_reopen_day" type="object" string="Reopen Day" icon="fa-unlock" class="btn-warning" invisible="not is_day_closed"/>
 <button name="action_open_daily_control" type="object" string="Daily Control" icon="fa-dashboard"/>
 <button name="action_open_all_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
 <button name="action_open_unfinished_visits" type="object" string="Unfinished" icon="fa-exclamation-circle"/>
@@ -81,6 +84,14 @@
 <button name="action_open_direct_returns" type="object" string="Return Orders" icon="fa-undo"/>
 </header>
 <sheet>
+<field name="ready_to_close" invisible="1"/>
+<field name="is_day_closed" invisible="1"/>
+<field name="daily_closing_state" invisible="1"/>
+<field name="daily_closing_id" invisible="1"/>
+<field name="closed_by_id" invisible="1"/>
+<field name="closed_at" invisible="1"/>
+<field name="reopened_by_id" invisible="1"/>
+<field name="reopened_at" invisible="1"/>
 <div class="oe_title mb-2">
 <span class="text-muted">Supervisor Daily Closing</span>
 <h1>Operations Closing Control</h1>
@@ -144,6 +155,56 @@ Pending:
 Promises:
 <field name="open_promise_count" nolabel="1"/>
 </span>
+</div>
+</div>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-12 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Closing Status</span>
+<strong class="fs-5">
+<field name="daily_closing_state_label" nolabel="1"/>
+</strong>
+<span class="text-muted small d-block">
+<field name="daily_closing_state_note" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-4" invisible="not is_day_closed">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Closed By / At</span>
+<strong class="d-block">
+<field name="closed_by_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</strong>
+<span class="text-muted small d-block">
+<field name="closed_at" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-4" invisible="daily_closing_state != 'reopened'">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Reopened By / At</span>
+<strong class="d-block">
+<field name="reopened_by_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</strong>
+<span class="text-muted small d-block">
+<field name="reopened_at" nolabel="1"/>
+</span>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Closing Actions</h3>
+<div class="row g-2 mb-3">
+<div class="col-12 col-lg-6" invisible="is_day_closed">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Closing Notes</span>
+<field name="closing_note" nolabel="1" placeholder="Optional notes before closing the day..."/>
+</div>
+</div>
+<div class="col-12 col-lg-6" invisible="not is_day_closed">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Reopen Reason</span>
+<field name="reopen_reason" nolabel="1" placeholder="Required before reopening a closed day..."/>
 </div>
 </div>
 </div>
