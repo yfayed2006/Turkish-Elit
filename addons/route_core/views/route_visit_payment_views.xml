@@ -1,5 +1,4 @@
 <odoo>
-<!--  SAFE FIX 2026-04-27: removed invalid xpath for action_open_supervisor_promise_review.  -->
 <!--                Admin / all payments                -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
@@ -180,6 +179,9 @@
 <record id="view_route_visit_payment_form" model="ir.ui.view">
 <field name="name">route.visit.payment.form</field>
 <field name="model">route.visit.payment</field>
+<!--  Force this XML id back to a primary/base form view in case a previous failed upgrade left inherit_id on this view record.  -->
+<field name="inherit_id" eval="False"/>
+<field name="mode">primary</field>
 <field name="arch" type="xml">
 <form class="route_pda_payment_form">
 <header>
