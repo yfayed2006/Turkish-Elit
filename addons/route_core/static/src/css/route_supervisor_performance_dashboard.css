@@ -259,3 +259,102 @@
     .route_dash_table_card { padding: 12px; }
     .route_dash_pie { width: 140px; height: 140px; box-shadow: inset 0 0 0 24px #fff, 0 12px 24px rgba(15,23,42,.07); }
 }
+
+/* Supervisor Performance Dashboard - Professional Polish Round */
+.route_dash_insight_grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 4px 0 14px;
+}
+.route_dash_insight {
+    position: relative;
+    min-height: 92px;
+    padding: 12px 12px 12px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+    overflow: hidden;
+}
+.route_dash_insight::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: #7c3aed;
+}
+.route_dash_insight span,
+.route_dash_insight small {
+    display: block;
+    color: #64748b;
+}
+.route_dash_insight strong {
+    display: block;
+    margin: 7px 0 5px;
+    color: #0f172a;
+    font-size: 16px;
+    line-height: 1.18;
+    font-weight: 900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.route_dash_insight small {
+    font-size: 12px;
+    font-weight: 600;
+}
+.route_dash_empty_chart {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    border: 1px dashed #cbd5e1;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+}
+.route_dash_empty_chart strong {
+    color: #475569;
+    font-size: 14px;
+}
+.route_dash_empty_chart small {
+    max-width: 360px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+.route_dash_chart_card {
+    min-height: 250px;
+}
+.route_dash_chart_body {
+    min-height: 160px;
+}
+.route_dash_chart_card .route_dash_bars {
+    max-height: 300px;
+    overflow: hidden;
+}
+.route_dash_chart_wide .route_dash_bars {
+    max-height: 360px;
+}
+.route_dash_line_wrap {
+    min-height: 180px;
+}
+.route_dash_line_svg {
+    height: 160px;
+}
+.route_dash_scope span {
+    min-height: 54px;
+}
+@media (max-width: 1400px) {
+    .route_dash_insight_grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+    .route_dash_insight_grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+    .route_dash_insight_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .route_dash_insight { min-height: 84px; padding: 10px 10px 10px 13px; }
+    .route_dash_insight strong { font-size: 14px; }
+    .route_dash_chart_card { min-height: 220px; }
+    .route_dash_chart_body { min-height: 135px; }
+    .route_dash_empty_chart { min-height: 120px; padding: 12px; }
+    .route_dash_line_wrap { min-height: 145px; }
+    .route_dash_line_svg { height: 125px; }
+}
