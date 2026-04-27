@@ -880,13 +880,27 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "closing_note": self.closing_note or False,
             "blocker_count": self.blocker_count,
             "plan_count": self.total_plan_count,
+            "not_finalized_plan_count": self.not_finalized_plan_count,
             "visit_count": self.total_visit_count,
+            "done_visit_count": self.done_visit_count,
+            "unfinished_visit_count": self.unfinished_visit_count,
+            "location_issue_count": self.location_issue_count,
             "open_due_amount": self.open_due_amount,
+            "open_due_visit_count": self.open_due_visit_count,
             "open_promise_count": self.open_promise_count,
+            "open_promise_amount": self.open_promise_amount,
             "vehicle_closing_count": self.vehicle_closing_count,
+            "vehicle_closing_closed_count": self.vehicle_closing_closed_count,
+            "vehicle_closing_missing_count": self.vehicle_closing_missing_count,
             "loading_proposal_count": self.loading_proposal_count,
+            "loading_pending_count": self.loading_pending_count,
+            "pending_transfer_count": self.pending_transfer_count,
+            "return_transfer_count": self.return_transfer_count,
+            "refill_transfer_count": self.refill_transfer_count,
             "sale_order_count": self.sale_order_count,
+            "pending_sale_order_count": self.pending_sale_order_count,
             "direct_return_count": self.direct_return_count,
+            "pending_direct_return_count": self.pending_direct_return_count,
             "visit_ids": [fields.Command.set(self.daily_visit_ids.ids)],
             "plan_ids": [fields.Command.set(self.daily_plan_ids.ids)],
             "vehicle_closing_ids": [fields.Command.set(self.vehicle_closing_ids.ids)],
@@ -946,6 +960,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 "closed_at": now,
             })
             closing_record = self.env["route.daily.closing"].create(values)
+        closing_record._create_audit_line("closed", self.closing_note or _("Day closed from Supervisor Daily Closing."))
         self._link_daily_closing_to_operational_records(closing_record)
         return self._daily_closing_action_notification(
             _("Day Closed"),
@@ -965,6 +980,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "reopened_at": fields.Datetime.now(),
             "reopen_reason": reason,
         })
+        closing_record._create_audit_line("reopened", reason)
         self._unlink_daily_closing_from_operational_records(closing_record)
         return self._daily_closing_action_notification(
             _("Day Reopened"),
@@ -1020,9 +1036,10 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "res_model": "route.daily.closing",
             "view_mode": "form",
         }
+        form_view = self.env.ref("route_core.view_route_daily_closing_form", raise_if_not_found=False)
         result.update({
             "res_id": closing_record.id,
-            "views": [(False, "form")],
+            "views": [(form_view.id, "form")] if form_view else [(False, "form")],
             "target": "current",
         })
         return result
@@ -1316,13 +1333,27 @@ class RouteDailyClosing(models.Model):
 
     blocker_count = fields.Integer(string="Blockers", readonly=True)
     plan_count = fields.Integer(string="Daily Plans", readonly=True)
+    not_finalized_plan_count = fields.Integer(string="Not Finalized Plans", readonly=True)
     visit_count = fields.Integer(string="Visits", readonly=True)
+    done_visit_count = fields.Integer(string="Done Visits", readonly=True)
+    unfinished_visit_count = fields.Integer(string="Unfinished Visits", readonly=True)
+    location_issue_count = fields.Integer(string="Location Reviews", readonly=True)
+    open_due_visit_count = fields.Integer(string="Open Due Visits", readonly=True)
     open_due_amount = fields.Monetary(string="Open Due", currency_field="currency_id", readonly=True)
     open_promise_count = fields.Integer(string="Open Promises", readonly=True)
+    open_promise_amount = fields.Monetary(string="Promise Amount", currency_field="currency_id", readonly=True)
     vehicle_closing_count = fields.Integer(string="Vehicle Closings", readonly=True)
+    vehicle_closing_closed_count = fields.Integer(string="Closed Vehicle Closings", readonly=True)
+    vehicle_closing_missing_count = fields.Integer(string="Missing Vehicle Closings", readonly=True)
     loading_proposal_count = fields.Integer(string="Loading Proposals", readonly=True)
+    loading_pending_count = fields.Integer(string="Pending Loading", readonly=True)
+    pending_transfer_count = fields.Integer(string="Pending Transfers", readonly=True)
+    return_transfer_count = fields.Integer(string="Return Transfers", readonly=True)
+    refill_transfer_count = fields.Integer(string="Refill Transfers", readonly=True)
     sale_order_count = fields.Integer(string="Sales Orders", readonly=True)
+    pending_sale_order_count = fields.Integer(string="Pending Sales Orders", readonly=True)
     direct_return_count = fields.Integer(string="Return Orders", readonly=True)
+    pending_direct_return_count = fields.Integer(string="Pending Return Orders", readonly=True)
 
     visit_ids = fields.Many2many("route.visit", string="Visits", readonly=True)
     plan_ids = fields.Many2many("route.plan", string="Daily Plans", readonly=True)
@@ -1330,6 +1361,13 @@ class RouteDailyClosing(models.Model):
     loading_proposal_ids = fields.Many2many("route.loading.proposal", string="Loading Proposals", readonly=True)
     sale_order_ids = fields.Many2many("sale.order", string="Sales Orders", readonly=True)
     direct_return_ids = fields.Many2many("route.direct.return", string="Return Orders", readonly=True)
+    audit_line_ids = fields.One2many(
+        "route.daily.closing.audit.line",
+        "closing_id",
+        string="Audit Trail",
+        readonly=True,
+        copy=False,
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1337,6 +1375,58 @@ class RouteDailyClosing(models.Model):
             if not vals.get("name"):
                 vals["name"] = _("Daily Closing")
         return super().create(vals_list)
+
+    def _create_audit_line(self, event_type, note=False):
+        for rec in self:
+            self.env["route.daily.closing.audit.line"].create({
+                "closing_id": rec.id,
+                "event_type": event_type,
+                "user_id": self.env.user.id,
+                "event_datetime": fields.Datetime.now(),
+                "note": note or False,
+            })
+
+    def _action_open_related_records(self, name, records, res_model, view_mode="list,form", action_xmlid=False):
+        self.ensure_one()
+        action = self.env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
+        result = action.read()[0] if action else {
+            "type": "ir.actions.act_window",
+            "name": name,
+            "res_model": res_model,
+            "view_mode": view_mode,
+        }
+        result.update({
+            "name": name,
+            "res_model": res_model,
+            "view_mode": view_mode,
+            "domain": [("id", "in", records.ids or [0])],
+            "context": {"create": False, "edit": True, "delete": False},
+        })
+        return result
+
+    def action_open_visits(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Visits"), self.visit_ids, "route.visit", "kanban,list,form")
+
+    def action_open_daily_plans(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Daily Plans"), self.plan_ids, "route.plan", "list,form")
+
+    def action_open_vehicle_closings(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Vehicle Closings"), self.vehicle_closing_ids, "route.vehicle.closing", "list,form")
+
+    def action_open_loading_proposals(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Loading Proposals"), self.loading_proposal_ids, "route.loading.proposal", "list,form")
+
+    def action_open_sales_orders(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Sales Orders"), self.sale_order_ids, "sale.order", "list,form", "sale.action_orders")
+
+    def action_open_direct_returns(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Return Orders"), self.direct_return_ids, "route.direct.return", "kanban,list,form")
 
     @api.model
     def _route_closed_closing_domain_for_values(self, company_id, closing_date, salesperson_id=False, vehicle_id=False, city_id=False, area_id=False, outlet_id=False):
@@ -1371,6 +1461,39 @@ class RouteDailyClosing(models.Model):
             ),
             limit=1,
         )
+
+
+class RouteDailyClosingAuditLine(models.Model):
+    _name = "route.daily.closing.audit.line"
+    _description = "Route Daily Closing Audit Line"
+    _order = "event_datetime desc, id desc"
+
+    closing_id = fields.Many2one(
+        "route.daily.closing",
+        string="Daily Closing",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+    event_type = fields.Selection(
+        [
+            ("closed", "Closed"),
+            ("reopened", "Reopened"),
+        ],
+        string="Event",
+        required=True,
+        default="closed",
+    )
+    event_label = fields.Char(string="Event Label", compute="_compute_event_label", store=True)
+    user_id = fields.Many2one("res.users", string="User", required=True, default=lambda self: self.env.user)
+    event_datetime = fields.Datetime(string="Date/Time", required=True, default=fields.Datetime.now)
+    note = fields.Text(string="Note")
+
+    @api.depends("event_type")
+    def _compute_event_label(self):
+        labels = dict(self._fields["event_type"].selection)
+        for rec in self:
+            rec.event_label = labels.get(rec.event_type, rec.event_type or "")
 
 
 class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
