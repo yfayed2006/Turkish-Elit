@@ -1,4 +1,13 @@
 <odoo>
+<!--  SAFE CLEANUP 2026-04-27: deactivate any stale inherited view created by a previous broken Promise Review button-state attempt.  -->
+<function model="ir.ui.view" name="write">
+<value model="ir.ui.view" search="[('model', '=', 'route.visit.payment'), ('name', 'ilike', 'supervisor.promise.review.button.state')]"/>
+<value eval="{'active': False, 'inherit_id': False, 'arch_db': '<form string="Disabled Promise Review Button State"/>'}"/>
+</function>
+<function model="ir.ui.view" name="write">
+<value model="ir.ui.view" search="[('model', '=', 'route.visit.payment'), ('arch_db', 'ilike', 'action_open_supervisor_promise_review')]"/>
+<value eval="{'active': False, 'inherit_id': False, 'arch_db': '<form string="Disabled Broken Promise Review XPath"/>'}"/>
+</function>
 <!--                Admin / all payments                -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
@@ -176,7 +185,6 @@
 </kanban>
 </field>
 </record>
-<delete id="view_route_visit_payment_form" model="ir.ui.view"/>
 <record id="view_route_visit_payment_form" model="ir.ui.view">
 <field name="name">route.visit.payment.form</field>
 <field name="model">route.visit.payment</field>
