@@ -1319,6 +1319,7 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
 
 class RouteVisitDailyClosingLock(models.Model):
+    _name = "route.visit"
     _inherit = ["route.visit", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1356,6 +1357,7 @@ class RouteVisitDailyClosingLock(models.Model):
 
 
 class RoutePlanDailyClosingLock(models.Model):
+    _name = "route.plan"
     _inherit = ["route.plan", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
@@ -1416,6 +1418,7 @@ class RoutePlanLineDailyClosingLock(models.Model):
 
 
 class RouteVehicleClosingDailyClosingLock(models.Model):
+    _name = "route.vehicle.closing"
     _inherit = ["route.vehicle.closing", "route.daily.closing.lock.mixin"]
 
     @api.model_create_multi
