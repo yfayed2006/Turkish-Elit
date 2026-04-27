@@ -1703,6 +1703,21 @@ class RouteVisitPaymentSupervisorPromiseReview(models.Model):
         readonly=True,
     )
 
+    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id", "payment_mode")
+    def _check_payment_rules(self):
+        """Allow supervisor promise review to update old promise records safely.
+
+        Some historical promise rows were created before the current stricter
+        route.visit.payment validations. Reviewing an overdue promise may only
+        change follow-up/review metadata, but Odoo still re-runs payment
+        constraints for the whole record. The explicit context flag is used
+        only by the supervisor review wizard; normal payment creation and
+        editing continue to use the original financial validations.
+        """
+        if self.env.context.get("bypass_promise_review_validation"):
+            return
+        return super()._check_payment_rules()
+
     def _ensure_can_supervise_promise_review(self):
         if not (
             self.env.user.has_group("route_core.group_route_supervisor")
@@ -1849,7 +1864,10 @@ class RoutePromiseReviewWizard(models.TransientModel):
             # deferred-mode rule was introduced.
             if payment.collection_type in ("defer_date", "next_visit") and payment.payment_mode != "deferred":
                 values["payment_mode"] = "deferred"
-        payment.with_context(bypass_daily_closing_lock=True).write(values)
+        payment.with_context(
+            bypass_daily_closing_lock=True,
+            bypass_promise_review_validation=True,
+        ).write(values)
         return {"type": "ir.actions.act_window_close"}
 
 
