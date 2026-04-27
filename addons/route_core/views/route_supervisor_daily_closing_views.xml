@@ -555,7 +555,7 @@ Pending:
 </div>
 <div class="col-6 col-lg-3">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Closed By / At</span>
+<span class="text-muted small d-block">Current Close By / At</span>
 <strong class="d-block">
 <field name="closed_by_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
 </strong>
@@ -564,15 +564,22 @@ Pending:
 </span>
 </div>
 </div>
-<div class="col-6 col-lg-3">
+<div class="col-6 col-lg-3" invisible="state != 'reopened'">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Reopened By / At</span>
+<span class="text-muted small d-block">Current Reopen By / At</span>
 <strong class="d-block">
 <field name="reopened_by_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
 </strong>
 <span class="text-muted small">
 <field name="reopened_at" nolabel="1" readonly="1"/>
 </span>
+</div>
+</div>
+<div class="col-6 col-lg-3" invisible="state == 'reopened'">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Reopen History</span>
+<strong class="d-block">Audit Trail</strong>
+<span class="text-muted small">All previous reopen / re-close events are listed below.</span>
 </div>
 </div>
 </div>
@@ -666,6 +673,10 @@ Amount:
 <field name="vehicle_closing_count" nolabel="1" readonly="1"/>
 </strong>
 <span class="text-muted small d-block">
+Pending:
+<field name="vehicle_closing_pending_count" nolabel="1" readonly="1"/>
+</span>
+<span class="text-muted small d-block">
 Missing:
 <field name="vehicle_closing_missing_count" nolabel="1" readonly="1"/>
 </span>
@@ -708,6 +719,14 @@ Pending:
 /
 <field name="pending_direct_return_count" nolabel="1" readonly="1"/>
 </span>
+<span class="text-muted small d-block">
+Sales:
+<field name="sale_order_amount" nolabel="1" readonly="1" widget="monetary"/>
+</span>
+<span class="text-muted small d-block">
+Returns:
+<field name="direct_return_amount" nolabel="1" readonly="1" widget="monetary"/>
+</span>
 </div>
 </div>
 <div class="col-6 col-md-4 col-lg-3">
@@ -728,6 +747,8 @@ Pending:
 <list string="Audit Trail" create="0" delete="0">
 <field name="event_datetime"/>
 <field name="event_label"/>
+<field name="state_from"/>
+<field name="state_to"/>
 <field name="user_id"/>
 <field name="note"/>
 </list>
@@ -740,7 +761,64 @@ Pending:
 </group>
 </page>
 <page string="Linked Documents">
-<group string="Linked Records" col="2">
+<div class="alert alert-info mb-3" role="alert">Use the buttons below to open the operational records captured in this closing snapshot.</div>
+<div class="row g-2 mb-3">
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Visits</span>
+<strong class="fs-5">
+<field name="visit_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_visits" type="object" string="Open Visits" class="btn btn-primary w-100 mt-2" icon="fa-calendar-check-o"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Daily Plans</span>
+<strong class="fs-5">
+<field name="plan_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_daily_plans" type="object" string="Open Plans" class="btn btn-primary w-100 mt-2" icon="fa-calendar"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle Closings</span>
+<strong class="fs-5">
+<field name="vehicle_closing_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_vehicle_closings" type="object" string="Open Closings" class="btn btn-primary w-100 mt-2" icon="fa-truck"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Loading Proposals</span>
+<strong class="fs-5">
+<field name="loading_proposal_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_loading_proposals" type="object" string="Open Loading" class="btn btn-primary w-100 mt-2" icon="fa-cubes"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Sales Orders</span>
+<strong class="fs-5">
+<field name="sale_order_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_sales_orders" type="object" string="Open Sales Orders" class="btn btn-primary w-100 mt-2" icon="fa-shopping-cart"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Return Orders</span>
+<strong class="fs-5">
+<field name="direct_return_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_direct_returns" type="object" string="Open Returns" class="btn btn-primary w-100 mt-2" icon="fa-undo"/>
+</div>
+</div>
+</div>
+<group string="Linked Record References" col="2">
 <field name="visit_ids" readonly="1" widget="many2many_tags"/>
 <field name="plan_ids" readonly="1" widget="many2many_tags"/>
 <field name="vehicle_closing_ids" readonly="1" widget="many2many_tags"/>
