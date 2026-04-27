@@ -871,6 +871,78 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             parts.append(area.display_name)
         return " - ".join([part for part in parts if part])
 
+    def _scope_label_value(self, selected_record, record_count, all_label):
+        """Return a readable scope label for Daily Closing Record cards.
+
+        When the closing was created with an explicit filter, show the selected
+        record name. When it is a full-day/company closing, show an "All ..."
+        label with the number of records included in the frozen snapshot.
+        """
+        self.ensure_one()
+        if selected_record:
+            return selected_record.display_name
+        if record_count:
+            return _("%(label)s (%(count)s)") % {"label": all_label, "count": record_count}
+        return all_label
+
+    def _calculate_daily_closing_scope_values(self, visits, plans, closings):
+        """Build readable scope labels/counts for the persisted closing record.
+
+        The top section of the Closing Record should not show blank Salesperson,
+        Vehicle, City, Area or Outlet fields for a company-wide closing. A blank
+        many2one looks like missing data, while the correct meaning is usually
+        "all records covered by the selected day/company". Store explicit text
+        labels so the record remains clear after closing/reopening.
+        """
+        self.ensure_one()
+
+        salespersons = visits.mapped("user_id") | plans.mapped("user_id")
+        vehicles = visits.mapped("vehicle_id") | plans.mapped("vehicle_id") | closings.mapped("vehicle_id")
+        outlets = visits.mapped("outlet_id") | plans.mapped("line_ids.outlet_id")
+        areas = visits.mapped("area_id") | plans.mapped("area_id") | plans.mapped("line_ids.area_id") | outlets.mapped("area_id")
+        cities = areas.mapped("city_id") | outlets.mapped("route_city_id")
+
+        if self.salesperson_id:
+            salespersons |= self.salesperson_id
+        if self.vehicle_id:
+            vehicles |= self.vehicle_id
+        if self.outlet_id:
+            outlets |= self.outlet_id
+        if self.area_id:
+            areas |= self.area_id
+        if self.city_id:
+            cities |= self.city_id
+
+        selected_filters = []
+        if self.salesperson_id:
+            selected_filters.append(_("Salesperson"))
+        if self.vehicle_id:
+            selected_filters.append(_("Vehicle"))
+        if self.city_id:
+            selected_filters.append(_("City"))
+        if self.area_id:
+            selected_filters.append(_("Area"))
+        if self.outlet_id:
+            selected_filters.append(_("Outlet"))
+
+        scope_label = _("Full Company Day Closing")
+        if selected_filters:
+            scope_label = _("Filtered Closing by %s") % ", ".join(selected_filters)
+
+        return {
+            "scope_label": scope_label,
+            "salesperson_scope_count": len(salespersons),
+            "vehicle_scope_count": len(vehicles),
+            "city_scope_count": len(cities),
+            "area_scope_count": len(areas),
+            "outlet_scope_count": len(outlets),
+            "salesperson_scope_label": self._scope_label_value(self.salesperson_id, len(salespersons), _("All Salespersons")),
+            "vehicle_scope_label": self._scope_label_value(self.vehicle_id, len(vehicles), _("All Vehicles")),
+            "city_scope_label": self._scope_label_value(self.city_id, len(cities), _("All Cities")),
+            "area_scope_label": self._scope_label_value(self.area_id, len(areas), _("All Areas")),
+            "outlet_scope_label": self._scope_label_value(self.outlet_id, len(outlets), _("All Outlets")),
+        }
+
     def _calculate_daily_closing_snapshot_values(self):
         """Build the persisted closing snapshot from the same live data as the dashboard.
 
@@ -914,7 +986,9 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             + len(pending_direct_returns)
         )
 
-        return {
+        scope_vals = self._calculate_daily_closing_scope_values(visits, plans, closings)
+
+        result = {
             "blocker_count": blocker_count,
             "plan_count": len(plans),
             "not_finalized_plan_count": len(not_finalized_plans),
@@ -945,9 +1019,14 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "plan_ids": [fields.Command.set(plans.ids)],
             "vehicle_closing_ids": [fields.Command.set(closings.ids)],
             "loading_proposal_ids": [fields.Command.set(proposals.ids)],
+            "pending_transfer_ids": [fields.Command.set(pending_transfers.ids)],
+            "return_transfer_ids": [fields.Command.set(return_pickings.ids)],
+            "refill_transfer_ids": [fields.Command.set(refill_pickings.ids)],
             "sale_order_ids": [fields.Command.set(sale_orders.ids)],
             "direct_return_ids": [fields.Command.set(direct_returns.ids)],
         }
+        result.update(scope_vals)
+        return result
 
     def _prepare_daily_closing_record_values(self, state="closed"):
         self.ensure_one()
@@ -998,7 +1077,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         if issue_values:
             raise UserError(self._format_blocking_issue_message(issue_values))
 
-        before_state = closing_record.state if closing_record else False
+        before_state = closing_record.state if closing_record else "open"
         values = self._prepare_daily_closing_record_values(state="closed")
         now = fields.Datetime.now()
         values.update({
@@ -1038,6 +1117,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             raise UserError(_("There is no closed day to reopen for the selected filters."))
         if not reason:
             raise UserError(_("Please enter a Reopen Reason before reopening the day."))
+        closing_record._ensure_initial_close_audit_line()
         before_state = closing_record.state
         closing_record.write({
             "state": "reopened",
@@ -1099,6 +1179,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         closing_record = self._get_daily_closing_record()
         if not closing_record:
             raise UserError(_("No daily closing record exists yet for the selected filters."))
+        closing_record._ensure_initial_close_audit_line()
+        closing_record._ensure_scope_labels()
         action = self.env.ref("route_core.action_route_daily_closing", raise_if_not_found=False)
         result = action.read()[0] if action else {
             "type": "ir.actions.act_window",
@@ -1394,6 +1476,17 @@ class RouteDailyClosing(models.Model):
     city_id = fields.Many2one("route.city", string="City")
     area_id = fields.Many2one("route.area", string="Area")
     outlet_id = fields.Many2one("route.outlet", string="Outlet")
+    scope_label = fields.Char(string="Closing Scope", readonly=True)
+    salesperson_scope_label = fields.Char(string="Salespersons", readonly=True)
+    vehicle_scope_label = fields.Char(string="Vehicles", readonly=True)
+    city_scope_label = fields.Char(string="Cities", readonly=True)
+    area_scope_label = fields.Char(string="Areas", readonly=True)
+    outlet_scope_label = fields.Char(string="Outlets", readonly=True)
+    salesperson_scope_count = fields.Integer(string="Salesperson Count", readonly=True)
+    vehicle_scope_count = fields.Integer(string="Vehicle Count", readonly=True)
+    city_scope_count = fields.Integer(string="City Count", readonly=True)
+    area_scope_count = fields.Integer(string="Area Count", readonly=True)
+    outlet_scope_count = fields.Integer(string="Outlet Count", readonly=True)
     closed_by_id = fields.Many2one("res.users", string="Closed By", readonly=True, copy=False)
     closed_at = fields.Datetime(string="Closed At", readonly=True, copy=False)
     reopened_by_id = fields.Many2one("res.users", string="Reopened By", readonly=True, copy=False)
@@ -1432,6 +1525,30 @@ class RouteDailyClosing(models.Model):
     plan_ids = fields.Many2many("route.plan", string="Daily Plans", readonly=True)
     vehicle_closing_ids = fields.Many2many("route.vehicle.closing", string="Vehicle Closings", readonly=True)
     loading_proposal_ids = fields.Many2many("route.loading.proposal", string="Loading Proposals", readonly=True)
+    pending_transfer_ids = fields.Many2many(
+        "stock.picking",
+        "route_daily_closing_pending_transfer_rel",
+        "closing_id",
+        "picking_id",
+        string="Pending Transfers",
+        readonly=True,
+    )
+    return_transfer_ids = fields.Many2many(
+        "stock.picking",
+        "route_daily_closing_return_transfer_rel",
+        "closing_id",
+        "picking_id",
+        string="Return Transfers",
+        readonly=True,
+    )
+    refill_transfer_ids = fields.Many2many(
+        "stock.picking",
+        "route_daily_closing_refill_transfer_rel",
+        "closing_id",
+        "picking_id",
+        string="Refill Transfers",
+        readonly=True,
+    )
     sale_order_ids = fields.Many2many("sale.order", string="Sales Orders", readonly=True)
     direct_return_ids = fields.Many2many("route.direct.return", string="Return Orders", readonly=True)
     audit_line_ids = fields.One2many(
@@ -1449,16 +1566,89 @@ class RouteDailyClosing(models.Model):
                 vals["name"] = _("Daily Closing")
         return super().create(vals_list)
 
-    def _create_audit_line(self, event_type, note=False, state_from=False, state_to=False):
+    def _create_audit_line(self, event_type, note=False, state_from=False, state_to=False, event_datetime=False):
         for rec in self:
             self.env["route.daily.closing.audit.line"].sudo().create({
                 "closing_id": rec.id,
                 "event_type": event_type,
                 "user_id": self.env.user.id,
-                "event_datetime": fields.Datetime.now(),
+                "event_datetime": event_datetime or fields.Datetime.now(),
                 "state_from": state_from or False,
                 "state_to": state_to or False,
                 "note": note or False,
+            })
+
+    def _ensure_initial_close_audit_line(self):
+        """Backfill the first Close Day audit row for records created by older builds."""
+        for rec in self:
+            has_initial_close = rec.audit_line_ids.filtered(lambda line: line.event_type in ("close_day", "closed"))
+            if not has_initial_close:
+                rec._create_audit_line(
+                    "close_day",
+                    rec.closing_note or _("Day closed from Supervisor Daily Closing."),
+                    state_from="open",
+                    state_to="closed",
+                    event_datetime=rec.closed_at or rec.create_date or fields.Datetime.now(),
+                )
+
+    def _scope_label_value(self, selected_record, record_count, all_label):
+        if selected_record:
+            return selected_record.display_name
+        if record_count:
+            return _("%(label)s (%(count)s)") % {"label": all_label, "count": record_count}
+        return all_label
+
+    def _ensure_scope_labels(self):
+        """Backfill readable scope cards for records created before this feature."""
+        for rec in self:
+            if rec.scope_label and rec.salesperson_scope_label and rec.vehicle_scope_label and rec.city_scope_label and rec.area_scope_label and rec.outlet_scope_label:
+                continue
+
+            salespersons = rec.visit_ids.mapped("user_id") | rec.plan_ids.mapped("user_id")
+            vehicles = rec.visit_ids.mapped("vehicle_id") | rec.plan_ids.mapped("vehicle_id") | rec.vehicle_closing_ids.mapped("vehicle_id")
+            outlets = rec.visit_ids.mapped("outlet_id") | rec.plan_ids.mapped("line_ids.outlet_id")
+            areas = rec.visit_ids.mapped("area_id") | rec.plan_ids.mapped("area_id") | rec.plan_ids.mapped("line_ids.area_id") | outlets.mapped("area_id")
+            cities = areas.mapped("city_id") | outlets.mapped("route_city_id")
+
+            if rec.salesperson_id:
+                salespersons |= rec.salesperson_id
+            if rec.vehicle_id:
+                vehicles |= rec.vehicle_id
+            if rec.outlet_id:
+                outlets |= rec.outlet_id
+            if rec.area_id:
+                areas |= rec.area_id
+            if rec.city_id:
+                cities |= rec.city_id
+
+            selected_filters = []
+            if rec.salesperson_id:
+                selected_filters.append(_("Salesperson"))
+            if rec.vehicle_id:
+                selected_filters.append(_("Vehicle"))
+            if rec.city_id:
+                selected_filters.append(_("City"))
+            if rec.area_id:
+                selected_filters.append(_("Area"))
+            if rec.outlet_id:
+                selected_filters.append(_("Outlet"))
+
+            scope_label = _("Full Company Day Closing")
+            if selected_filters:
+                scope_label = _("Filtered Closing by %s") % ", ".join(selected_filters)
+
+            rec.sudo().write({
+                "scope_label": scope_label,
+                "salesperson_scope_count": len(salespersons),
+                "vehicle_scope_count": len(vehicles),
+                "city_scope_count": len(cities),
+                "area_scope_count": len(areas),
+                "outlet_scope_count": len(outlets),
+                "salesperson_scope_label": rec._scope_label_value(rec.salesperson_id, len(salespersons), _("All Salespersons")),
+                "vehicle_scope_label": rec._scope_label_value(rec.vehicle_id, len(vehicles), _("All Vehicles")),
+                "city_scope_label": rec._scope_label_value(rec.city_id, len(cities), _("All Cities")),
+                "area_scope_label": rec._scope_label_value(rec.area_id, len(areas), _("All Areas")),
+                "outlet_scope_label": rec._scope_label_value(rec.outlet_id, len(outlets), _("All Outlets")),
             })
 
     def _action_open_related_records(self, name, records, res_model, view_mode="list,form", action_xmlid=False):
@@ -1494,6 +1684,18 @@ class RouteDailyClosing(models.Model):
     def action_open_loading_proposals(self):
         self.ensure_one()
         return self._action_open_related_records(_("Closing Loading Proposals"), self.loading_proposal_ids, "route.loading.proposal", "list,form")
+
+    def action_open_pending_transfers(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Pending Transfers"), self.pending_transfer_ids, "stock.picking", "list,form")
+
+    def action_open_return_transfers(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Return Transfers"), self.return_transfer_ids, "stock.picking", "list,form")
+
+    def action_open_refill_transfers(self):
+        self.ensure_one()
+        return self._action_open_related_records(_("Closing Refill Transfers"), self.refill_transfer_ids, "stock.picking", "list,form")
 
     def action_open_sales_orders(self):
         self.ensure_one()
@@ -1567,12 +1769,12 @@ class RouteDailyClosingAuditLine(models.Model):
     user_id = fields.Many2one("res.users", string="User", required=True, default=lambda self: self.env.user)
     event_datetime = fields.Datetime(string="Date/Time", required=True, default=fields.Datetime.now)
     state_from = fields.Selection(
-        [("closed", "Closed"), ("reopened", "Reopened")],
+        [("open", "Open"), ("closed", "Closed"), ("reopened", "Reopened")],
         string="From Status",
         readonly=True,
     )
     state_to = fields.Selection(
-        [("closed", "Closed"), ("reopened", "Reopened")],
+        [("open", "Open"), ("closed", "Closed"), ("reopened", "Reopened")],
         string="To Status",
         readonly=True,
     )
