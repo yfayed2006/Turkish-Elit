@@ -89,6 +89,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         sanitize=False,
         readonly=True,
     )
+    outlet_chart_html = fields.Html(
+        string="Outlet Performance Analytics",
+        compute="_compute_dashboard_html",
+        sanitize=False,
+        readonly=True,
+    )
     ranking_html = fields.Html(
         string="Team and Operations Ranking",
         compute="_compute_dashboard_html",
@@ -313,6 +319,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             rec.visit_chart_html = rec._render_visit_chart_html(payload)
             rec.collection_chart_html = rec._render_collection_chart_html(payload)
             rec.product_chart_html = rec._render_product_chart_html(payload)
+            rec.outlet_chart_html = rec._render_outlet_chart_html(payload)
             rec.ranking_html = rec._render_ranking_html(payload)
 
     def _get_date_range(self):
@@ -578,6 +585,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         salesperson_lines = self._build_salesperson_lines(visits, payments, sale_orders, direct_returns, location_issue_visits)
         vehicle_lines = self._build_vehicle_lines(visits, vehicle_closings)
         product_lines, gross_profit, missing_cost_product_count = self._build_product_lines(visits, sale_orders, direct_returns)
+        outlet_lines, outlet_mode_summary = self._build_outlet_lines(
+            visits, confirmed_payments, open_promises, sale_orders, direct_returns, location_issue_visits
+        )
 
         operation_dates = self._operation_dates(
             visits, payments, sale_orders, direct_returns, closing_records, vehicle_closings, loading_proposals
@@ -639,6 +649,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "salesperson_lines": salesperson_lines,
             "vehicle_lines": vehicle_lines,
             "product_lines": product_lines,
+            "outlet_lines": outlet_lines,
+            "outlet_mode_summary": outlet_mode_summary,
             "gross_profit": gross_profit,
             "missing_cost_product_count": missing_cost_product_count,
             "closed_day_count": closed_day_count,
@@ -812,6 +824,127 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         lines = sorted(data.values(), key=lambda item: item["sales"], reverse=True)
         return lines, sum(line["profit"] for line in lines), len(missing_cost_product_ids)
 
+    def _outlet_mode_key(self, outlet):
+        mode = (getattr(outlet, "outlet_operation_mode", False) or "consignment") if outlet else "consignment"
+        return "direct_sale" if mode in ("direct_sale", "direct_sales") else "consignment"
+
+    def _outlet_mode_label(self, mode):
+        return _("Direct Sale") if mode == "direct_sale" else _("Consignment")
+
+    def _build_outlet_lines(self, visits, confirmed_payments, open_promises, sale_orders, direct_returns, location_issue_visits):
+        data = defaultdict(lambda: {
+            "name": _("No Outlet"),
+            "mode": "consignment",
+            "mode_label": _("Consignment"),
+            "visits": 0,
+            "done": 0,
+            "unfinished": 0,
+            "sales": 0.0,
+            "collection": 0.0,
+            "open_due": 0.0,
+            "promises": 0.0,
+            "returns": 0.0,
+            "location": 0,
+            "risk": 0.0,
+            "collection_rate": 0.0,
+            "return_rate": 0.0,
+        })
+
+        def values_for(outlet):
+            key = outlet.id if outlet else 0
+            values = data[key]
+            if outlet:
+                values["name"] = outlet.display_name
+                values["mode"] = self._outlet_mode_key(outlet)
+                values["mode_label"] = self._outlet_mode_label(values["mode"])
+            return values
+
+        for visit in visits:
+            values = values_for(visit.outlet_id)
+            values["visits"] += 1
+            if visit.visit_process_state == "done":
+                values["done"] += 1
+            elif visit.visit_process_state != "cancel":
+                values["unfinished"] += 1
+            values["open_due"] += visit.remaining_due_amount or 0.0
+            if values["mode"] != "direct_sale":
+                values["sales"] += sum((line.sold_amount or 0.0) for line in visit.line_ids)
+                values["returns"] += sum((line.return_amount or 0.0) for line in visit.line_ids)
+
+        for visit in location_issue_visits:
+            values_for(visit.outlet_id)["location"] += 1
+
+        for order in sale_orders:
+            values = values_for(order.route_outlet_id)
+            values["sales"] += order.amount_total or 0.0
+            if "direct_sale_remaining_due" in order._fields:
+                values["open_due"] += order.direct_sale_remaining_due or 0.0
+
+        for payment in confirmed_payments:
+            values_for(payment.outlet_id)["collection"] += payment.amount or 0.0
+
+        for payment in open_promises:
+            values_for(payment.outlet_id)["promises"] += payment.effective_promise_amount or payment.promise_amount or 0.0
+
+        for ret in direct_returns:
+            values_for(ret.outlet_id)["returns"] += ret.amount_total or 0.0
+
+        lines = []
+        for values in data.values():
+            if not any((values["visits"], values["sales"], values["collection"], values["open_due"], values["promises"], values["returns"], values["location"])):
+                continue
+            values["collection_rate"] = (values["collection"] / values["sales"] * 100.0) if values["sales"] else 0.0
+            values["return_rate"] = (values["returns"] / values["sales"] * 100.0) if values["sales"] else 0.0
+            values["risk"] = (
+                (values["unfinished"] * 5.0)
+                + (values["location"] * 3.0)
+                + (1.0 if values["promises"] else 0.0)
+                + (values["open_due"] / 10.0)
+                + (values["returns"] / 25.0)
+            )
+            lines.append(values)
+
+        summary = {
+            "direct_sale": {
+                "label": _("Direct Sale"),
+                "outlets": 0,
+                "visits": 0,
+                "sales": 0.0,
+                "collection": 0.0,
+                "open_due": 0.0,
+                "promises": 0.0,
+                "returns": 0.0,
+                "collection_rate": 0.0,
+                "return_rate": 0.0,
+            },
+            "consignment": {
+                "label": _("Consignment"),
+                "outlets": 0,
+                "visits": 0,
+                "sales": 0.0,
+                "collection": 0.0,
+                "open_due": 0.0,
+                "promises": 0.0,
+                "returns": 0.0,
+                "collection_rate": 0.0,
+                "return_rate": 0.0,
+            },
+        }
+        for line in lines:
+            bucket = summary[line["mode"]]
+            bucket["outlets"] += 1
+            bucket["visits"] += line["visits"]
+            bucket["sales"] += line["sales"]
+            bucket["collection"] += line["collection"]
+            bucket["open_due"] += line["open_due"]
+            bucket["promises"] += line["promises"]
+            bucket["returns"] += line["returns"]
+        for bucket in summary.values():
+            bucket["collection_rate"] = (bucket["collection"] / bucket["sales"] * 100.0) if bucket["sales"] else 0.0
+            bucket["return_rate"] = (bucket["returns"] / bucket["sales"] * 100.0) if bucket["sales"] else 0.0
+
+        return sorted(lines, key=lambda item: (item["risk"], item["open_due"], item["returns"], item["sales"]), reverse=True), summary
+
     def _render_executive_html(self, payload):
         visit_total = len(payload["visits"])
         done = payload["visit_status"].get("done", 0)
@@ -963,6 +1096,111 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
+
+    def _render_outlet_chart_html(self, payload):
+        outlet_lines = payload.get("outlet_lines") or []
+        summary = payload.get("outlet_mode_summary") or {}
+        direct = summary.get("direct_sale") or {}
+        consignment = summary.get("consignment") or {}
+
+        comparison_rows = [
+            (_("Sales"), direct.get("sales", 0.0), consignment.get("sales", 0.0), True),
+            (_("Collection"), direct.get("collection", 0.0), consignment.get("collection", 0.0), True),
+            (_("Open Due"), direct.get("open_due", 0.0), consignment.get("open_due", 0.0), True),
+            (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
+            (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
+        ]
+        top_sales = sorted(outlet_lines, key=lambda line: line.get("sales", 0.0), reverse=True)[:10]
+        top_collection = sorted(outlet_lines, key=lambda line: line.get("collection", 0.0), reverse=True)[:10]
+        top_due = sorted(outlet_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]
+        top_returns = sorted(outlet_lines, key=lambda line: line.get("returns", 0.0), reverse=True)[:10]
+        risk_lines = sorted(outlet_lines, key=lambda line: line.get("risk", 0.0), reverse=True)[:10]
+
+        direct_card = self._outlet_mode_card("direct", _("Direct Sale Outlets"), direct)
+        consignment_card = self._outlet_mode_card("consignment", _("Consignment Outlets"), consignment)
+        outlet_cards = "<div class='route_dash_outlet_mode_grid'>%s%s</div>" % (direct_card, consignment_card)
+
+        html = self._section_title(
+            _("Outlet Performance Analytics"),
+            _("Compare direct-sale and consignment outlets by sales, collection, open due, returns, and operational risk."),
+        )
+        html += outlet_cards
+        html += "<div class='route_dash_chart_grid'>"
+        html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Side-by-side comparison by outlet operation mode."), wide=True)
+        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars([(line["name"], line["sales"], "#0ea5e9") for line in top_sales], money=True), _("Revenue leaders across both outlet types."))
+        html += self._chart_card(_("Top Outlets by Collection"), self._horizontal_bars([(line["name"], line["collection"], "#16a34a") for line in top_collection], money=True), _("Best cash collection outlets."))
+        html += self._chart_card(_("Highest Open Due Outlets"), self._horizontal_bars([(line["name"], line["open_due"], "#ef4444") for line in top_due], money=True), _("Priority collection follow-up."))
+        html += self._chart_card(_("Top Returned Outlets"), self._horizontal_bars([(line["name"], line["returns"], "#f97316") for line in top_returns], money=True), _("Helps identify slow movement, mismatch, or display issues."))
+        html += self._chart_card(_("Outlet Risk Ranking"), self._outlet_risk_cards(risk_lines), _("Risk combines unfinished visits, location issues, open due, promises, and returns."), wide=True)
+        html += "</div>"
+        return f"<div class='route_dash_block route_dash_outlet_block'>{html}</div>"
+
+    def _outlet_mode_card(self, tone, title, values):
+        sales = values.get("sales", 0.0) or 0.0
+        collection = values.get("collection", 0.0) or 0.0
+        collection_rate = values.get("collection_rate", 0.0) or 0.0
+        return_rate = values.get("return_rate", 0.0) or 0.0
+        return (
+            f"<div class='route_dash_outlet_mode route_dash_outlet_{escape(tone)}'>"
+            f"<div><span>{escape(str(title))}</span><strong>{escape(self._num(values.get('outlets', 0)))}</strong><small>{escape(_('active outlets in selected period'))}</small></div>"
+            "<div class='route_dash_outlet_mode_metrics'>"
+            f"<span><small>{escape(_('Sales'))}</small><b>{escape(self._money(sales))}</b></span>"
+            f"<span><small>{escape(_('Collection'))}</small><b>{escape(self._money(collection))}</b></span>"
+            f"<span><small>{escape(_('Open Due'))}</small><b>{escape(self._money(values.get('open_due', 0.0)))}</b></span>"
+            f"<span><small>{escape(_('Returns'))}</small><b>{escape(self._money(values.get('returns', 0.0)))}</b></span>"
+            f"<span><small>{escape(_('Collection Rate'))}</small><b>{collection_rate:.0f}%</b></span>"
+            f"<span><small>{escape(_('Return Rate'))}</small><b>{return_rate:.0f}%</b></span>"
+            "</div></div>"
+        )
+
+    def _dual_horizontal_bars(self, rows):
+        cleaned = [(label, float(direct or 0.0), float(consignment or 0.0), bool(money)) for label, direct, consignment, money in rows if direct or consignment]
+        if not cleaned:
+            return self._empty_chart()
+        max_value = max(max(abs(direct), abs(consignment)) for _label, direct, consignment, _money in cleaned) or 1.0
+        html = "<div class='route_dash_dual_bars'>"
+        html += (
+            "<div class='route_dash_dual_legend'>"
+            "<span><i class='route_dash_direct_dot'></i>Direct Sale</span>"
+            "<span><i class='route_dash_consignment_dot'></i>Consignment</span>"
+            "</div>"
+        )
+        for label, direct, consignment, money in cleaned:
+            direct_width = max(min(abs(direct) / max_value * 100.0, 100.0), 2.0) if direct else 0.0
+            consignment_width = max(min(abs(consignment) / max_value * 100.0, 100.0), 2.0) if consignment else 0.0
+            direct_display = self._money(direct) if money else self._short_num(direct)
+            consignment_display = self._money(consignment) if money else self._short_num(consignment)
+            html += (
+                "<div class='route_dash_dual_row'>"
+                f"<div class='route_dash_dual_label'>{escape(str(label))}</div>"
+                "<div class='route_dash_dual_lines'>"
+                f"<div class='route_dash_dual_line'><span>{escape(_('Direct Sale'))}</span><div><i class='route_dash_direct_bar' style='width:{direct_width:.2f}%'></i></div><strong>{escape(direct_display)}</strong></div>"
+                f"<div class='route_dash_dual_line'><span>{escape(_('Consignment'))}</span><div><i class='route_dash_consignment_bar' style='width:{consignment_width:.2f}%'></i></div><strong>{escape(consignment_display)}</strong></div>"
+                "</div></div>"
+            )
+        html += "</div>"
+        return html
+
+    def _outlet_risk_cards(self, lines):
+        if not lines:
+            return self._empty_chart()
+        html = "<div class='route_dash_outlet_risk_grid'>"
+        for line in lines:
+            risk = line.get("risk", 0.0) or 0.0
+            risk_label = _("High") if risk >= 25 else (_("Medium") if risk >= 8 else _("Low"))
+            html += (
+                "<div class='route_dash_outlet_risk_card'>"
+                f"<div><strong>{escape(str(line.get('name') or _('No Outlet')))}</strong><span>{escape(str(line.get('mode_label') or ''))}</span></div>"
+                f"<b>{escape(risk_label)}</b>"
+                "<small>"
+                f"{escape(_('Due'))}: {escape(self._money(line.get('open_due', 0.0)))} · "
+                f"{escape(_('Returns'))}: {escape(self._money(line.get('returns', 0.0)))} · "
+                f"{escape(_('Issues'))}: {escape(self._num((line.get('unfinished', 0) or 0) + (line.get('location', 0) or 0)))}"
+                "</small>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
 
     def _render_ranking_html(self, payload):
         salesperson_rows = payload["salesperson_lines"][:8]
@@ -1188,3 +1426,4 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         if currency.position == "after":
             return f"{formatted} {symbol}".strip()
         return f"{symbol} {formatted}".strip()
+
