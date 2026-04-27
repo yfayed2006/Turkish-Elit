@@ -1019,6 +1019,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "plan_ids": [fields.Command.set(plans.ids)],
             "vehicle_closing_ids": [fields.Command.set(closings.ids)],
             "loading_proposal_ids": [fields.Command.set(proposals.ids)],
+            "location_review_visit_ids": [fields.Command.set(location_issues.ids)],
+            "open_due_visit_ids": [fields.Command.set(open_due_visits.ids)],
             "open_promise_payment_ids": [fields.Command.set(open_promises.ids)],
             "pending_transfer_ids": [fields.Command.set(pending_transfers.ids)],
             "return_transfer_ids": [fields.Command.set(return_pickings.ids)],
@@ -1182,6 +1184,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             raise UserError(_("No daily closing record exists yet for the selected filters."))
         closing_record._ensure_initial_close_audit_line()
         closing_record._ensure_scope_labels()
+        closing_record._ensure_linked_document_records()
         action = self.env.ref("route_core.action_route_daily_closing", raise_if_not_found=False)
         result = action.read()[0] if action else {
             "type": "ir.actions.act_window",
@@ -1526,6 +1529,22 @@ class RouteDailyClosing(models.Model):
     plan_ids = fields.Many2many("route.plan", string="Daily Plans", readonly=True)
     vehicle_closing_ids = fields.Many2many("route.vehicle.closing", string="Vehicle Closings", readonly=True)
     loading_proposal_ids = fields.Many2many("route.loading.proposal", string="Loading Proposals", readonly=True)
+    location_review_visit_ids = fields.Many2many(
+        "route.visit",
+        "route_daily_closing_location_review_visit_rel",
+        "closing_id",
+        "visit_id",
+        string="Location Review Visits",
+        readonly=True,
+    )
+    open_due_visit_ids = fields.Many2many(
+        "route.visit",
+        "route_daily_closing_open_due_visit_rel",
+        "closing_id",
+        "visit_id",
+        string="Open Due Visits",
+        readonly=True,
+    )
     open_promise_payment_ids = fields.Many2many(
         "route.visit.payment",
         "route_daily_closing_open_promise_payment_rel",
@@ -1660,6 +1679,60 @@ class RouteDailyClosing(models.Model):
                 "outlet_scope_label": rec._scope_label_value(rec.outlet_id, len(outlets), _("All Outlets")),
             })
 
+    def _create_dashboard_scope_for_backfill(self):
+        self.ensure_one()
+        return self.env["route.supervisor.daily.closing"].sudo().create({
+            "company_id": self.company_id.id or self.env.company.id,
+            "closing_date": self.closing_date or fields.Date.context_today(self),
+            "salesperson_id": self.salesperson_id.id or False,
+            "vehicle_id": self.vehicle_id.id or False,
+            "city_id": self.city_id.id or False,
+            "area_id": self.area_id.id or False,
+            "outlet_id": self.outlet_id.id or False,
+        })
+
+    def _collect_linked_document_recordsets(self):
+        """Return the same operational records used by the closing dashboard.
+
+        This is used as a safe backfill for closing records created before all
+        linked-document relation fields existed. Counts alone are not enough for
+        action buttons: the buttons must open the exact records behind the count.
+        """
+        self.ensure_one()
+        dashboard = self._create_dashboard_scope_for_backfill()
+        visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = dashboard._collect_dashboard_data()
+        location_issues = dashboard._location_review_issue_visits(visits)
+        open_due_visits = dashboard._uncovered_due_visits(visits, open_promises)
+        return_pickings = (visits.mapped("return_picking_ids") | direct_returns.mapped("picking_ids")).filtered(lambda picking: picking.state != "cancel")
+        refill_pickings = visits.mapped("refill_picking_id").filtered(lambda picking: picking.state != "cancel")
+        return {
+            "location_review_visit_ids": location_issues,
+            "open_due_visit_ids": open_due_visits,
+            "open_promise_payment_ids": open_promises,
+            "pending_transfer_ids": pending_transfers,
+            "return_transfer_ids": return_pickings,
+            "refill_transfer_ids": refill_pickings,
+        }
+
+    def _ensure_linked_document_records(self):
+        """Populate linked-document relations for older records and button actions."""
+        for rec in self:
+            needs_backfill = (
+                (rec.location_issue_count and not rec.location_review_visit_ids)
+                or (rec.open_due_visit_count and not rec.open_due_visit_ids)
+                or (rec.open_promise_count and not rec.open_promise_payment_ids)
+                or (rec.pending_transfer_count and not rec.pending_transfer_ids)
+                or (rec.return_transfer_count and not rec.return_transfer_ids)
+                or (rec.refill_transfer_count and not rec.refill_transfer_ids)
+            )
+            if not needs_backfill:
+                continue
+            recordsets = rec._collect_linked_document_recordsets()
+            rec.sudo().write({
+                field_name: [fields.Command.set(records.ids)]
+                for field_name, records in recordsets.items()
+            })
+
     def _action_open_related_records(self, name, records, res_model, view_mode="list,form", action_xmlid=False):
         self.ensure_one()
         action = self.env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
@@ -1696,40 +1769,33 @@ class RouteDailyClosing(models.Model):
 
     def action_open_location_review_visits(self):
         self.ensure_one()
-        location_review_visits = self.visit_ids.filtered(
-            lambda visit: visit.geo_review_required
-            or visit.geo_review_supervisor_decision == "needs_correction"
-            or visit.geo_review_state in ["outlet_missing", "pending_checkin"]
-        )
-        return self._action_open_related_records(_("Closing Location Review Visits"), location_review_visits, "route.visit", "kanban,list,form")
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Location Review Visits"), self.location_review_visit_ids, "route.visit", "kanban,list,form")
 
     def action_open_open_due_visits(self):
         self.ensure_one()
-        due_visits = self.visit_ids.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
-        return self._action_open_related_records(_("Closing Open Due Visits"), due_visits, "route.visit", "kanban,list,form")
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Open Due Visits"), self.open_due_visit_ids, "route.visit", "kanban,list,form")
 
     def action_open_promises(self):
         self.ensure_one()
-        action_xmlid = "route_core.action_route_visit_payment" if self.env.ref("route_core.action_route_visit_payment", raise_if_not_found=False) else False
-        return self._action_open_related_records(
-            _("Closing Open Promises"),
-            self.open_promise_payment_ids,
-            "route.visit.payment",
-            "kanban,list,form",
-            action_xmlid,
-        )
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Open Promises"), self.open_promise_payment_ids, "route.visit.payment", "list,form", "route_core.action_route_visit_payment")
 
     def action_open_pending_transfers(self):
         self.ensure_one()
-        return self._action_open_related_records(_("Closing Pending Transfers"), self.pending_transfer_ids, "stock.picking", "list,form")
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Pending Transfers"), self.pending_transfer_ids, "stock.picking", "list,form", "stock.action_picking_tree_all")
 
     def action_open_return_transfers(self):
         self.ensure_one()
-        return self._action_open_related_records(_("Closing Return Transfers"), self.return_transfer_ids, "stock.picking", "list,form")
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Return Transfers"), self.return_transfer_ids, "stock.picking", "list,form", "stock.action_picking_tree_all")
 
     def action_open_refill_transfers(self):
         self.ensure_one()
-        return self._action_open_related_records(_("Closing Refill Transfers"), self.refill_transfer_ids, "stock.picking", "list,form")
+        self._ensure_linked_document_records()
+        return self._action_open_related_records(_("Closing Refill Transfers"), self.refill_transfer_ids, "stock.picking", "list,form", "stock.action_picking_tree_all")
 
     def action_open_sales_orders(self):
         self.ensure_one()
