@@ -288,7 +288,10 @@ class RouteVisit(models.Model):
         for visit in self:
             if not visit.geo_review_required:
                 raise ValidationError(_("Only visits that need geo review can be marked as accepted."))
-        self.write({
+        self.with_context(
+            route_visit_force_write=True,
+            bypass_daily_closing_lock=True,
+        ).write({
             "geo_review_supervisor_decision": "accepted",
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
@@ -299,7 +302,10 @@ class RouteVisit(models.Model):
         for visit in self:
             if not visit.geo_review_required:
                 raise ValidationError(_("Only visits that need geo review can be marked as needs correction."))
-        self.write({
+        self.with_context(
+            route_visit_force_write=True,
+            bypass_daily_closing_lock=True,
+        ).write({
             "geo_review_supervisor_decision": "needs_correction",
             "geo_review_supervisor_user_id": self.env.user.id,
             "geo_review_supervisor_datetime": fields.Datetime.now(),
@@ -307,7 +313,10 @@ class RouteVisit(models.Model):
         return self._geo_review_refresh_action(_("Location review marked as needs correction."), notification_type="warning")
 
     def action_geo_review_reset_decision(self):
-        self.write(self._geo_review_reset_supervisor_decision_values())
+        self.with_context(
+            route_visit_force_write=True,
+            bypass_daily_closing_lock=True,
+        ).write(self._geo_review_reset_supervisor_decision_values())
         return self._geo_review_refresh_action(_("Location review decision reset."), notification_type="info")
 
     @api.constrains("geo_checkin_latitude", "geo_checkin_longitude", "geo_checkin_accuracy_m")
