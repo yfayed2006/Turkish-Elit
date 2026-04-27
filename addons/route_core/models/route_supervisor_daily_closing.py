@@ -585,6 +585,26 @@ class RouteSupervisorDailyClosing(models.TransientModel):
     def _uncovered_due_amount_total(self, visits, open_promises):
         return sum(self._visit_uncovered_due_amount(visit, open_promises) for visit in visits)
 
+    def _location_review_issue_visits(self, visits):
+        """Visits that still require supervisor location review for daily closing.
+
+        Cancelled visits without field execution should not block closing. If a
+        visit was cancelled, it remains visible in visit history, but it is not
+        treated as a location review blocker.
+        """
+        return visits.filtered(
+            lambda visit: visit.visit_process_state != "cancel"
+            and (
+                (visit.geo_review_required and not visit.geo_review_supervisor_decision)
+                or visit.geo_review_supervisor_decision == "needs_correction"
+                or visit.geo_review_state == "outlet_missing"
+                or (
+                    visit.geo_review_state == "pending_checkin"
+                    and visit.visit_process_state not in ["draft", "cancel"]
+                )
+            )
+        )
+
     @api.depends("company_id", "closing_date", "salesperson_id", "vehicle_id", "city_id", "area_id", "outlet_id")
     def _compute_closing_dashboard(self):
         for dashboard in self:
@@ -595,11 +615,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 not_started_visits = visits.filtered(lambda visit: visit.visit_process_state == "draft")
                 active_visits = visits.filtered(lambda visit: visit.visit_process_state not in ["draft", "done", "cancel"])
                 unfinished_visits = visits.filtered(lambda visit: visit.visit_process_state not in ["done", "cancel"])
-                location_issues = visits.filtered(
-                    lambda visit: (visit.geo_review_required and not visit.geo_review_supervisor_decision)
-                    or visit.geo_review_supervisor_decision == "needs_correction"
-                    or visit.geo_review_state in ["pending_checkin", "outlet_missing"]
-                )
+                location_issues = dashboard._location_review_issue_visits(visits)
                 open_due_visits = dashboard._uncovered_due_visits(visits, open_promises)
                 blocking_promises = dashboard._blocking_promises(open_promises)
                 not_finalized_plans = plans.filtered(lambda plan: not plan.planning_finalized)
@@ -731,11 +747,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         not_started = visits.filtered(lambda visit: visit.visit_process_state == "draft")
         open_due = self._uncovered_due_visits(visits, open_promises)
         blocking_promises = self._blocking_promises(open_promises)
-        location_issues = visits.filtered(
-            lambda visit: (visit.geo_review_required and not visit.geo_review_supervisor_decision)
-            or visit.geo_review_supervisor_decision == "needs_correction"
-            or visit.geo_review_state in ["pending_checkin", "outlet_missing"]
-        )
+        location_issues = self._location_review_issue_visits(visits)
         not_finalized = plans.filtered(lambda plan: not plan.planning_finalized)
         pending_closings = closings.filtered(lambda closing: closing.state != "closed")
         missing_closings = plans.filtered(lambda plan: plan.vehicle_id and plan not in closings.mapped("plan_id"))
@@ -1021,17 +1033,10 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         )
 
     def action_open_location_issues(self):
-        return self._action_open_visits(
-            _("Location Review Pending"),
-            self._base_visit_domain()
-            + [
-                "|",
-                "|",
-                ("geo_review_state", "in", ["pending_checkin", "outlet_missing"]),
-                ("geo_review_required", "=", True),
-                ("geo_review_supervisor_decision", "=", "needs_correction"),
-            ],
-        )
+        self.ensure_one()
+        visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = self._collect_dashboard_data()
+        visits = self._location_review_issue_visits(visits)
+        return self._action_open_visits(_("Location Review Pending"), [("id", "in", visits.ids or [0])])
 
     def action_open_open_due_visits(self):
         self.ensure_one()
