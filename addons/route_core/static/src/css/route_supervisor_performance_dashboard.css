@@ -358,3 +358,195 @@
     .route_dash_line_wrap { min-height: 145px; }
     .route_dash_line_svg { height: 125px; }
 }
+
+/* Supervisor Performance Dashboard - Outlet Analytics Round */
+.route_dash_outlet_block {
+    margin-top: 18px;
+}
+.route_dash_outlet_mode_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 8px 0 14px;
+}
+.route_dash_outlet_mode {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055);
+    overflow: hidden;
+}
+.route_dash_outlet_mode::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    background: #0ea5e9;
+}
+.route_dash_outlet_consignment::before { background: #16a34a; }
+.route_dash_outlet_mode span,
+.route_dash_outlet_mode small {
+    display: block;
+    color: #64748b;
+}
+.route_dash_outlet_mode strong {
+    display: block;
+    margin: 6px 0 4px;
+    color: #0f172a;
+    font-size: 32px;
+    line-height: 1;
+    font-weight: 900;
+}
+.route_dash_outlet_mode_metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.route_dash_outlet_mode_metrics span {
+    padding: 9px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.9);
+}
+.route_dash_outlet_mode_metrics b {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.route_dash_dual_bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.route_dash_dual_legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.route_dash_dual_legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+.route_dash_direct_dot,
+.route_dash_consignment_dot {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    border-radius: 999px;
+}
+.route_dash_direct_dot { background: #0ea5e9; }
+.route_dash_consignment_dot { background: #16a34a; }
+.route_dash_dual_row {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+.route_dash_dual_label {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 800;
+}
+.route_dash_dual_lines {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.route_dash_dual_line {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr) 90px;
+    gap: 8px;
+    align-items: center;
+}
+.route_dash_dual_line span,
+.route_dash_dual_line strong {
+    color: #334155;
+    font-size: 12px;
+}
+.route_dash_dual_line strong {
+    text-align: right;
+    font-weight: 800;
+}
+.route_dash_dual_line div {
+    height: 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+.route_dash_dual_line i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+}
+.route_dash_direct_bar { background: #0ea5e9; }
+.route_dash_consignment_bar { background: #16a34a; }
+.route_dash_outlet_risk_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.route_dash_outlet_risk_card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+.route_dash_outlet_risk_card strong,
+.route_dash_outlet_risk_card span,
+.route_dash_outlet_risk_card small {
+    display: block;
+}
+.route_dash_outlet_risk_card strong {
+    color: #0f172a;
+    font-size: 14px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.route_dash_outlet_risk_card span {
+    color: #64748b;
+    font-size: 12px;
+}
+.route_dash_outlet_risk_card b {
+    align-self: start;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #c2410c;
+    font-size: 12px;
+}
+.route_dash_outlet_risk_card small {
+    grid-column: 1 / -1;
+    color: #64748b;
+    font-weight: 600;
+}
+@media (max-width: 1200px) {
+    .route_dash_outlet_mode { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+    .route_dash_outlet_mode_grid { grid-template-columns: 1fr; }
+    .route_dash_outlet_mode_metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .route_dash_dual_row { grid-template-columns: 1fr; }
+    .route_dash_dual_line { grid-template-columns: 72px minmax(0, 1fr) 78px; }
+    .route_dash_outlet_risk_grid { grid-template-columns: 1fr; }
+}
