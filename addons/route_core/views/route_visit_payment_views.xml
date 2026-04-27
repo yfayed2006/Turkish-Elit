@@ -1,5 +1,5 @@
 <odoo>
-<!--                Admin / all payments                -->
+<!--                 Admin / all payments                 -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--                Tailored visit list                -->
+<!--                 Tailored visit list                 -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--                Tailored direct sale list                -->
+<!--                 Tailored direct sale list                 -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -92,6 +92,10 @@
 <field name="source_document_ref"/>
 <field name="settlement_document_ref"/>
 <field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="state"/>
+<field name="due_date"/>
 <field name="amount"/>
 <field name="remaining_due_amount"/>
 <field name="effective_promise_amount"/>
@@ -104,8 +108,10 @@
 <div class="route_pda_payment_title">
 <t t-esc="record.source_document_ref.value or 'Collection'"/>
 </div>
-<div class="route_pda_payment_subtitle" t-if="record.outlet_id.raw_value">
-<t t-esc="record.outlet_id.value"/>
+<div class="route_pda_payment_subtitle" t-if="record.outlet_id.raw_value or record.salesperson_id.raw_value">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.salesperson_id.raw_value"> • </t>
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
 </div>
 </div>
 <div class="route_pda_payment_date">
@@ -127,6 +133,11 @@
 <t t-if="record.promise_status.raw_value">
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
 <t t-esc="record.promise_status.value"/>
+</span>
+</t>
+<t t-if="record.state.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t t-esc="record.state.value"/>
 </span>
 </t>
 </div>
@@ -152,12 +163,36 @@
 </div>
 </t>
 </div>
-<div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value or record.promise_date.raw_value">
+<div class="route_pda_payment_footer" t-if="record.source_document_ref.raw_value or record.settlement_document_ref.raw_value or record.area_id.raw_value or record.promise_date.raw_value or record.due_date.raw_value">
+<t t-if="record.source_document_ref.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Source</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.source_document_ref.value"/>
+</span>
+</div>
+</t>
 <t t-if="record.settlement_document_ref.raw_value">
 <div class="route_pda_payment_footer_item route_pda_payment_footer_token">
 <span class="route_pda_payment_footer_label">Settlement</span>
 <span class="route_pda_payment_footer_value">
 <t t-esc="record.settlement_document_ref.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.area_id.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Area</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.area_id.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.due_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Due</span>
+<span class="route_pda_payment_footer_value">
+<field name="due_date"/>
 </span>
 </div>
 </t>
@@ -349,7 +384,7 @@
 </form>
 </field>
 </record>
-<!--                Admin / all payments search                -->
+<!--                 Admin / all payments search                 -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -411,7 +446,7 @@
 </search>
 </field>
 </record>
-<!--                Visit collections search                -->
+<!--                 Visit collections search                 -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -462,7 +497,7 @@
 </search>
 </field>
 </record>
-<!--                Direct sale payments search                -->
+<!--                 Direct sale payments search                 -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -513,7 +548,8 @@
 <record id="action_route_visit_payment" model="ir.actions.act_window">
 <field name="name">All Payments</field>
 <field name="res_model">route.visit.payment</field>
-<field name="view_mode">list,form</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="view_route_visit_collection_kanban"/>
 <field name="search_view_id" ref="view_route_visit_payment_search"/>
 <field name="context">{'search_default_filter_my_payments': 1}</field>
 </record>
