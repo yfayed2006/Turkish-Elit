@@ -791,11 +791,12 @@ Returns:
 <page string="Linked Documents">
 <div class="alert alert-info mb-3" role="alert">
 <strong>Closing Snapshot Documents</strong>
-<span class="d-block">These cards open the exact operational records captured when this day was closed.</span>
+<br/>
+These cards open the exact operational records captured when this day was closed.
 </div>
 <div class="row g-2 mb-3">
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Visits</span>
 <strong class="fs-5">
 <field name="visit_count" nolabel="1" readonly="1"/>
@@ -808,11 +809,11 @@ Done:
 Unfinished:
 <field name="unfinished_visit_count" nolabel="1" readonly="1"/>
 </span>
-<button name="action_open_visits" type="object" string="Open Visits" class="btn btn-primary w-100 mt-auto" icon="fa-calendar-check-o"/>
+<button name="action_open_visits" type="object" string="Open Visits" class="btn btn-primary w-100 mt-2" icon="fa-calendar-check-o"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Daily Plans</span>
 <strong class="fs-5">
 <field name="plan_count" nolabel="1" readonly="1"/>
@@ -822,11 +823,11 @@ Not finalized:
 <field name="not_finalized_plan_count" nolabel="1" readonly="1"/>
 </span>
 <span class="text-muted small d-block">Planning snapshot</span>
-<button name="action_open_daily_plans" type="object" string="Open Plans" class="btn btn-primary w-100 mt-auto" icon="fa-calendar"/>
+<button name="action_open_daily_plans" type="object" string="Open Plans" class="btn btn-primary w-100 mt-2" icon="fa-calendar"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Vehicle Closings</span>
 <strong class="fs-5">
 <field name="vehicle_closing_closed_count" nolabel="1" readonly="1"/>
@@ -841,22 +842,22 @@ Pending:
 Missing:
 <field name="vehicle_closing_missing_count" nolabel="1" readonly="1"/>
 </span>
-<button name="action_open_vehicle_closings" type="object" string="Open Closings" class="btn btn-primary w-100 mt-auto" icon="fa-truck"/>
+<button name="action_open_vehicle_closings" type="object" string="Open Closings" class="btn btn-primary w-100 mt-2" icon="fa-truck"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Location Review</span>
 <strong class="fs-5">
 <field name="location_issue_count" nolabel="1" readonly="1"/>
 </strong>
 <span class="text-muted small d-block">Needs review at closing time</span>
 <span class="text-muted small d-block">Visit location control</span>
-<button name="action_open_location_review_visits" type="object" string="Open Review Visits" class="btn btn-primary w-100 mt-auto" icon="fa-map-marker"/>
+<button name="action_open_location_review_visits" type="object" string="Open Review Visits" class="btn btn-primary w-100 mt-2" icon="fa-map-marker"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Open Due</span>
 <strong class="fs-5">
 <field name="open_due_amount" nolabel="1" readonly="1" widget="monetary"/>
@@ -866,11 +867,11 @@ Visits:
 <field name="open_due_visit_count" nolabel="1" readonly="1"/>
 </span>
 <span class="text-muted small d-block">Uncovered due snapshot</span>
-<button name="action_open_open_due_visits" type="object" string="Open Due Visits" class="btn btn-primary w-100 mt-auto" icon="fa-money"/>
+<button name="action_open_open_due_visits" type="object" string="Open Due Visits" class="btn btn-primary w-100 mt-2" icon="fa-money"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Promises</span>
 <strong class="fs-5">
 <field name="open_promise_count" nolabel="1" readonly="1"/>
@@ -880,11 +881,11 @@ Amount:
 <field name="open_promise_amount" nolabel="1" readonly="1" widget="monetary"/>
 </span>
 <span class="text-muted small d-block">Open payment promises</span>
-<button name="action_open_promises" type="object" string="Open Promises" class="btn btn-primary w-100 mt-auto" icon="fa-calendar-check-o"/>
+<button name="action_open_promises" type="object" string="Open Promises" class="btn btn-primary w-100 mt-2" icon="fa-calendar-check-o"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Loading Proposals</span>
 <strong class="fs-5">
 <field name="loading_proposal_count" nolabel="1" readonly="1"/>
@@ -894,44 +895,44 @@ Pending:
 <field name="loading_pending_count" nolabel="1" readonly="1"/>
 </span>
 <span class="text-muted small d-block">Vehicle loading snapshot</span>
-<button name="action_open_loading_proposals" type="object" string="Open Loading" class="btn btn-primary w-100 mt-auto" icon="fa-cubes"/>
+<button name="action_open_loading_proposals" type="object" string="Open Loading" class="btn btn-primary w-100 mt-2" icon="fa-cubes"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Pending Transfers</span>
 <strong class="fs-5">
 <field name="pending_transfer_count" nolabel="1" readonly="1"/>
 </strong>
 <span class="text-muted small d-block">Pending stock moves</span>
 <span class="text-muted small d-block">Transfer readiness</span>
-<button name="action_open_pending_transfers" type="object" string="Open Transfers" class="btn btn-primary w-100 mt-auto" icon="fa-exchange"/>
+<button name="action_open_pending_transfers" type="object" string="Open Transfers" class="btn btn-primary w-100 mt-2" icon="fa-exchange"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Return Transfers</span>
 <strong class="fs-5">
 <field name="return_transfer_count" nolabel="1" readonly="1"/>
 </strong>
 <span class="text-muted small d-block">Return stock moves</span>
 <span class="text-muted small d-block">Captured at closing time</span>
-<button name="action_open_return_transfers" type="object" string="Open Return Transfers" class="btn btn-primary w-100 mt-auto" icon="fa-undo"/>
+<button name="action_open_return_transfers" type="object" string="Open Return Transfers" class="btn btn-primary w-100 mt-2" icon="fa-undo"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Refill Transfers</span>
 <strong class="fs-5">
 <field name="refill_transfer_count" nolabel="1" readonly="1"/>
 </strong>
 <span class="text-muted small d-block">Refill stock moves</span>
 <span class="text-muted small d-block">Captured at closing time</span>
-<button name="action_open_refill_transfers" type="object" string="Open Refill Transfers" class="btn btn-primary w-100 mt-auto" icon="fa-refresh"/>
+<button name="action_open_refill_transfers" type="object" string="Open Refill Transfers" class="btn btn-primary w-100 mt-2" icon="fa-refresh"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Sales Orders</span>
 <strong class="fs-5">
 <field name="sale_order_count" nolabel="1" readonly="1"/>
@@ -944,11 +945,11 @@ Pending:
 Amount:
 <field name="sale_order_amount" nolabel="1" readonly="1" widget="monetary"/>
 </span>
-<button name="action_open_sales_orders" type="object" string="Open Sales Orders" class="btn btn-primary w-100 mt-auto" icon="fa-shopping-cart"/>
+<button name="action_open_sales_orders" type="object" string="Open Sales Orders" class="btn btn-primary w-100 mt-2" icon="fa-shopping-cart"/>
 </div>
 </div>
-<div class="col-6 col-md-4 col-xl-3">
-<div class="border rounded p-2 bg-white h-100 d-flex flex-column">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Return Orders</span>
 <strong class="fs-5">
 <field name="direct_return_count" nolabel="1" readonly="1"/>
@@ -961,7 +962,7 @@ Pending:
 Amount:
 <field name="direct_return_amount" nolabel="1" readonly="1" widget="monetary"/>
 </span>
-<button name="action_open_direct_returns" type="object" string="Open Return Orders" class="btn btn-primary w-100 mt-auto" icon="fa-undo"/>
+<button name="action_open_direct_returns" type="object" string="Open Return Orders" class="btn btn-primary w-100 mt-2" icon="fa-undo"/>
 </div>
 </div>
 </div>
@@ -970,6 +971,8 @@ Amount:
 <field name="plan_ids" readonly="1" widget="many2many_tags"/>
 <field name="vehicle_closing_ids" readonly="1" widget="many2many_tags"/>
 <field name="loading_proposal_ids" readonly="1" widget="many2many_tags"/>
+<field name="location_review_visit_ids" readonly="1" widget="many2many_tags"/>
+<field name="open_due_visit_ids" readonly="1" widget="many2many_tags"/>
 <field name="open_promise_payment_ids" readonly="1" widget="many2many_tags"/>
 <field name="pending_transfer_ids" readonly="1" widget="many2many_tags"/>
 <field name="return_transfer_ids" readonly="1" widget="many2many_tags"/>
