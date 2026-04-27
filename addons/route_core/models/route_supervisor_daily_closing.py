@@ -829,12 +829,10 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             )
         issue_values = self._get_blocking_issue_values()
         if not issue_values:
-            return self._daily_closing_action_notification(
-                _("Ready to Close"),
-                _("No blocking items were found for the selected filters."),
-                "success",
-                reload=False,
-            )
+            # Validate Closing is the supervisor confirmation step.
+            # When no blockers remain, close the day immediately so the
+            # dashboard does not stop at a passive "Ready to Close" notice.
+            return self.action_close_day()
         raise UserError(self._format_blocking_issue_message(issue_values))
 
     def _get_blocking_issue_values(self):
