@@ -500,6 +500,7 @@ Pending:
 <field name="name"/>
 <field name="closing_date"/>
 <field name="state" widget="badge"/>
+<field name="scope_label"/>
 <field name="company_id"/>
 <field name="salesperson_id"/>
 <field name="vehicle_id"/>
@@ -524,6 +525,9 @@ Pending:
 <button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
 <button name="action_open_vehicle_closings" type="object" string="Vehicle Closings" icon="fa-truck"/>
 <button name="action_open_loading_proposals" type="object" string="Loading" icon="fa-cubes"/>
+<button name="action_open_pending_transfers" type="object" string="Transfers" icon="fa-exchange"/>
+<button name="action_open_return_transfers" type="object" string="Return Transfers" icon="fa-undo"/>
+<button name="action_open_refill_transfers" type="object" string="Refill Transfers" icon="fa-refresh"/>
 <button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
 <button name="action_open_direct_returns" type="object" string="Return Orders" icon="fa-undo"/>
 <field name="state" widget="statusbar" statusbar_visible="closed,reopened"/>
@@ -584,29 +588,53 @@ Pending:
 </div>
 </div>
 <div class="row g-2 mb-3">
-<div class="col-6 col-lg-3">
+<div class="col-12 col-lg-4">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Salesperson</span>
-<field name="salesperson_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Closing Scope</span>
+<strong class="d-block">
+<field name="scope_label" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">The labels below show whether this record covers all daily operations or selected filters only.</span>
 </div>
 </div>
-<div class="col-6 col-lg-3">
+<div class="col-6 col-lg-2">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Vehicle</span>
-<field name="vehicle_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Salespersons</span>
+<strong class="d-block">
+<field name="salesperson_scope_label" nolabel="1" readonly="1"/>
+</strong>
 </div>
 </div>
-<div class="col-6 col-lg-3">
+<div class="col-6 col-lg-2">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">City</span>
-<field name="city_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Vehicles</span>
+<strong class="d-block">
+<field name="vehicle_scope_label" nolabel="1" readonly="1"/>
+</strong>
 </div>
 </div>
-<div class="col-6 col-lg-3">
+<div class="col-6 col-lg-2">
 <div class="border rounded p-2 bg-white h-100">
-<span class="text-muted small d-block">Area / Outlet</span>
-<field name="area_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
-<field name="outlet_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<span class="text-muted small d-block">Cities</span>
+<strong class="d-block">
+<field name="city_scope_label" nolabel="1" readonly="1"/>
+</strong>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Areas</span>
+<strong class="d-block">
+<field name="area_scope_label" nolabel="1" readonly="1"/>
+</strong>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Outlets</span>
+<strong class="d-block">
+<field name="outlet_scope_label" nolabel="1" readonly="1"/>
+</strong>
 </div>
 </div>
 </div>
@@ -801,6 +829,33 @@ Returns:
 </div>
 <div class="col-6 col-lg-4">
 <div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Pending Transfers</span>
+<strong class="fs-5">
+<field name="pending_transfer_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_pending_transfers" type="object" string="Open Transfers" class="btn btn-primary w-100 mt-2" icon="fa-exchange"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Return Transfers</span>
+<strong class="fs-5">
+<field name="return_transfer_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_return_transfers" type="object" string="Open Return Transfers" class="btn btn-primary w-100 mt-2" icon="fa-undo"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Refill Transfers</span>
+<strong class="fs-5">
+<field name="refill_transfer_count" nolabel="1" readonly="1"/>
+</strong>
+<button name="action_open_refill_transfers" type="object" string="Open Refill Transfers" class="btn btn-primary w-100 mt-2" icon="fa-refresh"/>
+</div>
+</div>
+<div class="col-6 col-lg-4">
+<div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">Sales Orders</span>
 <strong class="fs-5">
 <field name="sale_order_count" nolabel="1" readonly="1"/>
@@ -823,6 +878,9 @@ Returns:
 <field name="plan_ids" readonly="1" widget="many2many_tags"/>
 <field name="vehicle_closing_ids" readonly="1" widget="many2many_tags"/>
 <field name="loading_proposal_ids" readonly="1" widget="many2many_tags"/>
+<field name="pending_transfer_ids" readonly="1" widget="many2many_tags"/>
+<field name="return_transfer_ids" readonly="1" widget="many2many_tags"/>
+<field name="refill_transfer_ids" readonly="1" widget="many2many_tags"/>
 <field name="sale_order_ids" readonly="1" widget="many2many_tags"/>
 <field name="direct_return_ids" readonly="1" widget="many2many_tags"/>
 </group>
