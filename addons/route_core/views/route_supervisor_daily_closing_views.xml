@@ -372,9 +372,11 @@ Pending:
 <field name="inherit_id" ref="route_core.view_route_visit_payment_form"/>
 <field name="priority">99</field>
 <field name="arch" type="xml">
-<xpath expr="//header/field[@name='state']" position="before">
-<button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-primary" invisible="state != 'confirmed' or promise_status not in ['due_today', 'overdue'] or not effective_promise_amount or effective_promise_amount == 0"/>
-<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or promise_status in ['due_today', 'overdue', 'closed'] or not effective_promise_amount or effective_promise_amount == 0"/>
+<xpath expr="//header/button[@string='Review Promise']" position="attributes">
+<attribute name="invisible">state != 'confirmed' or promise_status not in ('due_today', 'overdue')</attribute>
+</xpath>
+<xpath expr="//header/button[@string='Review Promise']" position="after">
+<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or promise_status != 'open' or promise_amount == 0"/>
 </xpath>
 </field>
 </record>
