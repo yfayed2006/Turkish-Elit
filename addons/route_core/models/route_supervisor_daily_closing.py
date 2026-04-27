@@ -964,17 +964,45 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         )
 
     def action_open_location_issues(self):
-        return self._action_open_visits(
-            _("Location Review Pending"),
-            self._base_visit_domain()
-            + [
-                "|",
-                "|",
-                ("geo_review_state", "in", ["pending_checkin", "outlet_missing"]),
-                ("geo_review_required", "=", True),
-                ("geo_review_supervisor_decision", "=", "needs_correction"),
-            ],
-        )
+        """Open location-review cards with supervisor decision actions.
+
+        These cards show Accept, Needs Correction, and Reset so the supervisor can
+        clear the Location Review Pending closing blocker from the same screen.
+        """
+        self.ensure_one()
+        domain = self._base_visit_domain() + [
+            "|",
+            "|",
+            ("geo_review_state", "in", ["pending_checkin", "outlet_missing"]),
+            ("geo_review_required", "=", True),
+            ("geo_review_supervisor_decision", "=", "needs_correction"),
+        ]
+
+        views = []
+        geo_kanban_view = self.env.ref("route_core.view_route_geo_control_visit_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
+        if geo_kanban_view:
+            views.append((geo_kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Location Review Pending"),
+            "res_model": "route.visit",
+            "view_mode": "kanban,list,form",
+            "domain": domain,
+            "context": {"create": False, "edit": True, "delete": False},
+        }
+        if views:
+            action["views"] = views
+        search_view = self.env.ref("route_core.view_route_geo_control_card_search", raise_if_not_found=False)
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
 
     def action_open_open_due_visits(self):
         visits = self.env["route.visit"].search(self._base_visit_domain()).filtered(
