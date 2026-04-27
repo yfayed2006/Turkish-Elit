@@ -1,5 +1,5 @@
 <odoo>
-<!--                 Admin / all payments                 -->
+<!--                Admin / all payments                -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--                 Tailored visit list                 -->
+<!--                Tailored visit list                -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -50,7 +50,7 @@
 </list>
 </field>
 </record>
-<!--                 Tailored direct sale list                 -->
+<!--                Tailored direct sale list                -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -176,16 +176,6 @@
 </kanban>
 </field>
 </record>
-<record id="view_route_visit_payment_form_supervisor_promise_review_button_state" model="ir.ui.view">
-<field name="name">route.visit.payment.form.supervisor.promise.review.button.state.disabled</field>
-<field name="model">route.visit.payment</field>
-<field name="inherit_id" eval="False"/>
-<field name="mode">primary</field>
-<field name="active">False</field>
-<field name="arch" type="xml">
-<form string="Disabled Promise Review Button Override"/>
-</field>
-</record>
 <record id="view_route_visit_payment_form" model="ir.ui.view">
 <field name="name">route.visit.payment.form</field>
 <field name="model">route.visit.payment</field>
@@ -193,8 +183,8 @@
 <form class="route_pda_payment_form">
 <header>
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
-<button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue') or effective_promise_amount == 0"/>
-<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or not promise_reviewed_at"/>
+<button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue')"/>
+<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or not promise_review_followup_date"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
 <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
@@ -210,7 +200,6 @@
 <field name="promise_review_for_closing_date" invisible="1"/>
 <field name="promise_review_followup_date" invisible="1"/>
 <field name="promise_reviewed_by_id" invisible="1"/>
-<field name="promise_reviewed_at" invisible="1"/>
 <field name="promise_review_note" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
@@ -309,7 +298,7 @@
 </div>
 </div>
 </div>
-<div class="route_pda_payment_section" invisible="not promise_reviewed_at">
+<div class="route_pda_payment_section" invisible="not promise_review_followup_date and not promise_review_note">
 <div class="route_pda_group_title route_pda_payment_section_title">Supervisor Promise Review</div>
 <div class="route_pda_payment_meta_grid route_pda_payment_reference_grid">
 <div class="route_pda_payment_meta_item">
@@ -326,10 +315,10 @@
 </div>
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Reviewed By</span>
-<field name="promise_reviewed_by_id" readonly="1" nolabel="1"/>
+<field name="promise_reviewed_by_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
 </div>
 </div>
-<div class="route_pda_payment_note_wrap" invisible="not promise_review_note">
+<div class="route_pda_payment_note_wrap mt-2" invisible="not promise_review_note">
 <span class="route_pda_payment_meta_label">Review Note</span>
 <field name="promise_review_note" readonly="1" widget="text" nolabel="1"/>
 </div>
@@ -360,7 +349,7 @@
 </form>
 </field>
 </record>
-<!--                 Admin / all payments search                 -->
+<!--                Admin / all payments search                -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -422,7 +411,7 @@
 </search>
 </field>
 </record>
-<!--                 Visit collections search                 -->
+<!--                Visit collections search                -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -473,7 +462,7 @@
 </search>
 </field>
 </record>
-<!--                 Direct sale payments search                 -->
+<!--                Direct sale payments search                -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
