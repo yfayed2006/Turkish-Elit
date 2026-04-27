@@ -702,8 +702,8 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                 dashboard.is_day_closed = bool(closing_record and closing_record.state == "closed")
                 dashboard.closed_by_id = closing_record.closed_by_id if closing_record else False
                 dashboard.closed_at = closing_record.closed_at if closing_record else False
-                dashboard.reopened_by_id = closing_record.reopened_by_id if closing_record else False
-                dashboard.reopened_at = closing_record.reopened_at if closing_record else False
+                dashboard.reopened_by_id = closing_record.reopened_by_id if closing_record and closing_record.state == "reopened" else False
+                dashboard.reopened_at = closing_record.reopened_at if closing_record and closing_record.state == "reopened" else False
 
                 if closing_record and closing_record.state == "closed":
                     dashboard.daily_closing_state = "closed"
@@ -871,42 +871,93 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             parts.append(area.display_name)
         return " - ".join([part for part in parts if part])
 
+    def _calculate_daily_closing_snapshot_values(self):
+        """Build the persisted closing snapshot from the same live data as the dashboard.
+
+        The Daily Closing Record must be a reliable frozen snapshot of the
+        selected filters at the moment of closing. Avoid copying cached
+        transient/computed values here; recompute from the live recordsets so
+        the record numbers match the Supervisor Daily Closing screen.
+        """
+        self.ensure_one()
+        visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns = self._collect_dashboard_data()
+
+        done_visits = visits.filtered(lambda visit: visit.visit_process_state == "done")
+        unfinished_visits = visits.filtered(lambda visit: visit.visit_process_state not in ["done", "cancel"])
+        location_issues = self._location_review_issue_visits(visits)
+        open_due_visits = self._uncovered_due_visits(visits, open_promises)
+        blocking_promises = self._blocking_promises(open_promises)
+        not_finalized_plans = plans.filtered(lambda plan: not plan.planning_finalized)
+        closed_closings = closings.filtered(lambda closing: closing.state == "closed")
+        pending_closings = closings.filtered(lambda closing: closing.state != "closed")
+        missing_closings_count = len(plans.filtered(lambda plan: plan.vehicle_id and plan not in closings.mapped("plan_id")))
+        pending_loading = proposals.filtered(
+            lambda proposal: proposal.state not in ["approved", "cancelled"]
+            or (proposal.picking_id and proposal.picking_id.state not in ["done", "cancel"])
+        )
+        return_pickings = (visits.mapped("return_picking_ids") | direct_returns.mapped("picking_ids")).filtered(lambda picking: picking.state != "cancel")
+        refill_pickings = visits.mapped("refill_picking_id").filtered(lambda picking: picking.state != "cancel")
+        pending_sale_orders = sale_orders.filtered(lambda order: order.state in ["draft", "sent"])
+        pending_direct_returns = direct_returns.filtered(lambda direct_return: direct_return.state == "draft")
+
+        blocker_count = (
+            len(unfinished_visits)
+            + len(location_issues)
+            + len(open_due_visits)
+            + len(blocking_promises)
+            + len(not_finalized_plans)
+            + len(pending_closings)
+            + missing_closings_count
+            + len(pending_loading)
+            + len(pending_transfers)
+            + len(pending_sale_orders)
+            + len(pending_direct_returns)
+        )
+
+        return {
+            "blocker_count": blocker_count,
+            "plan_count": len(plans),
+            "not_finalized_plan_count": len(not_finalized_plans),
+            "visit_count": len(visits),
+            "done_visit_count": len(done_visits),
+            "unfinished_visit_count": len(unfinished_visits),
+            "location_issue_count": len(location_issues),
+            "open_due_amount": self._uncovered_due_amount_total(open_due_visits, open_promises) if open_due_visits else 0.0,
+            "open_due_visit_count": len(open_due_visits),
+            "open_promise_count": len(open_promises),
+            "open_promise_amount": sum(open_promises.mapped("promise_amount")) if open_promises else 0.0,
+            "vehicle_closing_count": len(closings),
+            "vehicle_closing_closed_count": len(closed_closings),
+            "vehicle_closing_pending_count": len(pending_closings),
+            "vehicle_closing_missing_count": missing_closings_count,
+            "loading_proposal_count": len(proposals),
+            "loading_pending_count": len(pending_loading),
+            "pending_transfer_count": len(pending_transfers),
+            "return_transfer_count": len(return_pickings),
+            "refill_transfer_count": len(refill_pickings),
+            "sale_order_count": len(sale_orders),
+            "pending_sale_order_count": len(pending_sale_orders),
+            "sale_order_amount": sum(sale_orders.mapped("amount_total")) if sale_orders else 0.0,
+            "direct_return_count": len(direct_returns),
+            "pending_direct_return_count": len(pending_direct_returns),
+            "direct_return_amount": sum(direct_returns.mapped("amount_total")) if direct_returns else 0.0,
+            "visit_ids": [fields.Command.set(visits.ids)],
+            "plan_ids": [fields.Command.set(plans.ids)],
+            "vehicle_closing_ids": [fields.Command.set(closings.ids)],
+            "loading_proposal_ids": [fields.Command.set(proposals.ids)],
+            "sale_order_ids": [fields.Command.set(sale_orders.ids)],
+            "direct_return_ids": [fields.Command.set(direct_returns.ids)],
+        }
+
     def _prepare_daily_closing_record_values(self, state="closed"):
         self.ensure_one()
         vals = self._daily_closing_lookup_values()
+        snapshot_vals = self._calculate_daily_closing_snapshot_values()
+        vals.update(snapshot_vals)
         vals.update({
             "name": self._build_daily_closing_name(vals),
             "state": state,
             "closing_note": self.closing_note or False,
-            "blocker_count": self.blocker_count,
-            "plan_count": self.total_plan_count,
-            "not_finalized_plan_count": self.not_finalized_plan_count,
-            "visit_count": self.total_visit_count,
-            "done_visit_count": self.done_visit_count,
-            "unfinished_visit_count": self.unfinished_visit_count,
-            "location_issue_count": self.location_issue_count,
-            "open_due_amount": self.open_due_amount,
-            "open_due_visit_count": self.open_due_visit_count,
-            "open_promise_count": self.open_promise_count,
-            "open_promise_amount": self.open_promise_amount,
-            "vehicle_closing_count": self.vehicle_closing_count,
-            "vehicle_closing_closed_count": self.vehicle_closing_closed_count,
-            "vehicle_closing_missing_count": self.vehicle_closing_missing_count,
-            "loading_proposal_count": self.loading_proposal_count,
-            "loading_pending_count": self.loading_pending_count,
-            "pending_transfer_count": self.pending_transfer_count,
-            "return_transfer_count": self.return_transfer_count,
-            "refill_transfer_count": self.refill_transfer_count,
-            "sale_order_count": self.sale_order_count,
-            "pending_sale_order_count": self.pending_sale_order_count,
-            "direct_return_count": self.direct_return_count,
-            "pending_direct_return_count": self.pending_direct_return_count,
-            "visit_ids": [fields.Command.set(self.daily_visit_ids.ids)],
-            "plan_ids": [fields.Command.set(self.daily_plan_ids.ids)],
-            "vehicle_closing_ids": [fields.Command.set(self.vehicle_closing_ids.ids)],
-            "loading_proposal_ids": [fields.Command.set(self.loading_proposal_ids.ids)],
-            "sale_order_ids": [fields.Command.set(self.sale_order_ids.ids)],
-            "direct_return_ids": [fields.Command.set(self.direct_return_ids.ids)],
         })
         return vals
 
@@ -914,12 +965,14 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         self.ensure_one()
         link_vals = {"daily_closing_id": closing_record.id}
         ctx = {"bypass_daily_closing_lock": True, "route_plan_skip_locked_check": True, "route_plan_skip_sync": True, "route_visit_force_write": True}
-        if self.daily_visit_ids:
-            self.daily_visit_ids.with_context(**ctx).write(link_vals)
-        if self.daily_plan_ids:
-            self.daily_plan_ids.with_context(**ctx).write(link_vals)
-        if self.vehicle_closing_ids:
-            self.vehicle_closing_ids.with_context(**ctx).write(link_vals)
+        # Link exactly the frozen snapshot records, not potentially stale
+        # transient many2many values from the dashboard cache.
+        if closing_record.visit_ids:
+            closing_record.visit_ids.with_context(**ctx).write(link_vals)
+        if closing_record.plan_ids:
+            closing_record.plan_ids.with_context(**ctx).write(link_vals)
+        if closing_record.vehicle_closing_ids:
+            closing_record.vehicle_closing_ids.with_context(**ctx).write(link_vals)
 
     def _unlink_daily_closing_from_operational_records(self, closing_record):
         self.ensure_one()
@@ -945,22 +998,33 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         if issue_values:
             raise UserError(self._format_blocking_issue_message(issue_values))
 
+        before_state = closing_record.state if closing_record else False
         values = self._prepare_daily_closing_record_values(state="closed")
         now = fields.Datetime.now()
+        values.update({
+            "closed_by_id": self.env.user.id,
+            "closed_at": now,
+            # Reopen details are only current while the record is reopened.
+            # Historical reopen information lives in the Audit Trail.
+            "reopened_by_id": False,
+            "reopened_at": False,
+            "reopen_reason": False,
+        })
         if closing_record:
-            values.update({
-                "state": "closed",
-                "closed_by_id": self.env.user.id,
-                "closed_at": now,
-            })
+            values.update({"state": "closed"})
             closing_record.write(values)
+            event_type = "close_day_again"
+            audit_note = self.closing_note or _("Day closed again after reopening.")
         else:
-            values.update({
-                "closed_by_id": self.env.user.id,
-                "closed_at": now,
-            })
             closing_record = self.env["route.daily.closing"].create(values)
-        closing_record._create_audit_line("closed", self.closing_note or _("Day closed from Supervisor Daily Closing."))
+            event_type = "close_day"
+            audit_note = self.closing_note or _("Day closed from Supervisor Daily Closing.")
+        closing_record._create_audit_line(
+            event_type,
+            audit_note,
+            state_from=before_state,
+            state_to="closed",
+        )
         self._link_daily_closing_to_operational_records(closing_record)
         return self._daily_closing_action_notification(
             _("Day Closed"),
@@ -974,13 +1038,19 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             raise UserError(_("There is no closed day to reopen for the selected filters."))
         if not reason:
             raise UserError(_("Please enter a Reopen Reason before reopening the day."))
+        before_state = closing_record.state
         closing_record.write({
             "state": "reopened",
             "reopened_by_id": self.env.user.id,
             "reopened_at": fields.Datetime.now(),
             "reopen_reason": reason,
         })
-        closing_record._create_audit_line("reopened", reason)
+        closing_record._create_audit_line(
+            "reopen_day",
+            reason,
+            state_from=before_state,
+            state_to="reopened",
+        )
         self._unlink_daily_closing_from_operational_records(closing_record)
         return self._daily_closing_action_notification(
             _("Day Reopened"),
@@ -1344,6 +1414,7 @@ class RouteDailyClosing(models.Model):
     open_promise_amount = fields.Monetary(string="Promise Amount", currency_field="currency_id", readonly=True)
     vehicle_closing_count = fields.Integer(string="Vehicle Closings", readonly=True)
     vehicle_closing_closed_count = fields.Integer(string="Closed Vehicle Closings", readonly=True)
+    vehicle_closing_pending_count = fields.Integer(string="Pending Vehicle Closings", readonly=True)
     vehicle_closing_missing_count = fields.Integer(string="Missing Vehicle Closings", readonly=True)
     loading_proposal_count = fields.Integer(string="Loading Proposals", readonly=True)
     loading_pending_count = fields.Integer(string="Pending Loading", readonly=True)
@@ -1352,8 +1423,10 @@ class RouteDailyClosing(models.Model):
     refill_transfer_count = fields.Integer(string="Refill Transfers", readonly=True)
     sale_order_count = fields.Integer(string="Sales Orders", readonly=True)
     pending_sale_order_count = fields.Integer(string="Pending Sales Orders", readonly=True)
+    sale_order_amount = fields.Monetary(string="Sales Order Amount", currency_field="currency_id", readonly=True)
     direct_return_count = fields.Integer(string="Return Orders", readonly=True)
     pending_direct_return_count = fields.Integer(string="Pending Return Orders", readonly=True)
+    direct_return_amount = fields.Monetary(string="Return Order Amount", currency_field="currency_id", readonly=True)
 
     visit_ids = fields.Many2many("route.visit", string="Visits", readonly=True)
     plan_ids = fields.Many2many("route.plan", string="Daily Plans", readonly=True)
@@ -1376,13 +1449,15 @@ class RouteDailyClosing(models.Model):
                 vals["name"] = _("Daily Closing")
         return super().create(vals_list)
 
-    def _create_audit_line(self, event_type, note=False):
+    def _create_audit_line(self, event_type, note=False, state_from=False, state_to=False):
         for rec in self:
-            self.env["route.daily.closing.audit.line"].create({
+            self.env["route.daily.closing.audit.line"].sudo().create({
                 "closing_id": rec.id,
                 "event_type": event_type,
                 "user_id": self.env.user.id,
                 "event_datetime": fields.Datetime.now(),
+                "state_from": state_from or False,
+                "state_to": state_to or False,
                 "note": note or False,
             })
 
@@ -1477,21 +1552,41 @@ class RouteDailyClosingAuditLine(models.Model):
     )
     event_type = fields.Selection(
         [
+            ("close_day", "Close Day"),
+            ("reopen_day", "Reopen Day"),
+            ("close_day_again", "Close Day Again"),
+            # Kept for compatibility with audit rows created by earlier builds.
             ("closed", "Closed"),
             ("reopened", "Reopened"),
         ],
         string="Event",
         required=True,
-        default="closed",
+        default="close_day",
     )
     event_label = fields.Char(string="Event Label", compute="_compute_event_label", store=True)
     user_id = fields.Many2one("res.users", string="User", required=True, default=lambda self: self.env.user)
     event_datetime = fields.Datetime(string="Date/Time", required=True, default=fields.Datetime.now)
+    state_from = fields.Selection(
+        [("closed", "Closed"), ("reopened", "Reopened")],
+        string="From Status",
+        readonly=True,
+    )
+    state_to = fields.Selection(
+        [("closed", "Closed"), ("reopened", "Reopened")],
+        string="To Status",
+        readonly=True,
+    )
     note = fields.Text(string="Note")
 
     @api.depends("event_type")
     def _compute_event_label(self):
-        labels = dict(self._fields["event_type"].selection)
+        labels = {
+            "close_day": _("Close Day"),
+            "reopen_day": _("Reopen Day"),
+            "close_day_again": _("Close Day Again"),
+            "closed": _("Close Day"),
+            "reopened": _("Reopen Day"),
+        }
         for rec in self:
             rec.event_label = labels.get(rec.event_type, rec.event_type or "")
 
