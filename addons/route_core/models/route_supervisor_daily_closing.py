@@ -530,6 +530,31 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         ])
         return visits, plans, closings, proposals, open_promises, pending_transfers, sale_orders, direct_returns
 
+    def _promise_is_blocking_for_closing(self, payment):
+        """Return True only for promises that need same-day supervisor action.
+
+        Future promises are official follow-up commitments and must remain open,
+        but they should not block the operational closing of the previous day.
+        Due-today, overdue, or undated promises are kept as blockers so money is
+        not forgotten or lost.
+        """
+        self.ensure_one()
+        status = payment.promise_status or ""
+        if status in ("due_today", "overdue"):
+            return True
+        if status != "open":
+            return False
+
+        promise_date = fields.Date.to_date(payment.promise_date) if payment.promise_date else False
+        closing_date = fields.Date.to_date(self.closing_date or fields.Date.context_today(self))
+        if not promise_date:
+            return True
+        return promise_date <= closing_date
+
+    def _blocking_promises(self, open_promises):
+        """Promises that must be resolved before Close Day."""
+        return open_promises.filtered(lambda payment: self._promise_is_blocking_for_closing(payment))
+
     def _visit_open_promise_amount(self, visit, open_promises):
         """Return the open promise amount that covers a specific visit."""
         related_promises = open_promises.filtered(
@@ -576,6 +601,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                     or visit.geo_review_state in ["pending_checkin", "outlet_missing"]
                 )
                 open_due_visits = dashboard._uncovered_due_visits(visits, open_promises)
+                blocking_promises = dashboard._blocking_promises(open_promises)
                 not_finalized_plans = plans.filtered(lambda plan: not plan.planning_finalized)
                 closed_closings = closings.filtered(lambda closing: closing.state == "closed")
                 pending_closings = closings.filtered(lambda closing: closing.state != "closed")
@@ -593,7 +619,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
                     len(unfinished_visits)
                     + len(location_issues)
                     + len(open_due_visits)
-                    + len(open_promises)
+                    + len(blocking_promises)
                     + len(not_finalized_plans)
                     + len(pending_closings)
                     + missing_closings_count
@@ -704,6 +730,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         unfinished = visits.filtered(lambda visit: visit.visit_process_state not in ["done", "cancel"])
         not_started = visits.filtered(lambda visit: visit.visit_process_state == "draft")
         open_due = self._uncovered_due_visits(visits, open_promises)
+        blocking_promises = self._blocking_promises(open_promises)
         location_issues = visits.filtered(
             lambda visit: (visit.geo_review_required and not visit.geo_review_supervisor_decision)
             or visit.geo_review_supervisor_decision == "needs_correction"
@@ -723,7 +750,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         add(20, "not_started_visits", _("Not Started Visits"), len(not_started), _("Planned visits not started yet."), "warning", button_label=_("Open Visits"))
         add(30, "location_issues", _("Location Review Pending"), len(location_issues), _("Location issues need supervisor review."), "warning", button_label=_("Open Location"))
         add(40, "open_due", _("Open Due"), len(open_due), _("Visits with due amount not covered by an open promise."), "danger", self._uncovered_due_amount_total(open_due, open_promises) if open_due else 0.0, button_label=_("Open Visits"))
-        add(50, "open_promises", _("Open Promises"), len(open_promises), _("Open, due today, or overdue promises."), "warning", sum(open_promises.mapped("promise_amount")) if open_promises else 0.0, button_label=_("Open Promises"))
+        add(50, "open_promises", _("Due / Overdue Promises"), len(blocking_promises), _("Promises due today, overdue, or missing a promise date must be resolved before closing."), "warning", sum(blocking_promises.mapped("promise_amount")) if blocking_promises else 0.0, button_label=_("Open Promises"))
         add(60, "pending_sale_orders", _("Pending Sales Orders"), len(pending_sale_orders), _("Direct sale orders still need confirmation."), "warning", sum(pending_sale_orders.mapped("amount_total")) if pending_sale_orders else 0.0, button_label=_("Open Orders"))
         add(70, "pending_direct_returns", _("Pending Return Orders"), len(pending_direct_returns), _("Direct return orders still need processing."), "warning", sum(pending_direct_returns.mapped("amount_total")) if pending_direct_returns else 0.0, button_label=_("Open Returns"))
         add(80, "not_finalized_plans", _("Plans Not Finalized"), len(not_finalized), _("Daily route plans still need finalization."), "warning", button_label=_("Open Plans"))
@@ -1110,9 +1137,11 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "res_model": "route.visit.payment",
             "view_mode": "kanban,list,form",
         }
+        blocking_promises = self._blocking_promises(self.open_promise_payment_ids)
+        promises_to_open = blocking_promises or self.open_promise_payment_ids
         result.update({
-            "name": _("Open Promises"),
-            "domain": [("id", "in", self.open_promise_payment_ids.ids or [0])],
+            "name": _("Due / Overdue Promises") if blocking_promises else _("Open Promises"),
+            "domain": [("id", "in", promises_to_open.ids or [0])],
             "context": {"create": False, "edit": True, "delete": False},
         })
         return result
@@ -1319,8 +1348,62 @@ class RouteDailyClosingLockedRecordMixin(models.AbstractModel):
 
 
 class RouteVisitDailyClosingLock(models.Model):
-    _name = "route.visit"
-    _inherit = ["route.visit", "route.daily.closing.lock.mixin"]
+    _inherit = "route.visit"
+
+    daily_closing_id = fields.Many2one("route.daily.closing", string="Daily Closing", copy=False, readonly=True)
+    is_daily_closed = fields.Boolean(string="Daily Closed", compute="_compute_is_daily_closed")
+
+    @api.depends("daily_closing_id", "daily_closing_id.state")
+    def _compute_is_daily_closed(self):
+        for rec in self:
+            closing = rec.sudo().daily_closing_id
+            rec.is_daily_closed = bool(closing and closing.state == "closed")
+
+    def _route_daily_closing_values(self, vals=None):
+        self.ensure_one()
+        vals = vals or {}
+        company = getattr(self, "company_id", False)
+        closing_date = vals.get("date") or getattr(self, "date", False)
+        salesperson = self.env["res.users"].browse(vals["user_id"]) if vals.get("user_id") else getattr(self, "user_id", False)
+        vehicle = self.env["route.vehicle"].browse(vals["vehicle_id"]) if vals.get("vehicle_id") else getattr(self, "vehicle_id", False)
+        area = self.env["route.area"].browse(vals["area_id"]) if vals.get("area_id") else getattr(self, "area_id", False)
+        outlet = self.env["route.outlet"].browse(vals["outlet_id"]) if vals.get("outlet_id") else getattr(self, "outlet_id", False)
+        city = False
+        if outlet and outlet.exists() and outlet.route_city_id:
+            city = outlet.route_city_id
+        elif area and area.exists() and area.city_id:
+            city = area.city_id
+        return {
+            "company_id": company.id if company else self.env.company.id,
+            "closing_date": closing_date,
+            "salesperson_id": salesperson.id if salesperson else False,
+            "vehicle_id": vehicle.id if vehicle else False,
+            "city_id": city.id if city else False,
+            "area_id": area.id if area else False,
+            "outlet_id": outlet.id if outlet else False,
+        }
+
+    def _find_route_daily_closed_record(self, vals=None):
+        self.ensure_one()
+        linked_closing = self.sudo().daily_closing_id
+        if linked_closing and linked_closing.state == "closed":
+            return linked_closing
+        closing_values = self._route_daily_closing_values(vals=vals)
+        return self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
+
+    def _ensure_not_route_daily_closed(self, vals=None):
+        if self.env.context.get("bypass_daily_closing_lock"):
+            return
+        for rec in self:
+            closing = rec._find_route_daily_closed_record(vals=vals)
+            if closing:
+                raise UserError(
+                    _(
+                        "This record is locked because the related day is closed by Supervisor Daily Closing (%s). "
+                        "Reopen the day before making changes."
+                    )
+                    % (closing.display_name,)
+                )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1333,7 +1416,7 @@ class RouteVisitDailyClosingLock(models.Model):
                     city = outlet.route_city_id
                 elif area and area.exists() and area.city_id:
                     city = area.city_id
-                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(
+                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(
                     company_id=vals.get("company_id") or self.env.company.id,
                     closing_date=vals.get("date"),
                     salesperson_id=vals.get("user_id") or False,
@@ -1357,8 +1440,57 @@ class RouteVisitDailyClosingLock(models.Model):
 
 
 class RoutePlanDailyClosingLock(models.Model):
-    _name = "route.plan"
-    _inherit = ["route.plan", "route.daily.closing.lock.mixin"]
+    _inherit = "route.plan"
+
+    daily_closing_id = fields.Many2one("route.daily.closing", string="Daily Closing", copy=False, readonly=True)
+    is_daily_closed = fields.Boolean(string="Daily Closed", compute="_compute_is_daily_closed")
+
+    @api.depends("daily_closing_id", "daily_closing_id.state")
+    def _compute_is_daily_closed(self):
+        for rec in self:
+            closing = rec.sudo().daily_closing_id
+            rec.is_daily_closed = bool(closing and closing.state == "closed")
+
+    def _route_daily_closing_values(self, vals=None):
+        self.ensure_one()
+        vals = vals or {}
+        company = getattr(self, "company_id", False)
+        closing_date = vals.get("date") or getattr(self, "date", False)
+        salesperson = self.env["res.users"].browse(vals["user_id"]) if vals.get("user_id") else getattr(self, "user_id", False)
+        vehicle = self.env["route.vehicle"].browse(vals["vehicle_id"]) if vals.get("vehicle_id") else getattr(self, "vehicle_id", False)
+        area = self.env["route.area"].browse(vals["area_id"]) if vals.get("area_id") else getattr(self, "area_id", False)
+        city = area.city_id if area and area.exists() and area.city_id else False
+        return {
+            "company_id": company.id if company else self.env.company.id,
+            "closing_date": closing_date,
+            "salesperson_id": salesperson.id if salesperson else False,
+            "vehicle_id": vehicle.id if vehicle else False,
+            "city_id": city.id if city else False,
+            "area_id": area.id if area else False,
+            "outlet_id": False,
+        }
+
+    def _find_route_daily_closed_record(self, vals=None):
+        self.ensure_one()
+        linked_closing = self.sudo().daily_closing_id
+        if linked_closing and linked_closing.state == "closed":
+            return linked_closing
+        closing_values = self._route_daily_closing_values(vals=vals)
+        return self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
+
+    def _ensure_not_route_daily_closed(self, vals=None):
+        if self.env.context.get("bypass_daily_closing_lock"):
+            return
+        for rec in self:
+            closing = rec._find_route_daily_closed_record(vals=vals)
+            if closing:
+                raise UserError(
+                    _(
+                        "This record is locked because the related day is closed by Supervisor Daily Closing (%s). "
+                        "Reopen the day before making changes."
+                    )
+                    % (closing.display_name,)
+                )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1376,7 +1508,7 @@ class RoutePlanDailyClosingLock(models.Model):
                 if closing_values["area_id"]:
                     area = self.env["route.area"].browse(closing_values["area_id"])
                     closing_values["city_id"] = area.city_id.id if area and area.exists() and area.city_id else False
-                closing = self.env["route.daily.closing"]._find_closed_closing_for_values(**closing_values)
+                closing = self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
                 if closing:
                     raise UserError(_("You cannot create a route plan for a closed day. Reopen the day first."))
         return super().create(vals_list)
@@ -1418,8 +1550,16 @@ class RoutePlanLineDailyClosingLock(models.Model):
 
 
 class RouteVehicleClosingDailyClosingLock(models.Model):
-    _name = "route.vehicle.closing"
-    _inherit = ["route.vehicle.closing", "route.daily.closing.lock.mixin"]
+    _inherit = "route.vehicle.closing"
+
+    daily_closing_id = fields.Many2one("route.daily.closing", string="Daily Closing", copy=False, readonly=True)
+    is_daily_closed = fields.Boolean(string="Daily Closed", compute="_compute_is_daily_closed")
+
+    @api.depends("daily_closing_id", "daily_closing_id.state")
+    def _compute_is_daily_closed(self):
+        for rec in self:
+            closing = rec.sudo().daily_closing_id
+            rec.is_daily_closed = bool(closing and closing.state == "closed")
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1447,6 +1587,28 @@ class RouteVehicleClosingDailyClosingLock(models.Model):
             "area_id": area.id if area else False,
             "outlet_id": False,
         }
+
+    def _find_route_daily_closed_record(self, vals=None):
+        self.ensure_one()
+        linked_closing = self.sudo().daily_closing_id
+        if linked_closing and linked_closing.state == "closed":
+            return linked_closing
+        closing_values = self._route_daily_closing_values(vals=vals)
+        return self.env["route.daily.closing"].sudo()._find_closed_closing_for_values(**closing_values)
+
+    def _ensure_not_route_daily_closed(self, vals=None):
+        if self.env.context.get("bypass_daily_closing_lock"):
+            return
+        for rec in self:
+            closing = rec._find_route_daily_closed_record(vals=vals)
+            if closing:
+                raise UserError(
+                    _(
+                        "This record is locked because the related day is closed by Supervisor Daily Closing (%s). "
+                        "Reopen the day before making changes."
+                    )
+                    % (closing.display_name,)
+                )
 
     def write(self, vals):
         if set(vals.keys()) - {"daily_closing_id"}:
