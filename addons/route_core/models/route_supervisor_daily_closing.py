@@ -536,9 +536,22 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         Future promises are official follow-up commitments and must remain open,
         but they should not block the operational closing of the previous day.
         Due-today, overdue, or undated promises are kept as blockers so money is
-        not forgotten or lost.
+        not forgotten or lost. A supervisor review can release the blocker only
+        when it records a concrete follow-up date after the closing date.
         """
         self.ensure_one()
+        closing_date = fields.Date.to_date(self.closing_date or fields.Date.context_today(self))
+
+        review_for_date = fields.Date.to_date(payment.promise_review_for_closing_date) if getattr(payment, "promise_review_for_closing_date", False) else False
+        review_followup_date = fields.Date.to_date(payment.promise_review_followup_date) if getattr(payment, "promise_review_followup_date", False) else False
+        if (
+            review_for_date == closing_date
+            and getattr(payment, "promise_review_decision", False) in ("reschedule", "review_followup")
+            and review_followup_date
+            and review_followup_date > closing_date
+        ):
+            return False
+
         status = payment.promise_status or ""
         if status in ("due_today", "overdue"):
             return True
@@ -546,7 +559,6 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             return False
 
         promise_date = fields.Date.to_date(payment.promise_date) if payment.promise_date else False
-        closing_date = fields.Date.to_date(self.closing_date or fields.Date.context_today(self))
         if not promise_date:
             return True
         return promise_date <= closing_date
@@ -1147,7 +1159,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         result.update({
             "name": _("Due / Overdue Promises") if blocking_promises else _("Open Promises"),
             "domain": [("id", "in", promises_to_open.ids or [0])],
-            "context": {"create": False, "edit": True, "delete": False},
+            "context": {"create": False, "edit": True, "delete": False, "daily_closing_review_date": self.closing_date},
         })
         return result
 
@@ -1651,6 +1663,183 @@ class RouteVehicleClosingLineDailyClosingLock(models.Model):
         return super().unlink()
 
 
+class RouteVisitPaymentSupervisorPromiseReview(models.Model):
+    _inherit = "route.visit.payment"
+
+    promise_review_decision = fields.Selection(
+        [
+            ("reschedule", "Rescheduled by Supervisor"),
+            ("review_followup", "Reviewed for Follow-up"),
+            ("keep_blocking", "Keep Blocking / Escalated"),
+        ],
+        string="Supervisor Review Decision",
+        copy=False,
+        readonly=True,
+    )
+    promise_review_for_closing_date = fields.Date(
+        string="Reviewed For Closing Date",
+        copy=False,
+        readonly=True,
+    )
+    promise_review_followup_date = fields.Date(
+        string="Next Follow-up Date",
+        copy=False,
+        readonly=True,
+    )
+    promise_reviewed_by_id = fields.Many2one(
+        "res.users",
+        string="Reviewed By",
+        copy=False,
+        readonly=True,
+    )
+    promise_reviewed_at = fields.Datetime(
+        string="Reviewed At",
+        copy=False,
+        readonly=True,
+    )
+    promise_review_note = fields.Text(
+        string="Supervisor Promise Review Note",
+        copy=False,
+        readonly=True,
+    )
+
+    def _ensure_can_supervise_promise_review(self):
+        if not (
+            self.env.user.has_group("route_core.group_route_supervisor")
+            or self.env.user.has_group("route_core.group_route_management")
+        ):
+            raise UserError(_("Only Route Supervisors or Route Management can review overdue promises."))
+
+    def action_open_supervisor_promise_review(self):
+        self.ensure_one()
+        self._ensure_can_supervise_promise_review()
+        if self.state == "cancelled":
+            raise UserError(_("Cancelled payments cannot be reviewed for promise follow-up."))
+        if (self.promise_amount or 0.0) <= 0.0:
+            raise UserError(_("This payment has no promise amount to review."))
+        closing_date = self.env.context.get("daily_closing_review_date") or fields.Date.context_today(self)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Supervisor Promise Review"),
+            "res_model": "route.promise.review.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_payment_id": self.id,
+                "default_closing_date": closing_date,
+            },
+        }
+
+
+class RoutePromiseReviewWizard(models.TransientModel):
+    _name = "route.promise.review.wizard"
+    _description = "Supervisor Promise Review"
+
+    payment_id = fields.Many2one(
+        "route.visit.payment",
+        string="Promise",
+        required=True,
+        readonly=True,
+    )
+    company_id = fields.Many2one(related="payment_id.company_id", readonly=True)
+    currency_id = fields.Many2one(related="payment_id.currency_id", readonly=True)
+    closing_date = fields.Date(string="Closing Date", required=True, readonly=True)
+    outlet_id = fields.Many2one(related="payment_id.outlet_id", string="Outlet", readonly=True)
+    salesperson_id = fields.Many2one(related="payment_id.salesperson_id", string="Salesperson", readonly=True)
+    source_document_ref = fields.Char(related="payment_id.source_document_ref", string="Source Document", readonly=True)
+    current_promise_date = fields.Date(related="payment_id.promise_date", string="Current Promise Date", readonly=True)
+    current_promise_amount = fields.Monetary(
+        related="payment_id.promise_amount",
+        string="Promise Amount",
+        currency_field="currency_id",
+        readonly=True,
+    )
+    current_promise_status = fields.Selection(
+        related="payment_id.promise_status",
+        string="Current Promise Status",
+        readonly=True,
+    )
+    decision = fields.Selection(
+        [
+            ("reschedule", "Reschedule / New Follow-up Date"),
+            ("review_followup", "Reviewed - Follow Up Later"),
+            ("keep_blocking", "Keep Blocking / Escalate"),
+        ],
+        string="Supervisor Decision",
+        required=True,
+        default="reschedule",
+    )
+    new_promise_date = fields.Date(string="New Follow-up Date")
+    note = fields.Text(string="Supervisor Review Note", required=True)
+
+    @api.model
+    def default_get(self, fields_list):
+        vals = super().default_get(fields_list)
+        closing_date = fields.Date.to_date(
+            vals.get("closing_date")
+            or self.env.context.get("default_closing_date")
+            or fields.Date.context_today(self)
+        )
+        if "new_promise_date" in fields_list and not vals.get("new_promise_date"):
+            vals["new_promise_date"] = closing_date + timedelta(days=1)
+        return vals
+
+    @api.onchange("decision", "closing_date")
+    def _onchange_decision_set_date(self):
+        for rec in self:
+            if rec.decision in ("reschedule", "review_followup") and not rec.new_promise_date:
+                base_date = fields.Date.to_date(rec.closing_date or fields.Date.context_today(rec))
+                rec.new_promise_date = base_date + timedelta(days=1)
+            elif rec.decision == "keep_blocking":
+                rec.new_promise_date = False
+
+    def action_confirm_review(self):
+        self.ensure_one()
+        payment = self.payment_id
+        payment._ensure_can_supervise_promise_review()
+
+        closing_date = fields.Date.to_date(self.closing_date or fields.Date.context_today(self))
+        new_date = fields.Date.to_date(self.new_promise_date) if self.new_promise_date else False
+        if self.decision in ("reschedule", "review_followup"):
+            if not new_date:
+                raise UserError(_("Please set the new follow-up date."))
+            if new_date <= closing_date:
+                raise UserError(_("The new follow-up date must be after the closing date."))
+        if not (self.note or "").strip():
+            raise UserError(_("Please add a supervisor review note."))
+
+        decision_labels = dict(self._fields["decision"].selection)
+        reviewed_at = fields.Datetime.now()
+        user_label = self.env.user.display_name
+        note_line = _(
+            "Supervisor Promise Review: %(decision)s. Closing Date: %(closing_date)s. "
+            "Next Follow-up: %(followup)s. Reviewed By: %(user)s. Note: %(note)s"
+        ) % {
+            "decision": decision_labels.get(self.decision, self.decision),
+            "closing_date": self.closing_date or "-",
+            "followup": self.new_promise_date or _("No change"),
+            "user": user_label,
+            "note": (self.note or "").strip(),
+        }
+        existing_note = payment.note or ""
+        values = {
+            "promise_review_decision": self.decision,
+            "promise_review_for_closing_date": self.closing_date,
+            "promise_review_followup_date": self.new_promise_date if self.decision in ("reschedule", "review_followup") else False,
+            "promise_reviewed_by_id": self.env.user.id,
+            "promise_reviewed_at": reviewed_at,
+            "promise_review_note": (self.note or "").strip(),
+            "note": (existing_note + "\n\n" + note_line).strip() if existing_note else note_line,
+        }
+        if self.decision in ("reschedule", "review_followup"):
+            values.update({
+                "promise_date": self.new_promise_date,
+                "due_date": self.new_promise_date if payment.collection_type == "defer_date" else payment.due_date,
+            })
+        payment.with_context(bypass_daily_closing_lock=True).write(values)
+        return {"type": "ir.actions.act_window_close"}
+
+
 class RouteSupervisorDailyClosingIssue(models.TransientModel):
     _name = "route.supervisor.daily.closing.issue"
     _description = "Daily Closing Issue Card"
@@ -1727,5 +1916,4 @@ class RouteSupervisorDailyClosingIssue(models.TransientModel):
         if self.code == "pending_transfers":
             return dashboard.action_open_pending_transfers()
         return dashboard.action_refresh_dashboard()
-
 
