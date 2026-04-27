@@ -39,13 +39,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             ("custom", "Custom Range"),
         ],
         string="Period",
-        default="today",
+        default="last_30",
         required=True,
     )
     date_from = fields.Date(
         string="From Date",
         required=True,
-        default=fields.Date.context_today,
+        default=lambda self: fields.Date.context_today(self) - timedelta(days=29),
     )
     date_to = fields.Date(
         string="To Date",
@@ -103,8 +103,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             {
                 "name": _("Supervisor Performance Dashboard"),
                 "company_id": self.env.company.id,
-                "period_filter": "today",
-                "date_from": today,
+                "period_filter": "last_30",
+                "date_from": today - timedelta(days=29),
                 "date_to": today,
             }
         )
@@ -514,10 +514,27 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "not_started": len(visits.filtered(lambda visit: visit.visit_process_state == "draft")),
             "cancelled": len(visits.filtered(lambda visit: visit.visit_process_state == "cancel")),
         }
-        location_issue_visits = visits.filtered(
-            lambda visit: visit.geo_review_state in ["pending_checkin", "outlet_missing", "outside_no_reason", "outside_with_reason"]
-            or visit.geo_review_required
-            or visit.geo_review_supervisor_decision == "needs_correction"
+        location_missing_checkin_visits = visits.filtered(lambda visit: visit.geo_review_state == "pending_checkin")
+        location_missing_outlet_visits = visits.filtered(lambda visit: visit.geo_review_state == "outlet_missing")
+        location_outside_zone_visits = visits.filtered(
+            lambda visit: visit.geo_review_state in ("outside_no_reason", "outside_with_reason")
+        )
+        location_needs_correction_visits = visits.filtered(
+            lambda visit: visit.geo_review_supervisor_decision == "needs_correction"
+        )
+        location_pending_review_visits = visits.filtered(
+            lambda visit: visit.geo_review_required
+            and visit.geo_review_supervisor_decision not in ("accepted", "needs_correction")
+        )
+        location_accepted_visits = visits.filtered(
+            lambda visit: visit.geo_review_supervisor_decision == "accepted"
+        )
+        location_issue_visits = (
+            location_missing_checkin_visits
+            | location_missing_outlet_visits
+            | location_outside_zone_visits
+            | location_needs_correction_visits
+            | location_pending_review_visits
         )
         unfinished_visits = visits.filtered(lambda visit: visit.visit_process_state not in ("done", "cancel"))
         open_due_visits = visits.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
@@ -527,7 +544,11 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         direct_sales = sum(sale_orders.mapped("amount_total"))
         direct_return_amount = sum(direct_returns.mapped("amount_total"))
         total_collected = sum(confirmed_payments.mapped("amount"))
+        period_promises = payments.filtered(lambda payment: (payment.promise_amount or 0.0) > 0.0)
+        due_overdue_promises = open_promises.filtered(lambda payment: payment.promise_status in ("due_today", "overdue"))
+        period_promise_amount = sum((payment.effective_promise_amount or payment.promise_amount or 0.0) for payment in period_promises)
         open_promise_amount = sum((payment.effective_promise_amount or payment.promise_amount or 0.0) for payment in open_promises)
+        due_overdue_promise_amount = sum((payment.effective_promise_amount or payment.promise_amount or 0.0) for payment in due_overdue_promises)
         open_due_amount = sum(open_due_visits.mapped("remaining_due_amount"))
         gross_sales = consignment_sales + direct_sales
         total_returns = consignment_returns + direct_return_amount
@@ -556,12 +577,22 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
         salesperson_lines = self._build_salesperson_lines(visits, payments, sale_orders, direct_returns, location_issue_visits)
         vehicle_lines = self._build_vehicle_lines(visits, vehicle_closings)
-        product_lines, gross_profit = self._build_product_lines(visits, sale_orders)
+        product_lines, gross_profit, missing_cost_product_count = self._build_product_lines(visits, sale_orders, direct_returns)
 
-        closed_day_count = len(set(closing_records.filtered(lambda rec: rec.state == "closed").mapped("closing_date")))
-        reopened_day_count = len(set(closing_records.filtered(lambda rec: rec.state == "reopened" or rec.audit_line_ids.filtered(lambda line: line.event_type == "reopen_day")).mapped("closing_date")))
-        period_day_count = len(self._date_labels())
-        open_day_count = max(period_day_count - closed_day_count, 0)
+        operation_dates = self._operation_dates(
+            visits, payments, sale_orders, direct_returns, closing_records, vehicle_closings, loading_proposals
+        )
+        closed_dates = set(closing_records.filtered(lambda rec: rec.state == "closed").mapped("closing_date"))
+        reopened_dates = set(
+            closing_records.filtered(
+                lambda rec: rec.state == "reopened"
+                or rec.audit_line_ids.filtered(lambda line: line.event_type == "reopen_day")
+            ).mapped("closing_date")
+        )
+        closed_day_count = len(operation_dates & closed_dates)
+        reopened_day_count = len(operation_dates & reopened_dates)
+        period_day_count = len(operation_dates)
+        open_day_count = max(len(operation_dates - closed_dates), 0)
         pending_vehicle_issues = len(vehicle_closings.filtered(lambda closing: closing.state != "closed" or (closing.pending_variance_line_count or 0) > 0 or (closing.pending_execution_line_count or 0) > 0))
 
         return {
@@ -571,6 +602,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "payments": payments,
             "confirmed_payments": confirmed_payments,
             "open_promises": open_promises,
+            "period_promises": period_promises,
+            "due_overdue_promises": due_overdue_promises,
             "sale_orders": sale_orders,
             "direct_returns": direct_returns,
             "closing_records": closing_records,
@@ -580,6 +613,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "visit_status": visit_status,
             "unfinished_visits": unfinished_visits,
             "location_issue_visits": location_issue_visits,
+            "location_missing_checkin_visits": location_missing_checkin_visits,
+            "location_missing_outlet_visits": location_missing_outlet_visits,
+            "location_outside_zone_visits": location_outside_zone_visits,
+            "location_needs_correction_visits": location_needs_correction_visits,
+            "location_pending_review_visits": location_pending_review_visits,
+            "location_accepted_visits": location_accepted_visits,
             "open_due_visits": open_due_visits,
             "consignment_sales": consignment_sales,
             "direct_sales": direct_sales,
@@ -589,7 +628,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "total_returns": total_returns,
             "net_sales": net_sales,
             "total_collected": total_collected,
+            "period_promise_amount": period_promise_amount,
             "open_promise_amount": open_promise_amount,
+            "due_overdue_promise_amount": due_overdue_promise_amount,
             "open_due_amount": open_due_amount,
             "payment_modes": dict(payment_modes),
             "daily_collection": dict(daily_collection),
@@ -599,6 +640,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "vehicle_lines": vehicle_lines,
             "product_lines": product_lines,
             "gross_profit": gross_profit,
+            "missing_cost_product_count": missing_cost_product_count,
             "closed_day_count": closed_day_count,
             "reopened_day_count": reopened_day_count,
             "open_day_count": open_day_count,
@@ -607,6 +649,33 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "loading_pending_count": len(loading_proposals.filtered(lambda prop: prop.state not in ("approved", "done", "cancel"))),
             "pending_transfer_count": len(pending_transfers),
         }
+
+    def _operation_dates(self, visits, payments, sale_orders, direct_returns, closing_records, vehicle_closings, loading_proposals):
+        operation_dates = set()
+
+        def add_date(value):
+            if not value:
+                return
+            try:
+                operation_dates.add(fields.Date.to_date(value))
+            except Exception:
+                return
+
+        for visit in visits:
+            add_date(visit.date)
+        for payment in payments:
+            add_date(payment.payment_date)
+        for order in sale_orders:
+            add_date(order.date_order)
+        for ret in direct_returns:
+            add_date(ret.return_date)
+        for closing in closing_records:
+            add_date(closing.closing_date)
+        for closing in vehicle_closings:
+            add_date(closing.plan_date)
+        for proposal in loading_proposals:
+            add_date(proposal.plan_date)
+        return operation_dates
 
     def _build_salesperson_lines(self, visits, payments, sale_orders, direct_returns, location_issue_visits):
         data = defaultdict(lambda: {
@@ -686,8 +755,22 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             lines.append(values)
         return sorted(lines, key=lambda item: item["issues"], reverse=True)
 
-    def _build_product_lines(self, visits, sale_orders):
-        data = defaultdict(lambda: {"name": "", "qty": 0.0, "sales": 0.0, "profit": 0.0})
+    def _build_product_lines(self, visits, sale_orders, direct_returns):
+        data = defaultdict(lambda: {
+            "name": "",
+            "qty": 0.0,
+            "sales": 0.0,
+            "returns": 0.0,
+            "profit": 0.0,
+            "missing_cost": False,
+        })
+        missing_cost_product_ids = set()
+
+        def mark_missing_cost(product, qty, amount):
+            if product and qty and amount and (product.standard_price or 0.0) <= 0.0:
+                missing_cost_product_ids.add(product.id)
+                data[product.id]["missing_cost"] = True
+
         for line in visits.mapped("line_ids"):
             product = line.product_id
             if not product:
@@ -696,9 +779,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             values["name"] = product.display_name
             sold_qty = line.sold_qty or 0.0
             sold_amount = line.sold_amount or 0.0
+            return_qty = getattr(line, "return_qty", 0.0) or 0.0
+            return_amount = line.return_amount or 0.0
             values["qty"] += sold_qty
             values["sales"] += sold_amount
-            values["profit"] += sold_amount - (sold_qty * (product.standard_price or 0.0))
+            values["returns"] += return_amount
+            values["profit"] += sold_amount - return_amount - ((sold_qty - return_qty) * (product.standard_price or 0.0))
+            mark_missing_cost(product, sold_qty, sold_amount)
         for line in sale_orders.mapped("order_line"):
             product = line.product_id
             if not product:
@@ -710,8 +797,20 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             values["qty"] += qty
             values["sales"] += amount
             values["profit"] += amount - (qty * (product.standard_price or 0.0))
+            mark_missing_cost(product, qty, amount)
+        for line in direct_returns.mapped("line_ids"):
+            product = line.product_id
+            if not product:
+                continue
+            values = data[product.id]
+            values["name"] = product.display_name
+            qty = line.quantity or 0.0
+            amount = line.estimated_amount or 0.0
+            values["returns"] += amount
+            values["profit"] -= amount - (qty * (product.standard_price or 0.0))
+            mark_missing_cost(product, qty, amount)
         lines = sorted(data.values(), key=lambda item: item["sales"], reverse=True)
-        return lines, sum(line["profit"] for line in lines)
+        return lines, sum(line["profit"] for line in lines), len(missing_cost_product_ids)
 
     def _render_executive_html(self, payload):
         visit_total = len(payload["visits"])
@@ -719,17 +818,30 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         completion = (done / visit_total * 100.0) if visit_total else 0.0
         collection_rate = (payload["total_collected"] / payload["net_sales"] * 100.0) if payload["net_sales"] else 0.0
         margin = (payload["gross_profit"] / payload["gross_sales"] * 100.0) if payload["gross_sales"] else 0.0
+        profit_quality = 100.0
+        if payload["product_lines"]:
+            profit_quality = max(
+                0.0,
+                100.0 - ((payload["missing_cost_product_count"] / len(payload["product_lines"])) * 100.0),
+            )
+        attention_score = (
+            len(payload["unfinished_visits"])
+            + len(payload["location_issue_visits"])
+            + payload["pending_vehicle_issues"]
+            + payload["pending_transfer_count"]
+            + len(payload["due_overdue_promises"])
+        )
         cards = [
             self._kpi_card(_("Visits"), self._num(visit_total), _("Completed: %s") % self._num(done), "primary", f"{completion:.0f}%"),
             self._kpi_card(_("Collection"), self._money(payload["total_collected"]), _("Rate: %s%%") % f"{collection_rate:.0f}", "success"),
             self._kpi_card(_("Net Sales"), self._money(payload["net_sales"]), _("Gross: %s") % self._money(payload["gross_sales"]), "sales"),
-            self._kpi_card(_("Open Promises"), self._money(payload["open_promise_amount"]), _("Count: %s") % self._num(len(payload["open_promises"])), "warning"),
+            self._kpi_card(_("Due / Open Promises"), self._money(payload["open_promise_amount"]), _("Due/Overdue: %s") % self._num(len(payload["due_overdue_promises"])), "warning"),
             self._kpi_card(_("Open Due"), self._money(payload["open_due_amount"]), _("Visits: %s") % self._num(len(payload["open_due_visits"])), "danger"),
-            self._kpi_card(_("Estimated Profit"), self._money(payload["gross_profit"]), _("Margin: %s%%") % f"{margin:.0f}", "profit"),
-            self._kpi_card(_("Closed Days"), self._num(payload["closed_day_count"]), _("Open / Not Ready: %s") % self._num(payload["open_day_count"]), "success"),
-            self._kpi_card(_("Reopened Days"), self._num(payload["reopened_day_count"]), _("Period days: %s") % self._num(payload["period_day_count"]), "warning"),
+            self._kpi_card(_("Estimated Profit"), self._money(payload["gross_profit"]), _("Margin: %s%% | Cost data: %s%%") % (f"{margin:.0f}", f"{profit_quality:.0f}"), "profit"),
+            self._kpi_card(_("Closed Operating Days"), self._num(payload["closed_day_count"]), _("Open / Not Ready: %s") % self._num(payload["open_day_count"]), "success"),
+            self._kpi_card(_("Reopened Days"), self._num(payload["reopened_day_count"]), _("Operating days: %s") % self._num(payload["period_day_count"]), "warning"),
             self._kpi_card(_("Vehicle Issues"), self._num(payload["pending_vehicle_issues"]), _("Vehicle closing checks"), "danger"),
-            self._kpi_card(_("Location Issues"), self._num(len(payload["location_issue_visits"])), _("Need supervisor review"), "warning"),
+            self._kpi_card(_("Location Review"), self._num(len(payload["location_issue_visits"])), _("Outside/missing/pending review"), "warning"),
             self._kpi_card(_("Pending Transfers"), self._num(payload["pending_transfer_count"]), _("Stock moves not done"), "info"),
             self._kpi_card(_("Returns"), self._money(payload["total_returns"]), _("Return orders/transfers"), "danger"),
         ]
@@ -738,7 +850,33 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             _("Performance Command Center"),
             _("High-level KPIs for visits, collections, promises, stock operations, and sales performance."),
         )
-        return f"<div class='route_dash_block'>{title}{scope}<div class='route_dash_kpi_grid'>{''.join(cards)}</div></div>"
+        return (
+            f"<div class='route_dash_block'>{title}{scope}"
+            f"{self._render_insight_cards(payload, collection_rate, attention_score)}"
+            f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div></div>"
+        )
+
+    def _render_insight_cards(self, payload, collection_rate, attention_score):
+        best_salesperson = max(payload["salesperson_lines"], key=lambda line: line.get("collection", 0.0), default=False)
+        top_product = max(payload["product_lines"], key=lambda line: line.get("sales", 0.0), default=False)
+        top_return_product = max(payload["product_lines"], key=lambda line: line.get("returns", 0.0), default=False)
+        critical_vehicle = max(payload["vehicle_lines"], key=lambda line: line.get("issues", 0), default=False)
+        due_by_outlet = defaultdict(float)
+        for visit in payload["open_due_visits"]:
+            label = visit.outlet_id.display_name if visit.outlet_id else _("No Outlet")
+            due_by_outlet[label] += visit.remaining_due_amount or 0.0
+        highest_due = max(due_by_outlet.items(), key=lambda item: item[1], default=False)
+        insights = [
+            (_("Best Collector"), best_salesperson and best_salesperson.get("name") or _("No data"), best_salesperson and self._money(best_salesperson.get("collection")) or "-", "success"),
+            (_("Top Product"), top_product and top_product.get("name") or _("No data"), top_product and self._money(top_product.get("sales")) or "-", "sales"),
+            (_("Highest Open Due"), highest_due and highest_due[0] or _("No open due"), highest_due and self._money(highest_due[1]) or "-", "danger"),
+            (_("Most Returned Product"), top_return_product and top_return_product.get("name") or _("No returns"), top_return_product and self._money(top_return_product.get("returns")) or "-", "warning"),
+            (_("Critical Vehicle"), critical_vehicle and critical_vehicle.get("name") or _("No data"), critical_vehicle and _("Issues: %s") % self._num(critical_vehicle.get("issues")) or "-", "danger"),
+            (_("Collection Rate"), f"{collection_rate:.0f}%", _("Attention score: %s") % self._num(attention_score), "info"),
+        ]
+        return "<div class='route_dash_insight_grid'>" + "".join(
+            self._insight_card(title, value, note, tone) for title, value, note, tone in insights
+        ) + "</div>"
 
     def _render_visit_chart_html(self, payload):
         status = payload["visit_status"]
@@ -750,24 +888,29 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         ]
         operations_rows = [
             (_("Unfinished Visits"), len(payload["unfinished_visits"]), "#ef4444"),
-            (_("Location Issues"), len(payload["location_issue_visits"]), "#f59e0b"),
-            (_("Open Promises"), len(payload["open_promises"]), "#8b5cf6"),
+            (_("Due / Overdue Promises"), len(payload["due_overdue_promises"]), "#8b5cf6"),
             (_("Vehicle Issues"), payload["pending_vehicle_issues"], "#64748b"),
             (_("Pending Transfers"), payload["pending_transfer_count"], "#0ea5e9"),
+        ]
+        location_rows = [
+            (_("Missing Check-in"), len(payload["location_missing_checkin_visits"]), "#ef4444"),
+            (_("Missing Outlet GPS"), len(payload["location_missing_outlet_visits"]), "#64748b"),
+            (_("Outside Zone"), len(payload["location_outside_zone_visits"]), "#f59e0b"),
+            (_("Needs Correction"), len(payload["location_needs_correction_visits"]), "#dc2626"),
+            (_("Pending Review"), len(payload["location_pending_review_visits"]), "#0ea5e9"),
+            (_("Accepted"), len(payload["location_accepted_visits"]), "#16a34a"),
+        ]
+        closing_rows = [
+            (_("Closed"), payload["closed_day_count"], "#16a34a"),
+            (_("Open / Not Ready"), payload["open_day_count"], "#f59e0b"),
+            (_("Reopened"), payload["reopened_day_count"], "#ef4444"),
         ]
         html = self._section_title(_("Visit and Closing Health"), _("Visual status instead of repeated operational lists."))
         html += "<div class='route_dash_chart_grid'>"
         html += self._chart_card(_("Visit Status"), self._pie_chart(status_rows), self._legend(status_rows))
-        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), "")
-        html += self._chart_card(_("Closing Status"), self._pie_chart([
-            (_("Closed"), payload["closed_day_count"], "#16a34a"),
-            (_("Open / Not Ready"), payload["open_day_count"], "#f59e0b"),
-            (_("Reopened"), payload["reopened_day_count"], "#ef4444"),
-        ]), self._legend([
-            (_("Closed"), payload["closed_day_count"], "#16a34a"),
-            (_("Open / Not Ready"), payload["open_day_count"], "#f59e0b"),
-            (_("Reopened"), payload["reopened_day_count"], "#ef4444"),
-        ]))
+        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers are shown here."))
+        html += self._chart_card(_("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
+        html += self._chart_card(_("Closing Status"), self._pie_chart(closing_rows), self._legend(closing_rows) + _(" Operating days only."))
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
@@ -800,18 +943,24 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         product_sales = [(line["name"], line["sales"], "#0ea5e9") for line in top_products]
         product_qty = [(line["name"], line["qty"], "#8b5cf6") for line in top_products]
         profit_rows = [(line["name"], line["profit"], "#16a34a" if line["profit"] >= 0 else "#ef4444") for line in top_products]
+        product_returns = [
+            (line["name"], line.get("returns", 0.0), "#ef4444")
+            for line in sorted(payload["product_lines"], key=lambda item: item.get("returns", 0.0), reverse=True)[:10]
+        ]
         sales_return_rows = [
             (_("Gross Sales"), payload["gross_sales"], "#16a34a"),
             (_("Returns"), payload["total_returns"], "#ef4444"),
             (_("Net Sales"), payload["net_sales"], "#0ea5e9"),
             (_("Estimated Profit"), payload["gross_profit"], "#8b5cf6"),
         ]
-        html = self._section_title(_("Products, Sales, and Estimated Profit"), _("Product ranking and estimated margin based on product cost."))
+        quality_note = _("Missing cost products: %s. Profit is estimated from product cost.") % self._num(payload["missing_cost_product_count"])
+        html = self._section_title(_("Products, Sales, and Estimated Profit"), quality_note)
         html += "<div class='route_dash_chart_grid'>"
         html += self._chart_card(_("Sales / Returns / Profit"), self._horizontal_bars(sales_return_rows, money=True), "")
         html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
         html += self._chart_card(_("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
-        html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), "")
+        html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), "")
+        html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
@@ -844,6 +993,15 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         )
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
+
+    def _insight_card(self, title, value, note, tone="primary"):
+        return (
+            f"<div class='route_dash_insight route_dash_tone_{escape(tone)}'>"
+            f"<span>{escape(str(title))}</span>"
+            f"<strong>{escape(str(value))}</strong>"
+            f"<small>{escape(str(note or ''))}</small>"
+            f"</div>"
+        )
 
     def _kpi_card(self, title, value, note, tone="primary", corner=False):
         corner_html = f"<span class='route_dash_kpi_corner'>{escape(str(corner))}</span>" if corner else ""
@@ -891,10 +1049,18 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             f"</div>"
         )
 
+    def _empty_chart(self):
+        return (
+            "<div class='route_dash_empty_chart'>"
+            "<strong>No activity for this period</strong>"
+            "<small>Try Last 30 Days, This Month, or widen the filters.</small>"
+            "</div>"
+        )
+
     def _pie_chart(self, rows):
         total = sum(float(value or 0.0) for _label, value, _color in rows)
         if not total:
-            return "<div class='route_dash_empty_chart'>No data</div>"
+            return self._empty_chart()
         start = 0.0
         parts = []
         for _label, value, color in rows:
@@ -919,7 +1085,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def _horizontal_bars(self, rows, money=False, allow_negative=False):
         rows = [(label, value, color) for label, value, color in rows if value or allow_negative]
         if not rows:
-            return "<div class='route_dash_empty_chart'>No data</div>"
+            return self._empty_chart()
         max_value = max(abs(float(value or 0.0)) for _label, value, _color in rows) or 1.0
         html = "<div class='route_dash_bars'>"
         for label, value, color in rows:
@@ -946,9 +1112,11 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             if len(labels) > 60:
                 break
         if not labels:
-            return "<div class='route_dash_empty_chart'>No data</div>"
+            return self._empty_chart()
         sales_values = [float(sales_by_date.get(day, 0.0) or 0.0) for day in labels]
         collection_values = [float(collection_by_date.get(day, 0.0) or 0.0) for day in labels]
+        if not any(sales_values) and not any(collection_values):
+            return self._empty_chart()
         max_value = max(sales_values + collection_values + [1.0])
         width = 520
         height = 180
