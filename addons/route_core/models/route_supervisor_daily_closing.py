@@ -1718,7 +1718,8 @@ class RouteVisitPaymentSupervisorPromiseReview(models.Model):
         if (self.promise_amount or 0.0) <= 0.0:
             raise UserError(_("This payment has no promise amount to review."))
         closing_date = self.env.context.get("daily_closing_review_date") or fields.Date.context_today(self)
-        return {
+        review_view = self.env.ref("route_core.view_route_promise_review_wizard_form", raise_if_not_found=False)
+        action = {
             "type": "ir.actions.act_window",
             "name": _("Supervisor Promise Review"),
             "res_model": "route.promise.review.wizard",
@@ -1727,8 +1728,13 @@ class RouteVisitPaymentSupervisorPromiseReview(models.Model):
             "context": {
                 "default_payment_id": self.id,
                 "default_closing_date": closing_date,
+                "form_view_ref": "route_core.view_route_promise_review_wizard_form",
             },
         }
+        if review_view:
+            action["views"] = [(review_view.id, "form")]
+            action["view_id"] = review_view.id
+        return action
 
 
 class RoutePromiseReviewWizard(models.TransientModel):
