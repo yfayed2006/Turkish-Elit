@@ -359,6 +359,42 @@ Pending:
 </form>
 </field>
 </record>
+<record id="view_route_promise_review_wizard_form" model="ir.ui.view">
+<field name="name">route.promise.review.wizard.form</field>
+<field name="model">route.promise.review.wizard</field>
+<field name="arch" type="xml">
+<form string="Supervisor Promise Review">
+<sheet>
+<div class="alert alert-warning" role="alert"> Review the overdue promise and set a clear follow-up decision before closing the day. </div>
+<group string="Promise Details">
+<group>
+<field name="payment_id" readonly="1"/>
+<field name="currency_id" invisible="1"/>
+<field name="outlet_id" readonly="1"/>
+<field name="source_document_ref" readonly="1"/>
+<field name="current_promise_amount" readonly="1"/>
+</group>
+<group>
+<field name="company_id" readonly="1"/>
+<field name="closing_date" readonly="1"/>
+<field name="salesperson_id" readonly="1"/>
+<field name="current_promise_date" readonly="1"/>
+<field name="current_promise_status" readonly="1"/>
+</group>
+</group>
+<group string="Supervisor Decision">
+<field name="decision" widget="radio"/>
+<field name="new_promise_date" invisible="decision == 'keep_blocking'" required="decision in ('reschedule', 'review_followup')"/>
+<field name="note" placeholder="Write the follow-up note or escalation reason..."/>
+</group>
+</sheet>
+<footer>
+<button name="action_confirm_review" string="Confirm Review" type="object" class="btn-primary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
 <record id="server_action_open_route_supervisor_daily_closing" model="ir.actions.server">
 <field name="name">Supervisor Daily Closing</field>
 <field name="model_id" ref="route_core.model_route_supervisor_daily_closing"/>
@@ -366,15 +402,4 @@ Pending:
 <field name="code">action = env["route.supervisor.daily.closing"].action_open_daily_closing_dashboard()</field>
 </record>
 <menuitem id="menu_route_supervisor_daily_closing" name="Supervisor Daily Closing" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_supervisor_daily_closing" sequence="6" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<record id="view_route_visit_payment_form_supervisor_promise_review_button_state" model="ir.ui.view" forcecreate="0">
-<field name="name">route.visit.payment.form.supervisor.promise.review.button.state.disabled</field>
-<field name="model">route.visit.payment</field>
-<field name="inherit_id" ref="route_core.view_route_visit_payment_form"/>
-<field name="active" eval="False"/>
-<field name="arch" type="xml">
-<xpath expr="//header/field[@name='state']" position="attributes">
-<attribute name="statusbar_visible">draft,confirmed,cancelled</attribute>
-</xpath>
-</field>
-</record>
 </odoo>
