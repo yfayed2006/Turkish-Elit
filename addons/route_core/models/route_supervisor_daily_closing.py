@@ -1019,6 +1019,7 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "plan_ids": [fields.Command.set(plans.ids)],
             "vehicle_closing_ids": [fields.Command.set(closings.ids)],
             "loading_proposal_ids": [fields.Command.set(proposals.ids)],
+            "open_promise_payment_ids": [fields.Command.set(open_promises.ids)],
             "pending_transfer_ids": [fields.Command.set(pending_transfers.ids)],
             "return_transfer_ids": [fields.Command.set(return_pickings.ids)],
             "refill_transfer_ids": [fields.Command.set(refill_pickings.ids)],
@@ -1525,6 +1526,14 @@ class RouteDailyClosing(models.Model):
     plan_ids = fields.Many2many("route.plan", string="Daily Plans", readonly=True)
     vehicle_closing_ids = fields.Many2many("route.vehicle.closing", string="Vehicle Closings", readonly=True)
     loading_proposal_ids = fields.Many2many("route.loading.proposal", string="Loading Proposals", readonly=True)
+    open_promise_payment_ids = fields.Many2many(
+        "route.visit.payment",
+        "route_daily_closing_open_promise_payment_rel",
+        "closing_id",
+        "payment_id",
+        string="Open Promises",
+        readonly=True,
+    )
     pending_transfer_ids = fields.Many2many(
         "stock.picking",
         "route_daily_closing_pending_transfer_rel",
@@ -1684,6 +1693,31 @@ class RouteDailyClosing(models.Model):
     def action_open_loading_proposals(self):
         self.ensure_one()
         return self._action_open_related_records(_("Closing Loading Proposals"), self.loading_proposal_ids, "route.loading.proposal", "list,form")
+
+    def action_open_location_review_visits(self):
+        self.ensure_one()
+        location_review_visits = self.visit_ids.filtered(
+            lambda visit: visit.geo_review_required
+            or visit.geo_review_supervisor_decision == "needs_correction"
+            or visit.geo_review_state in ["outlet_missing", "pending_checkin"]
+        )
+        return self._action_open_related_records(_("Closing Location Review Visits"), location_review_visits, "route.visit", "kanban,list,form")
+
+    def action_open_open_due_visits(self):
+        self.ensure_one()
+        due_visits = self.visit_ids.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
+        return self._action_open_related_records(_("Closing Open Due Visits"), due_visits, "route.visit", "kanban,list,form")
+
+    def action_open_promises(self):
+        self.ensure_one()
+        action_xmlid = "route_core.action_route_visit_payment" if self.env.ref("route_core.action_route_visit_payment", raise_if_not_found=False) else False
+        return self._action_open_related_records(
+            _("Closing Open Promises"),
+            self.open_promise_payment_ids,
+            "route.visit.payment",
+            "kanban,list,form",
+            action_xmlid,
+        )
 
     def action_open_pending_transfers(self):
         self.ensure_one()
