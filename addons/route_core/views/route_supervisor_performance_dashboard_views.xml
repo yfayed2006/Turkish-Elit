@@ -1,261 +1,106 @@
-.route_supervisor_performance_dashboard_form .o_form_sheet_bg,
-.route_supervisor_performance_dashboard_form .o_form_sheet {
-    max-width: 100%;
-}
-.route_dash_block {
-    margin: 14px 0 18px;
-}
-.route_dash_section_title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin: 10px 0 12px;
-}
-.route_dash_section_title span {
-    font-size: 22px;
-    line-height: 1.2;
-    font-weight: 800;
-    color: #111827;
-}
-.route_dash_section_title p {
-    margin: 4px 0 0;
-    color: #64748b;
-}
-.route_dash_scope {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 12px;
-}
-.route_dash_scope span {
-    display: inline-flex;
-    flex-direction: column;
-    min-width: 120px;
-    padding: 8px 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #ffffff, #f8fafc);
-    font-weight: 700;
-}
-.route_dash_scope small {
-    color: #64748b;
-    font-weight: 500;
-}
-.route_dash_kpi_grid,
-.route_dash_chart_grid,
-.route_dash_ranking_grid {
-    display: grid;
-    gap: 12px;
-}
-.route_dash_kpi_grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-}
-.route_dash_chart_grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.route_dash_ranking_grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.route_dash_kpi,
-.route_dash_chart_card,
-.route_dash_table_card {
-    position: relative;
-    border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    background: #ffffff;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-}
-.route_dash_kpi {
-    min-height: 116px;
-    padding: 14px;
-    overflow: hidden;
-}
-.route_dash_kpi::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 5px;
-    background: #7c3aed;
-}
-.route_dash_kpi_label,
-.route_dash_kpi_note {
-    display: block;
-    color: #64748b;
-}
-.route_dash_kpi strong {
-    display: block;
-    margin: 7px 0 4px;
-    font-size: 25px;
-    line-height: 1.1;
-    color: #0f172a;
-}
-.route_dash_kpi_note {
-    font-size: 12px;
-}
-.route_dash_kpi_corner {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: #f1f5f9;
-    color: #334155;
-    font-size: 12px;
-    font-weight: 700;
-}
-.route_dash_tone_success::before { background: #16a34a; }
-.route_dash_tone_warning::before { background: #f59e0b; }
-.route_dash_tone_danger::before { background: #ef4444; }
-.route_dash_tone_info::before { background: #0ea5e9; }
-.route_dash_tone_sales::before { background: #8b5cf6; }
-.route_dash_tone_profit::before { background: #14b8a6; }
-.route_dash_chart_card,
-.route_dash_table_card {
-    padding: 14px;
-    min-height: 280px;
-}
-.route_dash_chart_card h3,
-.route_dash_table_card h3 {
-    margin: 0 0 12px;
-    font-size: 16px;
-    font-weight: 800;
-    color: #111827;
-}
-.route_dash_chart_wide {
-    grid-column: span 2;
-}
-.route_dash_chart_body {
-    min-height: 190px;
-}
-.route_dash_chart_footer {
-    margin-top: 10px;
-    color: #64748b;
-    font-size: 12px;
-}
-.route_dash_pie {
-    width: 170px;
-    height: 170px;
-    margin: 0 auto 8px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: inset 0 0 0 28px #fff, 0 12px 30px rgba(15, 23, 42, 0.08);
-}
-.route_dash_pie span {
-    font-size: 24px;
-    font-weight: 900;
-    color: #0f172a;
-}
-.route_dash_legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-}
-.route_dash_legend span,
-.route_dash_line_legend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #f8fafc;
-    color: #334155;
-    font-size: 12px;
-}
-.route_dash_legend i,
-.route_dash_line_legend i {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-}
-.route_dash_bars {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.route_dash_bar_meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    color: #334155;
-    font-size: 13px;
-    margin-bottom: 4px;
-}
-.route_dash_bar_meta span {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-.route_dash_bar_track {
-    height: 10px;
-    border-radius: 999px;
-    background: #f1f5f9;
-    overflow: hidden;
-}
-.route_dash_bar_track div {
-    height: 100%;
-    border-radius: 999px;
-}
-.route_dash_bar_negative .route_dash_bar_meta strong {
-    color: #ef4444;
-}
-.route_dash_line_wrap {
-    min-height: 210px;
-}
-.route_dash_line_svg {
-    width: 100%;
-    height: 185px;
-    border-radius: 14px;
-    background: linear-gradient(180deg, #f8fafc, #ffffff);
-}
-.route_dash_line_legend {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 8px;
-}
-.route_dash_table {
-    margin-bottom: 0;
-}
-.route_dash_table th {
-    color: #64748b;
-    font-size: 12px;
-    text-transform: uppercase;
-}
-.route_dash_table td {
-    vertical-align: middle;
-    font-size: 13px;
-}
-.route_dash_empty_chart,
-.route_dash_empty_cell {
-    display: flex;
-    min-height: 160px;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    font-weight: 700;
-    background: #f8fafc;
-    border-radius: 14px;
-}
-.route_dashboard_filter_cards .o_field_widget {
-    width: 100%;
-}
-@media (max-width: 1200px) {
-    .route_dash_kpi_grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-@media (max-width: 768px) {
-    .route_dash_section_title span { font-size: 18px; }
-    .route_dash_kpi_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .route_dash_chart_grid,
-    .route_dash_ranking_grid { grid-template-columns: 1fr; }
-    .route_dash_chart_wide { grid-column: span 1; }
-    .route_dash_kpi { min-height: 104px; padding: 12px; }
-    .route_dash_kpi strong { font-size: 20px; }
-    .route_dash_chart_card,
-    .route_dash_table_card { padding: 12px; }
-    .route_dash_pie { width: 140px; height: 140px; box-shadow: inset 0 0 0 24px #fff, 0 12px 24px rgba(15,23,42,.07); }
-}
+<odoo>
+<record id="view_route_supervisor_performance_dashboard_form" model="ir.ui.view">
+<field name="name">route.supervisor.performance.dashboard.form</field>
+<field name="model">route.supervisor.performance.dashboard</field>
+<field name="arch" type="xml">
+<form string="Supervisor Performance Dashboard" create="0" delete="0" class="route_supervisor_performance_dashboard_form">
+<header>
+<button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_open_daily_closing" type="object" string="Daily Closing" icon="fa-lock" class="btn-primary"/>
+<button name="action_open_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
+<button name="action_open_unfinished_visits" type="object" string="Unfinished" icon="fa-exclamation-circle"/>
+<button name="action_open_collections" type="object" string="Collections" icon="fa-money"/>
+<button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-o"/>
+<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
+<button name="action_open_returns" type="object" string="Returns" icon="fa-undo"/>
+<button name="action_open_location_review" type="object" string="Location Review" icon="fa-map-marker"/>
+<button name="action_open_vehicle_issues" type="object" string="Vehicle Issues" icon="fa-truck"/>
+<button name="action_open_closing_records" type="object" string="Closing Records" icon="fa-folder-open-o"/>
+</header>
+<sheet>
+<div class="oe_title mb-2">
+<span class="text-muted small">Supervisor Performance Dashboard</span>
+<h1 class="mb-1">Performance Command Center</h1>
+<p class="text-muted mb-0">Visual KPIs and charts for visits, collections, products, profit, promises, vehicles, and daily closing health.</p>
+</div>
+<h4 class="mt-2 mb-2">Dashboard Filters</h4>
+<div class="row g-2 mb-3 route_dashboard_filter_cards">
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Period</span>
+<field name="period_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">From</span>
+<field name="date_from" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">To</span>
+<field name="date_to" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">City</span>
+<field name="city_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Area</span>
+<field name="area_id" nolabel="1" domain="[('city_id', '=', city_id)]" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Outlet</span>
+<field name="outlet_id" nolabel="1" domain="[('active', '=', True)]" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Company</span>
+<field name="company_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+</div>
+<field name="currency_id" invisible="1"/>
+<field name="filtered_visit_count" invisible="1"/>
+<field name="completed_visit_count" invisible="1"/>
+<field name="collection_amount" invisible="1"/>
+<field name="net_sales_amount" invisible="1"/>
+<field name="open_promise_amount" invisible="1"/>
+<field name="gross_profit_amount" invisible="1"/>
+<field name="executive_html" nolabel="1" readonly="1" widget="html"/>
+<field name="visit_chart_html" nolabel="1" readonly="1" widget="html"/>
+<field name="collection_chart_html" nolabel="1" readonly="1" widget="html"/>
+<field name="product_chart_html" nolabel="1" readonly="1" widget="html"/>
+<field name="ranking_html" nolabel="1" readonly="1" widget="html"/>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_supervisor_performance_dashboard" model="ir.actions.server">
+<field name="name">Supervisor Performance Dashboard</field>
+<field name="model_id" ref="route_core.model_route_supervisor_performance_dashboard"/>
+<field name="state">code</field>
+<field name="code">action = env["route.supervisor.performance.dashboard"].action_open_performance_dashboard()</field>
+</record>
+<menuitem id="menu_route_supervisor_performance_dashboard" name="Supervisor Performance Dashboard" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_supervisor_performance_dashboard" sequence="4" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</odoo>
