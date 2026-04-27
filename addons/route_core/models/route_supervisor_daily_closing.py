@@ -952,18 +952,18 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             _("The selected day has been closed and linked visits, daily plans, and vehicle closings are now locked."),
         )
 
-    def action_reopen_day(self):
+    def _reopen_day_with_reason(self, closing_record, reopen_reason):
         self.ensure_one()
-        closing_record = self._get_daily_closing_record()
+        reason = (reopen_reason or "").strip()
         if not closing_record or closing_record.state != "closed":
             raise UserError(_("There is no closed day to reopen for the selected filters."))
-        if not (self.reopen_reason or "").strip():
+        if not reason:
             raise UserError(_("Please enter a Reopen Reason before reopening the day."))
         closing_record.write({
             "state": "reopened",
             "reopened_by_id": self.env.user.id,
             "reopened_at": fields.Datetime.now(),
-            "reopen_reason": self.reopen_reason.strip(),
+            "reopen_reason": reason,
         })
         self._unlink_daily_closing_from_operational_records(closing_record)
         return self._daily_closing_action_notification(
@@ -971,6 +971,42 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             _("The selected day has been reopened. Validate and close it again after completing the required corrections."),
             "warning",
         )
+
+    def action_open_reopen_day_wizard(self):
+        self.ensure_one()
+        closing_record = self._get_daily_closing_record()
+        if not closing_record or closing_record.state != "closed":
+            raise UserError(_("There is no closed day to reopen for the selected filters."))
+        view = self.env.ref("route_core.view_route_daily_closing_reopen_wizard_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Reopen Closed Day"),
+            "res_model": "route.daily.closing.reopen.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_dashboard_id": self.id,
+                "default_closing_id": closing_record.id,
+                "default_company_id": self.company_id.id,
+                "default_closing_date": self.closing_date,
+                "default_salesperson_id": self.salesperson_id.id,
+                "default_vehicle_id": self.vehicle_id.id,
+                "default_city_id": self.city_id.id,
+                "default_area_id": self.area_id.id,
+                "default_outlet_id": self.outlet_id.id,
+            },
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+            action["view_id"] = view.id
+        return action
+
+    def action_reopen_day(self):
+        self.ensure_one()
+        closing_record = self._get_daily_closing_record()
+        if not (self.reopen_reason or "").strip():
+            return self.action_open_reopen_day_wizard()
+        return self._reopen_day_with_reason(closing_record, self.reopen_reason)
 
     def action_open_daily_closing_record(self):
         self.ensure_one()
@@ -1213,6 +1249,41 @@ class RouteSupervisorDailyClosing(models.TransientModel):
             "domain": [("id", "in", direct_returns.ids or [0])],
         })
         return action
+
+
+class RouteDailyClosingReopenWizard(models.TransientModel):
+    _name = "route.daily.closing.reopen.wizard"
+    _description = "Reopen Route Daily Closing"
+
+    dashboard_id = fields.Many2one(
+        "route.supervisor.daily.closing",
+        string="Dashboard",
+        required=True,
+        readonly=True,
+    )
+    closing_id = fields.Many2one(
+        "route.daily.closing",
+        string="Daily Closing",
+        required=True,
+        readonly=True,
+    )
+    company_id = fields.Many2one("res.company", string="Company", readonly=True)
+    closing_date = fields.Date(string="Closing Date", readonly=True)
+    salesperson_id = fields.Many2one("res.users", string="Salesperson", readonly=True)
+    vehicle_id = fields.Many2one("route.vehicle", string="Vehicle", readonly=True)
+    city_id = fields.Many2one("route.city", string="City", readonly=True)
+    area_id = fields.Many2one("route.area", string="Area", readonly=True)
+    outlet_id = fields.Many2one("route.outlet", string="Outlet", readonly=True)
+    reopen_reason = fields.Text(string="Reopen Reason", required=True)
+
+    def action_confirm_reopen(self):
+        self.ensure_one()
+        if not (self.reopen_reason or "").strip():
+            raise UserError(_("Please enter a Reopen Reason before reopening the day."))
+        dashboard = self.dashboard_id.exists()
+        if not dashboard:
+            raise UserError(_("The daily closing dashboard is no longer available. Please refresh and try again."))
+        return dashboard._reopen_day_with_reason(self.closing_id, self.reopen_reason)
 
 
 class RouteDailyClosing(models.Model):
