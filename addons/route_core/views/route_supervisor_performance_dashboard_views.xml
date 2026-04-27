@@ -91,6 +91,7 @@
 <field name="visit_chart_html" nolabel="1" readonly="1" widget="html"/>
 <field name="collection_chart_html" nolabel="1" readonly="1" widget="html"/>
 <field name="product_chart_html" nolabel="1" readonly="1" widget="html"/>
+<field name="outlet_chart_html" nolabel="1" readonly="1" widget="html"/>
 <field name="ranking_html" nolabel="1" readonly="1" widget="html"/>
 </sheet>
 </form>
