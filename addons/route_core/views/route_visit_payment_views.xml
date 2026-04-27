@@ -1,4 +1,5 @@
 <odoo>
+<!--  SAFE FIX 2026-04-27: removed invalid xpath for action_open_supervisor_promise_review.  -->
 <!--                Admin / all payments                -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
