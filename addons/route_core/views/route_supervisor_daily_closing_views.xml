@@ -366,17 +366,14 @@ Pending:
 <field name="code">action = env["route.supervisor.daily.closing"].action_open_daily_closing_dashboard()</field>
 </record>
 <menuitem id="menu_route_supervisor_daily_closing" name="Supervisor Daily Closing" parent="route_core.menu_route_control_workspace" action="route_core.server_action_open_route_supervisor_daily_closing" sequence="6" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<record id="view_route_visit_payment_form_supervisor_promise_review_button_state" model="ir.ui.view">
-<field name="name">route.visit.payment.form.supervisor.promise.review.button.state</field>
+<record id="view_route_visit_payment_form_supervisor_promise_review_button_state" model="ir.ui.view" forcecreate="0">
+<field name="name">route.visit.payment.form.supervisor.promise.review.button.state.disabled</field>
 <field name="model">route.visit.payment</field>
 <field name="inherit_id" ref="route_core.view_route_visit_payment_form"/>
-<field name="priority">99</field>
+<field name="active" eval="False"/>
 <field name="arch" type="xml">
-<xpath expr="//header/button[@string='Review Promise']" position="attributes">
-<attribute name="invisible">state != 'confirmed' or promise_status not in ('due_today', 'overdue')</attribute>
-</xpath>
-<xpath expr="//header/button[@string='Review Promise']" position="after">
-<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or promise_status != 'open' or promise_amount == 0"/>
+<xpath expr="//header/field[@name='state']" position="attributes">
+<attribute name="statusbar_visible">draft,confirmed,cancelled</attribute>
 </xpath>
 </field>
 </record>
