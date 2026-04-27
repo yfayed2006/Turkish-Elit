@@ -1365,9 +1365,16 @@ class RouteSupervisorDailyClosing(models.TransientModel):
         promises_to_open = blocking_promises or self.open_promise_payment_ids
         result.update({
             "name": _("Due / Overdue Promises") if blocking_promises else _("Open Promises"),
+            "view_mode": "kanban,list,form",
             "domain": [("id", "in", promises_to_open.ids or [0])],
             "context": {"create": False, "edit": True, "delete": False, "daily_closing_review_date": self.closing_date},
         })
+        kanban_view = self.env.ref("route_core.view_route_visit_collection_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_visit_payment_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
+        if kanban_view and list_view and form_view:
+            result["views"] = [(kanban_view.id, "kanban"), (list_view.id, "list"), (form_view.id, "form")]
+            result["view_id"] = kanban_view.id
         return result
 
 
@@ -1749,6 +1756,13 @@ class RouteDailyClosing(models.Model):
             "domain": [("id", "in", records.ids or [0])],
             "context": {"create": False, "edit": True, "delete": False},
         })
+        if res_model == "route.visit.payment" and "kanban" in (view_mode or ""):
+            kanban_view = self.env.ref("route_core.view_route_visit_collection_kanban", raise_if_not_found=False)
+            list_view = self.env.ref("route_core.view_route_visit_payment_list", raise_if_not_found=False)
+            form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
+            if kanban_view and list_view and form_view:
+                result["views"] = [(kanban_view.id, "kanban"), (list_view.id, "list"), (form_view.id, "form")]
+                result["view_id"] = kanban_view.id
         return result
 
     def action_open_visits(self):
@@ -1780,7 +1794,7 @@ class RouteDailyClosing(models.Model):
     def action_open_promises(self):
         self.ensure_one()
         self._ensure_linked_document_records()
-        return self._action_open_related_records(_("Closing Open Promises"), self.open_promise_payment_ids, "route.visit.payment", "list,form", "route_core.action_route_visit_payment")
+        return self._action_open_related_records(_("Closing Open Promises"), self.open_promise_payment_ids, "route.visit.payment", "kanban,list,form", "route_core.action_route_visit_payment")
 
     def action_open_pending_transfers(self):
         self.ensure_one()
