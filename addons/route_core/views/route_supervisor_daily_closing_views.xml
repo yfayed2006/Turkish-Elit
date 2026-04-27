@@ -492,6 +492,275 @@ Pending:
 <xpath expr="//header/field[@name='state']" position="before"/>
 </field>
 </record>
+<record id="view_route_daily_closing_list" model="ir.ui.view">
+<field name="name">route.daily.closing.list</field>
+<field name="model">route.daily.closing</field>
+<field name="arch" type="xml">
+<list string="Daily Closings" create="0" delete="0">
+<field name="name"/>
+<field name="closing_date"/>
+<field name="state" widget="badge"/>
+<field name="company_id"/>
+<field name="salesperson_id"/>
+<field name="vehicle_id"/>
+<field name="visit_count"/>
+<field name="done_visit_count"/>
+<field name="open_due_amount" widget="monetary"/>
+<field name="open_promise_count"/>
+<field name="closed_by_id"/>
+<field name="closed_at"/>
+<field name="reopened_by_id"/>
+<field name="reopened_at"/>
+</list>
+</field>
+</record>
+<record id="view_route_daily_closing_form" model="ir.ui.view">
+<field name="name">route.daily.closing.form</field>
+<field name="model">route.daily.closing</field>
+<field name="arch" type="xml">
+<form string="Daily Closing Record" create="0" delete="0">
+<header>
+<button name="action_open_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
+<button name="action_open_daily_plans" type="object" string="Daily Plans" icon="fa-calendar"/>
+<button name="action_open_vehicle_closings" type="object" string="Vehicle Closings" icon="fa-truck"/>
+<button name="action_open_loading_proposals" type="object" string="Loading" icon="fa-cubes"/>
+<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
+<button name="action_open_direct_returns" type="object" string="Return Orders" icon="fa-undo"/>
+<field name="state" widget="statusbar" statusbar_visible="closed,reopened"/>
+</header>
+<sheet>
+<div class="oe_title mb-2">
+<span class="text-muted">Supervisor Daily Closing</span>
+<h1>
+<field name="name" nolabel="1" readonly="1"/>
+</h1>
+<p class="text-muted">End-of-day closing record, operational snapshot, and audit trail.</p>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Closing Date</span>
+<strong>
+<field name="closing_date" nolabel="1" readonly="1"/>
+</strong>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Company</span>
+<strong>
+<field name="company_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</strong>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Closed By / At</span>
+<strong class="d-block">
+<field name="closed_by_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</strong>
+<span class="text-muted small">
+<field name="closed_at" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Reopened By / At</span>
+<strong class="d-block">
+<field name="reopened_by_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</strong>
+<span class="text-muted small">
+<field name="reopened_at" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">City</span>
+<field name="city_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Area / Outlet</span>
+<field name="area_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<field name="outlet_id" nolabel="1" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+</div>
+<h3 class="mb-2">Closing Snapshot</h3>
+<div class="row g-2 mb-3">
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Visits</span>
+<strong class="fs-5">
+<field name="visit_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Done:
+<field name="done_visit_count" nolabel="1" readonly="1"/>
+</span>
+<span class="text-muted small d-block">
+Unfinished:
+<field name="unfinished_visit_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Daily Plans</span>
+<strong class="fs-5">
+<field name="plan_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Not finalized:
+<field name="not_finalized_plan_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Open Due</span>
+<strong class="fs-5">
+<field name="open_due_amount" nolabel="1" readonly="1" widget="monetary"/>
+</strong>
+<span class="text-muted small d-block">
+Visits:
+<field name="open_due_visit_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Promises</span>
+<strong class="fs-5">
+<field name="open_promise_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Amount:
+<field name="open_promise_amount" nolabel="1" readonly="1" widget="monetary"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle Closing</span>
+<strong class="fs-5">
+<field name="vehicle_closing_closed_count" nolabel="1" readonly="1"/>
+/
+<field name="vehicle_closing_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Missing:
+<field name="vehicle_closing_missing_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Location Review</span>
+<strong class="fs-5">
+<field name="location_issue_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">Needs review at closing time</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Loading / Transfers</span>
+<strong class="fs-5">
+<field name="loading_proposal_count" nolabel="1" readonly="1"/>
+/
+<field name="pending_transfer_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending loading:
+<field name="loading_pending_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Sales / Returns</span>
+<strong class="fs-5">
+<field name="sale_order_count" nolabel="1" readonly="1"/>
+/
+<field name="direct_return_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">
+Pending:
+<field name="pending_sale_order_count" nolabel="1" readonly="1"/>
+/
+<field name="pending_direct_return_count" nolabel="1" readonly="1"/>
+</span>
+</div>
+</div>
+<div class="col-6 col-md-4 col-lg-3">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Returns / Refill Transfers</span>
+<strong class="fs-5">
+<field name="return_transfer_count" nolabel="1" readonly="1"/>
+/
+<field name="refill_transfer_count" nolabel="1" readonly="1"/>
+</strong>
+<span class="text-muted small d-block">Stock movement snapshot</span>
+</div>
+</div>
+</div>
+<notebook>
+<page string="Audit Trail">
+<field name="audit_line_ids" nolabel="1" readonly="1">
+<list string="Audit Trail" create="0" delete="0">
+<field name="event_datetime"/>
+<field name="event_label"/>
+<field name="user_id"/>
+<field name="note"/>
+</list>
+</field>
+</page>
+<page string="Notes">
+<group>
+<field name="closing_note" readonly="1"/>
+<field name="reopen_reason" readonly="1"/>
+</group>
+</page>
+<page string="Linked Documents">
+<group string="Linked Records" col="2">
+<field name="visit_ids" readonly="1" widget="many2many_tags"/>
+<field name="plan_ids" readonly="1" widget="many2many_tags"/>
+<field name="vehicle_closing_ids" readonly="1" widget="many2many_tags"/>
+<field name="loading_proposal_ids" readonly="1" widget="many2many_tags"/>
+<field name="sale_order_ids" readonly="1" widget="many2many_tags"/>
+<field name="direct_return_ids" readonly="1" widget="many2many_tags"/>
+</group>
+</page>
+</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="action_route_daily_closing" model="ir.actions.act_window">
+<field name="name">Daily Closing Records</field>
+<field name="res_model">route.daily.closing</field>
+<field name="view_mode">list,form</field>
+<field name="views" eval="[(ref('route_core.view_route_daily_closing_list'), 'list'), (ref('route_core.view_route_daily_closing_form'), 'form')]"/>
+<field name="context">{'create': False, 'delete': False}</field>
+</record>
 <record id="server_action_open_route_supervisor_daily_closing" model="ir.actions.server">
 <field name="name">Supervisor Daily Closing</field>
 <field name="model_id" ref="route_core.model_route_supervisor_daily_closing"/>
