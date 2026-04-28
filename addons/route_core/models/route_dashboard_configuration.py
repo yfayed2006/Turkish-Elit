@@ -166,12 +166,31 @@ class RouteDashboardWidget(models.Model):
                 )
         return True
 
+    def action_toggle_active(self):
+        for rec in self:
+            rec.active = not rec.active
+        return True
+
+    def action_toggle_manager_visibility(self):
+        for rec in self:
+            rec.show_on_manager = not rec.show_on_manager
+        return True
+
+    def action_toggle_supervisor_visibility(self):
+        for rec in self:
+            rec.show_on_supervisor = not rec.show_on_supervisor
+        return True
+
+
     @api.model
     def action_open_dashboard_configuration(self):
         self._ensure_default_widgets(self.env.company)
+        kanban_view = self.env.ref("route_core.view_route_dashboard_widget_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_route_dashboard_widget_list", raise_if_not_found=False)
         form_view = self.env.ref("route_core.view_route_dashboard_widget_form", raise_if_not_found=False)
         views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
         if list_view:
             views.append((list_view.id, "list"))
         if form_view:
@@ -180,7 +199,7 @@ class RouteDashboardWidget(models.Model):
             "type": "ir.actions.act_window",
             "name": _("Dashboard Configuration"),
             "res_model": "route.dashboard.widget",
-            "view_mode": "list,form",
+            "view_mode": "kanban,list,form",
             "views": views or False,
             "domain": [("company_id", "=", self.env.company.id)],
             "context": {"default_company_id": self.env.company.id, "search_default_group_category": 1, "active_test": False},
