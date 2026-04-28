@@ -581,3 +581,47 @@
         gap: 8px;
     }
 }
+
+.route_dash_growth_success { color: #16a34a; font-weight: 800; }
+.route_dash_growth_danger { color: #ef4444; font-weight: 800; }
+.route_manager_executive_dashboard_form .route_dash_insight_grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.route_dash_insight {
+    position: relative;
+    min-height: 92px;
+    padding: 13px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+.route_dash_insight::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: #7c3aed;
+}
+.route_dash_insight span,
+.route_dash_insight small {
+    display: block;
+    color: #64748b;
+}
+.route_dash_insight strong {
+    display: block;
+    margin: 7px 0 4px;
+    color: #0f172a;
+    font-size: 17px;
+    line-height: 1.2;
+}
+@media (max-width: 1200px) {
+    .route_manager_executive_dashboard_form .route_dash_insight_grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+    .route_manager_executive_dashboard_form .route_dash_insight_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
