@@ -168,6 +168,148 @@ Seq.
 </form>
 </field>
 </record>
+<record id="view_route_dashboard_user_preference_search" model="ir.ui.view">
+<field name="name">route.dashboard.user.preference.search</field>
+<field name="model">route.dashboard.user.preference</field>
+<field name="arch" type="xml">
+<search string="My Dashboard Preferences">
+<field name="name"/>
+<field name="category"/>
+<field name="target"/>
+<filter name="shown" string="Shown" domain="[('visible', '=', True)]"/>
+<filter name="hidden" string="Hidden" domain="[('visible', '=', False)]"/>
+<separator/>
+<filter name="group_category" string="Category" context="{'group_by': 'category'}"/>
+<filter name="group_target" string="Dashboard" context="{'group_by': 'target'}"/>
+</search>
+</field>
+</record>
+<record id="view_route_dashboard_user_preference_kanban" model="ir.ui.view">
+<field name="name">route.dashboard.user.preference.kanban</field>
+<field name="model">route.dashboard.user.preference</field>
+<field name="arch" type="xml">
+<kanban string="Customize Dashboard" class="o_kanban_mobile route_dashboard_configuration_kanban" create="0" delete="0" quick_create="0" default_order="category, sequence, id">
+<field name="visible"/>
+<field name="name"/>
+<field name="category"/>
+<field name="target"/>
+<field name="sequence"/>
+<field name="description"/>
+<field name="company_allowed"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-3 border rounded bg-white shadow-sm h-100">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+<div class="min-w-0">
+<span class="text-muted small d-block">My Dashboard Widget</span>
+<strong class="d-block fs-5 text-truncate">
+<field name="name"/>
+</strong>
+<span class="badge rounded-pill text-bg-light border mt-1">
+<field name="category"/>
+</span>
+</div>
+<div class="text-end">
+<t t-if="record.visible.raw_value">
+<span class="badge rounded-pill text-bg-success">Shown</span>
+</t>
+<t t-if="!record.visible.raw_value">
+<span class="badge rounded-pill text-bg-secondary">Hidden</span>
+</t>
+<div class="text-muted small mt-1">
+Seq.
+<field name="sequence"/>
+</div>
+</div>
+</div>
+<div class="text-muted mb-3" style="min-height: 38px;">
+<field name="description"/>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-6">
+<div class="p-2 rounded border bg-light h-100">
+<span class="text-muted small d-block">Dashboard</span>
+<strong>
+<field name="target"/>
+</strong>
+</div>
+</div>
+<div class="col-6">
+<div class="p-2 rounded border bg-light h-100">
+<span class="text-muted small d-block">Company Setup</span>
+<t t-if="record.company_allowed.raw_value">
+<strong class="text-success">Allowed</strong>
+</t>
+<t t-if="!record.company_allowed.raw_value">
+<strong class="text-muted">Blocked</strong>
+</t>
+</div>
+</div>
+</div>
+<div class="d-flex flex-wrap gap-2">
+<button name="action_toggle_user_visibility" type="object" class="btn btn-outline-primary btn-sm">
+<t t-if="record.visible.raw_value">Hide from My Dashboard</t>
+<t t-if="!record.visible.raw_value">Show on My Dashboard</t>
+</button>
+<button name="action_reset_my_preference" type="object" class="btn btn-link btn-sm">Reset</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_dashboard_user_preference_list" model="ir.ui.view">
+<field name="name">route.dashboard.user.preference.list</field>
+<field name="model">route.dashboard.user.preference</field>
+<field name="arch" type="xml">
+<list string="Customize Dashboard" editable="bottom" create="0" delete="0" default_order="sequence, id" decoration-muted="not visible">
+<field name="visible"/>
+<field name="name" readonly="1"/>
+<field name="category" readonly="1"/>
+<field name="target" readonly="1"/>
+<field name="description" readonly="1" optional="show"/>
+<field name="sequence" readonly="1" optional="hide"/>
+<field name="company_allowed" readonly="1" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="view_route_dashboard_user_preference_form" model="ir.ui.view">
+<field name="name">route.dashboard.user.preference.form</field>
+<field name="model">route.dashboard.user.preference</field>
+<field name="arch" type="xml">
+<form string="Dashboard Preference" create="0" delete="0">
+<header>
+<button name="action_toggle_user_visibility" type="object" string="Show / Hide" class="btn-primary"/>
+<button name="action_reset_my_preference" type="object" string="Reset" class="btn-secondary"/>
+</header>
+<sheet>
+<div class="oe_title">
+<span class="text-muted small">My Dashboard Preference</span>
+<h1>
+<field name="name" readonly="1"/>
+</h1>
+</div>
+<group>
+<group string="Widget">
+<field name="visible"/>
+<field name="target" readonly="1"/>
+<field name="category" readonly="1"/>
+<field name="sequence" readonly="1"/>
+</group>
+<group string="Access">
+<field name="user_id" readonly="1"/>
+<field name="company_id" readonly="1" groups="base.group_multi_company"/>
+<field name="company_allowed" readonly="1"/>
+</group>
+</group>
+<group string="Description">
+<field name="description" readonly="1" nolabel="1"/>
+</group>
+</sheet>
+</form>
+</field>
+</record>
 <record id="server_action_open_route_dashboard_configuration" model="ir.actions.server">
 <field name="name">Dashboard Configuration</field>
 <field name="model_id" ref="route_core.model_route_dashboard_widget"/>
