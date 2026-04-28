@@ -215,7 +215,11 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         loading_workflow = self._company_field_value(company, "route_vehicle_loading_workflow", "optional") or "optional"
         show_loading = loading_workflow in ("optional", "required")
         show_vehicle_closing = bool(self._company_field_value(company, "route_workspace_show_vehicle_closing", True))
-        show_location = bool(self._company_field_value(company, "route_enable_outlet_geolocation", True))
+        geo_policy = self._company_field_value(company, "route_geo_checkin_policy", "review_only") or "review_only"
+        outlet_locations_enabled = bool(self._company_field_value(company, "route_enable_outlet_geolocation", True))
+        # Outlet locations can stay enabled for map/address use while Location Check-in is disabled.
+        # Dashboard review/issue sections should follow the check-in policy, not the map/location master-data flag.
+        show_location = bool(outlet_locations_enabled and geo_policy != "disabled")
         show_lot = bool(self._company_field_value(company, "route_enable_lot_serial_tracking", False))
         show_expiry = bool(self._company_field_value(company, "route_enable_expiry_tracking", False)) and show_lot
         show_direct_return = show_direct_sale and direct_return_toggle
@@ -239,7 +243,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "show_stock_transfers": show_stock_transfers,
             "show_lot_expiry": bool(show_lot or show_expiry),
             "loading_workflow": loading_workflow,
-            "geo_policy": self._company_field_value(company, "route_geo_checkin_policy", "review_only") or "review_only",
+            "geo_policy": geo_policy,
         }
 
     def _visit_is_direct_sale(self, visit):
@@ -316,7 +320,10 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_location_review(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        visits = payload["location_issue_visits"]
+        if not payload["settings"].get("show_location"):
+            visits = self.env["route.visit"].browse()
+        else:
+            visits = payload["location_issue_visits"]
         return self._action_open_records(_("Dashboard Location Review"), visits, "route.visit", "kanban,list,form")
 
     def action_open_collections(self):
