@@ -1156,15 +1156,31 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
     def _render_visit_chart_html(self, payload):
         status = payload["visit_status"]
-        status_rows = [
-            (_("Completed"), status.get("done", 0), "#16a34a"),
-            (_("In Progress"), status.get("active", 0), "#0ea5e9"),
-            (_("Not Started"), status.get("not_started", 0), "#f59e0b"),
-            (_("Cancelled"), status.get("cancelled", 0), "#ef4444"),
-        ]
+        visit_total = len(payload["visits"])
+        done = status.get("done", 0)
+        active = status.get("active", 0)
+        not_started = status.get("not_started", 0)
+        cancelled = status.get("cancelled", 0)
+        started = done + active
+        unfinished = len(payload["unfinished_visits"])
+        completion = (done / visit_total * 100.0) if visit_total else 0.0
+        start_rate = (started / visit_total * 100.0) if visit_total else 0.0
         settings = payload["settings"]
+
+        funnel_rows = [
+            (_("Planned Visits"), visit_total, "#64748b"),
+            (_("Started"), started, "#0ea5e9"),
+            (_("Completed"), done, "#16a34a"),
+            (_("Unfinished"), unfinished, "#ef4444"),
+        ]
+        status_rows = [
+            (_("Completed"), done, "#16a34a"),
+            (_("In Progress"), active, "#0ea5e9"),
+            (_("Not Started"), not_started, "#f59e0b"),
+            (_("Cancelled"), cancelled, "#ef4444"),
+        ]
         operations_rows = [
-            (_("Unfinished Visits"), len(payload["unfinished_visits"]), "#ef4444"),
+            (_("Unfinished Visits"), unfinished, "#ef4444"),
             (_("Due / Overdue Promises"), len(payload["due_overdue_promises"]), "#8b5cf6"),
         ]
         if settings["show_vehicle_closing"]:
@@ -1184,15 +1200,23 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             (_("Open / Not Ready"), payload["open_day_count"], "#f59e0b"),
             (_("Reopened"), payload["reopened_day_count"], "#ef4444"),
         ]
-        html = self._section_title(_("Visit and Closing Health"), _("Visual status instead of repeated operational lists."))
-        html += "<div class='route_dash_chart_grid'>"
+        health_tiles = [
+            (_("Start Rate"), f"{start_rate:.0f}%", _("Visits already started"), "#0ea5e9"),
+            (_("Completion Rate"), f"{completion:.0f}%", _("Visits completed"), "#16a34a"),
+            (_("Unfinished"), self._num(unfinished), _("Needs supervisor follow-up"), "#ef4444"),
+            (_("Not Started"), self._num(not_started), _("Remaining visits"), "#f59e0b"),
+        ]
+        html = self._section_title(_("Visit Execution Control"), _("Operational view for route progress, exceptions, and closing readiness."))
+        html += "<div class='route_dash_chart_grid route_dash_supervisor_ops'>"
+        html += self._chart_card(_("Route Execution Funnel"), self._funnel_chart(funnel_rows), _("Planned → started → completed, with unfinished visits highlighted."), wide=True)
+        html += self._chart_card(_("Execution Pulse"), self._spotlight_tiles(health_tiles), _("Fast operational signals for the supervisor."))
         html += self._chart_card(_("Visit Status"), self._pie_chart(status_rows), self._legend(status_rows))
         html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers enabled in Route Settings are shown here."))
         if settings["show_location"]:
             html += self._chart_card(_("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
         html += self._chart_card(_("Closing Status"), self._pie_chart(closing_rows), self._legend(closing_rows) + _(" Operating days only."))
         html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
+        return f"<div class='route_dash_block route_dash_supervisor_operational'>{html}</div>"
 
     def _render_collection_chart_html(self, payload):
         payment_labels = {
@@ -1210,22 +1234,35 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             for line in sorted(payload["salesperson_lines"], key=lambda item: item["collection"], reverse=True)[:8]
         ]
         line_html = self._line_chart(payload["daily_collection"], payload["daily_sales"], payload["date_from"], payload["date_to"])
-        html = self._section_title(_("Collections and Cash Flow"), _("Collections, promises, payment method mix, and trend over time."))
+        net_sales = payload["net_sales"] or 0.0
+        collection_gap = max(net_sales - (payload["total_collected"] or 0.0), 0.0)
+        collection_rate = (payload["total_collected"] / net_sales * 100.0) if net_sales else 0.0
+        promise_count = len(payload["open_promises"])
+        due_count = len(payload["due_overdue_promises"])
+        workload_tiles = [
+            (_("Collected"), self._money(payload["total_collected"]), _("Confirmed payments"), "#16a34a"),
+            (_("Collection Rate"), f"{collection_rate:.0f}%", _("Collected vs net sales"), "#0ea5e9"),
+            (_("Collection Gap"), self._money(collection_gap), _("Net sales not collected"), "#f97316"),
+            (_("Open Promises"), self._money(payload["open_promise_amount"]), _("%s promises") % self._num(promise_count), "#8b5cf6"),
+            (_("Due / Overdue"), self._num(due_count), self._money(payload["due_overdue_promise_amount"]), "#ef4444"),
+        ]
+        html = self._section_title(_("Collections and Cash Flow Control"), _("Collection workload, promise pressure, payment method mix, and trend over time."))
         html += "<div class='route_dash_chart_grid'>"
+        html += self._chart_card(_("Collection Workload"), self._spotlight_tiles(workload_tiles), _("Supervisor follow-up priorities for collections and promises."), wide=True)
         html += self._chart_card(_("Payment Method Mix"), self._pie_chart(payment_rows), self._legend(payment_rows))
-        html += self._chart_card(_("Collection by Salesperson"), self._horizontal_bars(salesperson_rows, money=True), "")
+        html += self._chart_card(_("Collection by Salesperson"), self._horizontal_bars(salesperson_rows, money=True), _("Who collected the most cash in the selected period."))
         html += self._chart_card(_("Sales vs Collection Trend"), line_html, _("Line compares sales and collections in the selected date range."), wide=True)
         html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
+        return f"<div class='route_dash_block route_dash_supervisor_collections'>{html}</div>"
 
     def _render_product_chart_html(self, payload):
-        top_products = payload["product_lines"][:10]
+        top_products = payload["product_lines"][:6]
         product_sales = [(line["name"], line["sales"], "#0ea5e9") for line in top_products]
         product_qty = [(line["name"], line["qty"], "#8b5cf6") for line in top_products]
         profit_rows = [(line["name"], line["profit"], "#16a34a" if line["profit"] >= 0 else "#ef4444") for line in top_products]
         product_returns = [
             (line["name"], line.get("returns", 0.0), "#ef4444")
-            for line in sorted(payload["product_lines"], key=lambda item: item.get("returns", 0.0), reverse=True)[:10]
+            for line in sorted(payload["product_lines"], key=lambda item: item.get("returns", 0.0), reverse=True)[:6]
         ]
         settings = payload["settings"]
         sales_return_rows = [
@@ -1237,17 +1274,29 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             (_("Net Sales"), payload["net_sales"], "#0ea5e9"),
             (_("Estimated Profit"), payload["gross_profit"], "#8b5cf6"),
         ]
+        product_count = len([line for line in payload["product_lines"] if line.get("sales") or line.get("qty") or line.get("returns")])
+        top_product = top_products[0] if top_products else False
+        top_profit = max(payload["product_lines"], key=lambda line: line.get("profit", 0.0), default=False)
+        top_returned = max(payload["product_lines"], key=lambda line: line.get("returns", 0.0), default=False)
+        profit_margin = (payload["gross_profit"] / payload["gross_sales"] * 100.0) if payload["gross_sales"] else 0.0
+        product_tiles = [
+            (_("Active Products"), self._num(product_count), _("Sold / returned in period"), "#0ea5e9"),
+            (_("Top Product"), top_product and top_product.get("name") or _("No data"), top_product and self._money(top_product.get("sales")) or "-", "#16a34a"),
+            (_("Profit Margin"), f"{profit_margin:.0f}%", _("Estimated from product cost"), "#8b5cf6"),
+            (_("Most Returned"), top_returned and top_returned.get("name") or _("No returns"), top_returned and self._money(top_returned.get("returns")) or "-", "#ef4444"),
+        ]
         quality_note = _("Missing cost products: %s. Profit is estimated from product cost.") % self._num(payload["missing_cost_product_count"])
-        html = self._section_title(_("Products, Sales, and Estimated Profit"), quality_note)
+        html = self._section_title(_("Products, Sales, and Stock Movement Signals"), quality_note)
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Sales / Returns / Profit"), self._horizontal_bars(sales_return_rows, money=True), "")
+        html += self._chart_card(_("Product Operations Pulse"), self._spotlight_tiles(product_tiles), _("Quick product signals for daily supervision."), wide=True)
+        html += self._chart_card(_("Sales / Returns / Profit Columns"), self._column_chart(sales_return_rows, money=True), _("Visual commercial mix for the selected period."), wide=True)
         html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
         html += self._chart_card(_("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
         if settings["show_consignment"] or settings["show_direct_return"]:
-            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), "")
+            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), _("Return exposure by product."))
         html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
         html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
+        return f"<div class='route_dash_block route_dash_supervisor_products'>{html}</div>"
 
     def _render_outlet_chart_html(self, payload):
         settings = payload["settings"]
@@ -1380,7 +1429,28 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def _render_ranking_html(self, payload):
         salesperson_rows = payload["salesperson_lines"][:8]
         vehicle_rows = payload["vehicle_lines"][:8]
+        settings = payload["settings"]
+        quick_rows = [
+            (_("Unfinished Visits"), self._num(len(payload["unfinished_visits"])), _("Open execution items"), "#ef4444"),
+            (_("Open Promises"), self._money(payload["open_promise_amount"]), _("Promises needing follow-up"), "#8b5cf6"),
+        ]
+        if settings.get("show_location"):
+            quick_rows.append((_("Location Review"), self._num(len(payload["location_issue_visits"])), _("Location exceptions"), "#f59e0b"))
+        if settings.get("show_vehicle_closing"):
+            quick_rows.append((_("Vehicle Issues"), self._num(payload["pending_vehicle_issues"]), _("Closing / variance issues"), "#64748b"))
+        if settings.get("show_stock_transfers"):
+            quick_rows.append((_("Pending Transfers"), self._num(payload["pending_transfer_count"]), _("Stock moves not done"), "#0ea5e9"))
+        focus_rows = []
+        for line in salesperson_rows[:6]:
+            visits = line.get("visits", 0) or 0
+            done = line.get("done", 0) or 0
+            completion = (done / visits * 100.0) if visits else 0.0
+            focus_rows.append((line.get("name") or _("No Salesperson"), line.get("issues", 0), completion, line.get("promises", 0.0)))
         html = self._section_title(_("Team and Operations Ranking"), _("Highlights who needs support and where operational risk is concentrated."))
+        html += "<div class='route_dash_chart_grid'>"
+        html += self._chart_card(_("Quick Exception Cards"), self._spotlight_tiles(quick_rows), _("These are the fastest actions for daily supervision."), wide=True)
+        html += self._chart_card(_("Salesperson Focus Ladder"), self._salesperson_focus_ladder(focus_rows), _("Ranked by issues, with completion and promises for context."), wide=True)
+        html += "</div>"
         html += "<div class='route_dash_ranking_grid'>"
         html += self._ranking_table(
             _("Salesperson Performance"),
@@ -1396,7 +1466,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 for line in salesperson_rows
             ],
         )
-        if payload["settings"].get("show_vehicle_closing"):
+        if settings.get("show_vehicle_closing"):
             html += self._ranking_table(
                 _("Vehicle Issue Ranking"),
                 [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
@@ -1406,7 +1476,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 ],
             )
         html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
+        return f"<div class='route_dash_block route_dash_supervisor_ranking'>{html}</div>"
 
     def _insight_card(self, title, value, note, tone="primary"):
         return (
