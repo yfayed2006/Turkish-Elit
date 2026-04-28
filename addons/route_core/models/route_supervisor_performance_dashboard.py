@@ -356,7 +356,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_returns(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Return Orders"), payload["direct_returns"], "route.direct.return", "kanban,list,form")
+        if payload["direct_returns"]:
+            return self._action_open_records(_("Dashboard Return Orders"), payload["direct_returns"], "route.direct.return", "kanban,list,form")
+        pickings = self.env["stock.picking"]
+        if payload["settings"].get("show_consignment"):
+            pickings |= payload["visits"].mapped("return_picking_ids")
+        return self._action_open_records(_("Dashboard Return Transfers"), pickings, "stock.picking", "list,form")
 
     def action_open_vehicle_issues(self):
         self.ensure_one()
@@ -370,6 +375,135 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         return self._action_open_records(_("Dashboard Closing Records"), payload["closing_records"], "route.daily.closing", "list,form")
+
+    def action_open_completed_visits(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "done")
+        return self._action_open_records(_("Dashboard Completed Visits"), visits, "route.visit", "kanban,list,form")
+
+    def action_open_started_visits(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        visits = payload["visits"].filtered(lambda visit: visit.visit_process_state not in ("draft", "done", "cancel"))
+        return self._action_open_records(_("Dashboard Started Visits"), visits, "route.visit", "kanban,list,form")
+
+    def action_open_not_started_visits(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "draft")
+        return self._action_open_records(_("Dashboard Not Started Visits"), visits, "route.visit", "kanban,list,form")
+
+    def action_open_cancelled_visits(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "cancel")
+        return self._action_open_records(_("Dashboard Cancelled Visits"), visits, "route.visit", "kanban,list,form")
+
+    def action_open_open_due_visits(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        return self._action_open_records(_("Dashboard Open Due Visits"), payload["open_due_visits"], "route.visit", "kanban,list,form")
+
+    def action_open_due_overdue_promises(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        return self._action_open_records(
+            _("Dashboard Due / Overdue Promises"),
+            payload["due_overdue_promises"],
+            "route.visit.payment",
+            "kanban,list,form",
+            "route_core.action_route_visit_payment",
+        )
+
+    def action_open_pending_transfers(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        return self._action_open_records(_("Dashboard Pending Transfers"), payload["pending_transfers"], "stock.picking", "list,form")
+
+    def action_open_loading_proposals(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        return self._action_open_records(_("Dashboard Loading Proposals"), payload["loading_proposals"], "route.loading.proposal", "list,form")
+
+    def action_open_return_transfers(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        pickings = self.env["stock.picking"]
+        if payload["settings"].get("show_consignment"):
+            pickings |= payload["visits"].mapped("return_picking_ids")
+        if payload["settings"].get("show_direct_return"):
+            pickings |= payload["direct_returns"].mapped("picking_ids")
+        return self._action_open_records(_("Dashboard Return Transfers"), pickings, "stock.picking", "list,form")
+
+    def action_open_refill_transfers(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        pickings = payload["visits"].mapped("refill_picking_id") if payload["settings"].get("show_consignment") else self.env["stock.picking"]
+        return self._action_open_records(_("Dashboard Refill Transfers"), pickings, "stock.picking", "list,form")
+
+    def action_open_dashboard_products(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        products = self._products_from_product_lines(payload["product_lines"])
+        return self._action_open_records(_("Dashboard Products"), products, "product.product", "kanban,list,form")
+
+    def action_open_top_selling_products(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        lines = sorted(payload["product_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
+        products = self._products_from_product_lines(lines)
+        return self._action_open_records(_("Dashboard Top Selling Products"), products, "product.product", "kanban,list,form")
+
+    def action_open_top_returned_products(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        lines = sorted(payload["product_lines"], key=lambda line: line.get("returns", 0.0), reverse=True)[:20]
+        products = self._products_from_product_lines(lines)
+        return self._action_open_records(_("Dashboard Top Returned Products"), products, "product.product", "kanban,list,form")
+
+    def action_open_dashboard_outlets(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        outlets = self._outlets_from_outlet_lines(payload["outlet_lines"])
+        return self._action_open_records(_("Dashboard Outlets"), outlets, "route.outlet", "kanban,list,form")
+
+    def action_open_top_sales_outlets(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
+        outlets = self._outlets_from_outlet_lines(lines)
+        return self._action_open_records(_("Dashboard Top Sales Outlets"), outlets, "route.outlet", "kanban,list,form")
+
+    def action_open_highest_due_outlets(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("open_due", 0.0), reverse=True)[:20]
+        outlets = self._outlets_from_outlet_lines(lines)
+        return self._action_open_records(_("Dashboard Highest Open Due Outlets"), outlets, "route.outlet", "kanban,list,form")
+
+    def action_open_high_risk_outlets(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("risk", 0.0), reverse=True)[:20]
+        outlets = self._outlets_from_outlet_lines(lines)
+        return self._action_open_records(_("Dashboard High Risk Outlets"), outlets, "route.outlet", "kanban,list,form")
+
+    def _products_from_product_lines(self, lines):
+        product_ids = []
+        for line in lines or []:
+            product_id = line.get("product_id")
+            if product_id and product_id not in product_ids:
+                product_ids.append(product_id)
+        return self.env["product.product"].browse(product_ids)
+
+    def _outlets_from_outlet_lines(self, lines):
+        outlet_ids = []
+        for line in lines or []:
+            outlet_id = line.get("outlet_id")
+            if outlet_id and outlet_id not in outlet_ids:
+                outlet_ids.append(outlet_id)
+        return self.env["route.outlet"].browse(outlet_ids)
 
     def _action_open_records(self, name, records, res_model, view_mode="list,form", action_xmlid=False):
         action = self.env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
@@ -904,6 +1038,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
     def _build_product_lines(self, visits, sale_orders, direct_returns):
         data = defaultdict(lambda: {
+            "product_id": False,
             "name": "",
             "qty": 0.0,
             "sales": 0.0,
@@ -923,6 +1058,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             if not product:
                 continue
             values = data[product.id]
+            values["product_id"] = product.id
             values["name"] = product.display_name
             sold_qty = line.sold_qty or 0.0
             sold_amount = line.sold_amount or 0.0
@@ -938,6 +1074,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             if not product:
                 continue
             values = data[product.id]
+            values["product_id"] = product.id
             values["name"] = product.display_name
             qty = getattr(line, "product_uom_qty", 0.0) or 0.0
             amount = getattr(line, "price_subtotal", 0.0) or 0.0
@@ -950,6 +1087,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             if not product:
                 continue
             values = data[product.id]
+            values["product_id"] = product.id
             values["name"] = product.display_name
             qty = line.quantity or 0.0
             amount = line.estimated_amount or 0.0
@@ -968,6 +1106,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
     def _build_outlet_lines(self, visits, confirmed_payments, open_promises, sale_orders, direct_returns, location_issue_visits):
         data = defaultdict(lambda: {
+            "outlet_id": False,
             "name": _("No Outlet"),
             "mode": "consignment",
             "mode_label": _("Consignment"),
@@ -989,6 +1128,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             key = outlet.id if outlet else 0
             values = data[key]
             if outlet:
+                values["outlet_id"] = outlet.id
                 values["name"] = outlet.display_name
                 values["mode"] = self._outlet_mode_key(outlet)
                 values["mode_label"] = self._outlet_mode_label(values["mode"])
