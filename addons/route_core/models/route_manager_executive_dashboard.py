@@ -355,30 +355,39 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         ]
         top_product_sales = [
             (line["name"], line.get("sales", 0.0), "#0ea5e9")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("sales", 0.0), reverse=True)[:10]
+            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("sales", 0.0), reverse=True)[:5]
         ]
         top_product_profit = [
             (line["name"], line.get("profit", 0.0), "#16a34a" if line.get("profit", 0.0) >= 0 else "#ef4444")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("profit", 0.0), reverse=True)[:10]
+            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("profit", 0.0), reverse=True)[:5]
         ]
         top_returned_products = [
             (line["name"], line.get("returns", 0.0), "#ef4444")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("returns", 0.0), reverse=True)[:10]
+            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("returns", 0.0), reverse=True)[:5]
         ]
+        gross_sales = payload.get("gross_sales", 0.0) or 0.0
+        net_sales = payload.get("net_sales", 0.0) or 0.0
+        total_collected = payload.get("total_collected", 0.0) or 0.0
+        total_returns = payload.get("total_returns", 0.0) or 0.0
+        gross_profit = payload.get("gross_profit", 0.0) or 0.0
+        collection_gap = max(net_sales - total_collected, 0.0)
+        cash_conversion = (total_collected / net_sales * 100.0) if net_sales else 0.0
+        return_impact = (total_returns / gross_sales * 100.0) if gross_sales else 0.0
+        profit_margin = (gross_profit / gross_sales * 100.0) if gross_sales else 0.0
         mix_tiles = [
-            (_("Gross Sales"), self._money(payload.get("gross_sales", 0.0)), _("Top-line business value"), "#16a34a"),
-            (_("Net Sales"), self._money(payload.get("net_sales", 0.0)), _("After returns adjustment"), "#0ea5e9"),
-            (_("Collection"), self._money(payload.get("total_collected", 0.0)), _("Cash conversion during period"), "#22c55e"),
-            (_("Estimated Profit"), self._money(payload.get("gross_profit", 0.0)), _("Commercial profitability"), "#8b5cf6"),
+            (_("Cash Conversion"), f"{cash_conversion:.0f}%", _("Collected vs net sales"), "#16a34a"),
+            (_("Collection Gap"), self._money(collection_gap), _("Net sales still not collected"), "#f97316"),
+            (_("Return Impact"), f"{return_impact:.0f}%", _("Returns vs gross sales"), "#ef4444"),
+            (_("Profit Margin"), f"{profit_margin:.0f}%", _("Estimated margin from product cost"), "#8b5cf6"),
         ]
         html = self._section_title(
             _("Commercial Performance"),
-            _("Sales, returns, collections, profit, and product contribution in one executive view."),
+            _("Sales, returns, collections, profit, and top 5 product contribution in one executive view."),
         )
         html += "<div class='route_dash_chart_grid'>"
         html += self._chart_card(_("Commercial Mix Columns"), self._column_chart(sales_return_rows, money=True), _("A more visual mix view for the main business values."), wide=True)
         html += self._chart_card(_("Sales vs Collection Trend"), self._line_chart(payload.get("daily_collection", {}), payload.get("daily_sales", {}), payload.get("date_from"), payload.get("date_to")), _("Trend across the selected period."), wide=True)
-        html += self._chart_card(_("Executive Mix Counters"), self._spotlight_tiles(mix_tiles), _("Fast-reading management counters."))
+        html += self._chart_card(_("Commercial Pulse"), self._spotlight_tiles(mix_tiles), _("Ratios and gaps that are not repeated in the main KPI cards."))
         html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(top_product_sales, money=True), "")
         html += self._chart_card(_("Top Profit Products"), self._horizontal_bars(top_product_profit, money=True, allow_negative=True), _("Estimated from product cost."))
         if settings.get("show_consignment") or settings.get("show_direct_return"):
@@ -394,10 +403,21 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         area_due = [(line["name"], line.get("open_due", 0.0), "#ef4444") for line in sorted(area_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]]
         outlet_sales = [(line["name"], line.get("sales", 0.0), "#0ea5e9") for line in sorted(outlet_lines, key=lambda line: line.get("sales", 0.0), reverse=True)[:10]]
         outlet_due = [(line["name"], line.get("open_due", 0.0), "#ef4444") for line in sorted(outlet_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]]
+        best_area = area_sales[0][0] if area_sales else _("No Area")
+        highest_due_area = area_due[0][0] if area_due else _("No Due Area")
+        best_outlet = outlet_sales[0][0] if outlet_sales else _("No Outlet")
+        risk_outlet = outlet_due[0][0] if outlet_due else _("No Risk Outlet")
+        insight_tiles = [
+            (_("Best Area"), best_area, _("Highest sales area"), "#0ea5e9"),
+            (_("Highest Due Area"), highest_due_area, _("Needs collection focus"), "#ef4444"),
+            (_("Best Outlet"), best_outlet, _("Top outlet by sales"), "#16a34a"),
+            (_("Risk Outlet"), risk_outlet, _("Highest open due outlet"), "#f97316"),
+        ]
         html = self._section_title(
             _("Market, Area, and Outlet Performance"),
             _("Compare areas and outlets by revenue, collection, open due, and customer risk."),
         )
+        html += self._chart_card(_("Market Insight Summary"), self._spotlight_tiles(insight_tiles), _("Fast executive reading before the detailed charts."), wide=True)
         html += "<div class='route_dash_chart_grid'>"
         if settings.get("show_outlet_comparison"):
             direct = (payload.get("outlet_mode_summary") or {}).get("direct_sale") or {}
@@ -569,3 +589,4 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             )
         html += "</div>"
         return html
+
