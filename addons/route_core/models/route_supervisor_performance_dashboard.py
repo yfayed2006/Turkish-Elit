@@ -42,6 +42,22 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         default="last_30",
         required=True,
     )
+    dashboard_focus_mode = fields.Selection(
+        [
+            ("all", "All Widgets"),
+            ("executive", "Executive Summary"),
+            ("closing", "Daily Closing Focus"),
+            ("collections", "Collections Focus"),
+            ("sales_profit", "Sales & Profit Focus"),
+            ("outlet_risk", "Outlet Risk Focus"),
+            ("visit_execution", "Visit Execution Focus"),
+            ("vehicle_risk", "Vehicle Risk Focus"),
+        ],
+        string="Focus Mode",
+        default="all",
+        required=True,
+    )
+
     date_from = fields.Date(
         string="From Date",
         required=True,
@@ -121,6 +137,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 "name": _("Supervisor Performance Dashboard"),
                 "company_id": self.env.company.id,
                 "period_filter": "last_30",
+                "dashboard_focus_mode": "all",
                 "date_from": today - timedelta(days=29),
                 "date_to": today,
             }
@@ -534,6 +551,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     @api.depends(
         "company_id",
         "period_filter",
+        "dashboard_focus_mode",
         "date_from",
         "date_to",
         "salesperson_id",
@@ -558,12 +576,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             rec.net_sales_amount = payload["net_sales"]
             rec.open_promise_amount = payload["open_promise_amount"]
             rec.gross_profit_amount = payload["gross_profit"]
-            rec.executive_html = rec._render_executive_html(payload)
-            rec.visit_chart_html = rec._render_visit_chart_html(payload)
-            rec.collection_chart_html = rec._render_collection_chart_html(payload)
-            rec.product_chart_html = rec._render_product_chart_html(payload)
-            rec.outlet_chart_html = rec._render_outlet_chart_html(payload)
-            rec.ranking_html = rec._render_ranking_html(payload)
+            rec.executive_html = rec._render_executive_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("executive")) else ""
+            rec.visit_chart_html = rec._render_visit_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("visits")) else ""
+            rec.collection_chart_html = rec._render_collection_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("collections")) else ""
+            rec.product_chart_html = rec._render_product_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("products")) else ""
+            rec.outlet_chart_html = rec._render_outlet_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("outlets")) else ""
+            rec.ranking_html = rec._render_ranking_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("ranking")) else ""
 
     def _get_date_range(self):
         self.ensure_one()
@@ -1221,6 +1239,182 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         return sorted(lines, key=lambda item: (item["risk"], item["open_due"], item["returns"], item["sales"]), reverse=True), summary
 
 
+    @api.model
+    def _dashboard_focus_widget_map(self):
+        return {
+            "executive": {
+                "command_center",
+                "executive_signal_gauges",
+                "period_comparison",
+                "sales_collection_trend",
+                "commercial_mix_columns",
+                "market_insight_summary",
+                "attention_counters",
+            },
+            "closing": {
+                "command_center",
+                "period_comparison",
+                "route_execution_funnel",
+                "action_priority_cards",
+                "execution_pulse",
+                "visit_status_chart",
+                "attention_mix",
+                "closing_status_chart",
+                "collection_workload",
+                "payment_method_mix",
+                "salesperson_ranking",
+                "vehicle_risk_ranking",
+            },
+            "collections": {
+                "command_center",
+                "period_comparison",
+                "collection_workload",
+                "payment_method_mix",
+                "collection_by_salesperson",
+                "sales_collection_trend",
+                "commercial_pulse",
+                "top_outlets_collection",
+                "highest_due_outlets",
+                "area_collection",
+                "area_open_due",
+                "attention_mix",
+                "salesperson_ranking",
+            },
+            "sales_profit": {
+                "command_center",
+                "executive_signal_gauges",
+                "period_comparison",
+                "sales_collection_trend",
+                "commercial_mix_columns",
+                "commercial_pulse",
+                "product_operations_pulse",
+                "top_products_sales",
+                "top_products_quantity",
+                "top_profit_products",
+                "estimated_product_profit",
+                "top_returned_products",
+                "direct_vs_consignment",
+                "outlet_mode_summary_cards",
+                "area_sales",
+                "top_outlets_sales",
+            },
+            "outlet_risk": {
+                "command_center",
+                "market_insight_summary",
+                "outlet_mode_summary_cards",
+                "direct_vs_consignment",
+                "area_sales",
+                "area_collection",
+                "area_open_due",
+                "top_outlets_sales",
+                "top_outlets_collection",
+                "highest_due_outlets",
+                "top_returned_outlets",
+                "outlet_risk_ranking",
+                "attention_mix",
+                "area_risk_ranking",
+            },
+            "visit_execution": {
+                "command_center",
+                "route_execution_funnel",
+                "action_priority_cards",
+                "execution_pulse",
+                "visit_status_chart",
+                "location_review_breakdown",
+                "closing_status_chart",
+                "attention_mix",
+                "salesperson_ranking",
+            },
+            "vehicle_risk": {
+                "command_center",
+                "route_execution_funnel",
+                "action_priority_cards",
+                "attention_mix",
+                "closing_status_chart",
+                "attention_counters",
+                "vehicle_risk_ranking",
+            },
+        }
+
+    @api.model
+    def _dashboard_section_widget_codes(self, section):
+        mapping = {
+            "executive": {
+                "command_center",
+                "executive_signal_gauges",
+            },
+            "period_comparison": {
+                "period_comparison",
+            },
+            "visits": {
+                "route_execution_funnel",
+                "action_priority_cards",
+                "execution_pulse",
+                "visit_status_chart",
+                "attention_mix",
+                "location_review_breakdown",
+                "closing_status_chart",
+            },
+            "collections": {
+                "collection_workload",
+                "payment_method_mix",
+                "collection_by_salesperson",
+                "sales_collection_trend",
+                "commercial_pulse",
+            },
+            "products": {
+                "product_operations_pulse",
+                "commercial_mix_columns",
+                "top_products_sales",
+                "top_products_quantity",
+                "top_profit_products",
+                "estimated_product_profit",
+                "top_returned_products",
+            },
+            "outlets": {
+                "outlet_mode_summary_cards",
+                "market_insight_summary",
+                "direct_vs_consignment",
+                "area_sales",
+                "area_collection",
+                "area_open_due",
+                "top_outlets_sales",
+                "top_outlets_collection",
+                "highest_due_outlets",
+                "top_returned_outlets",
+                "outlet_risk_ranking",
+            },
+            "risk": {
+                "attention_counters",
+                "attention_mix",
+                "area_risk_ranking",
+            },
+            "ranking": {
+                "salesperson_ranking",
+                "vehicle_risk_ranking",
+            },
+        }
+        return mapping.get(section, set())
+
+    def _dashboard_focus_allows_widget(self, code):
+        self.ensure_one()
+        mode = self.dashboard_focus_mode or "all"
+        if mode == "all":
+            return True
+        allowed_codes = self._dashboard_focus_widget_map().get(mode)
+        if allowed_codes is None:
+            return True
+        return code in allowed_codes
+
+    def _dashboard_focus_label(self):
+        self.ensure_one()
+        labels = dict(self._fields["dashboard_focus_mode"].selection)
+        return labels.get(self.dashboard_focus_mode or "all", labels.get("all", "All Widgets"))
+
+    def _dashboard_any_widget_enabled(self, codes, target=False):
+        self.ensure_one()
+        return any(self._dashboard_widget_enabled(code, target=target) for code in (codes or []))
+
     def _dashboard_target(self):
         return "supervisor"
 
@@ -1238,7 +1432,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def _dashboard_widget_enabled(self, code, target=False):
         self.ensure_one()
         target = target or self._dashboard_target()
-        return self.env["route.dashboard.widget"].is_enabled(code, target, company=self.company_id)
+        company_user_enabled = self.env["route.dashboard.widget"].is_enabled(code, target, company=self.company_id)
+        return bool(company_user_enabled and self._dashboard_focus_allows_widget(code))
 
     def _dashboard_chart_card(self, code, title, chart_html, footer="", wide=False, target=False):
         if not self._dashboard_widget_enabled(code, target=target):
@@ -1788,6 +1983,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             badges.append((_("Outlet"), self.outlet_id.display_name))
         if not badges:
             badges.append((_("Scope"), _("All Operations")))
+        if (self.dashboard_focus_mode or "all") != "all":
+            badges.append((_("Focus Mode"), self._dashboard_focus_label()))
         return "<div class='route_dash_scope'>" + "".join(
             f"<span><small>{escape(str(label))}</small>{escape(str(value))}</span>" for label, value in badges
         ) + "</div>"
@@ -1941,5 +2138,6 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         if currency.position == "after":
             return f"{formatted} {symbol}".strip()
         return f"{symbol} {formatted}".strip()
+
 
 
