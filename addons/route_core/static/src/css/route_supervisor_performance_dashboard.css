@@ -897,3 +897,151 @@
     }
 }
 
+
+/* Supervisor Performance Dashboard - Operational Visual Polish */
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_operational .route_dash_chart_grid,
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_collections .route_dash_chart_grid,
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_products .route_dash_chart_grid,
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_ranking .route_dash_chart_grid {
+    gap: 12px;
+}
+.route_dash_funnel {
+    display: grid;
+    gap: 12px;
+    padding: 4px 2px;
+}
+.route_dash_funnel_step {
+    position: relative;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    overflow: hidden;
+}
+.route_dash_funnel_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.route_dash_funnel_head span {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+}
+.route_dash_funnel_head strong {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+}
+.route_dash_funnel_bar {
+    height: 14px;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+.route_dash_funnel_step small {
+    display: block;
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+}
+.route_dash_supervisor_spotlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+.route_supervisor_performance_dashboard_form .route_dash_spotlight_tile {
+    min-height: 96px;
+    padding: 12px;
+    border-radius: 16px;
+}
+.route_supervisor_performance_dashboard_form .route_dash_spotlight_tile strong {
+    font-size: 19px;
+    line-height: 1.15;
+}
+.route_supervisor_performance_dashboard_form .route_dash_spotlight_tile span {
+    font-size: 12px;
+    font-weight: 800;
+}
+.route_supervisor_performance_dashboard_form .route_dash_spotlight_tile small {
+    font-size: 11px;
+}
+.route_dash_supervisor_columns {
+    min-height: 190px;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+.route_supervisor_performance_dashboard_form .route_dash_column_track {
+    height: 128px;
+    max-width: 96px;
+    margin: 0 auto;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)),
+        repeating-linear-gradient(0deg, transparent 0, transparent 24px, rgba(148,163,184,0.14) 25px);
+}
+.route_supervisor_performance_dashboard_form .route_dash_column_bar {
+    border-radius: 16px 16px 7px 7px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+.route_dash_focus_ladder {
+    display: grid;
+    gap: 10px;
+}
+.route_dash_focus_row {
+    display: grid;
+    grid-template-columns: minmax(160px, 1.2fr) 3fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+.route_dash_focus_name strong,
+.route_dash_focus_name span {
+    display: block;
+}
+.route_dash_focus_name strong {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+}
+.route_dash_focus_name span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+.route_dash_focus_track {
+    height: 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+.route_dash_focus_track div {
+    height: 100%;
+    border-radius: 999px;
+}
+.route_dash_focus_row b {
+    min-width: 34px;
+    text-align: center;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+}
+@media (max-width: 992px) {
+    .route_dash_focus_row {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .route_supervisor_performance_dashboard_form .route_dash_chart_card {
+        padding: 10px;
+    }
+    .route_dash_supervisor_spotlights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .route_dash_supervisor_columns {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
