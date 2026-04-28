@@ -10,11 +10,10 @@
 <filter name="visible_manager" string="Manager Dashboard" domain="[('show_on_manager', '=', True)]"/>
 <filter name="visible_supervisor" string="Supervisor Dashboard" domain="[('show_on_supervisor', '=', True)]"/>
 <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
-<group expand="0" string="Group By">
+<separator/>
 <filter name="group_category" string="Category" context="{'group_by': 'category'}"/>
 <filter name="group_manager" string="Manager Visible" context="{'group_by': 'show_on_manager'}"/>
 <filter name="group_supervisor" string="Supervisor Visible" context="{'group_by': 'show_on_supervisor'}"/>
-</group>
 </search>
 </field>
 </record>
