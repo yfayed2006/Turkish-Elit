@@ -1087,6 +1087,14 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_dashboard_configuration(self):
         return self.env["route.dashboard.widget"].action_open_dashboard_configuration()
 
+    def action_customize_dashboard(self):
+        self.ensure_one()
+        return self.env["route.dashboard.user.preference"].action_open_my_dashboard_preferences(
+            target=self._dashboard_target(),
+            company=self.company_id,
+            user=self.env.user,
+        )
+
     def _dashboard_widget_enabled(self, code, target=False):
         self.ensure_one()
         target = target or self._dashboard_target()
