@@ -582,47 +582,186 @@
     }
 }
 
-.route_dash_growth_success { color: #16a34a; font-weight: 800; }
-.route_dash_growth_danger { color: #ef4444; font-weight: 800; }
-.route_manager_executive_dashboard_form .route_dash_insight_grid {
+
+/* Manager Executive Dashboard - Executive Insights Round */
+.route_dash_exec_signal_grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
-    margin-bottom: 12px;
+    margin-top: 12px;
 }
-.route_dash_insight {
+.route_dash_gauge_card {
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    text-align: center;
+}
+.route_dash_gauge_ring {
+    width: 128px;
+    height: 128px;
+    margin: 0 auto 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.route_dash_gauge_inner {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+.route_dash_gauge_inner strong {
+    color: #0f172a;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 900;
+}
+.route_dash_gauge_inner span {
+    margin-top: 4px;
+    padding: 0 10px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.route_dash_gauge_card small {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+.route_dash_column_chart {
+    height: 100%;
+    min-height: 220px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+.route_dash_column_item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.route_dash_column_value {
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    white-space: nowrap;
+}
+.route_dash_column_track {
+    width: 100%;
+    height: 150px;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    border: 1px solid #e2e8f0;
+}
+.route_dash_column_bar {
+    width: 100%;
+    border-radius: 14px 14px 6px 6px;
+    min-height: 10px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+.route_dash_column_label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+}
+.route_dash_spotlight_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+.route_dash_spotlight_tile {
     position: relative;
-    min-height: 92px;
-    padding: 13px 14px;
+    min-height: 118px;
+    padding: 14px;
     border: 1px solid #e2e8f0;
     border-radius: 18px;
     background: linear-gradient(135deg, #ffffff, #f8fafc);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
     overflow: hidden;
 }
-.route_dash_insight::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 5px;
-    background: #7c3aed;
+.route_dash_spotlight_dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-bottom: 10px;
 }
-.route_dash_insight span,
-.route_dash_insight small {
+.route_dash_spotlight_tile strong,
+.route_dash_spotlight_tile span,
+.route_dash_spotlight_tile small {
     display: block;
-    color: #64748b;
 }
-.route_dash_insight strong {
-    display: block;
-    margin: 7px 0 4px;
+.route_dash_spotlight_tile strong {
     color: #0f172a;
-    font-size: 17px;
-    line-height: 1.2;
+    font-size: 22px;
+    line-height: 1.1;
+    font-weight: 900;
+    margin-bottom: 6px;
 }
-@media (max-width: 1200px) {
-    .route_manager_executive_dashboard_form .route_dash_insight_grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.route_dash_spotlight_tile span {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+.route_dash_spotlight_tile small {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+@media (max-width: 1400px) {
+    .route_dash_exec_signal_grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 992px) {
+    .route_dash_exec_signal_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 @media (max-width: 768px) {
-    .route_manager_executive_dashboard_form .route_dash_insight_grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .route_dash_exec_signal_grid {
+        grid-template-columns: 1fr;
+    }
+    .route_dash_gauge_ring {
+        width: 116px;
+        height: 116px;
+    }
+    .route_dash_gauge_inner {
+        width: 82px;
+        height: 82px;
+    }
+    .route_dash_column_chart {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        min-height: 200px;
+    }
+    .route_dash_column_track {
+        height: 130px;
+        padding: 0 6px;
+    }
+    .route_dash_spotlight_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
