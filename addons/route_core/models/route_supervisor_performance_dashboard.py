@@ -1478,6 +1478,94 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         html += "</div>"
         return f"<div class='route_dash_block route_dash_supervisor_ranking'>{html}</div>"
 
+
+    def _funnel_chart(self, rows):
+        rows = [(label, value, color) for label, value, color in rows if value is not None]
+        if not rows or not any(float(value or 0.0) for _label, value, _color in rows):
+            return self._empty_chart()
+        max_value = max(float(value or 0.0) for _label, value, _color in rows) or 1.0
+        base_value = float(rows[0][1] or 0.0) or max_value
+        html = "<div class='route_dash_funnel'>"
+        for label, value, color in rows:
+            raw_value = float(value or 0.0)
+            width = max(min(raw_value / max_value * 100.0, 100.0), 4.0) if raw_value else 0.0
+            share = (raw_value / base_value * 100.0) if base_value else 0.0
+            html += (
+                "<div class='route_dash_funnel_step'>"
+                "<div class='route_dash_funnel_head'>"
+                f"<span>{escape(str(label))}</span>"
+                f"<strong>{escape(self._num(raw_value))}</strong>"
+                "</div>"
+                f"<div class='route_dash_funnel_bar' style='width:{width:.2f}%; background:{escape(color)}'></div>"
+                f"<small>{share:.0f}% {escape(_('of planned visits'))}</small>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
+
+    def _column_chart(self, rows, money=False, allow_negative=False):
+        rows = [(label, value, color) for label, value, color in rows if value or allow_negative]
+        if not rows:
+            return self._empty_chart()
+        max_value = max(abs(float(value or 0.0)) for _label, value, _color in rows) or 1.0
+        html = "<div class='route_dash_column_chart route_dash_supervisor_columns'>"
+        for label, value, color in rows:
+            raw_value = float(value or 0.0)
+            height = max(min(abs(raw_value) / max_value * 100.0, 100.0), 8.0) if raw_value or allow_negative else 0.0
+            display = self._money(raw_value) if money else self._short_num(raw_value)
+            negative_class = " route_dash_column_negative" if raw_value < 0 else ""
+            html += (
+                f"<div class='route_dash_column_item{negative_class}'>"
+                f"<div class='route_dash_column_value'>{escape(display)}</div>"
+                "<div class='route_dash_column_track'>"
+                f"<div class='route_dash_column_bar' style='height:{height:.2f}%; background:{escape(color)};'></div>"
+                "</div>"
+                f"<div class='route_dash_column_label'>{escape(str(label))}</div>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
+
+    def _spotlight_tiles(self, rows):
+        rows = [row for row in rows if row and row[1] not in (False, None, "")]
+        if not rows:
+            return self._empty_chart()
+        html = "<div class='route_dash_spotlight_grid route_dash_supervisor_spotlights'>"
+        for title, value, note, color in rows:
+            html += (
+                "<div class='route_dash_spotlight_tile'>"
+                f"<span class='route_dash_spotlight_dot' style='background:{escape(color)}; box-shadow: 0 0 0 10px {escape(color)}22;'></span>"
+                f"<strong>{escape(str(value))}</strong>"
+                f"<span>{escape(str(title))}</span>"
+                f"<small>{escape(str(note or ''))}</small>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
+
+    def _salesperson_focus_ladder(self, rows):
+        rows = [row for row in rows if row]
+        if not rows:
+            return self._empty_chart()
+        max_issues = max(float(row[1] or 0.0) for row in rows) or 1.0
+        html = "<div class='route_dash_focus_ladder'>"
+        for name, issues, completion, promises in rows:
+            issues_value = float(issues or 0.0)
+            width = max(min(issues_value / max_issues * 100.0, 100.0), 4.0) if issues_value else 2.0
+            color = "#ef4444" if issues_value else "#16a34a"
+            html += (
+                "<div class='route_dash_focus_row'>"
+                "<div class='route_dash_focus_name'>"
+                f"<strong>{escape(str(name or _('No Salesperson')))}</strong>"
+                f"<span>{escape(_('Completion'))}: {completion:.0f}% · {escape(_('Promises'))}: {escape(self._money(promises or 0.0))}</span>"
+                "</div>"
+                f"<div class='route_dash_focus_track'><div style='width:{width:.2f}%; background:{escape(color)}'></div></div>"
+                f"<b>{escape(self._num(issues_value))}</b>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
+
     def _insight_card(self, title, value, note, tone="primary"):
         return (
             f"<div class='route_dash_insight route_dash_tone_{escape(tone)}'>"
@@ -1686,4 +1774,5 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         if currency.position == "after":
             return f"{formatted} {symbol}".strip()
         return f"{symbol} {formatted}".strip()
+
 
