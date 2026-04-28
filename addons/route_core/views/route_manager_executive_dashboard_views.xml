@@ -34,6 +34,12 @@
 </div>
 </div>
 <div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100 route_dashboard_focus_filter_card">
+<span class="text-muted small d-block">Focus Mode</span>
+<field name="dashboard_focus_mode" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
 <div class="border rounded p-2 bg-white h-100">
 <span class="text-muted small d-block">From</span>
 <field name="date_from" nolabel="1"/>
