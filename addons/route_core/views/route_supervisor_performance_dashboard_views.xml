@@ -11,10 +11,10 @@
 <button name="action_open_unfinished_visits" type="object" string="Unfinished" icon="fa-exclamation-circle"/>
 <button name="action_open_collections" type="object" string="Collections" icon="fa-money"/>
 <button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-o"/>
-<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart"/>
-<button name="action_open_returns" type="object" string="Returns" icon="fa-undo"/>
-<button name="action_open_location_review" type="object" string="Location Review" icon="fa-map-marker"/>
-<button name="action_open_vehicle_issues" type="object" string="Vehicle Issues" icon="fa-truck"/>
+<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart" invisible="not show_direct_sale_sections"/>
+<button name="action_open_returns" type="object" string="Returns" icon="fa-undo" invisible="not show_direct_return_sections"/>
+<button name="action_open_location_review" type="object" string="Location Review" icon="fa-map-marker" invisible="not show_location_sections"/>
+<button name="action_open_vehicle_issues" type="object" string="Vehicle Issues" icon="fa-truck" invisible="not show_vehicle_closing_sections"/>
 <button name="action_open_closing_records" type="object" string="Closing Records" icon="fa-folder-open-o"/>
 </header>
 <sheet>
@@ -81,6 +81,16 @@
 </div>
 </div>
 <field name="currency_id" invisible="1"/>
+<field name="show_direct_sale_sections" invisible="1"/>
+<field name="show_consignment_sections" invisible="1"/>
+<field name="show_outlet_comparison_sections" invisible="1"/>
+<field name="show_direct_return_sections" invisible="1"/>
+<field name="show_location_sections" invisible="1"/>
+<field name="show_vehicle_closing_sections" invisible="1"/>
+<field name="show_loading_sections" invisible="1"/>
+<field name="show_stock_transfer_sections" invisible="1"/>
+<field name="show_lot_expiry_sections" invisible="1"/>
+<field name="dashboard_operation_mode_label" invisible="1"/>
 <field name="filtered_visit_count" invisible="1"/>
 <field name="completed_visit_count" invisible="1"/>
 <field name="collection_amount" invisible="1"/>
