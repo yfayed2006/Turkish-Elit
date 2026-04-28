@@ -1471,3 +1471,31 @@
     }
 }
 
+/* Stage 5 - Dashboard Focus Modes */
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_filter_card {
+    border-color: #ddd6fe !important;
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%) !important;
+    box-shadow: 0 8px 22px rgba(124, 58, 237, 0.06);
+}
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_filter_card .o_field_widget,
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_filter_card select {
+    font-weight: 800;
+    color: #4c1d95;
+}
+.route_supervisor_performance_dashboard_form .route_dash_scope span small {
+    letter-spacing: .02em;
+}
+.route_supervisor_performance_dashboard_form .route_dash_scope span {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.route_supervisor_performance_dashboard_form .route_dash_scope span:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+@media (max-width: 768px) {
+    .route_supervisor_performance_dashboard_form .route_dashboard_focus_filter_card {
+        min-height: 74px;
+    }
+}
+
+
