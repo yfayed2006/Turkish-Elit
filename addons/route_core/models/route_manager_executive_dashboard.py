@@ -50,6 +50,14 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
     def _dashboard_target(self):
         return "manager"
 
+    def action_customize_dashboard(self):
+        self.ensure_one()
+        return self.env["route.dashboard.user.preference"].action_open_my_dashboard_preferences(
+            target=self._dashboard_target(),
+            company=self.company_id,
+            user=self.env.user,
+        )
+
     def action_open_manager_dashboard(self):
         today = fields.Date.context_today(self)
         dashboard = self.create(
@@ -597,4 +605,5 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             )
         html += "</div>"
         return html
+
 
