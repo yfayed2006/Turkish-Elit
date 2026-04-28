@@ -1,0 +1,109 @@
+<odoo>
+<record id="view_route_manager_executive_dashboard_form" model="ir.ui.view">
+<field name="name">route.manager.executive.dashboard.form</field>
+<field name="model">route.manager.executive.dashboard</field>
+<field name="arch" type="xml">
+<form string="Manager Executive Dashboard" create="0" delete="0" class="route_supervisor_performance_dashboard_form route_manager_executive_dashboard_form">
+<header>
+<button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_open_supervisor_dashboard" type="object" string="Supervisor Dashboard" icon="fa-dashboard" class="btn-primary"/>
+<button name="action_open_daily_closing" type="object" string="Daily Closing" icon="fa-lock"/>
+<button name="action_open_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
+<button name="action_open_collections" type="object" string="Collections" icon="fa-money"/>
+<button name="action_open_promises" type="object" string="Promises" icon="fa-calendar-o"/>
+<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart" invisible="not show_direct_sale_sections"/>
+<button name="action_open_returns" type="object" string="Returns" icon="fa-undo" invisible="not show_direct_return_sections and not show_consignment_sections"/>
+<button name="action_open_location_review" type="object" string="Location Risk" icon="fa-map-marker" invisible="not show_location_sections"/>
+<button name="action_open_vehicle_issues" type="object" string="Vehicle Risk" icon="fa-truck" invisible="not show_vehicle_closing_sections"/>
+<button name="action_open_closing_records" type="object" string="Closing Records" icon="fa-folder-open-o"/>
+</header>
+<sheet>
+<div class="oe_title mb-2">
+<span class="text-muted small">Manager Executive Dashboard</span>
+<h1 class="mb-1">Executive Command Center</h1>
+<p class="text-muted mb-0">Management KPIs and visual analytics for sales, collections, profit, outlets, products, areas, and operational risk.</p>
+</div>
+<h4 class="mt-2 mb-2">Executive Filters</h4>
+<div class="row g-2 mb-3 route_dashboard_filter_cards">
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Period</span>
+<field name="period_filter" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">From</span>
+<field name="date_from" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">To</span>
+<field name="date_to" nolabel="1"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Salesperson</span>
+<field name="salesperson_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Vehicle</span>
+<field name="vehicle_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">City</span>
+<field name="city_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Area</span>
+<field name="area_id" nolabel="1" domain="[('city_id', '=', city_id)]" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Outlet</span>
+<field name="outlet_id" nolabel="1" domain="[('active', '=', True)]" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="col-6 col-lg-2">
+<div class="border rounded p-2 bg-white h-100">
+<span class="text-muted small d-block">Company</span>
+<field name="company_id" nolabel="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+</div>
+<field name="currency_id" invisible="1"/>
+<field name="show_direct_sale_sections" invisible="1"/>
+<field name="show_consignment_sections" invisible="1"/>
+<field name="show_outlet_comparison_sections" invisible="1"/>
+<field name="show_direct_return_sections" invisible="1"/>
+<field name="show_location_sections" invisible="1"/>
+<field name="show_vehicle_closing_sections" invisible="1"/>
+<field name="show_loading_sections" invisible="1"/>
+<field name="show_stock_transfer_sections" invisible="1"/>
+<field name="show_lot_expiry_sections" invisible="1"/>
+<field name="executive_overview_html" nolabel="1" readonly="1" widget="html"/>
+<field name="period_comparison_html" nolabel="1" readonly="1" widget="html"/>
+<field name="commercial_health_html" nolabel="1" readonly="1" widget="html"/>
+<field name="market_ranking_html" nolabel="1" readonly="1" widget="html"/>
+<field name="executive_risk_html" nolabel="1" readonly="1" widget="html"/>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_manager_executive_dashboard" model="ir.actions.server">
+<field name="name">Manager Executive Dashboard</field>
+<field name="model_id" ref="route_core.model_route_manager_executive_dashboard"/>
+<field name="state">code</field>
+<field name="code">action = env["route.manager.executive.dashboard"].action_open_manager_dashboard()</field>
+</record>
+<menuitem id="menu_route_manager_executive_dashboard" name="Manager Executive Dashboard" parent="route_core.menu_route_management_workspace" action="route_core.server_action_open_route_manager_executive_dashboard" sequence="1" groups="route_core.group_route_management"/>
+</odoo>
