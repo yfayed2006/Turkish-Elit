@@ -47,6 +47,9 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
     )
 
     @api.model
+    def _dashboard_target(self):
+        return "manager"
+
     def action_open_manager_dashboard(self):
         today = fields.Date.context_today(self)
         dashboard = self.create(
@@ -128,7 +131,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             area_lines = rec._build_manager_area_lines(payload)
 
             rec.executive_overview_html = rec._render_manager_overview_html(payload, previous_payload, comparison)
-            rec.period_comparison_html = rec._render_manager_period_comparison_html(comparison)
+            rec.period_comparison_html = rec._render_manager_period_comparison_html(comparison) if rec._dashboard_widget_enabled("period_comparison", target="manager") else ""
             rec.commercial_health_html = rec._render_manager_commercial_html(payload)
             rec.market_ranking_html = rec._render_manager_market_html(payload, area_lines)
             rec.executive_risk_html = rec._render_manager_risk_html(payload, area_lines)
@@ -316,11 +319,16 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             _("Management-level KPIs with period comparison, commercial performance, and operational risk."),
         )
         subtitle = self._manager_period_label(payload, previous_payload)
+        if not self._dashboard_widget_enabled("command_center", target="manager"):
+            return ""
+        signal_html = ""
+        if self._dashboard_widget_enabled("executive_signal_gauges", target="manager"):
+            signal_html = f"<div class='route_dash_exec_signal_grid'>{''.join(signal_cards)}</div>"
         return (
             f"<div class='route_dash_block'>{title}{self._scope_badges()}{self._settings_badges(settings)}"
             f"<div class='route_dash_scope'><span><small>{escape(_('Period Compared'))}</small>{escape(subtitle)}</span></div>"
             f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div>"
-            f"<div class='route_dash_exec_signal_grid'>{''.join(signal_cards)}</div></div>"
+            f"{signal_html}</div>"
         )
 
     def _render_manager_period_comparison_html(self, comparison):
@@ -385,13 +393,13 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             _("Sales, returns, collections, profit, and top 5 product contribution in one executive view."),
         )
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Commercial Mix Columns"), self._column_chart(sales_return_rows, money=True), _("A more visual mix view for the main business values."), wide=True)
-        html += self._chart_card(_("Sales vs Collection Trend"), self._line_chart(payload.get("daily_collection", {}), payload.get("daily_sales", {}), payload.get("date_from"), payload.get("date_to")), _("Trend across the selected period."), wide=True)
-        html += self._chart_card(_("Commercial Pulse"), self._spotlight_tiles(mix_tiles), _("Ratios and gaps that are not repeated in the main KPI cards."))
-        html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(top_product_sales, money=True), "")
-        html += self._chart_card(_("Top Profit Products"), self._horizontal_bars(top_product_profit, money=True, allow_negative=True), _("Estimated from product cost."))
+        html += self._dashboard_chart_card("commercial_mix_columns", _("Commercial Mix Columns"), self._column_chart(sales_return_rows, money=True), _("A more visual mix view for the main business values."), wide=True, target="manager")
+        html += self._dashboard_chart_card("sales_collection_trend", _("Sales vs Collection Trend"), self._line_chart(payload.get("daily_collection", {}), payload.get("daily_sales", {}), payload.get("date_from"), payload.get("date_to")), _("Trend across the selected period."), wide=True, target="manager")
+        html += self._dashboard_chart_card("commercial_pulse", _("Commercial Pulse"), self._spotlight_tiles(mix_tiles), _("Ratios and gaps that are not repeated in the main KPI cards."), target="manager")
+        html += self._dashboard_chart_card("top_products_sales", _("Top Products by Sales"), self._horizontal_bars(top_product_sales, money=True), "", target="manager")
+        html += self._dashboard_chart_card("top_profit_products", _("Top Profit Products"), self._horizontal_bars(top_product_profit, money=True, allow_negative=True), _("Estimated from product cost."), target="manager")
         if settings.get("show_consignment") or settings.get("show_direct_return"):
-            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(top_returned_products, money=True), _("Return exposure by product."), wide=True)
+            html += self._dashboard_chart_card("top_returned_products", _("Top Returned Products"), self._horizontal_bars(top_returned_products, money=True), _("Return exposure by product."), wide=True, target="manager")
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
@@ -417,7 +425,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             _("Market, Area, and Outlet Performance"),
             _("Compare areas and outlets by revenue, collection, open due, and customer risk."),
         )
-        html += self._chart_card(_("Market Insight Summary"), self._spotlight_tiles(insight_tiles), _("Fast executive reading before the detailed charts."), wide=True)
+        html += self._dashboard_chart_card("market_insight_summary", _("Market Insight Summary"), self._spotlight_tiles(insight_tiles), _("Fast executive reading before the detailed charts."), wide=True, target="manager")
         html += "<div class='route_dash_chart_grid'>"
         if settings.get("show_outlet_comparison"):
             direct = (payload.get("outlet_mode_summary") or {}).get("direct_sale") or {}
@@ -429,12 +437,12 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
                 (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
             ]
-            html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Shown only when both workflows are enabled."), wide=True)
-        html += self._chart_card(_("Sales by Area"), self._horizontal_bars(area_sales, money=True), "")
-        html += self._chart_card(_("Collection by Area"), self._horizontal_bars(area_collection, money=True), "")
-        html += self._chart_card(_("Open Due by Area"), self._horizontal_bars(area_due, money=True), _("Priority follow-up by market."))
-        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars(outlet_sales, money=True), "")
-        html += self._chart_card(_("Highest Open Due Outlets"), self._horizontal_bars(outlet_due, money=True), _("Customer credit risk."), wide=True)
+            html += self._dashboard_chart_card("direct_vs_consignment", _("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Shown only when both workflows are enabled."), wide=True, target="manager")
+        html += self._dashboard_chart_card("area_sales", _("Sales by Area"), self._horizontal_bars(area_sales, money=True), "", target="manager")
+        html += self._dashboard_chart_card("area_collection", _("Collection by Area"), self._horizontal_bars(area_collection, money=True), "", target="manager")
+        html += self._dashboard_chart_card("area_open_due", _("Open Due by Area"), self._horizontal_bars(area_due, money=True), _("Priority follow-up by market."), target="manager")
+        html += self._dashboard_chart_card("top_outlets_sales", _("Top Outlets by Sales"), self._horizontal_bars(outlet_sales, money=True), "", target="manager")
+        html += self._dashboard_chart_card("highest_due_outlets", _("Highest Open Due Outlets"), self._horizontal_bars(outlet_due, money=True), _("Customer credit risk."), wide=True, target="manager")
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
@@ -475,9 +483,9 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             _("Where management attention is needed: people, vehicles, areas, and unresolved operations."),
         )
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Attention Counters"), self._spotlight_tiles(alert_tiles), _("High-visibility counters for the main operational blockers."), wide=True)
-        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(attention_rows), _("Only enabled workflows are included."))
-        html += self._chart_card(_("Area Risk Ranking"), self._horizontal_bars(area_risk), _("Mix of issues and open due by area."))
+        html += self._dashboard_chart_card("attention_counters", _("Attention Counters"), self._spotlight_tiles(alert_tiles), _("High-visibility counters for the main operational blockers."), wide=True, target="manager")
+        html += self._dashboard_chart_card("attention_mix", _("Attention Mix"), self._horizontal_bars(attention_rows), _("Only enabled workflows are included."), target="manager")
+        html += self._dashboard_chart_card("area_risk_ranking", _("Area Risk Ranking"), self._horizontal_bars(area_risk), _("Mix of issues and open due by area."), target="manager")
         html += "</div>"
         html += "<div class='route_dash_ranking_grid mt-2'>"
         html += self._ranking_table(
