@@ -1080,7 +1080,26 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
         return sorted(lines, key=lambda item: (item["risk"], item["open_due"], item["returns"], item["sales"]), reverse=True), summary
 
+
+    def _dashboard_target(self):
+        return "supervisor"
+
+    def action_open_dashboard_configuration(self):
+        return self.env["route.dashboard.widget"].action_open_dashboard_configuration()
+
+    def _dashboard_widget_enabled(self, code, target=False):
+        self.ensure_one()
+        target = target or self._dashboard_target()
+        return self.env["route.dashboard.widget"].is_enabled(code, target, company=self.company_id)
+
+    def _dashboard_chart_card(self, code, title, chart_html, footer="", wide=False, target=False):
+        if not self._dashboard_widget_enabled(code, target=target):
+            return ""
+        return self._chart_card(title, chart_html, footer, wide=wide)
+
     def _render_executive_html(self, payload):
+        if not self._dashboard_widget_enabled("command_center"):
+            return ""
         visit_total = len(payload["visits"])
         done = payload["visit_status"].get("done", 0)
         completion = (done / visit_total * 100.0) if visit_total else 0.0
@@ -1216,14 +1235,14 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         ]
         html = self._section_title(_("Visit Execution Control"), _("Operational view for route progress, exceptions, and closing readiness."))
         html += "<div class='route_dash_chart_grid route_dash_supervisor_ops route_dash_action_priority_zone'>"
-        html += self._chart_card(_("Route Execution Funnel"), self._funnel_chart(funnel_rows), _("Planned → started → completed, with unfinished visits highlighted."), wide=True)
-        html += self._chart_card(_("Action Priority Cards"), self._spotlight_tiles(action_rows), _("Use the top toolbar buttons to open and resolve each exception."), wide=True)
-        html += self._chart_card(_("Execution Pulse"), self._spotlight_tiles(health_tiles), _("Fast operational signals for the supervisor."))
-        html += self._chart_card(_("Visit Status"), self._pie_chart(status_rows), self._legend(status_rows))
-        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers enabled in Route Settings are shown here."))
+        html += self._dashboard_chart_card("route_execution_funnel", _("Route Execution Funnel"), self._funnel_chart(funnel_rows), _("Planned → started → completed, with unfinished visits highlighted."), wide=True)
+        html += self._dashboard_chart_card("action_priority_cards", _("Action Priority Cards"), self._spotlight_tiles(action_rows), _("Use the top toolbar buttons to open and resolve each exception."), wide=True)
+        html += self._dashboard_chart_card("execution_pulse", _("Execution Pulse"), self._spotlight_tiles(health_tiles), _("Fast operational signals for the supervisor."))
+        html += self._dashboard_chart_card("visit_status_chart", _("Visit Status"), self._pie_chart(status_rows), self._legend(status_rows))
+        html += self._dashboard_chart_card("attention_mix", _("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers enabled in Route Settings are shown here."))
         if settings["show_location"]:
-            html += self._chart_card(_("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
-        html += self._chart_card(_("Closing Status"), self._pie_chart(closing_rows), self._legend(closing_rows) + _(" Operating days only."))
+            html += self._dashboard_chart_card("location_review_breakdown", _("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
+        html += self._dashboard_chart_card("closing_status_chart", _("Closing Status"), self._pie_chart(closing_rows), self._legend(closing_rows) + _(" Operating days only."))
         html += "</div>"
         return f"<div class='route_dash_block route_dash_supervisor_operational'>{html}</div>"
 
@@ -1257,10 +1276,10 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         ]
         html = self._section_title(_("Collections and Cash Flow Control"), _("Collection workload, promise pressure, payment method mix, and trend over time."))
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Collection Workload"), self._spotlight_tiles(workload_tiles), _("Supervisor follow-up priorities for collections and promises."), wide=True)
-        html += self._chart_card(_("Payment Method Mix"), self._pie_chart(payment_rows), self._legend(payment_rows))
-        html += self._chart_card(_("Collection by Salesperson"), self._horizontal_bars(salesperson_rows, money=True), _("Who collected the most cash in the selected period."))
-        html += self._chart_card(_("Sales vs Collection Trend"), line_html, _("Line compares sales and collections in the selected date range."), wide=True)
+        html += self._dashboard_chart_card("collection_workload", _("Collection Workload"), self._spotlight_tiles(workload_tiles), _("Supervisor follow-up priorities for collections and promises."), wide=True)
+        html += self._dashboard_chart_card("payment_method_mix", _("Payment Method Mix"), self._pie_chart(payment_rows), self._legend(payment_rows))
+        html += self._dashboard_chart_card("collection_by_salesperson", _("Collection by Salesperson"), self._horizontal_bars(salesperson_rows, money=True), _("Who collected the most cash in the selected period."))
+        html += self._dashboard_chart_card("sales_collection_trend", _("Sales vs Collection Trend"), line_html, _("Line compares sales and collections in the selected date range."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block route_dash_supervisor_collections'>{html}</div>"
 
@@ -1297,13 +1316,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         quality_note = _("Missing cost products: %s. Profit is estimated from product cost.") % self._num(payload["missing_cost_product_count"])
         html = self._section_title(_("Products, Sales, and Stock Movement Signals"), quality_note)
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Product Operations Pulse"), self._spotlight_tiles(product_tiles), _("Quick product signals for daily supervision."), wide=True)
-        html += self._chart_card(_("Sales / Returns / Profit Columns"), self._column_chart(sales_return_rows, money=True), _("Visual commercial mix for the selected period."), wide=True)
-        html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
-        html += self._chart_card(_("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
+        html += self._dashboard_chart_card("product_operations_pulse", _("Product Operations Pulse"), self._spotlight_tiles(product_tiles), _("Quick product signals for daily supervision."), wide=True)
+        html += self._dashboard_chart_card("commercial_mix_columns", _("Sales / Returns / Profit Columns"), self._column_chart(sales_return_rows, money=True), _("Visual commercial mix for the selected period."), wide=True)
+        html += self._dashboard_chart_card("top_products_sales", _("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
+        html += self._dashboard_chart_card("top_products_quantity", _("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
         if settings["show_consignment"] or settings["show_direct_return"]:
-            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), _("Return exposure by product."))
-        html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
+            html += self._dashboard_chart_card("top_returned_products", _("Top Returned Products"), self._horizontal_bars(product_returns, money=True), _("Return exposure by product."))
+        html += self._dashboard_chart_card("estimated_product_profit", _("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block route_dash_supervisor_products'>{html}</div>"
 
@@ -1338,7 +1357,8 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             subtitle = _("Consignment outlet performance by visit sales, collection, returns, shelf movement, and operational risk.")
 
         html = self._section_title(title, subtitle)
-        html += outlet_cards
+        if self._dashboard_widget_enabled("outlet_mode_summary_cards"):
+            html += outlet_cards
         html += "<div class='route_dash_chart_grid'>"
         if settings["show_outlet_comparison"]:
             comparison_rows = [
@@ -1348,7 +1368,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
                 (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
             ]
-            html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Side-by-side comparison by outlet operation mode."), wide=True)
+            html += self._dashboard_chart_card("direct_vs_consignment", _("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Side-by-side comparison by outlet operation mode."), wide=True)
         else:
             active_summary = direct if settings["show_direct_sale"] else consignment
             activity_rows = [
@@ -1358,13 +1378,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 (_("Returns"), active_summary.get("returns", 0.0), "#f97316"),
                 (_("Visits"), active_summary.get("visits", 0), "#8b5cf6"),
             ]
-            html += self._chart_card(_("Outlet Activity Mix"), self._horizontal_bars(activity_rows), _("Displayed according to the active Route Operation Mode."), wide=True)
-        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars([(line["name"], line["sales"], "#0ea5e9") for line in top_sales], money=True), _("Revenue leaders for the enabled outlet workflow."))
-        html += self._chart_card(_("Top Outlets by Collection"), self._horizontal_bars([(line["name"], line["collection"], "#16a34a") for line in top_collection], money=True), _("Best cash collection outlets."))
-        html += self._chart_card(_("Highest Open Due Outlets"), self._horizontal_bars([(line["name"], line["open_due"], "#ef4444") for line in top_due], money=True), _("Priority collection follow-up."))
+            html += self._dashboard_chart_card("direct_vs_consignment", _("Outlet Activity Mix"), self._horizontal_bars(activity_rows), _("Displayed according to the active Route Operation Mode."), wide=True)
+        html += self._dashboard_chart_card("top_outlets_sales", _("Top Outlets by Sales"), self._horizontal_bars([(line["name"], line["sales"], "#0ea5e9") for line in top_sales], money=True), _("Revenue leaders for the enabled outlet workflow."))
+        html += self._dashboard_chart_card("top_outlets_collection", _("Top Outlets by Collection"), self._horizontal_bars([(line["name"], line["collection"], "#16a34a") for line in top_collection], money=True), _("Best cash collection outlets."))
+        html += self._dashboard_chart_card("highest_due_outlets", _("Highest Open Due Outlets"), self._horizontal_bars([(line["name"], line["open_due"], "#ef4444") for line in top_due], money=True), _("Priority collection follow-up."))
         if settings["show_consignment"] or settings["show_direct_return"]:
-            html += self._chart_card(_("Top Returned Outlets"), self._horizontal_bars([(line["name"], line["returns"], "#f97316") for line in top_returns], money=True), _("Helps identify slow movement, mismatch, or display issues."))
-        html += self._chart_card(_("Outlet Risk Ranking"), self._outlet_risk_cards(risk_lines), _("Risk combines unfinished visits, location issues, open due, promises, and returns."), wide=True)
+            html += self._dashboard_chart_card("top_returned_outlets", _("Top Returned Outlets"), self._horizontal_bars([(line["name"], line["returns"], "#f97316") for line in top_returns], money=True), _("Helps identify slow movement, mismatch, or display issues."))
+        html += self._dashboard_chart_card("outlet_risk_ranking", _("Outlet Risk Ranking"), self._outlet_risk_cards(risk_lines), _("Risk combines unfinished visits, location issues, open due, promises, and returns."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block route_dash_outlet_block'>{html}</div>"
 
@@ -1447,11 +1467,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             focus_rows.append((line.get("name") or _("No Salesperson"), line.get("issues", 0), completion, line.get("promises", 0.0)))
         html = self._section_title(_("Team and Operations Ranking"), _("Who needs support and where operational risk is concentrated."))
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Salesperson Focus Ladder"), self._salesperson_focus_ladder(focus_rows), _("Ranked by issues, with completion and promises for context."), wide=True)
+        html += self._dashboard_chart_card("salesperson_ranking", _("Salesperson Focus Ladder"), self._salesperson_focus_ladder(focus_rows), _("Ranked by issues, with completion and promises for context."), wide=True)
         html += "</div>"
         html += "<div class='route_dash_ranking_grid'>"
-        html += self._ranking_table(
-            _("Salesperson Performance"),
+        if self._dashboard_widget_enabled("salesperson_ranking"):
+            html += self._ranking_table(
+                _("Salesperson Performance"),
             [_('Salesperson'), _('Sales'), _('Collected'), _('Promises'), _('Issues')],
             [
                 [
@@ -1464,7 +1485,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 for line in salesperson_rows
             ],
         )
-        if settings.get("show_vehicle_closing"):
+        if settings.get("show_vehicle_closing") and self._dashboard_widget_enabled("vehicle_risk_ranking"):
             html += self._ranking_table(
                 _("Vehicle Issue Ranking"),
                 [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
