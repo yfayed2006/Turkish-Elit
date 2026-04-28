@@ -65,6 +65,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 "name": _("Manager Executive Dashboard"),
                 "company_id": self.env.company.id,
                 "period_filter": "last_30",
+                "dashboard_focus_mode": "all",
                 "date_from": today - timedelta(days=29),
                 "date_to": today,
             }
@@ -90,6 +91,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 "name": _("Supervisor Performance Dashboard"),
                 "company_id": self.company_id.id,
                 "period_filter": self.period_filter,
+                "dashboard_focus_mode": self.dashboard_focus_mode or "all",
                 "date_from": self.date_from,
                 "date_to": self.date_to,
                 "salesperson_id": self.salesperson_id.id or False,
@@ -116,6 +118,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
     @api.depends(
         "company_id",
         "period_filter",
+        "dashboard_focus_mode",
         "date_from",
         "date_to",
         "salesperson_id",
@@ -138,11 +141,11 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             comparison = rec._manager_period_comparison(payload, previous_payload)
             area_lines = rec._build_manager_area_lines(payload)
 
-            rec.executive_overview_html = rec._render_manager_overview_html(payload, previous_payload, comparison)
+            rec.executive_overview_html = rec._render_manager_overview_html(payload, previous_payload, comparison) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("executive"), target="manager") else ""
             rec.period_comparison_html = rec._render_manager_period_comparison_html(comparison) if rec._dashboard_widget_enabled("period_comparison", target="manager") else ""
-            rec.commercial_health_html = rec._render_manager_commercial_html(payload)
-            rec.market_ranking_html = rec._render_manager_market_html(payload, area_lines)
-            rec.executive_risk_html = rec._render_manager_risk_html(payload, area_lines)
+            rec.commercial_health_html = rec._render_manager_commercial_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("collections") | rec._dashboard_section_widget_codes("products"), target="manager") else ""
+            rec.market_ranking_html = rec._render_manager_market_html(payload, area_lines) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("outlets"), target="manager") else ""
+            rec.executive_risk_html = rec._render_manager_risk_html(payload, area_lines) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("risk") | rec._dashboard_section_widget_codes("ranking"), target="manager") else ""
 
     def _get_previous_dashboard_payload(self):
         self.ensure_one()
@@ -495,19 +498,21 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         html += self._dashboard_chart_card("attention_mix", _("Attention Mix"), self._horizontal_bars(attention_rows), _("Only enabled workflows are included."), target="manager")
         html += self._dashboard_chart_card("area_risk_ranking", _("Area Risk Ranking"), self._horizontal_bars(area_risk), _("Mix of issues and open due by area."), target="manager")
         html += "</div>"
-        html += "<div class='route_dash_ranking_grid mt-2'>"
-        html += self._ranking_table(
-            _("Salesperson Executive Ranking"),
-            [_('Salesperson'), _('Sales'), _('Collected'), _('Open Promises'), _('Issues')],
-            [[line.get("name"), self._money(line.get("sales")), self._money(line.get("collection")), self._money(line.get("promises")), self._num(line.get("issues"))] for line in salesperson_rows],
-        )
-        if settings.get("show_vehicle_closing"):
-            html += self._ranking_table(
+        ranking_html = ""
+        if self._dashboard_widget_enabled("salesperson_ranking", target="manager"):
+            ranking_html += self._ranking_table(
+                _("Salesperson Executive Ranking"),
+                [_('Salesperson'), _('Sales'), _('Collected'), _('Open Promises'), _('Issues')],
+                [[line.get("name"), self._money(line.get("sales")), self._money(line.get("collection")), self._money(line.get("promises")), self._num(line.get("issues"))] for line in salesperson_rows],
+            )
+        if settings.get("show_vehicle_closing") and self._dashboard_widget_enabled("vehicle_risk_ranking", target="manager"):
+            ranking_html += self._ranking_table(
                 _("Vehicle Executive Risk"),
                 [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
                 [[line.get("name"), self._num(line.get("visits")), self._num(line.get("unfinished")), self._num(line.get("variance")), self._num(line.get("issues"))] for line in vehicle_rows],
             )
-        html += "</div>"
+        if ranking_html:
+            html += f"<div class='route_dash_ranking_grid mt-2'>{ranking_html}</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
     def _growth_card(self, title, values, tone="primary", money=False, inverse=False):
