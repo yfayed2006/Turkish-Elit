@@ -1185,3 +1185,289 @@
         padding: 6px 7px !important;
     }
 }
+
+/* Stage 4.1 - Dashboard Drill-down Visual Polish */
+.route_dash_drilldown_panel {
+    position: relative;
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid rgba(124, 58, 237, 0.16);
+    background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.09), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.08), transparent 34%),
+        linear-gradient(135deg, #ffffff 0%, #f8fafc 58%, #f5f3ff 100%);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+}
+.route_manager_executive_dashboard_form .route_dash_manager_drilldown_panel {
+    background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.11), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.08), transparent 34%),
+        linear-gradient(135deg, #ffffff 0%, #faf5ff 55%, #f8fafc 100%);
+}
+.route_dash_drilldown_panel::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, #7c3aed 0%, #0ea5e9 45%, #22c55e 100%);
+    opacity: 0.95;
+}
+.route_dash_drilldown_head {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 14px;
+}
+.route_dash_drilldown_head strong {
+    letter-spacing: -0.01em;
+}
+.route_dash_drilldown_head span {
+    color: #64748b;
+}
+.route_dash_drilldown_grid {
+    position: relative;
+    z-index: 1;
+    gap: 10px;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn {
+    --route-drill-icon: #7c3aed;
+    --route-drill-bg: rgba(124, 58, 237, 0.10);
+    --route-drill-glow: rgba(124, 58, 237, 0.18);
+    position: relative;
+    overflow: hidden;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 12px !important;
+    border: 1px solid rgba(148, 163, 184, 0.30) !important;
+    border-radius: 16px !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%) !important;
+    color: #263449 !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.01em;
+    box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition:
+        transform .16s ease,
+        box-shadow .16s ease,
+        border-color .16s ease,
+        background .16s ease,
+        color .16s ease;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -36%;
+    width: 34%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent);
+    transform: skewX(-18deg);
+    opacity: 0;
+    pointer-events: none;
+    transition: left .42s ease, opacity .22s ease;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(124, 58, 237, 0.42) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 72%, rgba(245, 243, 255, 0.92) 100%) !important;
+    box-shadow:
+        0 16px 30px rgba(15, 23, 42, 0.11),
+        0 0 0 4px var(--route-drill-glow),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn:hover::after {
+    left: 106%;
+    opacity: 1;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn:active {
+    transform: translateY(0);
+    box-shadow: 0 7px 16px rgba(15, 23, 42, 0.08);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn i.fa {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    color: var(--route-drill-icon) !important;
+    background: var(--route-drill-bg);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55);
+    font-size: 14px !important;
+    line-height: 1 !important;
+    transition: transform .16s ease, background .16s ease, color .16s ease;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn:hover i.fa {
+    transform: scale(1.06);
+}
+.route_dash_drilldown_grid .route_dash_drill_primary {
+    --route-drill-icon: #7c3aed;
+    --route-drill-bg: rgba(255, 255, 255, 0.92);
+    --route-drill-glow: rgba(124, 58, 237, 0.24);
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 55%, #6d28d9 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(109, 40, 217, 0.70) !important;
+    box-shadow:
+        0 14px 30px rgba(124, 58, 237, 0.24),
+        inset 0 1px 0 rgba(255,255,255,0.28);
+}
+.route_dash_drilldown_grid .route_dash_drill_primary:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 55%, #5b21b6 100%) !important;
+    border-color: #6d28d9 !important;
+    box-shadow:
+        0 18px 34px rgba(124, 58, 237, 0.30),
+        0 0 0 4px rgba(124, 58, 237, 0.18);
+}
+
+/* Drill-down action color language */
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="visit"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="Visit"] {
+    --route-drill-icon: #0284c7;
+    --route-drill-bg: rgba(14, 165, 233, 0.12);
+    --route-drill-glow: rgba(14, 165, 233, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="completed"] {
+    --route-drill-icon: #16a34a;
+    --route-drill-bg: rgba(34, 197, 94, 0.12);
+    --route-drill-glow: rgba(34, 197, 94, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="unfinished"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="risk"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="due"] {
+    --route-drill-icon: #dc2626;
+    --route-drill-bg: rgba(239, 68, 68, 0.11);
+    --route-drill-glow: rgba(239, 68, 68, 0.14);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="not_started"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="promises"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="daily_closing"] {
+    --route-drill-icon: #d97706;
+    --route-drill-bg: rgba(245, 158, 11, 0.13);
+    --route-drill-glow: rgba(245, 158, 11, 0.16);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="collection"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="payment"] {
+    --route-drill-icon: #059669;
+    --route-drill-bg: rgba(16, 185, 129, 0.12);
+    --route-drill-glow: rgba(16, 185, 129, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="sales"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="product"] {
+    --route-drill-icon: #2563eb;
+    --route-drill-bg: rgba(59, 130, 246, 0.12);
+    --route-drill-glow: rgba(59, 130, 246, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="return"] {
+    --route-drill-icon: #ea580c;
+    --route-drill-bg: rgba(249, 115, 22, 0.13);
+    --route-drill-glow: rgba(249, 115, 22, 0.16);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="transfer"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="loading"] {
+    --route-drill-icon: #0891b2;
+    --route-drill-bg: rgba(6, 182, 212, 0.12);
+    --route-drill-glow: rgba(6, 182, 212, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="outlet"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="location"] {
+    --route-drill-icon: #0f766e;
+    --route-drill-bg: rgba(20, 184, 166, 0.12);
+    --route-drill-glow: rgba(20, 184, 166, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="vehicle"] {
+    --route-drill-icon: #475569;
+    --route-drill-bg: rgba(100, 116, 139, 0.13);
+    --route-drill-glow: rgba(100, 116, 139, 0.15);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="closing_records"],
+.route_dash_drilldown_grid .route_dash_drill_btn[name*="supervisor_dashboard"] {
+    --route-drill-icon: #7c3aed;
+    --route-drill-bg: rgba(124, 58, 237, 0.11);
+    --route-drill-glow: rgba(124, 58, 237, 0.17);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-money {
+    color: #059669 !important;
+    background: rgba(16, 185, 129, 0.12);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-warning,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-exclamation-circle,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-bolt {
+    color: #dc2626 !important;
+    background: rgba(239, 68, 68, 0.11);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-calendar-o,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-bell,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-lock,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-clock-o {
+    color: #d97706 !important;
+    background: rgba(245, 158, 11, 0.13);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-shopping-cart,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-cube,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-line-chart {
+    color: #2563eb !important;
+    background: rgba(59, 130, 246, 0.12);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-undo,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-reply {
+    color: #ea580c !important;
+    background: rgba(249, 115, 22, 0.13);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-map-marker,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-map-signs {
+    color: #0f766e !important;
+    background: rgba(20, 184, 166, 0.12);
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-truck,
+.route_dash_drilldown_grid .route_dash_drill_btn .fa-folder-open-o {
+    color: #475569 !important;
+    background: rgba(100, 116, 139, 0.13);
+}
+.route_dash_drilldown_grid .route_dash_drill_primary i.fa {
+    color: #7c3aed !important;
+    background: rgba(255,255,255,0.94) !important;
+}
+@media (max-width: 992px) {
+    .route_dash_drilldown_grid .route_dash_drill_btn {
+        min-height: 46px;
+        padding: 8px 10px !important;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn i.fa {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        border-radius: 10px;
+    }
+}
+@media (max-width: 768px) {
+    .route_dash_drilldown_panel {
+        margin: 8px 0 14px;
+        padding: 12px 10px 12px 12px;
+        border-radius: 18px;
+    }
+    .route_dash_drilldown_panel::before {
+        width: 3px;
+    }
+    .route_dash_drilldown_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn {
+        min-height: 44px;
+        justify-content: flex-start;
+        text-align: left;
+        font-size: 12px !important;
+        padding: 8px 9px !important;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn i.fa {
+        width: 25px;
+        height: 25px;
+        min-width: 25px;
+        font-size: 12px !important;
+    }
+}
+
