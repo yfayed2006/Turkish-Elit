@@ -17,6 +17,100 @@
 </search>
 </field>
 </record>
+<record id="view_route_dashboard_widget_kanban" model="ir.ui.view">
+<field name="name">route.dashboard.widget.kanban</field>
+<field name="model">route.dashboard.widget</field>
+<field name="arch" type="xml">
+<kanban string="Dashboard Configuration" class="o_kanban_mobile route_dashboard_configuration_kanban" create="0" delete="0" quick_create="0" default_order="category, sequence, id">
+<field name="active"/>
+<field name="name"/>
+<field name="category"/>
+<field name="show_on_manager"/>
+<field name="show_on_supervisor"/>
+<field name="default_manager"/>
+<field name="default_supervisor"/>
+<field name="sequence"/>
+<field name="description"/>
+<templates>
+<t t-name="card">
+<div class="kanban-box p-3 border rounded bg-white shadow-sm h-100">
+<div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+<div class="min-w-0">
+<span class="text-muted small d-block">Dashboard Widget</span>
+<strong class="d-block fs-5 text-truncate">
+<field name="name"/>
+</strong>
+<span class="badge rounded-pill text-bg-light border mt-1">
+<field name="category"/>
+</span>
+</div>
+<div class="text-end">
+<t t-if="record.active.raw_value">
+<span class="badge rounded-pill text-bg-success">Active</span>
+</t>
+<t t-if="!record.active.raw_value">
+<span class="badge rounded-pill text-bg-secondary">Inactive</span>
+</t>
+<div class="text-muted small mt-1">
+Seq.
+<field name="sequence"/>
+</div>
+</div>
+</div>
+<div class="text-muted mb-3" style="min-height: 38px;">
+<field name="description"/>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-6">
+<div class="p-2 rounded border bg-light h-100">
+<span class="text-muted small d-block">Manager</span>
+<t t-if="record.show_on_manager.raw_value">
+<strong class="text-success">Shown</strong>
+</t>
+<t t-if="!record.show_on_manager.raw_value">
+<strong class="text-muted">Hidden</strong>
+</t>
+<t t-if="record.default_manager.raw_value">
+<span class="badge rounded-pill text-bg-info ms-1">Default</span>
+</t>
+</div>
+</div>
+<div class="col-6">
+<div class="p-2 rounded border bg-light h-100">
+<span class="text-muted small d-block">Supervisor</span>
+<t t-if="record.show_on_supervisor.raw_value">
+<strong class="text-success">Shown</strong>
+</t>
+<t t-if="!record.show_on_supervisor.raw_value">
+<strong class="text-muted">Hidden</strong>
+</t>
+<t t-if="record.default_supervisor.raw_value">
+<span class="badge rounded-pill text-bg-info ms-1">Default</span>
+</t>
+</div>
+</div>
+</div>
+<div class="d-flex flex-wrap gap-2">
+<button name="action_toggle_manager_visibility" type="object" class="btn btn-outline-primary btn-sm">
+<t t-if="record.show_on_manager.raw_value">Hide Manager</t>
+<t t-if="!record.show_on_manager.raw_value">Show Manager</t>
+</button>
+<button name="action_toggle_supervisor_visibility" type="object" class="btn btn-outline-primary btn-sm">
+<t t-if="record.show_on_supervisor.raw_value">Hide Supervisor</t>
+<t t-if="!record.show_on_supervisor.raw_value">Show Supervisor</t>
+</button>
+<button name="action_toggle_active" type="object" class="btn btn-outline-secondary btn-sm">
+<t t-if="record.active.raw_value">Deactivate</t>
+<t t-if="!record.active.raw_value">Activate</t>
+</button>
+<button name="action_reset_to_default_visibility" type="object" class="btn btn-link btn-sm">Reset Default</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_dashboard_widget_list" model="ir.ui.view">
 <field name="name">route.dashboard.widget.list</field>
 <field name="model">route.dashboard.widget</field>
@@ -40,7 +134,10 @@
 <field name="arch" type="xml">
 <form string="Dashboard Widget">
 <header>
-<button name="action_reset_to_default_visibility" type="object" string="Reset to Default" class="btn-secondary"/>
+<button name="action_toggle_manager_visibility" type="object" string="Toggle Manager" class="btn-secondary"/>
+<button name="action_toggle_supervisor_visibility" type="object" string="Toggle Supervisor" class="btn-secondary"/>
+<button name="action_toggle_active" type="object" string="Activate / Deactivate" class="btn-secondary"/>
+<button name="action_reset_to_default_visibility" type="object" string="Reset to Default" class="btn-primary"/>
 </header>
 <sheet>
 <div class="oe_title">
