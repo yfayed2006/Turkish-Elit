@@ -199,13 +199,16 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         return (payload.get("total_collected", 0.0) or 0.0) / net_sales * 100.0
 
     def _attention_score(self, payload):
-        return (
-            len(payload.get("unfinished_visits") or [])
-            + len(payload.get("location_issue_visits") or [])
-            + int(payload.get("pending_vehicle_issues") or 0)
-            + int(payload.get("pending_transfer_count") or 0)
-            + len(payload.get("due_overdue_promises") or [])
-        )
+        settings = payload.get("settings") or {}
+        score = len(payload.get("unfinished_visits") or [])
+        score += len(payload.get("due_overdue_promises") or [])
+        if settings.get("show_location"):
+            score += len(payload.get("location_issue_visits") or [])
+        if settings.get("show_vehicle_closing"):
+            score += int(payload.get("pending_vehicle_issues") or 0)
+        if settings.get("show_stock_transfers"):
+            score += int(payload.get("pending_transfer_count") or 0)
+        return score
 
     def _build_manager_area_lines(self, payload):
         data = {}
@@ -246,8 +249,10 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 values["sales"] += sum((line.sold_amount or 0.0) for line in visit.line_ids)
                 values["returns"] += sum((line.return_amount or 0.0) for line in visit.line_ids)
 
-        for visit in payload.get("location_issue_visits") or []:
-            values_for(visit.outlet_id, visit.area_id)["issues"] += 1
+        settings = payload.get("settings") or {}
+        if settings.get("show_location"):
+            for visit in payload.get("location_issue_visits") or []:
+                values_for(visit.outlet_id, visit.area_id)["issues"] += 1
 
         for payment in payload.get("confirmed_payments") or []:
             values_for(payment.outlet_id)["collection"] += payment.amount or 0.0
