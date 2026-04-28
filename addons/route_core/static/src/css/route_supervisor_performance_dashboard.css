@@ -765,3 +765,135 @@
     }
 }
 
+
+/* Manager Executive Dashboard - Final Visual Polish */
+.route_manager_executive_dashboard_form .o_form_sheet {
+    padding-top: 12px;
+}
+.route_manager_executive_dashboard_form .oe_title {
+    margin-bottom: 8px !important;
+}
+.route_manager_executive_dashboard_form .oe_title h1 {
+    font-size: 30px;
+    line-height: 1.1;
+}
+.route_manager_executive_dashboard_form .route_dashboard_filter_cards {
+    margin-bottom: 8px !important;
+}
+.route_manager_executive_dashboard_form .route_dashboard_filter_cards .border {
+    min-height: 58px;
+}
+.route_manager_executive_dashboard_form .route_dash_section_title {
+    margin-top: 10px;
+}
+.route_manager_executive_dashboard_form .route_dash_scope {
+    margin-bottom: 8px;
+}
+.route_manager_executive_dashboard_form .route_dash_kpi_grid {
+    gap: 9px;
+}
+.route_manager_executive_dashboard_form .route_dash_kpi_card {
+    min-height: 74px;
+    padding: 10px 12px;
+}
+.route_manager_executive_dashboard_form .route_dash_kpi_card strong {
+    font-size: 19px;
+}
+.route_manager_executive_dashboard_form .route_dash_exec_signal_grid {
+    gap: 9px;
+}
+.route_manager_executive_dashboard_form .route_dash_gauge_card {
+    min-height: 150px;
+    padding: 10px;
+}
+.route_manager_executive_dashboard_form .route_dash_gauge_ring {
+    width: 104px;
+    height: 104px;
+    margin-bottom: 6px;
+}
+.route_manager_executive_dashboard_form .route_dash_gauge_inner {
+    width: 74px;
+    height: 74px;
+}
+.route_manager_executive_dashboard_form .route_dash_gauge_inner strong {
+    font-size: 19px;
+}
+.route_manager_executive_dashboard_form .route_dash_gauge_inner span {
+    font-size: 10px;
+}
+.route_manager_executive_dashboard_form .route_dash_column_chart {
+    min-height: 190px;
+    grid-template-columns: repeat(6, minmax(70px, 1fr));
+    align-items: end;
+    padding: 8px 6px 2px;
+}
+.route_manager_executive_dashboard_form .route_dash_column_item {
+    gap: 6px;
+}
+.route_manager_executive_dashboard_form .route_dash_column_track {
+    height: 128px;
+    max-width: 92px;
+    padding: 0 14px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.92)),
+        repeating-linear-gradient(0deg, transparent 0, transparent 24px, rgba(148,163,184,0.16) 25px);
+}
+.route_manager_executive_dashboard_form .route_dash_column_bar {
+    border-radius: 16px 16px 7px 7px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    transition: transform .18s ease, filter .18s ease;
+}
+.route_manager_executive_dashboard_form .route_dash_column_item:hover .route_dash_column_bar {
+    transform: translateY(-3px);
+    filter: brightness(1.05);
+}
+.route_manager_executive_dashboard_form .route_dash_column_value {
+    font-size: 11px;
+}
+.route_manager_executive_dashboard_form .route_dash_column_label {
+    min-height: 28px;
+    font-size: 11px;
+}
+.route_manager_executive_dashboard_form .route_dash_spotlight_grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.route_manager_executive_dashboard_form .route_dash_spotlight_tile {
+    min-height: 96px;
+    padding: 12px;
+}
+.route_manager_executive_dashboard_form .route_dash_spotlight_tile strong {
+    font-size: 20px;
+}
+.route_manager_executive_dashboard_form .route_dash_spotlight_tile small {
+    font-size: 11px;
+}
+.route_manager_executive_dashboard_form .route_dash_chart_card {
+    border-radius: 16px;
+}
+.route_manager_executive_dashboard_form .route_dash_chart_card h4 {
+    font-size: 14px;
+}
+@media (max-width: 1400px) {
+    .route_manager_executive_dashboard_form .route_dash_spotlight_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .route_manager_executive_dashboard_form .route_dash_column_chart {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 768px) {
+    .route_manager_executive_dashboard_form .oe_title h1 {
+        font-size: 24px;
+    }
+    .route_manager_executive_dashboard_form .route_dash_kpi_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .route_manager_executive_dashboard_form .route_dash_exec_signal_grid,
+    .route_manager_executive_dashboard_form .route_dash_spotlight_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .route_manager_executive_dashboard_form .route_dash_column_chart {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
