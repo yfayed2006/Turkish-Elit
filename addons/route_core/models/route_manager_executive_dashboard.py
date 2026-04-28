@@ -1,3 +1,10 @@
+# الملف الأول: `route_core/models/route_manager_executive_dashboard.py`
+
+انسخ كل المحتوى الموجود داخل هذا القسم وضعه داخل:
+
+`route_core/models/route_manager_executive_dashboard.py`
+
+```python
 from datetime import timedelta
 from html import escape
 
@@ -17,466 +24,931 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
     )
     executive_overview_html = fields.Html(
         string="Executive Overview",
-        compute="_compute_manager_dashboard_html",
+        compute="_compute_dashboard_html",
         sanitize=False,
-        readonly=True,
     )
-    period_comparison_html = fields.Html(
+    growth_comparison_html = fields.Html(
         string="Period Comparison",
-        compute="_compute_manager_dashboard_html",
+        compute="_compute_dashboard_html",
         sanitize=False,
-        readonly=True,
     )
-    commercial_health_html = fields.Html(
-        string="Commercial Health",
-        compute="_compute_manager_dashboard_html",
+    commercial_performance_html = fields.Html(
+        string="Commercial Performance",
+        compute="_compute_dashboard_html",
         sanitize=False,
-        readonly=True,
     )
-    market_ranking_html = fields.Html(
-        string="Market Ranking",
-        compute="_compute_manager_dashboard_html",
+    market_performance_html = fields.Html(
+        string="Market Performance",
+        compute="_compute_dashboard_html",
         sanitize=False,
-        readonly=True,
     )
     executive_risk_html = fields.Html(
         string="Executive Risk",
-        compute="_compute_manager_dashboard_html",
+        compute="_compute_dashboard_html",
         sanitize=False,
-        readonly=True,
     )
 
-    @api.model
-    def action_open_manager_dashboard(self):
-        today = fields.Date.context_today(self)
-        dashboard = self.create(
+    def _compute_dashboard_html(self):
+        for wizard in self:
+            data = wizard._manager_collect_dashboard_data()
+            wizard.executive_overview_html = wizard._render_manager_executive_overview(data)
+            wizard.growth_comparison_html = wizard._render_manager_growth_comparison(data)
+            wizard.commercial_performance_html = wizard._render_manager_commercial_performance(data)
+            wizard.market_performance_html = wizard._render_manager_market_performance(data)
+            wizard.executive_risk_html = wizard._render_manager_executive_risk(data)
+
+    def _manager_collect_dashboard_data(self):
+        self.ensure_one()
+        current = self._collect_dashboard_data()
+        previous = self._manager_collect_previous_period_data()
+        settings = current.get("settings") or {}
+        totals = current.get("totals") or {}
+        prev_totals = previous.get("totals") or {}
+
+        sales = totals.get("total_sales", 0.0)
+        collection = totals.get("total_collection", 0.0)
+        open_due = totals.get("open_due", 0.0)
+        returns = totals.get("returns_amount", 0.0)
+        profit = totals.get("estimated_profit", 0.0)
+        visits_total = totals.get("total_visits", 0) or 0
+        visits_done = totals.get("done_visits", 0) or 0
+        collection_rate = self._safe_percent(collection, sales)
+        visit_completion = self._safe_percent(visits_done, visits_total)
+        health_score = self._manager_compute_health_score(totals, current)
+        risk_level, risk_class = self._manager_risk_level(health_score, totals)
+
+        current.update(
             {
-                "name": _("Manager Executive Dashboard"),
-                "company_id": self.env.company.id,
-                "period_filter": "last_30",
-                "date_from": today - timedelta(days=29),
-                "date_to": today,
+                "previous": previous,
+                "manager_metrics": {
+                    "collection_rate": collection_rate,
+                    "visit_completion": visit_completion,
+                    "business_health_score": health_score,
+                    "risk_level": risk_level,
+                    "risk_class": risk_class,
+                    "sales_delta": self._manager_delta(sales, prev_totals.get("total_sales", 0.0)),
+                    "collection_delta": self._manager_delta(collection, prev_totals.get("total_collection", 0.0)),
+                    "open_due_delta": self._manager_delta(open_due, prev_totals.get("open_due", 0.0), lower_is_better=True),
+                    "returns_delta": self._manager_delta(returns, prev_totals.get("returns_amount", 0.0), lower_is_better=True),
+                    "profit_delta": self._manager_delta(profit, prev_totals.get("estimated_profit", 0.0)),
+                    "visit_completion_delta": self._manager_delta(visit_completion, self._safe_percent(prev_totals.get("done_visits", 0), prev_totals.get("total_visits", 0))),
+                },
+                "manager_insights": self._manager_build_insights(current),
             }
         )
-        view = self.env.ref("route_core.view_route_manager_executive_dashboard_form", raise_if_not_found=False)
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Manager Executive Dashboard"),
-            "res_model": "route.manager.executive.dashboard",
-            "res_id": dashboard.id,
-            "view_mode": "form",
-            "target": "current",
-            "context": {"create": False, "edit": True, "delete": False},
-        }
-        if view:
-            action["views"] = [(view.id, "form")]
-        return action
+        current["settings"] = settings
+        return current
 
-    def action_open_supervisor_dashboard(self):
+    def _manager_collect_previous_period_data(self):
         self.ensure_one()
-        dashboard = self.env["route.supervisor.performance.dashboard"].create(
-            {
-                "name": _("Supervisor Performance Dashboard"),
-                "company_id": self.company_id.id,
-                "period_filter": self.period_filter,
-                "date_from": self.date_from,
-                "date_to": self.date_to,
-                "salesperson_id": self.salesperson_id.id or False,
-                "vehicle_id": self.vehicle_id.id or False,
-                "city_id": self.city_id.id or False,
-                "area_id": self.area_id.id or False,
-                "outlet_id": self.outlet_id.id or False,
-            }
-        )
-        view = self.env.ref("route_core.view_route_supervisor_performance_dashboard_form", raise_if_not_found=False)
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Supervisor Performance Dashboard"),
-            "res_model": "route.supervisor.performance.dashboard",
-            "res_id": dashboard.id,
-            "view_mode": "form",
-            "target": "current",
-            "context": {"create": False, "edit": True, "delete": False},
-        }
-        if view:
-            action["views"] = [(view.id, "form")]
-        return action
-
-    @api.depends(
-        "company_id",
-        "period_filter",
-        "date_from",
-        "date_to",
-        "salesperson_id",
-        "vehicle_id",
-        "city_id",
-        "area_id",
-        "outlet_id",
-    )
-    def _compute_manager_dashboard_html(self):
-        for rec in self:
-            if not rec.date_from:
-                rec.date_from = fields.Date.context_today(rec) - timedelta(days=29)
-            if not rec.date_to:
-                rec.date_to = fields.Date.context_today(rec)
-            if rec.date_from and rec.date_to and rec.date_from > rec.date_to:
-                rec.date_from, rec.date_to = rec.date_to, rec.date_from
-
-            payload = rec._get_dashboard_payload()
-            previous_payload = rec._get_previous_dashboard_payload()
-            comparison = rec._manager_period_comparison(payload, previous_payload)
-            area_lines = rec._build_manager_area_lines(payload)
-
-            rec.executive_overview_html = rec._render_manager_overview_html(payload, previous_payload, comparison)
-            rec.period_comparison_html = rec._render_manager_period_comparison_html(comparison)
-            rec.commercial_health_html = rec._render_manager_commercial_html(payload)
-            rec.market_ranking_html = rec._render_manager_market_html(payload, area_lines)
-            rec.executive_risk_html = rec._render_manager_risk_html(payload, area_lines)
-
-    def _get_previous_dashboard_payload(self):
-        self.ensure_one()
-        date_from, date_to = self._get_date_range()
-        date_from = fields.Date.to_date(date_from)
-        date_to = fields.Date.to_date(date_to)
-        day_count = max((date_to - date_from).days + 1, 1)
+        date_from, date_to = self._get_effective_date_range()
+        if not date_from or not date_to:
+            return {"totals": {}}
+        period_days = max((date_to - date_from).days + 1, 1)
         previous_to = date_from - timedelta(days=1)
-        previous_from = previous_to - timedelta(days=day_count - 1)
-        previous = self.new(
+        previous_from = previous_to - timedelta(days=period_days - 1)
+        clone = self.copy(
             {
-                "name": _("Previous Period"),
-                "company_id": self.company_id.id,
-                "period_filter": "custom",
+                "period_mode": "custom",
                 "date_from": previous_from,
                 "date_to": previous_to,
-                "salesperson_id": self.salesperson_id.id or False,
-                "vehicle_id": self.vehicle_id.id or False,
-                "city_id": self.city_id.id or False,
-                "area_id": self.area_id.id or False,
-                "outlet_id": self.outlet_id.id or False,
             }
         )
-        return previous._get_dashboard_payload()
+        try:
+            return clone._collect_dashboard_data()
+        finally:
+            clone.unlink()
 
-    def _manager_period_comparison(self, payload, previous_payload):
-        def metric(current, previous):
-            current = float(current or 0.0)
-            previous = float(previous or 0.0)
-            if previous:
-                change = ((current - previous) / abs(previous)) * 100.0
+    def _manager_compute_health_score(self, totals, data):
+        sales = totals.get("total_sales", 0.0) or 0.0
+        collection = totals.get("total_collection", 0.0) or 0.0
+        open_due = totals.get("open_due", 0.0) or 0.0
+        returns = totals.get("returns_amount", 0.0) or 0.0
+        total_visits = totals.get("total_visits", 0) or 0
+        done_visits = totals.get("done_visits", 0) or 0
+        open_promises = totals.get("open_promises", 0) or 0
+        unfinished_visits = totals.get("unfinished_visits", 0) or 0
+        vehicle_issues = totals.get("vehicle_issues", 0) or 0
+        location_issues = totals.get("location_issues", 0) or 0
+
+        score = 100.0
+        collection_rate = self._safe_percent(collection, sales)
+        visit_completion = self._safe_percent(done_visits, total_visits)
+        due_rate = self._safe_percent(open_due, sales + open_due)
+        return_rate = self._safe_percent(returns, sales + returns)
+
+        if collection_rate < 95:
+            score -= min(22, (95 - collection_rate) * 0.35)
+        if visit_completion < 98:
+            score -= min(18, (98 - visit_completion) * 0.45)
+        if due_rate > 5:
+            score -= min(18, due_rate * 0.4)
+        if return_rate > 5:
+            score -= min(12, return_rate * 0.35)
+        score -= min(12, open_promises * 1.5)
+        score -= min(12, unfinished_visits * 1.2)
+        score -= min(10, vehicle_issues * 1.5)
+        score -= min(10, location_issues * 0.4)
+        return max(0, min(100, round(score, 1)))
+
+    def _manager_risk_level(self, score, totals):
+        if score >= 85:
+            return _("Low Risk"), "success"
+        if score >= 65:
+            return _("Medium Risk"), "warning"
+        return _("High Risk"), "danger"
+
+    def _manager_delta(self, current, previous, lower_is_better=False):
+        current = current or 0.0
+        previous = previous or 0.0
+        if not previous:
+            if current:
+                percent = 100.0
             else:
-                change = 100.0 if current else 0.0
-            return {"current": current, "previous": previous, "change": change}
-
-        visits = len(payload.get("visits") or [])
-        previous_visits = len(previous_payload.get("visits") or [])
-        completion = self._completion_rate(payload)
-        previous_completion = self._completion_rate(previous_payload)
-        collection_rate = self._collection_rate(payload)
-        previous_collection_rate = self._collection_rate(previous_payload)
+                percent = 0.0
+        else:
+            percent = ((current - previous) / abs(previous)) * 100.0
+        improved = percent < 0 if lower_is_better else percent > 0
+        neutral = abs(percent) < 0.01
+        if neutral:
+            mood = "neutral"
+            label = _("Stable vs previous period")
+        elif improved:
+            mood = "good"
+            label = _("Better vs previous period")
+        else:
+            mood = "bad"
+            label = _("Needs attention vs previous period")
+        direction = "up" if percent > 0 else "down" if percent < 0 else "flat"
         return {
-            "gross_sales": metric(payload.get("gross_sales"), previous_payload.get("gross_sales")),
-            "net_sales": metric(payload.get("net_sales"), previous_payload.get("net_sales")),
-            "collection": metric(payload.get("total_collected"), previous_payload.get("total_collected")),
-            "profit": metric(payload.get("gross_profit"), previous_payload.get("gross_profit")),
-            "returns": metric(payload.get("total_returns"), previous_payload.get("total_returns")),
-            "open_due": metric(payload.get("open_due_amount"), previous_payload.get("open_due_amount")),
-            "visits": metric(visits, previous_visits),
-            "completion": metric(completion, previous_completion),
-            "collection_rate": metric(collection_rate, previous_collection_rate),
-            "attention_score": metric(self._attention_score(payload), self._attention_score(previous_payload)),
-        }
-
-    def _completion_rate(self, payload):
-        total = len(payload.get("visits") or [])
-        if not total:
-            return 0.0
-        return (payload.get("visit_status", {}).get("done", 0) / total) * 100.0
-
-    def _collection_rate(self, payload):
-        net_sales = payload.get("net_sales", 0.0) or 0.0
-        if not net_sales:
-            return 0.0
-        return (payload.get("total_collected", 0.0) or 0.0) / net_sales * 100.0
-
-    def _attention_score(self, payload):
-        return (
-            len(payload.get("unfinished_visits") or [])
-            + len(payload.get("location_issue_visits") or [])
-            + int(payload.get("pending_vehicle_issues") or 0)
-            + int(payload.get("pending_transfer_count") or 0)
-            + len(payload.get("due_overdue_promises") or [])
-        )
-
-    def _build_manager_area_lines(self, payload):
-        data = {}
-
-        def area_key_from(outlet=False, area=False):
-            area = area or (outlet.area_id if outlet else False)
-            if not area:
-                return 0, _("No Area")
-            return area.id, area.display_name
-
-        def values_for(outlet=False, area=False):
-            key, label = area_key_from(outlet, area)
-            if key not in data:
-                data[key] = {
-                    "name": label,
-                    "visits": 0,
-                    "done": 0,
-                    "unfinished": 0,
-                    "sales": 0.0,
-                    "collection": 0.0,
-                    "open_due": 0.0,
-                    "returns": 0.0,
-                    "promises": 0.0,
-                    "issues": 0,
-                    "collection_rate": 0.0,
-                }
-            return data[key]
-
-        for visit in payload.get("visits") or []:
-            values = values_for(visit.outlet_id, visit.area_id)
-            values["visits"] += 1
-            if visit.visit_process_state == "done":
-                values["done"] += 1
-            elif visit.visit_process_state != "cancel":
-                values["unfinished"] += 1
-            values["open_due"] += visit.remaining_due_amount or 0.0
-            if not self._visit_is_direct_sale(visit):
-                values["sales"] += sum((line.sold_amount or 0.0) for line in visit.line_ids)
-                values["returns"] += sum((line.return_amount or 0.0) for line in visit.line_ids)
-
-        for visit in payload.get("location_issue_visits") or []:
-            values_for(visit.outlet_id, visit.area_id)["issues"] += 1
-
-        for payment in payload.get("confirmed_payments") or []:
-            values_for(payment.outlet_id)["collection"] += payment.amount or 0.0
-
-        for payment in payload.get("open_promises") or []:
-            values_for(payment.outlet_id)["promises"] += payment.effective_promise_amount or payment.promise_amount or 0.0
-
-        for order in payload.get("sale_orders") or []:
-            values = values_for(order.route_outlet_id)
-            values["sales"] += order.amount_total or 0.0
-            if "direct_sale_remaining_due" in order._fields:
-                values["open_due"] += order.direct_sale_remaining_due or 0.0
-
-        for ret in payload.get("direct_returns") or []:
-            values_for(ret.outlet_id)["returns"] += ret.amount_total or 0.0
-
-        lines = []
-        for values in data.values():
-            values["issues"] += values["unfinished"] + (1 if values["promises"] else 0)
-            values["collection_rate"] = (values["collection"] / values["sales"] * 100.0) if values["sales"] else 0.0
-            if any((values["visits"], values["sales"], values["collection"], values["open_due"], values["returns"], values["issues"])):
-                lines.append(values)
-        return sorted(lines, key=lambda line: (line["sales"], line["collection"], line["visits"]), reverse=True)
-
-    def _render_manager_overview_html(self, payload, previous_payload, comparison):
-        settings = payload.get("settings") or {}
-        completion = self._completion_rate(payload)
-        collection_rate = self._collection_rate(payload)
-        attention_score = self._attention_score(payload)
-        active_salespersons = len([line for line in payload.get("salesperson_lines", []) if line.get("visits") or line.get("sales") or line.get("collection")])
-        active_outlets = len(payload.get("outlet_lines") or [])
-        margin = (payload.get("gross_profit", 0.0) / payload.get("gross_sales", 1.0) * 100.0) if payload.get("gross_sales") else 0.0
-        cards = [
-            self._kpi_card(_("Total Sales"), self._money(payload.get("gross_sales")), self._comparison_note(comparison["gross_sales"], money=True), "sales"),
-            self._kpi_card(_("Total Collection"), self._money(payload.get("total_collected")), _("Collection Rate: %s%%") % f"{collection_rate:.0f}", "success"),
-            self._kpi_card(_("Net Sales"), self._money(payload.get("net_sales")), self._comparison_note(comparison["net_sales"], money=True), "primary"),
-            self._kpi_card(_("Estimated Profit"), self._money(payload.get("gross_profit")), _("Margin: %s%%") % f"{margin:.0f}", "profit"),
-            self._kpi_card(_("Open Due"), self._money(payload.get("open_due_amount")), self._comparison_note(comparison["open_due"], money=True, inverse=True), "danger"),
-            self._kpi_card(_("Returns"), self._money(payload.get("total_returns")), self._comparison_note(comparison["returns"], money=True, inverse=True), "warning"),
-            self._kpi_card(_("Visit Completion"), f"{completion:.0f}%", _("Completed: %s / %s") % (self._num(payload.get("visit_status", {}).get("done", 0)), self._num(len(payload.get("visits") or []))), "info"),
-            self._kpi_card(_("Active Outlets"), self._num(active_outlets), _("Salespersons: %s") % self._num(active_salespersons), "primary"),
-            self._kpi_card(_("Reopened Days"), self._num(payload.get("reopened_day_count")), _("Closed: %s") % self._num(payload.get("closed_day_count")), "warning"),
-            self._kpi_card(_("Attention Score"), self._num(attention_score), self._comparison_note(comparison["attention_score"], inverse=True), "danger"),
-        ]
-        if settings.get("show_location"):
-            cards.append(self._kpi_card(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or [])), _("Review workload"), "warning"))
-        if settings.get("show_vehicle_closing"):
-            cards.append(self._kpi_card(_("Vehicle Issues"), self._num(payload.get("pending_vehicle_issues")), _("Closing / variance risk"), "danger"))
-        title = self._section_title(
-            _("Executive Command Center"),
-            _("Management-level KPIs with period comparison, commercial performance, and operational risk."),
-        )
-        subtitle = self._manager_period_label(payload, previous_payload)
-        return (
-            f"<div class='route_dash_block'>{title}{self._scope_badges()}{self._settings_badges(settings)}"
-            f"<div class='route_dash_scope'><span><small>{escape(_('Period Compared'))}</small>{escape(subtitle)}</span></div>"
-            f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div></div>"
-        )
-
-    def _render_manager_period_comparison_html(self, comparison):
-        rows = [
-            (_("Sales Growth"), comparison["gross_sales"], "sales", True, False),
-            (_("Collection Growth"), comparison["collection"], "success", True, False),
-            (_("Net Sales Growth"), comparison["net_sales"], "primary", True, False),
-            (_("Profit Growth"), comparison["profit"], "profit", True, False),
-            (_("Returns Change"), comparison["returns"], "warning", True, True),
-            (_("Open Due Change"), comparison["open_due"], "danger", True, True),
-            (_("Visit Volume"), comparison["visits"], "info", False, False),
-            (_("Completion Rate Change"), comparison["completion"], "info", False, False),
-            (_("Collection Rate Change"), comparison["collection_rate"], "success", False, False),
-            (_("Attention Score Change"), comparison["attention_score"], "danger", False, True),
-        ]
-        cards = "".join(self._growth_card(title, values, tone, money, inverse) for title, values, tone, money, inverse in rows)
-        html = self._section_title(
-            _("This Period vs Previous Period"),
-            _("Growth cards compare the selected period with the immediately preceding period of the same length."),
-        )
-        return f"<div class='route_dash_block'>{html}<div class='route_dash_insight_grid'>{cards}</div></div>"
-
-    def _render_manager_commercial_html(self, payload):
-        settings = payload.get("settings") or {}
-        sales_return_rows = [
-            (_("Gross Sales"), payload.get("gross_sales", 0.0), "#16a34a"),
-            (_("Returns"), payload.get("total_returns", 0.0), "#ef4444"),
-            (_("Net Sales"), payload.get("net_sales", 0.0), "#0ea5e9"),
-            (_("Collection"), payload.get("total_collected", 0.0), "#22c55e"),
-            (_("Open Due"), payload.get("open_due_amount", 0.0), "#f97316"),
-            (_("Estimated Profit"), payload.get("gross_profit", 0.0), "#8b5cf6"),
-        ]
-        top_product_sales = [
-            (line["name"], line.get("sales", 0.0), "#0ea5e9")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("sales", 0.0), reverse=True)[:10]
-        ]
-        top_product_profit = [
-            (line["name"], line.get("profit", 0.0), "#16a34a" if line.get("profit", 0.0) >= 0 else "#ef4444")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("profit", 0.0), reverse=True)[:10]
-        ]
-        top_returned_products = [
-            (line["name"], line.get("returns", 0.0), "#ef4444")
-            for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("returns", 0.0), reverse=True)[:10]
-        ]
-        html = self._section_title(
-            _("Commercial Performance"),
-            _("Sales, returns, collections, profit, and product contribution in one executive view."),
-        )
-        html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Sales / Collection / Profit Mix"), self._horizontal_bars(sales_return_rows, money=True), "", wide=True)
-        html += self._chart_card(_("Sales vs Collection Trend"), self._line_chart(payload.get("daily_collection", {}), payload.get("daily_sales", {}), payload.get("date_from"), payload.get("date_to")), _("Trend across the selected period."), wide=True)
-        html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(top_product_sales, money=True), "")
-        html += self._chart_card(_("Top Profit Products"), self._horizontal_bars(top_product_profit, money=True, allow_negative=True), _("Estimated from product cost."))
-        if settings.get("show_consignment") or settings.get("show_direct_return"):
-            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(top_returned_products, money=True), _("Return exposure by product."), wide=True)
-        html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
-
-    def _render_manager_market_html(self, payload, area_lines):
-        settings = payload.get("settings") or {}
-        outlet_lines = payload.get("outlet_lines") or []
-        area_sales = [(line["name"], line.get("sales", 0.0), "#0ea5e9") for line in sorted(area_lines, key=lambda line: line.get("sales", 0.0), reverse=True)[:10]]
-        area_collection = [(line["name"], line.get("collection", 0.0), "#16a34a") for line in sorted(area_lines, key=lambda line: line.get("collection", 0.0), reverse=True)[:10]]
-        area_due = [(line["name"], line.get("open_due", 0.0), "#ef4444") for line in sorted(area_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]]
-        outlet_sales = [(line["name"], line.get("sales", 0.0), "#0ea5e9") for line in sorted(outlet_lines, key=lambda line: line.get("sales", 0.0), reverse=True)[:10]]
-        outlet_due = [(line["name"], line.get("open_due", 0.0), "#ef4444") for line in sorted(outlet_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]]
-        html = self._section_title(
-            _("Market, Area, and Outlet Performance"),
-            _("Compare areas and outlets by revenue, collection, open due, and customer risk."),
-        )
-        html += "<div class='route_dash_chart_grid'>"
-        if settings.get("show_outlet_comparison"):
-            direct = (payload.get("outlet_mode_summary") or {}).get("direct_sale") or {}
-            consignment = (payload.get("outlet_mode_summary") or {}).get("consignment") or {}
-            comparison_rows = [
-                (_("Sales"), direct.get("sales", 0.0), consignment.get("sales", 0.0), True),
-                (_("Collection"), direct.get("collection", 0.0), consignment.get("collection", 0.0), True),
-                (_("Open Due"), direct.get("open_due", 0.0), consignment.get("open_due", 0.0), True),
-                (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
-                (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
-            ]
-            html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Shown only when both workflows are enabled."), wide=True)
-        html += self._chart_card(_("Sales by Area"), self._horizontal_bars(area_sales, money=True), "")
-        html += self._chart_card(_("Collection by Area"), self._horizontal_bars(area_collection, money=True), "")
-        html += self._chart_card(_("Open Due by Area"), self._horizontal_bars(area_due, money=True), _("Priority follow-up by market."))
-        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars(outlet_sales, money=True), "")
-        html += self._chart_card(_("Highest Open Due Outlets"), self._horizontal_bars(outlet_due, money=True), _("Customer credit risk."), wide=True)
-        html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
-
-    def _render_manager_risk_html(self, payload, area_lines):
-        settings = payload.get("settings") or {}
-        attention_rows = [
-            (_("Unfinished Visits"), len(payload.get("unfinished_visits") or []), "#ef4444"),
-            (_("Due / Overdue Promises"), len(payload.get("due_overdue_promises") or []), "#8b5cf6"),
-        ]
-        if settings.get("show_location"):
-            attention_rows.append((_("Location Issues"), len(payload.get("location_issue_visits") or []), "#f59e0b"))
-        if settings.get("show_vehicle_closing"):
-            attention_rows.append((_("Vehicle Issues"), payload.get("pending_vehicle_issues", 0), "#64748b"))
-        if settings.get("show_stock_transfers"):
-            attention_rows.append((_("Pending Transfers"), payload.get("pending_transfer_count", 0), "#0ea5e9"))
-        area_risk = [
-            (line["name"], line.get("issues", 0) + (line.get("open_due", 0.0) / 10.0), "#ef4444")
-            for line in sorted(area_lines, key=lambda line: (line.get("issues", 0) + line.get("open_due", 0.0) / 10.0), reverse=True)[:10]
-        ]
-        salesperson_rows = sorted(payload.get("salesperson_lines") or [], key=lambda line: line.get("issues", 0), reverse=True)[:8]
-        vehicle_rows = sorted(payload.get("vehicle_lines") or [], key=lambda line: line.get("issues", 0), reverse=True)[:8]
-        html = self._section_title(
-            _("Executive Risk and Accountability"),
-            _("Where management attention is needed: people, vehicles, areas, and unresolved operations."),
-        )
-        html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(attention_rows), _("Only enabled workflows are included."))
-        html += self._chart_card(_("Area Risk Ranking"), self._horizontal_bars(area_risk), _("Mix of issues and open due by area."))
-        html += "</div>"
-        html += "<div class='route_dash_ranking_grid mt-2'>"
-        html += self._ranking_table(
-            _("Salesperson Executive Ranking"),
-            [_('Salesperson'), _('Sales'), _('Collected'), _('Open Promises'), _('Issues')],
-            [[line.get("name"), self._money(line.get("sales")), self._money(line.get("collection")), self._money(line.get("promises")), self._num(line.get("issues"))] for line in salesperson_rows],
-        )
-        if settings.get("show_vehicle_closing"):
-            html += self._ranking_table(
-                _("Vehicle Executive Risk"),
-                [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
-                [[line.get("name"), self._num(line.get("visits")), self._num(line.get("unfinished")), self._num(line.get("variance")), self._num(line.get("issues"))] for line in vehicle_rows],
-            )
-        html += "</div>"
-        return f"<div class='route_dash_block'>{html}</div>"
-
-    def _growth_card(self, title, values, tone="primary", money=False, inverse=False):
-        current = values.get("current", 0.0)
-        previous = values.get("previous", 0.0)
-        change = values.get("change", 0.0)
-        good = change >= 0.0
-        if inverse:
-            good = change <= 0.0
-        arrow = "▲" if change >= 0.0 else "▼"
-        change_label = f"{arrow} {abs(change):.0f}%"
-        change_tone = "success" if good else "danger"
-        display_current = self._money(current) if money else (f"{current:.0f}%" if "Rate" in str(title) else self._num(current))
-        display_previous = self._money(previous) if money else (f"{previous:.0f}%" if "Rate" in str(title) else self._num(previous))
-        return (
-            f"<div class='route_dash_insight route_dash_tone_{escape(tone)}'>"
-            f"<span>{escape(str(title))}</span>"
-            f"<strong>{escape(display_current)}</strong>"
-            f"<small>{escape(_('Previous'))}: {escape(display_previous)} · "
-            f"<b class='route_dash_growth_{escape(change_tone)}'>{escape(change_label)}</b></small>"
-            "</div>"
-        )
-
-    def _comparison_note(self, values, money=False, inverse=False):
-        change = values.get("change", 0.0)
-        previous = values.get("previous", 0.0)
-        good = change >= 0.0
-        if inverse:
-            good = change <= 0.0
-        marker = "+" if change >= 0.0 else "-"
-        previous_text = self._money(previous) if money else self._num(previous)
-        direction = _("better") if good else _("attention")
-        return _("Prev: %(previous)s | %(marker)s%(change).0f%% %(direction)s") % {
-            "previous": previous_text,
-            "marker": marker,
-            "change": abs(change),
+            "current": current,
+            "previous": previous,
+            "percent": round(percent, 1),
             "direction": direction,
+            "mood": mood,
+            "label": label,
         }
 
-    def _manager_period_label(self, payload, previous_payload):
-        return _("Current: %(current_from)s → %(current_to)s | Previous: %(previous_from)s → %(previous_to)s") % {
-            "current_from": payload.get("date_from"),
-            "current_to": payload.get("date_to"),
-            "previous_from": previous_payload.get("date_from"),
-            "previous_to": previous_payload.get("date_to"),
+    def _manager_build_insights(self, data):
+        rankings = data.get("rankings") or {}
+        product_rankings = data.get("product_rankings") or {}
+        outlet_rankings = data.get("outlet_rankings") or {}
+        totals = data.get("totals") or {}
+        best_salesperson = self._first_label(rankings.get("salesperson_collection"), _("No collection yet"))
+        best_area = self._first_label(rankings.get("area_sales"), _("No area sales yet"))
+        highest_risk_outlet = self._first_label(outlet_rankings.get("risk"), _("No outlet risk"))
+        top_profit_product = self._first_label(product_rankings.get("profit"), _("No profit data"))
+        highest_return_product = self._first_label(product_rankings.get("returns"), _("No returns"))
+        sales_trend = _("Sales need attention")
+        trend_class = "danger"
+        if (data.get("manager_metrics") or {}).get("sales_delta", {}).get("mood") == "good":
+            sales_trend = _("Sales are improving")
+            trend_class = "success"
+        elif totals.get("total_sales", 0.0):
+            sales_trend = _("Sales are active")
+            trend_class = "warning"
+        return {
+            "best_salesperson": best_salesperson,
+            "best_area": best_area,
+            "highest_risk_outlet": highest_risk_outlet,
+            "top_profit_product": top_profit_product,
+            "highest_return_product": highest_return_product,
+            "sales_trend": sales_trend,
+            "sales_trend_class": trend_class,
         }
+
+    def _first_label(self, rows, fallback):
+        if rows:
+            first = rows[0]
+            return first.get("label") or first.get("name") or fallback
+        return fallback
+
+    def _render_manager_executive_overview(self, data):
+        totals = data.get("totals") or {}
+        metrics = data.get("manager_metrics") or {}
+        insights = data.get("manager_insights") or {}
+        settings = data.get("settings") or {}
+        health = metrics.get("business_health_score", 0)
+        risk_level = metrics.get("risk_level") or _("Low Risk")
+        risk_class = metrics.get("risk_class") or "success"
+        kpis = [
+            self._kpi_card(_("Business Health"), f"{health:.1f}%", risk_level, risk_class, "fa-heartbeat"),
+            self._kpi_card(_("Total Sales"), self._format_money(totals.get("total_sales", 0.0)), self._delta_text(metrics.get("sales_delta")), self._delta_class(metrics.get("sales_delta")), "fa-line-chart"),
+            self._kpi_card(_("Total Collection"), self._format_money(totals.get("total_collection", 0.0)), self._delta_text(metrics.get("collection_delta")), self._delta_class(metrics.get("collection_delta")), "fa-money"),
+            self._kpi_card(_("Collection Rate"), self._format_percent(metrics.get("collection_rate", 0.0)), _("Collected / Sales"), "info", "fa-percent"),
+            self._kpi_card(_("Net Sales"), self._format_money(totals.get("net_sales", 0.0)), _("Sales after returns"), "primary", "fa-shopping-cart"),
+            self._kpi_card(_("Estimated Profit"), self._format_money(totals.get("estimated_profit", 0.0)), self._delta_text(metrics.get("profit_delta")), self._delta_class(metrics.get("profit_delta")), "fa-pie-chart"),
+            self._kpi_card(_("Open Due"), self._format_money(totals.get("open_due", 0.0)), self._delta_text(metrics.get("open_due_delta")), self._delta_class(metrics.get("open_due_delta")), "fa-warning"),
+            self._kpi_card(_("Returns"), self._format_money(totals.get("returns_amount", 0.0)), self._delta_text(metrics.get("returns_delta")), self._delta_class(metrics.get("returns_delta")), "fa-undo"),
+            self._kpi_card(_("Visit Completion"), self._format_percent(metrics.get("visit_completion", 0.0)), self._delta_text(metrics.get("visit_completion_delta")), self._delta_class(metrics.get("visit_completion_delta")), "fa-check-circle"),
+            self._kpi_card(_("Active Outlets"), self._format_int(totals.get("active_outlets", 0)), _("With activity"), "info", "fa-map-marker"),
+            self._kpi_card(_("Active Salespersons"), self._format_int(totals.get("active_salespersons", 0)), _("With activity"), "info", "fa-users"),
+            self._kpi_card(_("Reopened Days"), self._format_int(totals.get("reopened_days", 0)), _("Closing governance"), "warning" if totals.get("reopened_days") else "success", "fa-refresh"),
+        ]
+        insight_cards = [
+            self._insight_card(_("Best Salesperson"), insights.get("best_salesperson"), "success", "fa-user"),
+            self._insight_card(_("Best Area"), insights.get("best_area"), "primary", "fa-map"),
+            self._insight_card(_("Highest Risk Outlet"), insights.get("highest_risk_outlet"), "danger", "fa-exclamation-triangle"),
+            self._insight_card(_("Top Profit Product"), insights.get("top_profit_product"), "success", "fa-cubes"),
+            self._insight_card(_("Highest Return Product"), insights.get("highest_return_product"), "warning", "fa-undo"),
+            self._insight_card(_("Sales Trend"), insights.get("sales_trend"), insights.get("sales_trend_class"), "fa-line-chart"),
+        ]
+        settings_badges = self._settings_badges(settings)
+        return f"""
+            <div class="route_dash_block route_manager_dashboard">
+                <div class="route_dash_header route_manager_hero">
+                    <div>
+                        <div class="route_dash_eyebrow">{escape(_('Executive Command Center'))}</div>
+                        <h2>{escape(_('Manager Executive Dashboard'))}</h2>
+                        <p>{escape(_('High-level business performance, commercial health, and operational risk in one mobile-friendly view.'))}</p>
+                    </div>
+                    <div class="route_manager_health route_manager_health_{escape(risk_class)}">
+                        <span>{escape(_('Business Health'))}</span>
+                        <strong>{health:.1f}%</strong>
+                        <small>{escape(risk_level)}</small>
+                    </div>
+                </div>
+                <div class="route_dash_settings_strip">{settings_badges}</div>
+                <div class="route_dash_kpi_grid route_manager_kpi_grid">{''.join(kpis)}</div>
+                <div class="route_dash_insight_grid">{''.join(insight_cards)}</div>
+            </div>
+        """
+
+    def _render_manager_growth_comparison(self, data):
+        metrics = data.get("manager_metrics") or {}
+        rows = [
+            (_("Sales Growth"), metrics.get("sales_delta"), "fa-line-chart"),
+            (_("Collection Growth"), metrics.get("collection_delta"), "fa-money"),
+            (_("Open Due Movement"), metrics.get("open_due_delta"), "fa-warning"),
+            (_("Returns Movement"), metrics.get("returns_delta"), "fa-undo"),
+            (_("Profit Growth"), metrics.get("profit_delta"), "fa-pie-chart"),
+            (_("Visit Completion Change"), metrics.get("visit_completion_delta"), "fa-check-circle"),
+        ]
+        cards = []
+        for title, delta, icon in rows:
+            delta = delta or {}
+            cards.append(
+                f"""
+                <div class="route_delta_card route_delta_{escape(delta.get('mood') or 'neutral')}">
+                    <i class="fa {escape(icon)}"></i>
+                    <div>
+                        <span>{escape(title)}</span>
+                        <strong>{escape(self._delta_percent(delta))}</strong>
+                        <small>{escape(delta.get('label') or _('Stable vs previous period'))}</small>
+                    </div>
+                </div>
+                """
+            )
+        return f"""
+            <div class="route_dash_block">
+                <div class="route_dash_section_title">
+                    <div>
+                        <h3>{escape(_('This Period vs Previous Period'))}</h3>
+                        <p>{escape(_('Growth cards explain whether each movement is good or needs attention.'))}</p>
+                    </div>
+                </div>
+                <div class="route_dash_delta_grid">{''.join(cards)}</div>
+            </div>
+        """
+
+    def _render_manager_commercial_performance(self, data):
+        totals = data.get("totals") or {}
+        charts = []
+        charts.append(self._chart_card(_("Sales vs Collection Trend"), data.get("trend_chart"), "line"))
+        charts.append(self._chart_card(_("Payment Method Mix"), data.get("payment_method_chart"), "pie"))
+        charts.append(self._chart_card(_("Top Products by Sales"), data.get("product_sales_chart"), "bar"))
+        charts.append(self._chart_card(_("Top Products by Profit"), data.get("product_profit_chart"), "bar"))
+        charts.append(self._chart_card(_("Top Returned Products"), data.get("product_returns_chart"), "bar"))
+        commercial_kpis = [
+            self._mini_metric(_("Sales Orders"), self._format_int(totals.get("sales_order_count", 0)), "fa-file-text-o"),
+            self._mini_metric(_("Return Orders"), self._format_int(totals.get("return_order_count", 0)), "fa-undo"),
+            self._mini_metric(_("Open Promise Amount"), self._format_money(totals.get("open_promise_amount", 0.0)), "fa-calendar"),
+            self._mini_metric(_("Cost Data Quality"), self._format_percent(totals.get("cost_data_quality", 0.0)), "fa-check"),
+        ]
+        return f"""
+            <div class="route_dash_block">
+                <div class="route_dash_section_title">
+                    <div>
+                        <h3>{escape(_('Commercial Performance'))}</h3>
+                        <p>{escape(_('Sales, collections, products, returns, and profit signals.'))}</p>
+                    </div>
+                </div>
+                <div class="route_dash_mini_metric_grid">{''.join(commercial_kpis)}</div>
+                <div class="route_dash_chart_grid route_manager_chart_grid">{''.join(charts)}</div>
+            </div>
+        """
+
+    def _render_manager_market_performance(self, data):
+        settings = data.get("settings") or {}
+        charts = []
+        charts.append(self._chart_card(_("Sales by Area"), data.get("area_sales_chart"), "bar"))
+        charts.append(self._chart_card(_("Collection by Salesperson"), data.get("salesperson_collection_chart"), "bar"))
+        if settings.get("show_operation_comparison"):
+            charts.append(self._chart_card(_("Direct Sale vs Consignment"), data.get("operation_mode_chart"), "bar"))
+        charts.append(self._chart_card(_("Top Outlets by Sales"), data.get("outlet_sales_chart"), "bar"))
+        charts.append(self._chart_card(_("Highest Open Due Outlets"), data.get("outlet_due_chart"), "bar"))
+        charts.append(self._chart_card(_("Outlet Risk Ranking"), data.get("outlet_risk_chart"), "bar"))
+        return f"""
+            <div class="route_dash_block">
+                <div class="route_dash_section_title">
+                    <div>
+                        <h3>{escape(_('Market, Area, and Outlet Performance'))}</h3>
+                        <p>{escape(_('Compare areas, outlets, and sales channels without opening detailed lists.'))}</p>
+                    </div>
+                </div>
+                <div class="route_dash_chart_grid route_manager_chart_grid">{''.join(charts)}</div>
+            </div>
+        """
+
+    def _render_manager_executive_risk(self, data):
+        totals = data.get("totals") or {}
+        settings = data.get("settings") or {}
+        risk_cards = [
+            self._kpi_card(_("Attention Score"), self._format_int(totals.get("attention_score", 0)), _("Weighted exceptions"), "warning", "fa-bell"),
+            self._kpi_card(_("Unfinished Visits"), self._format_int(totals.get("unfinished_visits", 0)), _("Execution risk"), "danger" if totals.get("unfinished_visits") else "success", "fa-clock-o"),
+            self._kpi_card(_("Open Promises"), self._format_int(totals.get("open_promises", 0)), _("Payment follow-up"), "warning" if totals.get("open_promises") else "success", "fa-calendar"),
+            self._kpi_card(_("Pending Transfers"), self._format_int(totals.get("pending_transfers", 0)), _("Logistics risk"), "warning" if totals.get("pending_transfers") else "success", "fa-truck"),
+        ]
+        if settings.get("show_location"):
+            risk_cards.append(self._kpi_card(_("Location Issues"), self._format_int(totals.get("location_issues", 0)), _("Check-in review"), "warning" if totals.get("location_issues") else "success", "fa-map-marker"))
+        if settings.get("show_vehicle_closing"):
+            risk_cards.append(self._kpi_card(_("Vehicle Issues"), self._format_int(totals.get("vehicle_issues", 0)), _("Vehicle closing"), "warning" if totals.get("vehicle_issues") else "success", "fa-car"))
+        charts = [
+            self._chart_card(_("Closing Status Summary"), data.get("closing_status_chart"), "pie"),
+            self._chart_card(_("Visit Status Summary"), data.get("visit_status_chart"), "pie"),
+            self._chart_card(_("Attention Mix"), data.get("attention_mix_chart"), "bar"),
+        ]
+        if settings.get("show_vehicle_closing"):
+            charts.append(self._chart_card(_("Vehicle Risk Ranking"), data.get("vehicle_issue_chart"), "bar"))
+        if settings.get("show_location"):
+            charts.append(self._chart_card(_("Location Review Breakdown"), data.get("location_breakdown_chart"), "bar"))
+        return f"""
+            <div class="route_dash_block">
+                <div class="route_dash_section_title">
+                    <div>
+                        <h3>{escape(_('Executive Risk and Accountability'))}</h3>
+                        <p>{escape(_('Exceptions, governance, closing quality, and operational accountability.'))}</p>
+                    </div>
+                </div>
+                <div class="route_dash_kpi_grid">{''.join(risk_cards)}</div>
+                <div class="route_dash_chart_grid route_manager_chart_grid">{''.join(charts)}</div>
+            </div>
+        """
+
+    def _delta_text(self, delta):
+        if not delta:
+            return _("Stable vs previous period")
+        return _("%s vs previous period") % self._delta_percent(delta)
+
+    def _delta_percent(self, delta):
+        percent = delta.get("percent", 0.0) if delta else 0.0
+        if abs(percent) < 0.01:
+            return _("Stable")
+        direction = _("Up") if percent > 0 else _("Down")
+        return "%s %.1f%%" % (direction, abs(percent))
+
+    def _delta_class(self, delta):
+        if not delta:
+            return "muted"
+        mood = delta.get("mood")
+        if mood == "good":
+            return "success"
+        if mood == "bad":
+            return "danger"
+        return "muted"
+
+    def _settings_badges(self, settings):
+        badges = []
+        operation_label = settings.get("operation_mode_label") or _("Operations")
+        badges.append(self._settings_badge(_("Operation Mode"), operation_label, "fa-exchange"))
+        badges.append(self._settings_badge(_("Location Check-in"), _("Enabled") if settings.get("show_location") else _("Disabled"), "fa-map-marker"))
+        badges.append(self._settings_badge(_("Vehicle Closing"), _("Enabled") if settings.get("show_vehicle_closing") else _("Disabled"), "fa-car"))
+        badges.append(self._settings_badge(_("Vehicle Loading"), settings.get("loading_mode_label") or _("Disabled"), "fa-truck"))
+        badges.append(self._settings_badge(_("Lot / Expiry"), _("Enabled") if settings.get("show_lot_expiry") else _("Disabled"), "fa-barcode"))
+        return "".join(badges)
+
+    def _settings_badge(self, label, value, icon):
+        return f"""
+            <div class="route_dash_setting_badge">
+                <i class="fa {escape(icon)}"></i>
+                <span>{escape(label)}</span>
+                <strong>{escape(value)}</strong>
+            </div>
+        """
+
+    def _mini_metric(self, label, value, icon):
+        return f"""
+            <div class="route_dash_mini_metric">
+                <i class="fa {escape(icon)}"></i>
+                <div>
+                    <span>{escape(label)}</span>
+                    <strong>{escape(value)}</strong>
+                </div>
+            </div>
+        """
+
+    def _insight_card(self, label, value, card_class, icon):
+        return f"""
+            <div class="route_dash_insight_card route_dash_insight_{escape(card_class or 'primary')}">
+                <i class="fa {escape(icon)}"></i>
+                <div>
+                    <span>{escape(label)}</span>
+                    <strong>{escape(value or '-') }</strong>
+                </div>
+            </div>
+        """
+```
+
+---
+
+# الملف الثاني: `route_core/static/src/css/route_supervisor_performance_dashboard.css`
+
+انسخ كل المحتوى الموجود داخل هذا القسم وضعه داخل:
+
+`route_core/static/src/css/route_supervisor_performance_dashboard.css`
+
+```css
+.route_supervisor_performance_dashboard_form .o_form_sheet_bg,
+.route_supervisor_performance_dashboard_form .o_form_sheet {
+    max-width: 100%;
+}
+.route_dash_block {
+    margin: 14px 0 18px;
+}
+.route_dash_section_title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0;
+}
+.route_dash_section_title h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+.route_dash_section_title p {
+    margin: 3px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+.route_dash_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #0f172a, #1e3a8a);
+    color: white;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+}
+.route_dash_header h2 {
+    margin: 2px 0 4px;
+    font-size: 26px;
+    color: white;
+}
+.route_dash_header p {
+    margin: 0;
+    max-width: 720px;
+    color: rgba(255, 255, 255, 0.82);
+}
+.route_dash_eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.72);
+}
+.route_dash_settings_strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+}
+.route_dash_setting_badge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+.route_dash_setting_badge i {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #2563eb;
+}
+.route_dash_setting_badge span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.1;
+}
+.route_dash_setting_badge strong {
+    display: block;
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.2;
+}
+.route_dash_kpi_grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+.route_dash_kpi_card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    min-height: 92px;
+}
+.route_dash_kpi_icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 18px;
+}
+.route_dash_kpi_card span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+}
+.route_dash_kpi_card strong {
+    display: block;
+    margin: 2px 0;
+    color: #0f172a;
+    font-size: 21px;
+    line-height: 1.1;
+}
+.route_dash_kpi_card small {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+}
+.route_dash_kpi_success .route_dash_kpi_icon,
+.route_manager_health_success {
+    background: #dcfce7;
+    color: #15803d;
+}
+.route_dash_kpi_warning .route_dash_kpi_icon,
+.route_manager_health_warning {
+    background: #fef3c7;
+    color: #b45309;
+}
+.route_dash_kpi_danger .route_dash_kpi_icon,
+.route_manager_health_danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.route_dash_kpi_info .route_dash_kpi_icon {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+.route_dash_kpi_primary .route_dash_kpi_icon {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+.route_dash_kpi_muted .route_dash_kpi_icon {
+    background: #f1f5f9;
+    color: #64748b;
+}
+.route_dash_chart_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.route_dash_chart_card {
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    padding: 14px;
+    min-height: 250px;
+}
+.route_dash_chart_card h4 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.route_dash_chart_svg {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+}
+.route_dash_no_data {
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #64748b;
+    text-align: center;
+    padding: 18px;
+}
+.route_dash_no_data strong {
+    display: block;
+    color: #334155;
+    margin-bottom: 3px;
+}
+.route_dash_ranking_grid,
+.route_dash_outlet_grid,
+.route_dash_insight_grid,
+.route_dash_delta_grid,
+.route_dash_mini_metric_grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.route_dash_ranking_card,
+.route_dash_outlet_card,
+.route_dash_insight_card,
+.route_delta_card,
+.route_dash_mini_metric {
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    padding: 14px;
+}
+.route_dash_ranking_card h4,
+.route_dash_outlet_card h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #0f172a;
+}
+.route_dash_rank_row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid #f1f5f9;
+}
+.route_dash_rank_row:first-of-type {
+    border-top: 0;
+}
+.route_dash_rank_row span {
+    color: #334155;
+    font-size: 13px;
+}
+.route_dash_rank_row strong {
+    color: #0f172a;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.route_dash_action_grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+.route_dash_action_grid .btn {
+    border-radius: 999px;
+}
+.route_dash_operation_cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.route_dash_operation_card {
+    padding: 15px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.route_dash_operation_card h4 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 16px;
+}
+.route_dash_operation_metric_grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.route_dash_operation_metric {
+    padding: 9px;
+    border-radius: 13px;
+    background: #f8fafc;
+}
+.route_dash_operation_metric span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+}
+.route_dash_operation_metric strong {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+}
+.route_manager_hero {
+    background: linear-gradient(135deg, #111827, #312e81 55%, #0f766e);
+}
+.route_manager_health {
+    min-width: 170px;
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: inherit;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+.route_manager_health span {
+    font-size: 12px;
+    opacity: 0.85;
+}
+.route_manager_health strong {
+    font-size: 34px;
+    line-height: 1;
+    margin: 4px 0;
+}
+.route_manager_health small {
+    font-size: 13px;
+}
+.route_manager_kpi_grid .route_dash_kpi_card {
+    min-height: 100px;
+}
+.route_dash_insight_card,
+.route_delta_card,
+.route_dash_mini_metric {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.route_dash_insight_card i,
+.route_delta_card i,
+.route_dash_mini_metric i {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #334155;
+    flex: 0 0 auto;
+}
+.route_dash_insight_card span,
+.route_delta_card span,
+.route_dash_mini_metric span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+}
+.route_dash_insight_card strong,
+.route_delta_card strong,
+.route_dash_mini_metric strong {
+    display: block;
+    color: #0f172a;
+    font-size: 15px;
+    line-height: 1.2;
+}
+.route_delta_card small {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 11px;
+}
+.route_dash_insight_success i,
+.route_delta_good i {
+    background: #dcfce7;
+    color: #15803d;
+}
+.route_dash_insight_warning i {
+    background: #fef3c7;
+    color: #b45309;
+}
+.route_dash_insight_danger i,
+.route_delta_bad i {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.route_dash_insight_primary i {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+.route_delta_neutral i {
+    background: #f1f5f9;
+    color: #64748b;
+}
+.route_manager_chart_grid .route_dash_chart_card {
+    min-height: 240px;
+}
+@media (max-width: 1200px) {
+    .route_dash_kpi_grid,
+    .route_dash_settings_strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .route_dash_ranking_grid,
+    .route_dash_outlet_grid,
+    .route_dash_insight_grid,
+    .route_dash_delta_grid,
+    .route_dash_mini_metric_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 768px) {
+    .route_dash_header {
+        flex-direction: column;
+        padding: 14px;
+        border-radius: 16px;
+    }
+    .route_dash_header h2 {
+        font-size: 21px;
+    }
+    .route_manager_health {
+        min-width: 0;
+        width: 100%;
+    }
+    .route_dash_kpi_grid,
+    .route_dash_settings_strip,
+    .route_dash_ranking_grid,
+    .route_dash_outlet_grid,
+    .route_dash_insight_grid,
+    .route_dash_delta_grid,
+    .route_dash_mini_metric_grid,
+    .route_dash_operation_cards,
+    .route_dash_chart_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+    .route_dash_chart_grid {
+        grid-template-columns: 1fr;
+    }
+    .route_dash_kpi_card {
+        padding: 10px;
+        border-radius: 15px;
+        min-height: 84px;
+        gap: 8px;
+    }
+    .route_dash_kpi_icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        font-size: 14px;
+    }
+    .route_dash_kpi_card strong {
+        font-size: 16px;
+    }
+    .route_dash_kpi_card span,
+    .route_dash_kpi_card small {
+        font-size: 10px;
+    }
+    .route_dash_chart_card {
+        min-height: 220px;
+        padding: 10px;
+    }
+    .route_dash_setting_badge {
+        padding: 9px;
+        border-radius: 13px;
+    }
+    .route_dash_setting_badge i {
+        display: none;
+    }
+    .route_dash_operation_metric_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 460px) {
+    .route_dash_kpi_grid,
+    .route_dash_settings_strip,
+    .route_dash_ranking_grid,
+    .route_dash_outlet_grid,
+    .route_dash_insight_grid,
+    .route_dash_delta_grid,
+    .route_dash_mini_metric_grid,
+    .route_dash_operation_cards {
+        grid-template-columns: 1fr 1fr;
+    }
+    .route_dash_operation_metric_grid {
+        grid-template-columns: 1fr;
+    }
+    .route_dash_section_title {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+```
