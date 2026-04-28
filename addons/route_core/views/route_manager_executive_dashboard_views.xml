@@ -105,5 +105,19 @@
 <field name="state">code</field>
 <field name="code">action = env["route.manager.executive.dashboard"].action_open_manager_dashboard()</field>
 </record>
-<menuitem id="menu_route_manager_executive_dashboard" name="Manager Executive Dashboard" parent="route_core.menu_route_management_workspace" action="route_core.server_action_open_route_manager_executive_dashboard" sequence="1" groups="route_core.group_route_management"/>
+<record id="menu_route_manager_dashboards" model="ir.ui.menu">
+<field name="name">Dashboards</field>
+<field name="parent_id" ref="route_core.menu_route_management_workspace"/>
+<field name="sequence">1</field>
+<field name="active" eval="True"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+</record>
+<record id="menu_route_manager_executive_dashboard" model="ir.ui.menu">
+<field name="name">Manager Executive Dashboard</field>
+<field name="parent_id" ref="route_core.menu_route_manager_dashboards"/>
+<field name="action" ref="route_core.server_action_open_route_manager_executive_dashboard"/>
+<field name="sequence">1</field>
+<field name="active" eval="True"/>
+<field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
+</record>
 </odoo>
