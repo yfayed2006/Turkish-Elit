@@ -135,7 +135,7 @@ class RouteDashboardWidget(models.Model):
         return {vals["code"]: vals for vals in self._default_widget_definitions()}
 
     @api.model
-    def is_enabled(self, code, target, company=False):
+    def is_enabled(self, code, target, company=False, user=False, include_user=True):
         company = company or self.env.company
         if not company or not code or target not in ("manager", "supervisor"):
             return True
@@ -149,8 +149,18 @@ class RouteDashboardWidget(models.Model):
             defaults = self._default_lookup().get(code)
             if not defaults:
                 return True
-            return bool(defaults.get("show_on_%s" % target))
-        return bool(widget.active and widget[("show_on_%s" % target)])
+            company_enabled = bool(defaults.get("show_on_%s" % target))
+        else:
+            company_enabled = bool(widget.active and widget[("show_on_%s" % target)])
+        if not company_enabled or not include_user or self.env.context.get("ignore_dashboard_user_preferences"):
+            return company_enabled
+        user = user or self.env.user
+        return self.env["route.dashboard.user.preference"].sudo().is_widget_visible_for_user(
+            code=code,
+            target=target,
+            company=company,
+            user=user,
+        )
 
     def action_reset_to_default_visibility(self):
         defaults = self._default_lookup()
@@ -205,3 +215,174 @@ class RouteDashboardWidget(models.Model):
             "context": {"default_company_id": self.env.company.id, "search_default_group_category": 1, "active_test": False},
             "target": "current",
         }
+
+class RouteDashboardUserPreference(models.Model):
+    _name = "route.dashboard.user.preference"
+    _description = "Route Dashboard Personal Widget Preference"
+    _order = "target, category, sequence, name, id"
+    _rec_name = "name"
+
+    user_id = fields.Many2one(
+        "res.users",
+        string="User",
+        required=True,
+        default=lambda self: self.env.user,
+        index=True,
+        ondelete="cascade",
+    )
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        required=True,
+        default=lambda self: self.env.company,
+        index=True,
+        ondelete="cascade",
+    )
+    target = fields.Selection(
+        [("manager", "Manager Dashboard"), ("supervisor", "Supervisor Dashboard")],
+        string="Dashboard",
+        required=True,
+        default="supervisor",
+        index=True,
+    )
+    widget_id = fields.Many2one(
+        "route.dashboard.widget",
+        string="Widget",
+        required=True,
+        index=True,
+        ondelete="cascade",
+    )
+    visible = fields.Boolean(string="Show on My Dashboard", default=True)
+
+    name = fields.Char(string="Widget Name", related="widget_id.name", readonly=True)
+    code = fields.Char(string="Technical Code", related="widget_id.code", readonly=True)
+    category = fields.Selection(string="Category", related="widget_id.category", readonly=True)
+    sequence = fields.Integer(string="Sequence", related="widget_id.sequence", readonly=True)
+    description = fields.Char(string="Description", related="widget_id.description", readonly=True)
+    company_widget_active = fields.Boolean(string="Company Active", related="widget_id.active", readonly=True)
+    default_manager = fields.Boolean(string="Default Manager", related="widget_id.default_manager", readonly=True)
+    default_supervisor = fields.Boolean(string="Default Supervisor", related="widget_id.default_supervisor", readonly=True)
+    company_allowed = fields.Boolean(string="Allowed by Company", compute="_compute_company_allowed")
+
+    _sql_constraints = [
+        (
+            "route_dashboard_user_preference_unique",
+            "unique(user_id, company_id, target, widget_id)",
+            "Each dashboard widget can have only one personal preference per user, company, and dashboard.",
+        )
+    ]
+
+    @api.depends("target", "widget_id.active", "widget_id.show_on_manager", "widget_id.show_on_supervisor")
+    def _compute_company_allowed(self):
+        for rec in self:
+            if rec.target == "manager":
+                rec.company_allowed = bool(rec.widget_id.active and rec.widget_id.show_on_manager)
+            elif rec.target == "supervisor":
+                rec.company_allowed = bool(rec.widget_id.active and rec.widget_id.show_on_supervisor)
+            else:
+                rec.company_allowed = False
+
+    @api.model
+    def _allowed_widget_domain(self, company, target):
+        field_name = "show_on_manager" if target == "manager" else "show_on_supervisor"
+        return [("company_id", "=", company.id), ("active", "=", True), (field_name, "=", True)]
+
+    @api.model
+    def _ensure_preferences(self, user=False, company=False, target="supervisor"):
+        user = user or self.env.user
+        company = company or self.env.company
+        if not user or not company or target not in ("manager", "supervisor"):
+            return self.browse()
+        self.env["route.dashboard.widget"].sudo()._ensure_default_widgets(company)
+        widgets = self.env["route.dashboard.widget"].sudo().search(self._allowed_widget_domain(company, target))
+        existing = self.sudo().search(
+            [
+                ("user_id", "=", user.id),
+                ("company_id", "=", company.id),
+                ("target", "=", target),
+                ("widget_id", "in", widgets.ids),
+            ]
+        )
+        existing_widget_ids = set(existing.mapped("widget_id").ids)
+        created = self.browse()
+        for widget in widgets:
+            if widget.id not in existing_widget_ids:
+                created |= self.sudo().create(
+                    {
+                        "user_id": user.id,
+                        "company_id": company.id,
+                        "target": target,
+                        "widget_id": widget.id,
+                        "visible": True,
+                    }
+                )
+        return existing | created
+
+    @api.model
+    def is_widget_visible_for_user(self, code, target, company=False, user=False):
+        company = company or self.env.company
+        user = user or self.env.user
+        if not code or target not in ("manager", "supervisor") or not company or not user:
+            return True
+        preference = self.sudo().search(
+            [
+                ("user_id", "=", user.id),
+                ("company_id", "=", company.id),
+                ("target", "=", target),
+                ("widget_id.code", "=", code),
+            ],
+            limit=1,
+        )
+        # No personal preference yet means: follow the company dashboard setup.
+        if not preference:
+            return True
+        return bool(preference.visible)
+
+    @api.model
+    def action_open_my_dashboard_preferences(self, target="supervisor", company=False, user=False):
+        target = target if target in ("manager", "supervisor") else "supervisor"
+        user = user or self.env.user
+        company = company or self.env.company
+        self._ensure_preferences(user=user, company=company, target=target)
+        kanban_view = self.env.ref("route_core.view_route_dashboard_user_preference_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_dashboard_user_preference_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_dashboard_user_preference_form", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        allowed_domain = self._allowed_widget_domain(company, target)
+        allowed_widget_ids = self.env["route.dashboard.widget"].sudo().search(allowed_domain).ids
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Customize Dashboard"),
+            "res_model": "route.dashboard.user.preference",
+            "view_mode": "kanban,list,form",
+            "views": views or False,
+            "domain": [
+                ("user_id", "=", user.id),
+                ("company_id", "=", company.id),
+                ("target", "=", target),
+                ("widget_id", "in", allowed_widget_ids),
+            ],
+            "context": {
+                "default_user_id": user.id,
+                "default_company_id": company.id,
+                "default_target": target,
+                "search_default_group_category": 1,
+            },
+            "target": "current",
+        }
+
+    def action_toggle_user_visibility(self):
+        for rec in self:
+            rec.visible = not rec.visible
+        return True
+
+    def action_reset_my_preference(self):
+        for rec in self:
+            rec.visible = True
+        return True
