@@ -1045,3 +1045,55 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+
+/* Supervisor Dashboard - Action Priority Polish */
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:first-child {
+    border-left: 4px solid #64748b;
+}
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) {
+    border-left: 4px solid #7c3aed;
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+}
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) h4::after {
+    content: "Priority";
+    display: inline-flex;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f3e8ff;
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: 900;
+    vertical-align: middle;
+}
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) .route_dash_spotlight_grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) .route_dash_spotlight_tile {
+    min-height: 108px;
+    border: 1px solid #e9d5ff;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    transition: transform .16s ease, box-shadow .16s ease;
+}
+.route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) .route_dash_spotlight_tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(88, 28, 135, 0.12);
+}
+.route_supervisor_performance_dashboard_form .route_dash_outlet_block .route_dash_chart_grid .route_dash_chart_card {
+    min-height: 210px;
+}
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_products .route_dash_chart_grid .route_dash_chart_card {
+    min-height: 210px;
+}
+.route_supervisor_performance_dashboard_form .route_dash_supervisor_ranking .route_dash_chart_grid .route_dash_chart_card {
+    min-height: 160px;
+}
+@media (max-width: 768px) {
+    .route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) .route_dash_spotlight_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .route_supervisor_performance_dashboard_form .route_dash_action_priority_zone .route_dash_chart_card:nth-child(2) .route_dash_spotlight_tile {
+        min-height: 96px;
+    }
+}
