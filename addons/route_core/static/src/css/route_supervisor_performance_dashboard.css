@@ -1097,3 +1097,91 @@
         min-height: 96px;
     }
 }
+
+
+/* Dashboard Drill-down Actions */
+.route_dash_drilldown_panel {
+    margin: 10px 0 16px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055);
+}
+.route_dash_drilldown_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.route_dash_drilldown_head strong,
+.route_dash_drilldown_head span {
+    display: block;
+}
+.route_dash_drilldown_head strong {
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 900;
+}
+.route_dash_drilldown_head span {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+.route_dash_drilldown_grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-weight: 800 !important;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.045);
+    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn:hover {
+    transform: translateY(-1px);
+    border-color: #7c3aed !important;
+    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.12);
+}
+.route_dash_drilldown_grid .route_dash_drill_primary {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+    color: #ffffff !important;
+    border-color: #6d28d9 !important;
+}
+.route_manager_executive_dashboard_form .route_dash_manager_drilldown_panel {
+    background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+}
+@media (max-width: 1400px) {
+    .route_dash_drilldown_grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-width: 992px) {
+    .route_dash_drilldown_grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 768px) {
+    .route_dash_drilldown_panel {
+        padding: 10px;
+        border-radius: 16px;
+    }
+    .route_dash_drilldown_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn {
+        min-height: 38px;
+        font-size: 12px !important;
+        padding: 6px 7px !important;
+    }
+}
