@@ -1,0 +1,82 @@
+<odoo>
+<record id="view_route_dashboard_widget_search" model="ir.ui.view">
+<field name="name">route.dashboard.widget.search</field>
+<field name="model">route.dashboard.widget</field>
+<field name="arch" type="xml">
+<search string="Dashboard Widgets">
+<field name="name"/>
+<field name="code"/>
+<field name="category"/>
+<filter name="visible_manager" string="Manager Dashboard" domain="[('show_on_manager', '=', True)]"/>
+<filter name="visible_supervisor" string="Supervisor Dashboard" domain="[('show_on_supervisor', '=', True)]"/>
+<filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
+<group expand="0" string="Group By">
+<filter name="group_category" string="Category" context="{'group_by': 'category'}"/>
+<filter name="group_manager" string="Manager Visible" context="{'group_by': 'show_on_manager'}"/>
+<filter name="group_supervisor" string="Supervisor Visible" context="{'group_by': 'show_on_supervisor'}"/>
+</group>
+</search>
+</field>
+</record>
+<record id="view_route_dashboard_widget_list" model="ir.ui.view">
+<field name="name">route.dashboard.widget.list</field>
+<field name="model">route.dashboard.widget</field>
+<field name="arch" type="xml">
+<list string="Dashboard Configuration" editable="bottom" create="0" delete="0" default_order="sequence, id" decoration-muted="not active">
+<field name="sequence" widget="handle"/>
+<field name="active"/>
+<field name="name" readonly="1"/>
+<field name="category" readonly="1"/>
+<field name="show_on_manager"/>
+<field name="show_on_supervisor"/>
+<field name="description" readonly="1" optional="show"/>
+<field name="code" readonly="1" optional="hide"/>
+<field name="company_id" groups="base.group_multi_company" readonly="1" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="view_route_dashboard_widget_form" model="ir.ui.view">
+<field name="name">route.dashboard.widget.form</field>
+<field name="model">route.dashboard.widget</field>
+<field name="arch" type="xml">
+<form string="Dashboard Widget">
+<header>
+<button name="action_reset_to_default_visibility" type="object" string="Reset to Default" class="btn-secondary"/>
+</header>
+<sheet>
+<div class="oe_title">
+<span class="text-muted small">Dashboard Configuration</span>
+<h1>
+<field name="name" readonly="1"/>
+</h1>
+</div>
+<group>
+<group string="Widget">
+<field name="active"/>
+<field name="code" readonly="1"/>
+<field name="category" readonly="1"/>
+<field name="sequence"/>
+<field name="company_id" readonly="1" groups="base.group_multi_company"/>
+</group>
+<group string="Visible On">
+<field name="show_on_manager"/>
+<field name="show_on_supervisor"/>
+<field name="default_manager" readonly="1"/>
+<field name="default_supervisor" readonly="1"/>
+</group>
+</group>
+<group string="Description">
+<field name="description" readonly="1" nolabel="1"/>
+</group>
+</sheet>
+</form>
+</field>
+</record>
+<record id="server_action_open_route_dashboard_configuration" model="ir.actions.server">
+<field name="name">Dashboard Configuration</field>
+<field name="model_id" ref="route_core.model_route_dashboard_widget"/>
+<field name="state">code</field>
+<field name="code">action = env["route.dashboard.widget"].action_open_dashboard_configuration()</field>
+</record>
+<menuitem id="menu_route_dashboard_configuration" name="Dashboard Configuration" parent="route_core.menu_route_management_workspace" action="route_core.server_action_open_route_dashboard_configuration" sequence="2" groups="route_core.group_route_management"/>
+</odoo>
