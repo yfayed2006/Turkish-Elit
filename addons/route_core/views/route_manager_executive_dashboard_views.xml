@@ -8,6 +8,7 @@
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
 <button name="action_open_supervisor_dashboard" type="object" string="Supervisor Dashboard" icon="fa-dashboard" class="btn-primary"/>
 <button name="action_open_dashboard_configuration" type="object" string="Dashboard Setup" icon="fa-sliders"/>
+<button name="action_customize_dashboard" type="object" string="Customize Dashboard" icon="fa-eye"/>
 <button name="action_open_daily_closing" type="object" string="Daily Closing" icon="fa-lock"/>
 <button name="action_open_visits" type="object" string="Visits" icon="fa-calendar-check-o"/>
 <button name="action_open_collections" type="object" string="Collections" icon="fa-money"/>
