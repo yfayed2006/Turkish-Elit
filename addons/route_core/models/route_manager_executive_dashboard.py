@@ -199,16 +199,13 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         return (payload.get("total_collected", 0.0) or 0.0) / net_sales * 100.0
 
     def _attention_score(self, payload):
-        settings = payload.get("settings") or {}
-        score = len(payload.get("unfinished_visits") or [])
-        score += len(payload.get("due_overdue_promises") or [])
-        if settings.get("show_location"):
-            score += len(payload.get("location_issue_visits") or [])
-        if settings.get("show_vehicle_closing"):
-            score += int(payload.get("pending_vehicle_issues") or 0)
-        if settings.get("show_stock_transfers"):
-            score += int(payload.get("pending_transfer_count") or 0)
-        return score
+        return (
+            len(payload.get("unfinished_visits") or [])
+            + len(payload.get("location_issue_visits") or [])
+            + int(payload.get("pending_vehicle_issues") or 0)
+            + int(payload.get("pending_transfer_count") or 0)
+            + len(payload.get("due_overdue_promises") or [])
+        )
 
     def _build_manager_area_lines(self, payload):
         data = {}
@@ -249,10 +246,8 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 values["sales"] += sum((line.sold_amount or 0.0) for line in visit.line_ids)
                 values["returns"] += sum((line.return_amount or 0.0) for line in visit.line_ids)
 
-        settings = payload.get("settings") or {}
-        if settings.get("show_location"):
-            for visit in payload.get("location_issue_visits") or []:
-                values_for(visit.outlet_id, visit.area_id)["issues"] += 1
+        for visit in payload.get("location_issue_visits") or []:
+            values_for(visit.outlet_id, visit.area_id)["issues"] += 1
 
         for payment in payload.get("confirmed_payments") or []:
             values_for(payment.outlet_id)["collection"] += payment.amount or 0.0
@@ -284,14 +279,21 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         attention_score = self._attention_score(payload)
         active_salespersons = len([line for line in payload.get("salesperson_lines", []) if line.get("visits") or line.get("sales") or line.get("collection")])
         active_outlets = len(payload.get("outlet_lines") or [])
-        margin = (payload.get("gross_profit", 0.0) / payload.get("gross_sales", 1.0) * 100.0) if payload.get("gross_sales") else 0.0
+        gross_sales = payload.get("gross_sales", 0.0) or 0.0
+        net_sales = payload.get("net_sales", 0.0) or 0.0
+        total_returns = payload.get("total_returns", 0.0) or 0.0
+        open_due = payload.get("open_due_amount", 0.0) or 0.0
+        gross_profit = payload.get("gross_profit", 0.0) or 0.0
+        margin = (gross_profit / gross_sales * 100.0) if gross_sales else 0.0
+        return_rate = (total_returns / gross_sales * 100.0) if gross_sales else 0.0
+        open_due_ratio = (open_due / net_sales * 100.0) if net_sales else 0.0
         cards = [
-            self._kpi_card(_("Total Sales"), self._money(payload.get("gross_sales")), self._comparison_note(comparison["gross_sales"], money=True), "sales"),
+            self._kpi_card(_("Total Sales"), self._money(gross_sales), self._comparison_note(comparison["gross_sales"], money=True), "sales"),
             self._kpi_card(_("Total Collection"), self._money(payload.get("total_collected")), _("Collection Rate: %s%%") % f"{collection_rate:.0f}", "success"),
-            self._kpi_card(_("Net Sales"), self._money(payload.get("net_sales")), self._comparison_note(comparison["net_sales"], money=True), "primary"),
-            self._kpi_card(_("Estimated Profit"), self._money(payload.get("gross_profit")), _("Margin: %s%%") % f"{margin:.0f}", "profit"),
-            self._kpi_card(_("Open Due"), self._money(payload.get("open_due_amount")), self._comparison_note(comparison["open_due"], money=True, inverse=True), "danger"),
-            self._kpi_card(_("Returns"), self._money(payload.get("total_returns")), self._comparison_note(comparison["returns"], money=True, inverse=True), "warning"),
+            self._kpi_card(_("Net Sales"), self._money(net_sales), self._comparison_note(comparison["net_sales"], money=True), "primary"),
+            self._kpi_card(_("Estimated Profit"), self._money(gross_profit), _("Margin: %s%%") % f"{margin:.0f}", "profit"),
+            self._kpi_card(_("Open Due"), self._money(open_due), self._comparison_note(comparison["open_due"], money=True, inverse=True), "danger"),
+            self._kpi_card(_("Returns"), self._money(total_returns), self._comparison_note(comparison["returns"], money=True, inverse=True), "warning"),
             self._kpi_card(_("Visit Completion"), f"{completion:.0f}%", _("Completed: %s / %s") % (self._num(payload.get("visit_status", {}).get("done", 0)), self._num(len(payload.get("visits") or []))), "info"),
             self._kpi_card(_("Active Outlets"), self._num(active_outlets), _("Salespersons: %s") % self._num(active_salespersons), "primary"),
             self._kpi_card(_("Reopened Days"), self._num(payload.get("reopened_day_count")), _("Closed: %s") % self._num(payload.get("closed_day_count")), "warning"),
@@ -301,6 +303,14 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             cards.append(self._kpi_card(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or [])), _("Review workload"), "warning"))
         if settings.get("show_vehicle_closing"):
             cards.append(self._kpi_card(_("Vehicle Issues"), self._num(payload.get("pending_vehicle_issues")), _("Closing / variance risk"), "danger"))
+
+        signal_cards = [
+            self._gauge_card(_("Completion Rate"), completion, _("Route execution completion"), "#0ea5e9"),
+            self._gauge_card(_("Collection Efficiency"), collection_rate, _("Collected vs net sales"), "#16a34a"),
+            self._gauge_card(_("Gross Margin"), margin, _("Estimated profit quality"), "#8b5cf6"),
+            self._gauge_card(_("Return Pressure"), return_rate, _("Returns vs gross sales"), "#ef4444"),
+            self._gauge_card(_("Open Due Ratio"), open_due_ratio, _("Open due vs net sales"), "#f97316"),
+        ]
         title = self._section_title(
             _("Executive Command Center"),
             _("Management-level KPIs with period comparison, commercial performance, and operational risk."),
@@ -309,7 +319,8 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
         return (
             f"<div class='route_dash_block'>{title}{self._scope_badges()}{self._settings_badges(settings)}"
             f"<div class='route_dash_scope'><span><small>{escape(_('Period Compared'))}</small>{escape(subtitle)}</span></div>"
-            f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div></div>"
+            f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div>"
+            f"<div class='route_dash_exec_signal_grid'>{''.join(signal_cards)}</div></div>"
         )
 
     def _render_manager_period_comparison_html(self, comparison):
@@ -354,13 +365,20 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             (line["name"], line.get("returns", 0.0), "#ef4444")
             for line in sorted(payload.get("product_lines") or [], key=lambda line: line.get("returns", 0.0), reverse=True)[:10]
         ]
+        mix_tiles = [
+            (_("Gross Sales"), self._money(payload.get("gross_sales", 0.0)), _("Top-line business value"), "#16a34a"),
+            (_("Net Sales"), self._money(payload.get("net_sales", 0.0)), _("After returns adjustment"), "#0ea5e9"),
+            (_("Collection"), self._money(payload.get("total_collected", 0.0)), _("Cash conversion during period"), "#22c55e"),
+            (_("Estimated Profit"), self._money(payload.get("gross_profit", 0.0)), _("Commercial profitability"), "#8b5cf6"),
+        ]
         html = self._section_title(
             _("Commercial Performance"),
             _("Sales, returns, collections, profit, and product contribution in one executive view."),
         )
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Sales / Collection / Profit Mix"), self._horizontal_bars(sales_return_rows, money=True), "", wide=True)
+        html += self._chart_card(_("Commercial Mix Columns"), self._column_chart(sales_return_rows, money=True), _("A more visual mix view for the main business values."), wide=True)
         html += self._chart_card(_("Sales vs Collection Trend"), self._line_chart(payload.get("daily_collection", {}), payload.get("daily_sales", {}), payload.get("date_from"), payload.get("date_to")), _("Trend across the selected period."), wide=True)
+        html += self._chart_card(_("Executive Mix Counters"), self._spotlight_tiles(mix_tiles), _("Fast-reading management counters."))
         html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(top_product_sales, money=True), "")
         html += self._chart_card(_("Top Profit Products"), self._horizontal_bars(top_product_profit, money=True, allow_negative=True), _("Estimated from product cost."))
         if settings.get("show_consignment") or settings.get("show_direct_return"):
@@ -402,16 +420,30 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
 
     def _render_manager_risk_html(self, payload, area_lines):
         settings = payload.get("settings") or {}
+        unfinished_visits = len(payload.get("unfinished_visits") or [])
+        overdue_promises = len(payload.get("due_overdue_promises") or [])
+        location_issues = len(payload.get("location_issue_visits") or [])
+        vehicle_issues = payload.get("pending_vehicle_issues", 0)
+        pending_transfers = payload.get("pending_transfer_count", 0)
+
+        alert_tiles = [
+            (_("Unfinished Visits"), self._num(unfinished_visits), _("Execution still open"), "#ef4444"),
+            (_("Open Promises"), self._num(overdue_promises), _("Due / overdue commitments"), "#8b5cf6"),
+        ]
         attention_rows = [
-            (_("Unfinished Visits"), len(payload.get("unfinished_visits") or []), "#ef4444"),
-            (_("Due / Overdue Promises"), len(payload.get("due_overdue_promises") or []), "#8b5cf6"),
+            (_("Unfinished Visits"), unfinished_visits, "#ef4444"),
+            (_("Due / Overdue Promises"), overdue_promises, "#8b5cf6"),
         ]
         if settings.get("show_location"):
-            attention_rows.append((_("Location Issues"), len(payload.get("location_issue_visits") or []), "#f59e0b"))
+            attention_rows.append((_("Location Issues"), location_issues, "#f59e0b"))
+            alert_tiles.append((_("Location Issues"), self._num(location_issues), _("Location review load"), "#f59e0b"))
         if settings.get("show_vehicle_closing"):
-            attention_rows.append((_("Vehicle Issues"), payload.get("pending_vehicle_issues", 0), "#64748b"))
+            attention_rows.append((_("Vehicle Issues"), vehicle_issues, "#64748b"))
+            alert_tiles.append((_("Vehicle Issues"), self._num(vehicle_issues), _("Vehicle closing exceptions"), "#64748b"))
         if settings.get("show_stock_transfers"):
-            attention_rows.append((_("Pending Transfers"), payload.get("pending_transfer_count", 0), "#0ea5e9"))
+            attention_rows.append((_("Pending Transfers"), pending_transfers, "#0ea5e9"))
+            alert_tiles.append((_("Pending Transfers"), self._num(pending_transfers), _("Transfers need follow-up"), "#0ea5e9"))
+
         area_risk = [
             (line["name"], line.get("issues", 0) + (line.get("open_due", 0.0) / 10.0), "#ef4444")
             for line in sorted(area_lines, key=lambda line: (line.get("issues", 0) + line.get("open_due", 0.0) / 10.0), reverse=True)[:10]
@@ -423,6 +455,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             _("Where management attention is needed: people, vehicles, areas, and unresolved operations."),
         )
         html += "<div class='route_dash_chart_grid'>"
+        html += self._chart_card(_("Attention Counters"), self._spotlight_tiles(alert_tiles), _("High-visibility counters for the main operational blockers."), wide=True)
         html += self._chart_card(_("Attention Mix"), self._horizontal_bars(attention_rows), _("Only enabled workflows are included."))
         html += self._chart_card(_("Area Risk Ranking"), self._horizontal_bars(area_risk), _("Mix of issues and open due by area."))
         html += "</div>"
@@ -485,3 +518,54 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             "previous_from": previous_payload.get("date_from"),
             "previous_to": previous_payload.get("date_to"),
         }
+
+    def _gauge_card(self, title, value, note, color):
+        value = max(0.0, min(float(value or 0.0), 100.0))
+        return (
+            "<div class='route_dash_gauge_card'>"
+            f"<div class='route_dash_gauge_ring' style='background: conic-gradient({escape(color)} 0 {value:.2f}%, #e2e8f0 {value:.2f}% 100%);'>"
+            f"<div class='route_dash_gauge_inner'><strong>{escape(f'{value:.0f}%')}</strong><span>{escape(str(title))}</span></div>"
+            "</div>"
+            f"<small>{escape(str(note or ''))}</small>"
+            "</div>"
+        )
+
+    def _column_chart(self, rows, money=False, allow_negative=False):
+        rows = [(label, value, color) for label, value, color in rows if value or allow_negative]
+        if not rows:
+            return self._empty_chart()
+        max_value = max(abs(float(value or 0.0)) for _label, value, _color in rows) or 1.0
+        html = "<div class='route_dash_column_chart'>"
+        for label, value, color in rows:
+            raw_value = float(value or 0.0)
+            height = max(min(abs(raw_value) / max_value * 100.0, 100.0), 8.0)
+            display = self._money(raw_value) if money else self._short_num(raw_value)
+            negative_class = " route_dash_column_negative" if raw_value < 0 else ""
+            html += (
+                f"<div class='route_dash_column_item{negative_class}'>"
+                f"<div class='route_dash_column_value'>{escape(display)}</div>"
+                "<div class='route_dash_column_track'>"
+                f"<div class='route_dash_column_bar' style='height:{height:.2f}%; background:{escape(color)};'></div>"
+                "</div>"
+                f"<div class='route_dash_column_label'>{escape(str(label))}</div>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
+
+    def _spotlight_tiles(self, rows):
+        rows = [row for row in rows if row and row[1] not in (False, None, "")]
+        if not rows:
+            return self._empty_chart()
+        html = "<div class='route_dash_spotlight_grid'>"
+        for title, value, note, color in rows:
+            html += (
+                "<div class='route_dash_spotlight_tile'>"
+                f"<span class='route_dash_spotlight_dot' style='background:{escape(color)}; box-shadow: 0 0 0 10px {escape(color)}22;'></span>"
+                f"<strong>{escape(str(value))}</strong>"
+                f"<span>{escape(str(title))}</span>"
+                f"<small>{escape(str(note or ''))}</small>"
+                "</div>"
+            )
+        html += "</div>"
+        return html
