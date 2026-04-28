@@ -55,5 +55,6 @@ from . import route_geo_control_center
 from . import route_supervisor_daily_control
 from . import route_supervisor_daily_closing
 
+from . import route_dashboard_configuration
 from . import route_supervisor_performance_dashboard
 from . import route_manager_executive_dashboard
