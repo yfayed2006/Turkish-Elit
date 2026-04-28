@@ -58,6 +58,17 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     area_id = fields.Many2one("route.area", string="Area")
     outlet_id = fields.Many2one("route.outlet", string="Outlet")
 
+    show_direct_sale_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_consignment_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_outlet_comparison_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_direct_return_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_location_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_vehicle_closing_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_loading_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_stock_transfer_sections = fields.Boolean(compute="_compute_settings_visibility")
+    show_lot_expiry_sections = fields.Boolean(compute="_compute_settings_visibility")
+    dashboard_operation_mode_label = fields.Char(compute="_compute_settings_visibility")
+
     filtered_visit_count = fields.Integer(string="Filtered Visits", compute="_compute_dashboard_html")
     completed_visit_count = fields.Integer(string="Completed Visits", compute="_compute_dashboard_html")
     collection_amount = fields.Monetary(string="Collected", currency_field="currency_id", compute="_compute_dashboard_html")
@@ -168,6 +179,97 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.route_city_id:
                     rec.city_id = rec.outlet_id.route_city_id
+
+    @api.depends("company_id")
+    def _compute_settings_visibility(self):
+        for rec in self:
+            settings = rec._get_dashboard_settings()
+            rec.show_direct_sale_sections = settings["show_direct_sale"]
+            rec.show_consignment_sections = settings["show_consignment"]
+            rec.show_outlet_comparison_sections = settings["show_outlet_comparison"]
+            rec.show_direct_return_sections = settings["show_direct_return"]
+            rec.show_location_sections = settings["show_location"]
+            rec.show_vehicle_closing_sections = settings["show_vehicle_closing"]
+            rec.show_loading_sections = settings["show_loading"]
+            rec.show_stock_transfer_sections = settings["show_stock_transfers"]
+            rec.show_lot_expiry_sections = settings["show_lot_expiry"]
+            rec.dashboard_operation_mode_label = settings["operation_mode_label"]
+
+    def _company_field_value(self, company, field_name, default=False):
+        if company and field_name in company._fields:
+            return company[field_name]
+        return default
+
+    def _get_dashboard_settings(self):
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        operation_mode = self._company_field_value(company, "route_operation_mode", "hybrid") or "hybrid"
+        direct_toggle = bool(self._company_field_value(company, "route_enable_direct_sale", True))
+        direct_return_toggle = bool(self._company_field_value(company, "route_enable_direct_return", True))
+
+        show_direct_sale = operation_mode in ("direct_sales", "hybrid") and (operation_mode == "direct_sales" or direct_toggle)
+        show_consignment = operation_mode in ("consignment", "hybrid")
+        if not show_direct_sale and not show_consignment:
+            show_consignment = True
+
+        loading_workflow = self._company_field_value(company, "route_vehicle_loading_workflow", "optional") or "optional"
+        show_loading = loading_workflow in ("optional", "required")
+        show_vehicle_closing = bool(self._company_field_value(company, "route_workspace_show_vehicle_closing", True))
+        show_location = bool(self._company_field_value(company, "route_enable_outlet_geolocation", True))
+        show_lot = bool(self._company_field_value(company, "route_enable_lot_serial_tracking", False))
+        show_expiry = bool(self._company_field_value(company, "route_enable_expiry_tracking", False)) and show_lot
+        show_direct_return = show_direct_sale and direct_return_toggle
+        show_stock_transfers = bool(show_loading or show_consignment or show_direct_return or show_vehicle_closing)
+
+        labels = {
+            "consignment": _("Consignment Only"),
+            "direct_sales": _("Direct Sale Only"),
+            "hybrid": _("Direct Sale + Consignment"),
+        }
+        return {
+            "operation_mode": operation_mode,
+            "operation_mode_label": labels.get(operation_mode, labels["hybrid"]),
+            "show_direct_sale": show_direct_sale,
+            "show_consignment": show_consignment,
+            "show_outlet_comparison": bool(show_direct_sale and show_consignment),
+            "show_direct_return": show_direct_return,
+            "show_location": show_location,
+            "show_vehicle_closing": show_vehicle_closing,
+            "show_loading": show_loading,
+            "show_stock_transfers": show_stock_transfers,
+            "show_lot_expiry": bool(show_lot or show_expiry),
+            "loading_workflow": loading_workflow,
+            "geo_policy": self._company_field_value(company, "route_geo_checkin_policy", "review_only") or "review_only",
+        }
+
+    def _visit_is_direct_sale(self, visit):
+        execution_mode = getattr(visit, "visit_execution_mode", False)
+        if execution_mode:
+            return execution_mode == "direct_sales"
+        outlet = getattr(visit, "outlet_id", False)
+        return bool(outlet and getattr(outlet, "outlet_operation_mode", False) in ("direct_sale", "direct_sales"))
+
+    def _record_allowed_by_operation_mode(self, record, settings):
+        outlet = getattr(record, "outlet_id", False) or getattr(record, "route_outlet_id", False)
+        visit = getattr(record, "visit_id", False) or getattr(record, "settlement_visit_id", False) or getattr(record, "route_visit_id", False)
+        if visit:
+            is_direct = self._visit_is_direct_sale(visit)
+        else:
+            is_direct = bool(outlet and getattr(outlet, "outlet_operation_mode", False) in ("direct_sale", "direct_sales"))
+        if is_direct and not settings["show_direct_sale"]:
+            return False
+        if not is_direct and not settings["show_consignment"]:
+            return False
+        return True
+
+    def _apply_operation_mode_to_visits(self, visits, settings):
+        if settings["show_direct_sale"] and settings["show_consignment"]:
+            return visits
+        if settings["show_direct_sale"]:
+            return visits.filtered(lambda visit: self._visit_is_direct_sale(visit))
+        if settings["show_consignment"]:
+            return visits.filtered(lambda visit: not self._visit_is_direct_sale(visit))
+        return visits.browse()
 
     def action_refresh_dashboard(self):
         return {"type": "ir.actions.client", "tag": "reload"}
@@ -420,6 +522,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         date_from, date_to = self._get_date_range()
         dt_from, dt_to = self._datetime_bounds()
         company_id = self.company_id.id or self.env.company.id
+        settings = self._get_dashboard_settings()
 
         Visit = self.env["route.visit"]
         Payment = self.env["route.visit.payment"]
@@ -429,7 +532,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         VehicleClosing = self.env["route.vehicle.closing"]
         LoadingProposal = self.env["route.loading.proposal"]
 
-        visits = self._filter_visits_by_city(Visit.search(self._visit_domain()))
+        visits = self._apply_operation_mode_to_visits(
+            self._filter_visits_by_city(Visit.search(self._visit_domain())), settings
+        )
         payments = Payment.search(
             [
                 ("company_id", "=", company_id),
@@ -437,7 +542,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 ("payment_date", "<=", fields.Datetime.to_string(dt_to)),
                 ("state", "!=", "cancelled"),
             ]
-        ).filtered(lambda payment: self._record_in_scope(payment))
+        ).filtered(lambda payment: self._record_in_scope(payment) and self._record_allowed_by_operation_mode(payment, settings))
         confirmed_payments = payments.filtered(lambda payment: payment.state == "confirmed")
 
         promise_candidates = Payment.search(
@@ -446,7 +551,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 ("state", "!=", "cancelled"),
                 ("promise_amount", ">", 0.0),
             ]
-        ).filtered(lambda payment: self._record_in_scope(payment))
+        ).filtered(lambda payment: self._record_in_scope(payment) and self._record_allowed_by_operation_mode(payment, settings))
 
         def _promise_in_period(payment):
             promise_date = payment.promise_date or payment.due_date
@@ -463,24 +568,30 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             and _promise_in_period(payment)
         )
 
-        sale_orders = SaleOrder.search(
-            [
-                ("company_id", "=", company_id),
-                ("route_order_mode", "=", "direct_sale"),
-                ("date_order", ">=", fields.Datetime.to_string(dt_from)),
-                ("date_order", "<=", fields.Datetime.to_string(dt_to)),
-                ("state", "not in", ["cancel", "cancelled"]),
-            ]
-        ).filtered(lambda order: self._record_in_scope(order))
+        if settings["show_direct_sale"]:
+            sale_orders = SaleOrder.search(
+                [
+                    ("company_id", "=", company_id),
+                    ("route_order_mode", "=", "direct_sale"),
+                    ("date_order", ">=", fields.Datetime.to_string(dt_from)),
+                    ("date_order", "<=", fields.Datetime.to_string(dt_to)),
+                    ("state", "not in", ["cancel", "cancelled"]),
+                ]
+            ).filtered(lambda order: self._record_in_scope(order))
+        else:
+            sale_orders = SaleOrder.browse()
 
-        direct_returns = DirectReturn.search(
-            [
-                ("company_id", "=", company_id),
-                ("return_date", ">=", date_from),
-                ("return_date", "<=", date_to),
-                ("state", "!=", "cancel"),
-            ]
-        ).filtered(lambda ret: self._record_in_scope(ret))
+        if settings["show_direct_return"]:
+            direct_returns = DirectReturn.search(
+                [
+                    ("company_id", "=", company_id),
+                    ("return_date", ">=", date_from),
+                    ("return_date", "<=", date_to),
+                    ("state", "!=", "cancel"),
+                ]
+            ).filtered(lambda ret: self._record_in_scope(ret))
+        else:
+            direct_returns = DirectReturn.browse()
 
         closing_records = DailyClosing.search(
             [
@@ -490,29 +601,37 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             ]
         ).filtered(lambda closing: self._record_in_scope(closing))
 
-        vehicle_closings = VehicleClosing.search(
-            [
-                ("company_id", "=", company_id),
-                ("plan_date", ">=", date_from),
-                ("plan_date", "<=", date_to),
-            ]
-        ).filtered(lambda closing: self._record_in_scope(closing))
+        if settings["show_vehicle_closing"]:
+            vehicle_closings = VehicleClosing.search(
+                [
+                    ("company_id", "=", company_id),
+                    ("plan_date", ">=", date_from),
+                    ("plan_date", "<=", date_to),
+                ]
+            ).filtered(lambda closing: self._record_in_scope(closing))
+        else:
+            vehicle_closings = VehicleClosing.browse()
 
-        loading_proposals = LoadingProposal.search(
-            [
-                ("company_id", "=", company_id),
-                ("plan_date", ">=", date_from),
-                ("plan_date", "<=", date_to),
-            ]
-        ).filtered(lambda proposal: self._record_in_scope(proposal))
+        if settings["show_loading"]:
+            loading_proposals = LoadingProposal.search(
+                [
+                    ("company_id", "=", company_id),
+                    ("plan_date", ">=", date_from),
+                    ("plan_date", "<=", date_to),
+                ]
+            ).filtered(lambda proposal: self._record_in_scope(proposal))
+        else:
+            loading_proposals = LoadingProposal.browse()
 
-        route_transfer_candidates = (
-            visits.mapped("return_picking_ids")
-            | visits.mapped("refill_picking_id")
-            | direct_returns.mapped("picking_ids")
-            | loading_proposals.mapped("picking_id")
-            | vehicle_closings.mapped("reconciliation_picking_ids")
-        )
+        route_transfer_candidates = self.env["stock.picking"]
+        if settings["show_consignment"]:
+            route_transfer_candidates |= visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")
+        if settings["show_direct_return"]:
+            route_transfer_candidates |= direct_returns.mapped("picking_ids")
+        if settings["show_loading"]:
+            route_transfer_candidates |= loading_proposals.mapped("picking_id")
+        if settings["show_vehicle_closing"]:
+            route_transfer_candidates |= vehicle_closings.mapped("reconciliation_picking_ids")
         pending_transfers = route_transfer_candidates.filtered(lambda picking: picking and picking.state not in ("done", "cancel"))
 
         visit_status = {
@@ -536,6 +655,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         location_accepted_visits = visits.filtered(
             lambda visit: visit.geo_review_supervisor_decision == "accepted"
         )
+        if not settings["show_location"]:
+            location_missing_checkin_visits = visits.browse()
+            location_missing_outlet_visits = visits.browse()
+            location_outside_zone_visits = visits.browse()
+            location_needs_correction_visits = visits.browse()
+            location_pending_review_visits = visits.browse()
+            location_accepted_visits = visits.browse()
         location_issue_visits = (
             location_missing_checkin_visits
             | location_missing_outlet_visits
@@ -546,8 +672,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         unfinished_visits = visits.filtered(lambda visit: visit.visit_process_state not in ("done", "cancel"))
         open_due_visits = visits.filtered(lambda visit: (visit.remaining_due_amount or 0.0) > 0.0)
 
-        consignment_sales = sum((line.sold_amount or 0.0) for line in visits.mapped("line_ids"))
-        consignment_returns = sum((line.return_amount or 0.0) for line in visits.mapped("line_ids"))
+        consignment_visits = visits.filtered(lambda visit: not self._visit_is_direct_sale(visit)) if settings["show_consignment"] else visits.browse()
+        consignment_sales = sum((line.sold_amount or 0.0) for line in consignment_visits.mapped("line_ids"))
+        consignment_returns = sum((line.return_amount or 0.0) for line in consignment_visits.mapped("line_ids"))
         direct_sales = sum(sale_orders.mapped("amount_total"))
         direct_return_amount = sum(direct_returns.mapped("amount_total"))
         total_collected = sum(confirmed_payments.mapped("amount"))
@@ -571,7 +698,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         for payment in confirmed_payments:
             pay_date = fields.Date.to_date(payment.payment_date) if payment.payment_date else date_from
             daily_collection[pay_date] += payment.amount or 0.0
-        for visit in visits:
+        for visit in consignment_visits:
             visit_date = visit.date or date_from
             daily_sales[visit_date] += sum((line.sold_amount or 0.0) for line in visit.line_ids)
             daily_returns[visit_date] += sum((line.return_amount or 0.0) for line in visit.line_ids)
@@ -584,7 +711,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
         salesperson_lines = self._build_salesperson_lines(visits, payments, sale_orders, direct_returns, location_issue_visits)
         vehicle_lines = self._build_vehicle_lines(visits, vehicle_closings)
-        product_lines, gross_profit, missing_cost_product_count = self._build_product_lines(visits, sale_orders, direct_returns)
+        product_lines, gross_profit, missing_cost_product_count = self._build_product_lines(consignment_visits, sale_orders, direct_returns)
         outlet_lines, outlet_mode_summary = self._build_outlet_lines(
             visits, confirmed_payments, open_promises, sale_orders, direct_returns, location_issue_visits
         )
@@ -608,6 +735,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         return {
             "date_from": date_from,
             "date_to": date_to,
+            "settings": settings,
             "visits": visits,
             "payments": payments,
             "confirmed_payments": confirmed_payments,
@@ -964,6 +1092,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             + payload["pending_transfer_count"]
             + len(payload["due_overdue_promises"])
         )
+        settings = payload["settings"]
         cards = [
             self._kpi_card(_("Visits"), self._num(visit_total), _("Completed: %s") % self._num(done), "primary", f"{completion:.0f}%"),
             self._kpi_card(_("Collection"), self._money(payload["total_collected"]), _("Rate: %s%%") % f"{collection_rate:.0f}", "success"),
@@ -973,18 +1102,22 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             self._kpi_card(_("Estimated Profit"), self._money(payload["gross_profit"]), _("Margin: %s%% | Cost data: %s%%") % (f"{margin:.0f}", f"{profit_quality:.0f}"), "profit"),
             self._kpi_card(_("Closed Operating Days"), self._num(payload["closed_day_count"]), _("Open / Not Ready: %s") % self._num(payload["open_day_count"]), "success"),
             self._kpi_card(_("Reopened Days"), self._num(payload["reopened_day_count"]), _("Operating days: %s") % self._num(payload["period_day_count"]), "warning"),
-            self._kpi_card(_("Vehicle Issues"), self._num(payload["pending_vehicle_issues"]), _("Vehicle closing checks"), "danger"),
-            self._kpi_card(_("Location Review"), self._num(len(payload["location_issue_visits"])), _("Outside/missing/pending review"), "warning"),
-            self._kpi_card(_("Pending Transfers"), self._num(payload["pending_transfer_count"]), _("Stock moves not done"), "info"),
-            self._kpi_card(_("Returns"), self._money(payload["total_returns"]), _("Return orders/transfers"), "danger"),
         ]
+        if settings["show_vehicle_closing"]:
+            cards.append(self._kpi_card(_("Vehicle Issues"), self._num(payload["pending_vehicle_issues"]), _("Vehicle closing checks"), "danger"))
+        if settings["show_location"]:
+            cards.append(self._kpi_card(_("Location Review"), self._num(len(payload["location_issue_visits"])), _("Outside/missing/pending review"), "warning"))
+        if settings["show_stock_transfers"]:
+            cards.append(self._kpi_card(_("Pending Transfers"), self._num(payload["pending_transfer_count"]), _("Stock moves not done"), "info"))
+        if settings["show_consignment"] or settings["show_direct_return"]:
+            cards.append(self._kpi_card(_("Returns"), self._money(payload["total_returns"]), _("Return orders/transfers"), "danger"))
         scope = self._scope_badges()
         title = self._section_title(
             _("Performance Command Center"),
             _("High-level KPIs for visits, collections, promises, stock operations, and sales performance."),
         )
         return (
-            f"<div class='route_dash_block'>{title}{scope}"
+            f"<div class='route_dash_block'>{title}{scope}{self._settings_badges(settings)}"
             f"{self._render_insight_cards(payload, collection_rate, attention_score)}"
             f"<div class='route_dash_kpi_grid'>{''.join(cards)}</div></div>"
         )
@@ -999,14 +1132,17 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             label = visit.outlet_id.display_name if visit.outlet_id else _("No Outlet")
             due_by_outlet[label] += visit.remaining_due_amount or 0.0
         highest_due = max(due_by_outlet.items(), key=lambda item: item[1], default=False)
+        settings = payload["settings"]
         insights = [
             (_("Best Collector"), best_salesperson and best_salesperson.get("name") or _("No data"), best_salesperson and self._money(best_salesperson.get("collection")) or "-", "success"),
             (_("Top Product"), top_product and top_product.get("name") or _("No data"), top_product and self._money(top_product.get("sales")) or "-", "sales"),
             (_("Highest Open Due"), highest_due and highest_due[0] or _("No open due"), highest_due and self._money(highest_due[1]) or "-", "danger"),
-            (_("Most Returned Product"), top_return_product and top_return_product.get("name") or _("No returns"), top_return_product and self._money(top_return_product.get("returns")) or "-", "warning"),
-            (_("Critical Vehicle"), critical_vehicle and critical_vehicle.get("name") or _("No data"), critical_vehicle and _("Issues: %s") % self._num(critical_vehicle.get("issues")) or "-", "danger"),
-            (_("Collection Rate"), f"{collection_rate:.0f}%", _("Attention score: %s") % self._num(attention_score), "info"),
         ]
+        if settings["show_consignment"] or settings["show_direct_return"]:
+            insights.append((_("Most Returned Product"), top_return_product and top_return_product.get("name") or _("No returns"), top_return_product and self._money(top_return_product.get("returns")) or "-", "warning"))
+        if settings["show_vehicle_closing"]:
+            insights.append((_("Critical Vehicle"), critical_vehicle and critical_vehicle.get("name") or _("No data"), critical_vehicle and _("Issues: %s") % self._num(critical_vehicle.get("issues")) or "-", "danger"))
+        insights.append((_("Collection Rate"), f"{collection_rate:.0f}%", _("Attention score: %s") % self._num(attention_score), "info"))
         return "<div class='route_dash_insight_grid'>" + "".join(
             self._insight_card(title, value, note, tone) for title, value, note, tone in insights
         ) + "</div>"
@@ -1019,12 +1155,15 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             (_("Not Started"), status.get("not_started", 0), "#f59e0b"),
             (_("Cancelled"), status.get("cancelled", 0), "#ef4444"),
         ]
+        settings = payload["settings"]
         operations_rows = [
             (_("Unfinished Visits"), len(payload["unfinished_visits"]), "#ef4444"),
             (_("Due / Overdue Promises"), len(payload["due_overdue_promises"]), "#8b5cf6"),
-            (_("Vehicle Issues"), payload["pending_vehicle_issues"], "#64748b"),
-            (_("Pending Transfers"), payload["pending_transfer_count"], "#0ea5e9"),
         ]
+        if settings["show_vehicle_closing"]:
+            operations_rows.append((_("Vehicle Issues"), payload["pending_vehicle_issues"], "#64748b"))
+        if settings["show_stock_transfers"]:
+            operations_rows.append((_("Pending Transfers"), payload["pending_transfer_count"], "#0ea5e9"))
         location_rows = [
             (_("Missing Check-in"), len(payload["location_missing_checkin_visits"]), "#ef4444"),
             (_("Missing Outlet GPS"), len(payload["location_missing_outlet_visits"]), "#64748b"),
@@ -1041,8 +1180,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         html = self._section_title(_("Visit and Closing Health"), _("Visual status instead of repeated operational lists."))
         html += "<div class='route_dash_chart_grid'>"
         html += self._chart_card(_("Visit Status"), self._pie_chart(status_rows), self._legend(status_rows))
-        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers are shown here."))
-        html += self._chart_card(_("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
+        html += self._chart_card(_("Attention Mix"), self._horizontal_bars(operations_rows), _("Only active blockers enabled in Route Settings are shown here."))
+        if settings["show_location"]:
+            html += self._chart_card(_("Location Review Breakdown"), self._horizontal_bars(location_rows), _("Location is split by reason to avoid one confusing total."))
         html += self._chart_card(_("Closing Status"), self._pie_chart(closing_rows), self._legend(closing_rows) + _(" Operating days only."))
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
@@ -1080,9 +1220,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             (line["name"], line.get("returns", 0.0), "#ef4444")
             for line in sorted(payload["product_lines"], key=lambda item: item.get("returns", 0.0), reverse=True)[:10]
         ]
+        settings = payload["settings"]
         sales_return_rows = [
             (_("Gross Sales"), payload["gross_sales"], "#16a34a"),
-            (_("Returns"), payload["total_returns"], "#ef4444"),
+        ]
+        if settings["show_consignment"] or settings["show_direct_return"]:
+            sales_return_rows.append((_("Returns"), payload["total_returns"], "#ef4444"))
+        sales_return_rows += [
             (_("Net Sales"), payload["net_sales"], "#0ea5e9"),
             (_("Estimated Profit"), payload["gross_profit"], "#8b5cf6"),
         ]
@@ -1092,45 +1236,69 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         html += self._chart_card(_("Sales / Returns / Profit"), self._horizontal_bars(sales_return_rows, money=True), "")
         html += self._chart_card(_("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
         html += self._chart_card(_("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
-        html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), "")
+        if settings["show_consignment"] or settings["show_direct_return"]:
+            html += self._chart_card(_("Top Returned Products"), self._horizontal_bars(product_returns, money=True), "")
         html += self._chart_card(_("Estimated Product Profit"), self._horizontal_bars(profit_rows, money=True, allow_negative=True), _("Profit is safest when all products have standard cost."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
     def _render_outlet_chart_html(self, payload):
+        settings = payload["settings"]
         outlet_lines = payload.get("outlet_lines") or []
         summary = payload.get("outlet_mode_summary") or {}
         direct = summary.get("direct_sale") or {}
         consignment = summary.get("consignment") or {}
 
-        comparison_rows = [
-            (_("Sales"), direct.get("sales", 0.0), consignment.get("sales", 0.0), True),
-            (_("Collection"), direct.get("collection", 0.0), consignment.get("collection", 0.0), True),
-            (_("Open Due"), direct.get("open_due", 0.0), consignment.get("open_due", 0.0), True),
-            (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
-            (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
-        ]
         top_sales = sorted(outlet_lines, key=lambda line: line.get("sales", 0.0), reverse=True)[:10]
         top_collection = sorted(outlet_lines, key=lambda line: line.get("collection", 0.0), reverse=True)[:10]
         top_due = sorted(outlet_lines, key=lambda line: line.get("open_due", 0.0), reverse=True)[:10]
         top_returns = sorted(outlet_lines, key=lambda line: line.get("returns", 0.0), reverse=True)[:10]
         risk_lines = sorted(outlet_lines, key=lambda line: line.get("risk", 0.0), reverse=True)[:10]
 
-        direct_card = self._outlet_mode_card("direct", _("Direct Sale Outlets"), direct)
-        consignment_card = self._outlet_mode_card("consignment", _("Consignment Outlets"), consignment)
-        outlet_cards = "<div class='route_dash_outlet_mode_grid'>%s%s</div>" % (direct_card, consignment_card)
+        outlet_cards_parts = []
+        if settings["show_direct_sale"]:
+            outlet_cards_parts.append(self._outlet_mode_card("direct", _("Direct Sale Outlets"), direct))
+        if settings["show_consignment"]:
+            outlet_cards_parts.append(self._outlet_mode_card("consignment", _("Consignment Outlets"), consignment))
+        outlet_cards = "<div class='route_dash_outlet_mode_grid'>%s</div>" % "".join(outlet_cards_parts)
 
-        html = self._section_title(
-            _("Outlet Performance Analytics"),
-            _("Compare direct-sale and consignment outlets by sales, collection, open due, returns, and operational risk."),
-        )
+        if settings["show_outlet_comparison"]:
+            title = _("Direct Sale vs Consignment Outlet Performance")
+            subtitle = _("Compare direct-sale and consignment outlets by sales, collection, open due, returns, and operational risk.")
+        elif settings["show_direct_sale"]:
+            title = _("Direct Sale Outlet Performance")
+            subtitle = _("Direct-sale outlet performance by sales orders, collections, open due, returns, and operational risk.")
+        else:
+            title = _("Consignment Outlet Performance")
+            subtitle = _("Consignment outlet performance by visit sales, collection, returns, shelf movement, and operational risk.")
+
+        html = self._section_title(title, subtitle)
         html += outlet_cards
         html += "<div class='route_dash_chart_grid'>"
-        html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Side-by-side comparison by outlet operation mode."), wide=True)
-        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars([(line["name"], line["sales"], "#0ea5e9") for line in top_sales], money=True), _("Revenue leaders across both outlet types."))
+        if settings["show_outlet_comparison"]:
+            comparison_rows = [
+                (_("Sales"), direct.get("sales", 0.0), consignment.get("sales", 0.0), True),
+                (_("Collection"), direct.get("collection", 0.0), consignment.get("collection", 0.0), True),
+                (_("Open Due"), direct.get("open_due", 0.0), consignment.get("open_due", 0.0), True),
+                (_("Returns"), direct.get("returns", 0.0), consignment.get("returns", 0.0), True),
+                (_("Visits"), direct.get("visits", 0), consignment.get("visits", 0), False),
+            ]
+            html += self._chart_card(_("Direct Sale vs Consignment"), self._dual_horizontal_bars(comparison_rows), _("Side-by-side comparison by outlet operation mode."), wide=True)
+        else:
+            active_summary = direct if settings["show_direct_sale"] else consignment
+            activity_rows = [
+                (_("Sales"), active_summary.get("sales", 0.0), "#0ea5e9"),
+                (_("Collection"), active_summary.get("collection", 0.0), "#16a34a"),
+                (_("Open Due"), active_summary.get("open_due", 0.0), "#ef4444"),
+                (_("Returns"), active_summary.get("returns", 0.0), "#f97316"),
+                (_("Visits"), active_summary.get("visits", 0), "#8b5cf6"),
+            ]
+            html += self._chart_card(_("Outlet Activity Mix"), self._horizontal_bars(activity_rows), _("Displayed according to the active Route Operation Mode."), wide=True)
+        html += self._chart_card(_("Top Outlets by Sales"), self._horizontal_bars([(line["name"], line["sales"], "#0ea5e9") for line in top_sales], money=True), _("Revenue leaders for the enabled outlet workflow."))
         html += self._chart_card(_("Top Outlets by Collection"), self._horizontal_bars([(line["name"], line["collection"], "#16a34a") for line in top_collection], money=True), _("Best cash collection outlets."))
         html += self._chart_card(_("Highest Open Due Outlets"), self._horizontal_bars([(line["name"], line["open_due"], "#ef4444") for line in top_due], money=True), _("Priority collection follow-up."))
-        html += self._chart_card(_("Top Returned Outlets"), self._horizontal_bars([(line["name"], line["returns"], "#f97316") for line in top_returns], money=True), _("Helps identify slow movement, mismatch, or display issues."))
+        if settings["show_consignment"] or settings["show_direct_return"]:
+            html += self._chart_card(_("Top Returned Outlets"), self._horizontal_bars([(line["name"], line["returns"], "#f97316") for line in top_returns], money=True), _("Helps identify slow movement, mismatch, or display issues."))
         html += self._chart_card(_("Outlet Risk Ranking"), self._outlet_risk_cards(risk_lines), _("Risk combines unfinished visits, location issues, open due, promises, and returns."), wide=True)
         html += "</div>"
         return f"<div class='route_dash_block route_dash_outlet_block'>{html}</div>"
@@ -1221,14 +1389,15 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 for line in salesperson_rows
             ],
         )
-        html += self._ranking_table(
-            _("Vehicle Issue Ranking"),
-            [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
-            [
-                [line["name"], self._num(line["visits"]), self._num(line["unfinished"]), self._num(line["variance"]), self._num(line["issues"])]
-                for line in vehicle_rows
-            ],
-        )
+        if payload["settings"].get("show_vehicle_closing"):
+            html += self._ranking_table(
+                _("Vehicle Issue Ranking"),
+                [_('Vehicle'), _('Visits'), _('Unfinished'), _('Variance'), _('Issues')],
+                [
+                    [line["name"], self._num(line["visits"]), self._num(line["unfinished"]), self._num(line["variance"]), self._num(line["issues"])]
+                    for line in vehicle_rows
+                ],
+            )
         html += "</div>"
         return f"<div class='route_dash_block'>{html}</div>"
 
@@ -1258,6 +1427,20 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             f"<div><span>{escape(str(title))}</span><p>{escape(str(subtitle or ''))}</p></div>"
             "</div>"
         )
+
+    def _settings_badges(self, settings):
+        active = [(_("Operation Mode"), settings.get("operation_mode_label") or _("Hybrid"))]
+        if settings.get("show_location"):
+            active.append((_("Location Check-in"), _("Enabled")))
+        if settings.get("show_vehicle_closing"):
+            active.append((_("Vehicle Closing"), _("Enabled")))
+        if settings.get("show_loading"):
+            active.append((_("Vehicle Loading"), (settings.get("loading_workflow") or "").title()))
+        if settings.get("show_lot_expiry"):
+            active.append((_("Lot / Expiry"), _("Enabled")))
+        return "<div class='route_dash_settings_strip'>" + "".join(
+            f"<span><small>{escape(str(label))}</small>{escape(str(value))}</span>" for label, value in active
+        ) + "</div>"
 
     def _scope_badges(self):
         badges = []
