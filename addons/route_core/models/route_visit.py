@@ -2150,6 +2150,11 @@ class RouteVisit(models.Model):
             if not rec.vehicle_id:
                 raise UserError(_("Please select a vehicle before starting the visit."))
 
+            plan_line = rec._get_plan_line()
+            if plan_line and plan_line.plan_id:
+                plan_line.plan_id._ensure_vehicle_loading_ready_for_visit_start()
+                plan_line.plan_id._ensure_no_unresolved_previous_pending(plan_line)
+
             rec._ensure_single_active_plan_visit()
 
             rec.write({
