@@ -559,17 +559,21 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .popup-row {{ margin:3px 0; font-size:12px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
 @media (max-width: 900px) {{
-  .route-map-header {{ flex-direction:column; }}
+  .route-map-header {{ flex-direction:column; padding:10px; }}
   .legend {{ justify-content:flex-start; }}
   .route-map-body {{ display:block; }}
-  #map {{ height:48vh; min-height:330px; }}
-  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:8px; }}
+  #map {{ height:46vh; min-height:320px; }}
+  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:10px; }}
   .actions {{ grid-template-columns:1fr 1fr; }}
 }}
 @media (max-width: 420px) {{
-  .grid {{ grid-template-columns:1fr 1fr; }}
-  .visit-title {{ font-size:14px; }}
-  .map-btn {{ font-size:11px; }}
+  .route-map-title {{ font-size:16px; }}
+  .route-map-subtitle {{ font-size:11px; }}
+  .legend-pill {{ font-size:11px; padding:4px 7px; }}
+  .grid {{ grid-template-columns:1fr 1fr; gap:8px 12px; }}
+  .visit-card {{ padding:12px; border-radius:16px; }}
+  .visit-title {{ font-size:15px; }}
+  .map-btn {{ min-height:40px; font-size:12px; }}
 }}
 </style>
 </head>
@@ -683,4 +687,3 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
-
