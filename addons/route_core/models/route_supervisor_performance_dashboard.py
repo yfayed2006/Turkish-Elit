@@ -2,10 +2,9 @@ from collections import defaultdict
 from datetime import date as pydate
 from datetime import datetime, time, timedelta
 from html import escape
+import unicodedata
 
 from dateutil.relativedelta import relativedelta
-from markupsafe import Markup, escape as html_escape
-
 from odoo import _, api, fields, models
 
 
@@ -1740,13 +1739,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             metric(_("Total Visits"), self._num(visit_total), _("Filtered route visits"), "primary"),
             metric(_("Completed Visits"), self._num(done), pct(completion_rate), "success"),
             metric(_("Unfinished Visits"), self._num(len(payload.get("unfinished_visits") or [])), _("Needs follow-up"), "danger"),
-            metric(_("Total Sales"), self._money(payload.get("gross_sales")), _("Before returns"), "primary"),
-            metric(_("Net Sales"), self._money(payload.get("net_sales")), _("After returns"), "success"),
-            metric(_("Collected"), self._money(payload.get("total_collected")), pct(collection_rate), "success"),
-            metric(_("Open Due"), self._money(payload.get("open_due_amount")), _("Outstanding balance"), "danger"),
-            metric(_("Open Promises"), self._money(payload.get("open_promise_amount")), _("Promise amount"), "warning"),
-            metric(_("Returns"), self._money(payload.get("total_returns")), pct(return_rate), "warning"),
-            metric(_("Estimated Profit"), self._money(payload.get("gross_profit")), pct(profit_margin), "purple"),
+            metric(_("Total Sales"), self._dashboard_pdf_money(payload.get("gross_sales")), _("Before returns"), "primary"),
+            metric(_("Net Sales"), self._dashboard_pdf_money(payload.get("net_sales")), _("After returns"), "success"),
+            metric(_("Collected"), self._dashboard_pdf_money(payload.get("total_collected")), pct(collection_rate), "success"),
+            metric(_("Open Due"), self._dashboard_pdf_money(payload.get("open_due_amount")), _("Outstanding balance"), "danger"),
+            metric(_("Open Promises"), self._dashboard_pdf_money(payload.get("open_promise_amount")), _("Promise amount"), "warning"),
+            metric(_("Returns"), self._dashboard_pdf_money(payload.get("total_returns")), pct(return_rate), "warning"),
+            metric(_("Estimated Profit"), self._dashboard_pdf_money(payload.get("gross_profit")), pct(profit_margin), "purple"),
             metric(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or [])), _("Review workload"), "warning"),
             metric(_("Pending Transfers"), self._num(payload.get("pending_transfer_count")), _("Not done/cancelled"), "primary"),
         ]
@@ -1759,12 +1758,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             row(_("Completed Visits"), self._num(metrics.get("completed_visit_count"))),
             row(_("Unfinished Visits"), self._num(metrics.get("unfinished_visit_count"))),
             row(_("Not Started Visits"), self._num(metrics.get("not_started_visit_count"))),
-            row(_("Open Due Visits"), self._num(metrics.get("open_due_visit_count")), self._money(metrics.get("open_due_amount"))),
-            row(_("Collections"), self._num(metrics.get("collection_count")), self._money(metrics.get("collection_amount"))),
-            row(_("Open Promises"), self._num(metrics.get("open_promise_count")), self._money(metrics.get("open_promise_amount"))),
-            row(_("Due / Overdue Promises"), self._num(metrics.get("due_promise_count")), self._money(metrics.get("due_promise_amount"))),
-            row(_("Sales Orders"), self._num(metrics.get("sales_order_count")), self._money(metrics.get("sales_order_amount"))),
-            row(_("Returns"), self._num(metrics.get("return_count")), self._money(metrics.get("return_amount"))),
+            row(_("Open Due Visits"), self._num(metrics.get("open_due_visit_count")), self._dashboard_pdf_money(metrics.get("open_due_amount"))),
+            row(_("Collections"), self._num(metrics.get("collection_count")), self._dashboard_pdf_money(metrics.get("collection_amount"))),
+            row(_("Open Promises"), self._num(metrics.get("open_promise_count")), self._dashboard_pdf_money(metrics.get("open_promise_amount"))),
+            row(_("Due / Overdue Promises"), self._num(metrics.get("due_promise_count")), self._dashboard_pdf_money(metrics.get("due_promise_amount"))),
+            row(_("Sales Orders"), self._num(metrics.get("sales_order_count")), self._dashboard_pdf_money(metrics.get("sales_order_amount"))),
+            row(_("Returns"), self._num(metrics.get("return_count")), self._dashboard_pdf_money(metrics.get("return_amount"))),
             row(_("Return Transfers"), self._num(metrics.get("return_transfer_count"))),
             row(_("Refill Transfers"), self._num(metrics.get("refill_transfer_count"))),
             row(_("Loading Proposals"), self._num(metrics.get("loading_proposal_count"))),
@@ -1785,25 +1784,25 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             row(_("Reopened Days"), self._num(payload.get("reopened_day_count"))),
         ]
         financial_rows = [
-            row(_("Gross Sales"), self._money(payload.get("gross_sales"))),
-            row(_("Returns"), self._money(payload.get("total_returns"))),
-            row(_("Net Sales"), self._money(payload.get("net_sales"))),
-            row(_("Collected"), self._money(payload.get("total_collected")), pct(collection_rate)),
-            row(_("Open Due"), self._money(payload.get("open_due_amount"))),
-            row(_("Open Promise Amount"), self._money(payload.get("open_promise_amount"))),
-            row(_("Due / Overdue Promise Amount"), self._money(payload.get("due_overdue_promise_amount"))),
-            row(_("Estimated Profit"), self._money(payload.get("gross_profit")), pct(profit_margin)),
+            row(_("Gross Sales"), self._dashboard_pdf_money(payload.get("gross_sales"))),
+            row(_("Returns"), self._dashboard_pdf_money(payload.get("total_returns"))),
+            row(_("Net Sales"), self._dashboard_pdf_money(payload.get("net_sales"))),
+            row(_("Collected"), self._dashboard_pdf_money(payload.get("total_collected")), pct(collection_rate)),
+            row(_("Open Due"), self._dashboard_pdf_money(payload.get("open_due_amount"))),
+            row(_("Open Promise Amount"), self._dashboard_pdf_money(payload.get("open_promise_amount"))),
+            row(_("Due / Overdue Promise Amount"), self._dashboard_pdf_money(payload.get("due_overdue_promise_amount"))),
+            row(_("Estimated Profit"), self._dashboard_pdf_money(payload.get("gross_profit")), pct(profit_margin)),
         ]
         attention_rows = [
             row(_("Unfinished Visits"), self._num(len(payload.get("unfinished_visits") or []))),
-            row(_("Due / Overdue Promises"), self._num(len(payload.get("due_overdue_promises") or [])), self._money(payload.get("due_overdue_promise_amount"))),
+            row(_("Due / Overdue Promises"), self._num(len(payload.get("due_overdue_promises") or [])), self._dashboard_pdf_money(payload.get("due_overdue_promise_amount"))),
             row(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or []))),
             row(_("Pending Transfers"), self._num(payload.get("pending_transfer_count"))),
         ]
         if settings.get("show_vehicle_closing"):
             attention_rows.append(row(_("Vehicle Issues"), self._num(payload.get("pending_vehicle_issues"))))
         payment_rows = [
-            row(mode or _("Other"), self._money(amount))
+            row(mode or _("Other"), self._dashboard_pdf_money(amount))
             for mode, amount in sorted((payload.get("payment_modes") or {}).items(), key=lambda item: item[1], reverse=True)
         ]
         salesperson_rows = []
@@ -1813,9 +1812,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 "visits": self._num(line.get("visits")),
                 "done": self._num(line.get("done")),
                 "unfinished": self._num(line.get("unfinished")),
-                "sales": self._money(line.get("sales")),
-                "collection": self._money(line.get("collection")),
-                "promises": self._money(line.get("promises")),
+                "sales": self._dashboard_pdf_money(line.get("sales")),
+                "collection": self._dashboard_pdf_money(line.get("collection")),
+                "promises": self._dashboard_pdf_money(line.get("promises")),
                 "issues": self._num(line.get("issues")),
             })
         vehicle_rows = []
@@ -1833,9 +1832,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             product_rows.append({
                 "name": line.get("name") or _("Product"),
                 "qty": self._short_num(line.get("qty")),
-                "sales": self._money(line.get("sales")),
-                "returns": self._money(line.get("returns")),
-                "profit": self._money(line.get("profit")),
+                "sales": self._dashboard_pdf_money(line.get("sales")),
+                "returns": self._dashboard_pdf_money(line.get("returns")),
+                "profit": self._dashboard_pdf_money(line.get("profit")),
             })
         returned_product_rows = []
         for line in sorted(payload.get("product_lines") or [], key=lambda item: item.get("returns", 0.0), reverse=True)[:10]:
@@ -1843,9 +1842,9 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 continue
             returned_product_rows.append({
                 "name": line.get("name") or _("Product"),
-                "returns": self._money(line.get("returns")),
-                "sales": self._money(line.get("sales")),
-                "profit": self._money(line.get("profit")),
+                "returns": self._dashboard_pdf_money(line.get("returns")),
+                "sales": self._dashboard_pdf_money(line.get("sales")),
+                "profit": self._dashboard_pdf_money(line.get("profit")),
             })
         outlet_rows = []
         for line in sorted(payload.get("outlet_lines") or [], key=lambda item: (item.get("risk", 0.0), item.get("open_due", 0.0)), reverse=True)[:10]:
@@ -1853,25 +1852,25 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 "name": line.get("name") or _("Outlet"),
                 "mode": line.get("mode_label") or "",
                 "visits": self._num(line.get("visits")),
-                "sales": self._money(line.get("sales")),
-                "collection": self._money(line.get("collection")),
-                "open_due": self._money(line.get("open_due")),
-                "returns": self._money(line.get("returns")),
+                "sales": self._dashboard_pdf_money(line.get("sales")),
+                "collection": self._dashboard_pdf_money(line.get("collection")),
+                "open_due": self._dashboard_pdf_money(line.get("open_due")),
+                "returns": self._dashboard_pdf_money(line.get("returns")),
             })
         comparison_rows = []
         if target == "manager" and hasattr(self, "_get_previous_dashboard_payload") and hasattr(self, "_manager_period_comparison"):
             previous_payload = self._get_previous_dashboard_payload()
             comparison = self._manager_period_comparison(payload, previous_payload)
             comparison_rows = [
-                row(_("Sales Growth"), self._money(comparison["gross_sales"]["current"]), self._comparison_note(comparison["gross_sales"], money=True)),
-                row(_("Collection Growth"), self._money(comparison["collection"]["current"]), self._comparison_note(comparison["collection"], money=True)),
-                row(_("Net Sales Growth"), self._money(comparison["net_sales"]["current"]), self._comparison_note(comparison["net_sales"], money=True)),
-                row(_("Profit Growth"), self._money(comparison["profit"]["current"]), self._comparison_note(comparison["profit"], money=True)),
-                row(_("Returns Change"), self._money(comparison["returns"]["current"]), self._comparison_note(comparison["returns"], money=True, inverse=True)),
-                row(_("Open Due Change"), self._money(comparison["open_due"]["current"]), self._comparison_note(comparison["open_due"], money=True, inverse=True)),
-                row(_("Visit Volume"), self._num(comparison["visits"]["current"]), self._comparison_note(comparison["visits"])),
-                row(_("Completion Rate"), pct(comparison["completion"]["current"]), self._comparison_note(comparison["completion"])),
-                row(_("Attention Score"), self._num(comparison["attention_score"]["current"]), self._comparison_note(comparison["attention_score"], inverse=True)),
+                row(_("Sales Growth"), self._dashboard_pdf_money(comparison["gross_sales"]["current"]), self._dashboard_pdf_comparison_note(comparison["gross_sales"], money=True)),
+                row(_("Collection Growth"), self._dashboard_pdf_money(comparison["collection"]["current"]), self._dashboard_pdf_comparison_note(comparison["collection"], money=True)),
+                row(_("Net Sales Growth"), self._dashboard_pdf_money(comparison["net_sales"]["current"]), self._dashboard_pdf_comparison_note(comparison["net_sales"], money=True)),
+                row(_("Profit Growth"), self._dashboard_pdf_money(comparison["profit"]["current"]), self._dashboard_pdf_comparison_note(comparison["profit"], money=True)),
+                row(_("Returns Change"), self._dashboard_pdf_money(comparison["returns"]["current"]), self._dashboard_pdf_comparison_note(comparison["returns"], money=True, inverse=True)),
+                row(_("Open Due Change"), self._dashboard_pdf_money(comparison["open_due"]["current"]), self._dashboard_pdf_comparison_note(comparison["open_due"], money=True, inverse=True)),
+                row(_("Visit Volume"), self._num(comparison["visits"]["current"]), self._dashboard_pdf_comparison_note(comparison["visits"])),
+                row(_("Completion Rate"), pct(comparison["completion"]["current"]), self._dashboard_pdf_comparison_note(comparison["completion"])),
+                row(_("Attention Score"), self._num(comparison["attention_score"]["current"]), self._dashboard_pdf_comparison_note(comparison["attention_score"], inverse=True)),
             ]
 
         payload_data = {
@@ -1899,21 +1898,112 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         }
         return self._dashboard_pdf_safe_payload(payload_data)
 
-    def _dashboard_pdf_safe_payload(self, value):
-        """Return a report-safe payload using ASCII HTML entities for non-ASCII text.
+    def _dashboard_pdf_money(self, amount):
+        """Return a PDF-safe monetary value using the currency code, not a symbol.
 
-        wkhtmltopdf can mis-render UTF-8 characters in some Odoo.sh/report
-        environments. Keeping the HTML source ASCII while preserving entities
-        avoids mojibake for currency symbols, arrows, Turkish characters, and
-        other multilingual names in dashboard PDF snapshots.
+        Some wkhtmltopdf/Odoo.sh combinations render non-ASCII currency symbols
+        as mojibake in PDF output. Currency codes are ASCII and remain clear in
+        exported management snapshots.
         """
+        amount = amount or 0.0
+        currency = self.currency_id or self.env.company.currency_id
+        code = self._dashboard_pdf_text(currency.name or currency.display_name or "CUR")
+        code = (code or "CUR").strip().split(" ")[0]
+        return f"{amount:,.2f} {code}"
+
+    def _dashboard_pdf_comparison_note(self, values, money=False, inverse=False):
+        change = values.get("change", 0.0)
+        previous = values.get("previous", 0.0)
+        good = change >= 0.0
+        if inverse:
+            good = change <= 0.0
+        marker = "+" if change >= 0.0 else "-"
+        previous_text = self._dashboard_pdf_money(previous) if money else self._num(previous)
+        direction = _("better") if good else _("attention")
+        return _("Prev: %(previous)s | %(marker)s%(change).0f%% %(direction)s") % {
+            "previous": previous_text,
+            "marker": marker,
+            "change": abs(change),
+            "direction": direction,
+        }
+
+    def _dashboard_pdf_text(self, value):
+        """Normalize report text to an ASCII-safe display value for PDF output.
+
+        This prevents visible mojibake such as â‚¬ / PÄ° / Ä± when wkhtmltopdf
+        receives UTF-8 content but interprets parts of it with a legacy encoding.
+        The live dashboard keeps the original multilingual values; this fallback
+        is used only for PDF snapshots.
+        """
+        if value is None:
+            return ""
+        text = str(value)
+
+        # First repair strings that already arrived as UTF-8 mojibake.
+        try:
+            repaired = text.encode("latin1").decode("utf-8")
+            if repaired and repaired != text:
+                text = repaired
+        except Exception:
+            pass
+
+        replacements = {
+            "€": "EUR",
+            "£": "GBP",
+            "$": "USD",
+            "→": "-",
+            "←": "-",
+            "–": "-",
+            "—": "-",
+            "·": "-",
+            "â‚¬": "EUR",
+            "â†’": "-",
+            "â€“": "-",
+            "â€”": "-",
+            "Â": "",
+            "Ä°": "I",
+            "Ä±": "i",
+            "Åž": "S",
+            "ÅŸ": "s",
+            "Äž": "G",
+            "ÄŸ": "g",
+            "Ãœ": "U",
+            "Ã¼": "u",
+            "Ã–": "O",
+            "Ã¶": "o",
+            "Ã‡": "C",
+            "Ã§": "c",
+        }
+        for bad, good in replacements.items():
+            text = text.replace(bad, good)
+
+        turkish_map = str.maketrans({
+            "İ": "I",
+            "ı": "i",
+            "Ş": "S",
+            "ş": "s",
+            "Ğ": "G",
+            "ğ": "g",
+            "Ü": "U",
+            "ü": "u",
+            "Ö": "O",
+            "ö": "o",
+            "Ç": "C",
+            "ç": "c",
+        })
+        text = text.translate(turkish_map)
+        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+        text = " ".join(text.split())
+        return text
+
+    def _dashboard_pdf_safe_payload(self, value):
+        """Return a report-safe payload with ASCII-only text for PDF output."""
         if isinstance(value, dict):
             return {key: self._dashboard_pdf_safe_payload(val) for key, val in value.items()}
         if isinstance(value, (list, tuple)):
             return [self._dashboard_pdf_safe_payload(val) for val in value]
         if isinstance(value, str):
-            safe = html_escape(value).encode("ascii", "xmlcharrefreplace").decode("ascii")
-            return Markup(safe)
+            return self._dashboard_pdf_text(value)
         return value
 
     def action_open_dashboard_configuration(self):
