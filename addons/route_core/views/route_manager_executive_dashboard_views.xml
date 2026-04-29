@@ -105,8 +105,8 @@
 <div class="route_dash_drilldown_panel route_dash_manager_drilldown_panel">
 <div class="route_dash_drilldown_head">
 <div>
-<strong>Executive Drill-down Actions</strong>
-<span>Move from executive indicators to the exact records behind the current filters.</span>
+<strong>Smart Executive Drill-down Actions</strong>
+<span>Open filtered management records using the same executive period, salesperson, vehicle, city, area, and outlet filters.</span>
 </div>
 </div>
 <div class="route_dash_drilldown_grid">
