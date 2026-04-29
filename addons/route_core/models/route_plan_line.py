@@ -171,7 +171,7 @@ class RoutePlanLine(models.Model):
     def _compute_button_label(self):
         for rec in self:
             if not rec.visit_id:
-                rec.button_label = "Execute Visit"
+                rec.button_label = "Create Visit"
             elif rec.state in ("visited", "skipped") or rec.visit_id.state in ("done", "cancel"):
                 rec.button_label = "View Visit"
             else:
@@ -272,12 +272,14 @@ class RoutePlanLine(models.Model):
         if is_completed_line and visit:
             return self._get_pda_visit_action(visit)
 
-        self.plan_id._ensure_single_active_visit(current_line=self)
-
         if not visit:
-            visit = self.plan_id._create_visit_for_line(self)
-        elif visit.state not in ("done", "cancel"):
-            self.write({"state": "in_progress"})
+            visit = self.plan_id._create_visit_for_line(
+                self,
+                mark_in_progress=False,
+                enforce_start_readiness=False,
+                enforce_active_visit=False,
+                enforce_previous_pending=False,
+            )
 
         return self._get_pda_visit_action(visit)
 
