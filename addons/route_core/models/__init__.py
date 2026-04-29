@@ -52,6 +52,7 @@ from . import route_plan_schedule_ext
 from . import route_geolocation
 from . import route_visit_geo_checkin
 from . import route_geo_control_center
+from . import route_salesperson_route_map
 from . import route_supervisor_daily_control
 from . import route_supervisor_daily_closing
 
