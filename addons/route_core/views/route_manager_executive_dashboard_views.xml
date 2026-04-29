@@ -88,6 +88,10 @@
 </div>
 </div>
 </div>
+<div class="route_dashboard_focus_hint mb-3">
+<i class="fa fa-info-circle"/>
+<span>Focus Mode remembers your personal choice on this dashboard only. It filters enabled widgets; Dashboard Setup and Customize Dashboard still control what is allowed to appear.</span>
+</div>
 <field name="currency_id" invisible="1"/>
 <field name="show_direct_sale_sections" invisible="1"/>
 <field name="show_consignment_sections" invisible="1"/>
