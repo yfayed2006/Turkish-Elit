@@ -1683,6 +1683,218 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def _dashboard_target(self):
         return "supervisor"
 
+
+    def action_print_pdf_snapshot(self):
+        self.ensure_one()
+        self._save_user_dashboard_focus_mode()
+        return self.env.ref("route_core.action_report_route_supervisor_performance_snapshot").report_action(self)
+
+    def _dashboard_pdf_payload(self):
+        self.ensure_one()
+        payload = self._get_dashboard_payload()
+        metrics = self._compute_drilldown_metrics(payload)
+        settings = payload.get("settings") or {}
+        date_from, date_to = self._get_date_range()
+        visit_total = len(payload.get("visits") or [])
+        done = payload.get("visit_status", {}).get("done", 0)
+        active = payload.get("visit_status", {}).get("active", 0)
+        not_started = payload.get("visit_status", {}).get("not_started", 0)
+        cancelled = payload.get("visit_status", {}).get("cancelled", 0)
+        completion_rate = (done / visit_total * 100.0) if visit_total else 0.0
+        collection_rate = (payload.get("total_collected", 0.0) / payload.get("net_sales", 0.0) * 100.0) if payload.get("net_sales") else 0.0
+        return_rate = (payload.get("total_returns", 0.0) / payload.get("gross_sales", 0.0) * 100.0) if payload.get("gross_sales") else 0.0
+        profit_margin = (payload.get("gross_profit", 0.0) / payload.get("gross_sales", 0.0) * 100.0) if payload.get("gross_sales") else 0.0
+        target = self._dashboard_target()
+        generated_on = fields.Datetime.to_string(fields.Datetime.now())
+
+        def pct(value):
+            try:
+                return "%.0f%%" % float(value or 0.0)
+            except Exception:
+                return "0%"
+
+        def metric(label, value, note="", tone="neutral"):
+            return {"label": label, "value": value, "note": note, "tone": tone}
+
+        def row(label, value, note=""):
+            return {"label": label, "value": value, "note": note}
+
+        filter_rows = []
+        period_label = dict(self._fields["period_filter"].selection).get(self.period_filter or "custom", self.period_filter or "")
+        filter_rows.append(row(_("Period"), period_label or _("Custom"), "%s → %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to))))
+        filter_rows.append(row(_("Focus Mode"), self._dashboard_focus_label()))
+        filter_rows.append(row(_("Company"), self.company_id.display_name or self.env.company.display_name))
+        if self.salesperson_id:
+            filter_rows.append(row(_("Salesperson"), self.salesperson_id.display_name))
+        if self.vehicle_id:
+            filter_rows.append(row(_("Vehicle"), self.vehicle_id.display_name))
+        if self.city_id:
+            filter_rows.append(row(_("City"), self.city_id.display_name))
+        if self.area_id:
+            filter_rows.append(row(_("Area"), self.area_id.display_name))
+        if self.outlet_id:
+            filter_rows.append(row(_("Outlet"), self.outlet_id.display_name))
+
+        kpis = [
+            metric(_("Total Visits"), self._num(visit_total), _("Filtered route visits"), "primary"),
+            metric(_("Completed Visits"), self._num(done), pct(completion_rate), "success"),
+            metric(_("Unfinished Visits"), self._num(len(payload.get("unfinished_visits") or [])), _("Needs follow-up"), "danger"),
+            metric(_("Total Sales"), self._money(payload.get("gross_sales")), _("Before returns"), "primary"),
+            metric(_("Net Sales"), self._money(payload.get("net_sales")), _("After returns"), "success"),
+            metric(_("Collected"), self._money(payload.get("total_collected")), pct(collection_rate), "success"),
+            metric(_("Open Due"), self._money(payload.get("open_due_amount")), _("Outstanding balance"), "danger"),
+            metric(_("Open Promises"), self._money(payload.get("open_promise_amount")), _("Promise amount"), "warning"),
+            metric(_("Returns"), self._money(payload.get("total_returns")), pct(return_rate), "warning"),
+            metric(_("Estimated Profit"), self._money(payload.get("gross_profit")), pct(profit_margin), "purple"),
+            metric(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or [])), _("Review workload"), "warning"),
+            metric(_("Pending Transfers"), self._num(payload.get("pending_transfer_count")), _("Not done/cancelled"), "primary"),
+        ]
+        if settings.get("show_vehicle_closing"):
+            kpis.append(metric(_("Vehicle Issues"), self._num(payload.get("pending_vehicle_issues")), _("Closing exceptions"), "danger"))
+        kpis.append(metric(_("Closing Records"), self._num(len(payload.get("closing_records") or [])), _("Period records"), "neutral"))
+
+        drill_rows = [
+            row(_("All Visits"), self._num(metrics.get("all_visit_count"))),
+            row(_("Completed Visits"), self._num(metrics.get("completed_visit_count"))),
+            row(_("Unfinished Visits"), self._num(metrics.get("unfinished_visit_count"))),
+            row(_("Not Started Visits"), self._num(metrics.get("not_started_visit_count"))),
+            row(_("Open Due Visits"), self._num(metrics.get("open_due_visit_count")), self._money(metrics.get("open_due_amount"))),
+            row(_("Collections"), self._num(metrics.get("collection_count")), self._money(metrics.get("collection_amount"))),
+            row(_("Open Promises"), self._num(metrics.get("open_promise_count")), self._money(metrics.get("open_promise_amount"))),
+            row(_("Due / Overdue Promises"), self._num(metrics.get("due_promise_count")), self._money(metrics.get("due_promise_amount"))),
+            row(_("Sales Orders"), self._num(metrics.get("sales_order_count")), self._money(metrics.get("sales_order_amount"))),
+            row(_("Returns"), self._num(metrics.get("return_count")), self._money(metrics.get("return_amount"))),
+            row(_("Return Transfers"), self._num(metrics.get("return_transfer_count"))),
+            row(_("Refill Transfers"), self._num(metrics.get("refill_transfer_count"))),
+            row(_("Loading Proposals"), self._num(metrics.get("loading_proposal_count"))),
+            row(_("Pending Transfers"), self._num(metrics.get("pending_transfer_count"))),
+            row(_("Location Review"), self._num(metrics.get("location_review_count"))),
+            row(_("Vehicle Issues"), self._num(metrics.get("vehicle_issue_count"))),
+            row(_("Closing Records"), self._num(metrics.get("closing_record_count"))),
+        ]
+
+        visit_rows = [
+            row(_("Planned Visits"), self._num(visit_total)),
+            row(_("Completed"), self._num(done), pct(completion_rate)),
+            row(_("In Progress"), self._num(active)),
+            row(_("Not Started"), self._num(not_started)),
+            row(_("Cancelled"), self._num(cancelled)),
+            row(_("Closed Days"), self._num(payload.get("closed_day_count"))),
+            row(_("Open / Not Ready Days"), self._num(payload.get("open_day_count"))),
+            row(_("Reopened Days"), self._num(payload.get("reopened_day_count"))),
+        ]
+        financial_rows = [
+            row(_("Gross Sales"), self._money(payload.get("gross_sales"))),
+            row(_("Returns"), self._money(payload.get("total_returns"))),
+            row(_("Net Sales"), self._money(payload.get("net_sales"))),
+            row(_("Collected"), self._money(payload.get("total_collected")), pct(collection_rate)),
+            row(_("Open Due"), self._money(payload.get("open_due_amount"))),
+            row(_("Open Promise Amount"), self._money(payload.get("open_promise_amount"))),
+            row(_("Due / Overdue Promise Amount"), self._money(payload.get("due_overdue_promise_amount"))),
+            row(_("Estimated Profit"), self._money(payload.get("gross_profit")), pct(profit_margin)),
+        ]
+        attention_rows = [
+            row(_("Unfinished Visits"), self._num(len(payload.get("unfinished_visits") or []))),
+            row(_("Due / Overdue Promises"), self._num(len(payload.get("due_overdue_promises") or [])), self._money(payload.get("due_overdue_promise_amount"))),
+            row(_("Location Issues"), self._num(len(payload.get("location_issue_visits") or []))),
+            row(_("Pending Transfers"), self._num(payload.get("pending_transfer_count"))),
+        ]
+        if settings.get("show_vehicle_closing"):
+            attention_rows.append(row(_("Vehicle Issues"), self._num(payload.get("pending_vehicle_issues"))))
+        payment_rows = [
+            row(mode or _("Other"), self._money(amount))
+            for mode, amount in sorted((payload.get("payment_modes") or {}).items(), key=lambda item: item[1], reverse=True)
+        ]
+        salesperson_rows = []
+        for line in (payload.get("salesperson_lines") or [])[:10]:
+            salesperson_rows.append({
+                "name": line.get("name") or _("Unassigned"),
+                "visits": self._num(line.get("visits")),
+                "done": self._num(line.get("done")),
+                "unfinished": self._num(line.get("unfinished")),
+                "sales": self._money(line.get("sales")),
+                "collection": self._money(line.get("collection")),
+                "promises": self._money(line.get("promises")),
+                "issues": self._num(line.get("issues")),
+            })
+        vehicle_rows = []
+        for line in (payload.get("vehicle_lines") or [])[:10]:
+            vehicle_rows.append({
+                "name": line.get("name") or _("Unassigned"),
+                "visits": self._num(line.get("visits")),
+                "unfinished": self._num(line.get("unfinished")),
+                "variance": self._num(line.get("variance")),
+                "pending": self._num(line.get("pending")),
+                "issues": self._num(line.get("issues")),
+            })
+        product_rows = []
+        for line in sorted(payload.get("product_lines") or [], key=lambda item: item.get("sales", 0.0), reverse=True)[:10]:
+            product_rows.append({
+                "name": line.get("name") or _("Product"),
+                "qty": self._short_num(line.get("qty")),
+                "sales": self._money(line.get("sales")),
+                "returns": self._money(line.get("returns")),
+                "profit": self._money(line.get("profit")),
+            })
+        returned_product_rows = []
+        for line in sorted(payload.get("product_lines") or [], key=lambda item: item.get("returns", 0.0), reverse=True)[:10]:
+            if not line.get("returns"):
+                continue
+            returned_product_rows.append({
+                "name": line.get("name") or _("Product"),
+                "returns": self._money(line.get("returns")),
+                "sales": self._money(line.get("sales")),
+                "profit": self._money(line.get("profit")),
+            })
+        outlet_rows = []
+        for line in sorted(payload.get("outlet_lines") or [], key=lambda item: (item.get("risk", 0.0), item.get("open_due", 0.0)), reverse=True)[:10]:
+            outlet_rows.append({
+                "name": line.get("name") or _("Outlet"),
+                "mode": line.get("mode_label") or "",
+                "visits": self._num(line.get("visits")),
+                "sales": self._money(line.get("sales")),
+                "collection": self._money(line.get("collection")),
+                "open_due": self._money(line.get("open_due")),
+                "returns": self._money(line.get("returns")),
+            })
+        comparison_rows = []
+        if target == "manager" and hasattr(self, "_get_previous_dashboard_payload") and hasattr(self, "_manager_period_comparison"):
+            previous_payload = self._get_previous_dashboard_payload()
+            comparison = self._manager_period_comparison(payload, previous_payload)
+            comparison_rows = [
+                row(_("Sales Growth"), self._money(comparison["gross_sales"]["current"]), self._comparison_note(comparison["gross_sales"], money=True)),
+                row(_("Collection Growth"), self._money(comparison["collection"]["current"]), self._comparison_note(comparison["collection"], money=True)),
+                row(_("Net Sales Growth"), self._money(comparison["net_sales"]["current"]), self._comparison_note(comparison["net_sales"], money=True)),
+                row(_("Profit Growth"), self._money(comparison["profit"]["current"]), self._comparison_note(comparison["profit"], money=True)),
+                row(_("Returns Change"), self._money(comparison["returns"]["current"]), self._comparison_note(comparison["returns"], money=True, inverse=True)),
+                row(_("Open Due Change"), self._money(comparison["open_due"]["current"]), self._comparison_note(comparison["open_due"], money=True, inverse=True)),
+                row(_("Visit Volume"), self._num(comparison["visits"]["current"]), self._comparison_note(comparison["visits"])),
+                row(_("Completion Rate"), pct(comparison["completion"]["current"]), self._comparison_note(comparison["completion"])),
+                row(_("Attention Score"), self._num(comparison["attention_score"]["current"]), self._comparison_note(comparison["attention_score"], inverse=True)),
+            ]
+
+        return {
+            "title": _("Manager Executive PDF Snapshot") if target == "manager" else _("Supervisor Performance PDF Snapshot"),
+            "subtitle": self._dashboard_scope_label(),
+            "generated_on": generated_on,
+            "company": self.company_id,
+            "target": target,
+            "filter_rows": filter_rows,
+            "kpis": kpis,
+            "drill_rows": drill_rows,
+            "visit_rows": visit_rows,
+            "financial_rows": financial_rows,
+            "attention_rows": attention_rows,
+            "payment_rows": payment_rows,
+            "comparison_rows": comparison_rows,
+            "salesperson_rows": salesperson_rows,
+            "vehicle_rows": vehicle_rows,
+            "product_rows": product_rows,
+            "returned_product_rows": returned_product_rows,
+            "outlet_rows": outlet_rows,
+            "settings": settings,
+        }
+
     def action_open_dashboard_configuration(self):
         return self.env["route.dashboard.widget"].action_open_dashboard_configuration()
 
