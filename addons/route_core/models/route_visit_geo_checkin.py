@@ -376,19 +376,10 @@ class RouteVisit(models.Model):
         return True
 
     def action_geo_checkin_from_outlet_location(self):
-        """Supervisor/manager helper for demos and correction testing.
-
-        Salespeople must capture their real device location so the visit audit trail
-        stays trustworthy in daily operations.
-        """
-        if not (
-            self.env.user.has_group("route_core.group_route_supervisor")
-            or self.env.user.has_group("route_core.group_route_management")
-        ):
-            raise ValidationError(
-                _("The Use Outlet Coordinates shortcut is reserved for supervisors/managers. Please use Capture My Location on the device.")
-            )
+        """Copy outlet coordinates into check-in for supervisor/manager testing only."""
         self._geo_checkin_edit_allowed()
+        if not self._can_use_outlet_coordinates_for_checkin():
+            raise ValidationError(_("Use Capture My Location from the mobile device. Outlet coordinates cannot be used as a salesperson check-in."))
         now = fields.Datetime.now()
         for visit in self:
             if not visit.outlet_id:
@@ -417,6 +408,74 @@ class RouteVisit(models.Model):
         vals.update(self._geo_review_reset_supervisor_decision_values())
         self.write(vals)
         return True
+
+    def _can_use_outlet_coordinates_for_checkin(self):
+        """Return True for supervisor/manager testing or controlled corrections only.
+
+        Salespeople must use the browser/mobile GPS capture flow so the check-in
+        remains a trustworthy field-execution audit point.
+        """
+        user = self.env.user
+        return bool(
+            user.has_group("route_core.group_route_supervisor")
+            or user.has_group("route_core.group_route_management")
+            or user.has_group("base.group_system")
+        )
+
+    def _pda_action_open_today_visits(self):
+        today = fields.Date.context_today(self)
+        action_ref = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not action_ref:
+            action_ref = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+            action.update({
+                "name": _("Today's Visits"),
+                "domain": [("user_id", "=", self.env.user.id), ("date", "=", today)],
+                "context": {
+                    "search_default_filter_my_visits": 1,
+                    "search_default_filter_today": 1,
+                    "pda_mode": True,
+                    "create": 0,
+                    "edit": 1,
+                    "delete": 0,
+                },
+            })
+            return action
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Today's Visits"),
+            "res_model": "route.visit",
+            "view_mode": "kanban,form,list",
+            "domain": [("user_id", "=", self.env.user.id), ("date", "=", today)],
+            "target": "current",
+            "context": {"pda_mode": True, "create": 0, "edit": 1, "delete": 0},
+        }
+
+    def action_pda_open_today_route_map(self):
+        return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
+
+    def action_pda_open_workspace(self):
+        return self.env["route.pda.home"].action_open_dashboard()
+
+    def action_pda_open_today_visits(self):
+        return self._pda_action_open_today_visits()
+
+    def _geo_pda_warning_action(self, title, message):
+        """Show mobile-friendly feedback instead of a large Validation Error dialog."""
+        self.ensure_one()
+        next_action = self._get_pda_form_action() if hasattr(self, "_get_pda_form_action") else {"type": "ir.actions.client", "tag": "reload"}
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "type": "warning",
+                "sticky": False,
+                "next": next_action,
+            },
+        }
 
     def action_open_visit_outlet_map(self):
         self.ensure_one()
@@ -532,13 +591,6 @@ class RouteVisit(models.Model):
             action["views"] = [(view.id, "form")]
         return action
 
-
-    def action_pda_back_to_today_route_map(self):
-        return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
-
-    def action_pda_back_to_workspace(self):
-        return self.env["route.pda.home"].action_open_dashboard()
-
     def action_start_visit(self):
         for visit in self:
             missing_message = visit._geo_start_missing_checkin_message()
@@ -554,6 +606,14 @@ class RouteVisit(models.Model):
 
     def action_ux_start_visit(self):
         self.ensure_one()
+        missing_message = self._geo_start_missing_checkin_message()
+        if missing_message:
+            return self._geo_pda_warning_action(_("Location Check-in Required"), missing_message)
+        if self._should_block_geo_before_start():
+            return self._geo_pda_warning_action(
+                _("Start Visit Blocked"),
+                _("You are outside the allowed outlet radius. This visit cannot start under the current Location Check-in policy."),
+            )
         action = self.action_start_visit()
         if isinstance(action, dict):
             return action
