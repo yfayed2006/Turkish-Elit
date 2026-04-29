@@ -2414,3 +2414,37 @@
     font-weight: 600;
 }
 
+
+/* Salesperson Today Route Map */
+.route_pda_app_btn_map {
+    background: linear-gradient(135deg, #0ea5e9 0%, #7a536f 100%) !important;
+    color: #ffffff !important;
+    border-color: rgba(14, 165, 233, 0.55) !important;
+}
+
+.route_pda_app_btn_map:hover {
+    filter: brightness(0.96);
+}
+
+.route_pda_app_btn_map .route_pda_app_hint_stat {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.route_salesperson_route_map_sheet {
+    max-width: 1280px;
+}
+
+.route_salesperson_route_map_kpis {
+    margin-bottom: 12px;
+}
+
+.route_salesperson_route_map_sheet .o_field_html iframe {
+    width: 100% !important;
+}
+
+@media (max-width: 768px) {
+    .route_salesperson_route_map_sheet .o_field_html iframe {
+        min-height: 720px !important;
+    }
+}
