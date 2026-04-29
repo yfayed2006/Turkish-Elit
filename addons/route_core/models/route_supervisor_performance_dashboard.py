@@ -4,6 +4,7 @@ from datetime import datetime, time, timedelta
 from html import escape
 
 from dateutil.relativedelta import relativedelta
+from markupsafe import Markup, escape as html_escape
 
 from odoo import _, api, fields, models
 
@@ -698,7 +699,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         if period_label:
             parts.append(str(period_label))
         if date_from and date_to:
-            parts.append("%s → %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to)))
+            parts.append("%s - %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to)))
         if self.salesperson_id:
             parts.append(_("Salesperson: %s") % self.salesperson_id.display_name)
         if self.vehicle_id:
@@ -1721,7 +1722,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
 
         filter_rows = []
         period_label = dict(self._fields["period_filter"].selection).get(self.period_filter or "custom", self.period_filter or "")
-        filter_rows.append(row(_("Period"), period_label or _("Custom"), "%s → %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to))))
+        filter_rows.append(row(_("Period"), period_label or _("Custom"), "%s - %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to))))
         filter_rows.append(row(_("Focus Mode"), self._dashboard_focus_label()))
         filter_rows.append(row(_("Company"), self.company_id.display_name or self.env.company.display_name))
         if self.salesperson_id:
@@ -1873,11 +1874,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 row(_("Attention Score"), self._num(comparison["attention_score"]["current"]), self._comparison_note(comparison["attention_score"], inverse=True)),
             ]
 
-        return {
-            "title": _("Manager Executive PDF Snapshot") if target == "manager" else _("Supervisor Performance PDF Snapshot"),
+        payload_data = {
+            "title": _("Manager Executive Snapshot") if target == "manager" else _("Supervisor Performance Snapshot"),
             "subtitle": self._dashboard_scope_label(),
             "generated_on": generated_on,
             "company": self.company_id,
+            "company_name": self.company_id.display_name or self.env.company.display_name,
+            "show_company_logo": False,
             "target": target,
             "filter_rows": filter_rows,
             "kpis": kpis,
@@ -1894,6 +1897,24 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "outlet_rows": outlet_rows,
             "settings": settings,
         }
+        return self._dashboard_pdf_safe_payload(payload_data)
+
+    def _dashboard_pdf_safe_payload(self, value):
+        """Return a report-safe payload using ASCII HTML entities for non-ASCII text.
+
+        wkhtmltopdf can mis-render UTF-8 characters in some Odoo.sh/report
+        environments. Keeping the HTML source ASCII while preserving entities
+        avoids mojibake for currency symbols, arrows, Turkish characters, and
+        other multilingual names in dashboard PDF snapshots.
+        """
+        if isinstance(value, dict):
+            return {key: self._dashboard_pdf_safe_payload(val) for key, val in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [self._dashboard_pdf_safe_payload(val) for val in value]
+        if isinstance(value, str):
+            safe = html_escape(value).encode("ascii", "xmlcharrefreplace").decode("ascii")
+            return Markup(safe)
+        return value
 
     def action_open_dashboard_configuration(self):
         return self.env["route.dashboard.widget"].action_open_dashboard_configuration()
