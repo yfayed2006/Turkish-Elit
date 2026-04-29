@@ -87,7 +87,7 @@ class RoutePlan(models.Model):
         compute="_compute_line_counts",
     )
     visit_count = fields.Integer(
-        string="Executed Visits",
+        string="Created Visits",
         compute="_compute_line_counts",
     )
     pending_count = fields.Integer(
@@ -283,7 +283,7 @@ class RoutePlan(models.Model):
 
             rec.execution_summary_state = "ready"
             rec.execution_summary_message = _(
-                "Execution has not started yet. Use Execute Visit or Open Visits to begin field activity."
+                "Execution is ready. Planned visits are generated after Finalize Daily Plan; the salesperson can open Today’s Visits or Today’s Route Map and start each visit from the field."
             )
 
     @api.depends("area_id", "line_ids.area_id", "line_ids.outlet_id")
@@ -510,7 +510,15 @@ class RoutePlan(models.Model):
                     "planning_finalized_datetime": fields.Datetime.now(),
                 }
             )
+            rec._ensure_visits_for_planned_lines()
         return True
+
+    def action_generate_missing_visits(self):
+        for rec in self:
+            if not rec.planning_finalized:
+                raise UserError(_("Please finalize the daily plan before generating visits."))
+            rec._ensure_visits_for_planned_lines()
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_reopen_daily_plan(self):
         self.with_context(route_plan_skip_loading_dirty=True).write(
@@ -617,26 +625,72 @@ class RoutePlan(models.Model):
         })
         return action
 
-    def _create_visit_for_line(self, line):
+    def _ensure_visits_for_planned_lines(self):
+        """Create the draft route.visit records for all planned stops.
+
+        The supervisor's planning action should create the operational visits in one
+        step so the salesperson sees the full day in Today's Visits and Today's
+        Route Map. The visits remain Draft/Pending until the salesperson presses
+        Start Visit from the field. Loading and location policies are enforced at
+        Start Visit time, not while the supervisor is finalizing the route plan.
+        """
+        for rec in self:
+            if not rec.planning_finalized:
+                continue
+
+            draft_visit_lines = rec.line_ids.filtered(
+                lambda line: line.visit_id
+                and line.visit_id.state == "draft"
+                and line.state == "in_progress"
+            )
+            if draft_visit_lines:
+                draft_visit_lines.write({"state": "pending"})
+
+            lines = rec.line_ids.filtered(
+                lambda line: line.outlet_id
+                and line.state != "skipped"
+                and not line.visit_id
+            )
+            for line in lines.sorted(key=lambda l: (l.sequence or 0, l.id or 0)):
+                rec._create_visit_for_line(
+                    line,
+                    mark_in_progress=False,
+                    enforce_start_readiness=False,
+                    enforce_active_visit=False,
+                    enforce_previous_pending=False,
+                )
+
+    def _create_visit_for_line(
+        self,
+        line,
+        mark_in_progress=False,
+        enforce_start_readiness=False,
+        enforce_active_visit=False,
+        enforce_previous_pending=False,
+    ):
         self.ensure_one()
 
         if line.visit_id:
-            self._ensure_single_active_visit(current_line=line)
-            if line.state not in ("visited", "skipped") and line.visit_id.state not in ("done", "cancel"):
-                line.write({"state": "in_progress"})
+            if mark_in_progress:
+                self._ensure_single_active_visit(current_line=line)
+                if line.state not in ("visited", "skipped") and line.visit_id.state not in ("done", "cancel"):
+                    line.write({"state": "in_progress"})
             return line.visit_id
 
         if not self.planning_finalized:
             raise UserError(
                 _(
-                    "You cannot start visits before finalizing the daily plan. "
+                    "You cannot create visits before finalizing the daily plan. "
                     "Please click 'Finalize Daily Plan' first."
                 )
             )
 
-        self._ensure_vehicle_loading_ready_for_visit_start()
-        self._ensure_single_active_visit(current_line=line)
-        self._ensure_no_unresolved_previous_pending(line)
+        if enforce_start_readiness:
+            self._ensure_vehicle_loading_ready_for_visit_start()
+        if enforce_active_visit or mark_in_progress:
+            self._ensure_single_active_visit(current_line=line)
+        if enforce_previous_pending:
+            self._ensure_no_unresolved_previous_pending(line)
 
         if not line.outlet_id:
             raise UserError(_("Cannot create a visit for a route line without an outlet."))
@@ -646,7 +700,7 @@ class RoutePlan(models.Model):
             route_plan_allow_visit_create=True
         ).create(visit_vals)
 
-        line.write({"visit_id": visit.id, "state": "in_progress"})
+        line.write({"visit_id": visit.id, "state": "in_progress" if mark_in_progress else "pending"})
         return visit
 
     def _get_open_shortage_domain(self):
