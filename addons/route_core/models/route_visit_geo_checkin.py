@@ -458,16 +458,21 @@ class RouteVisit(models.Model):
     def _is_geo_start_policy_active(self):
         """Return True when Start Visit should evaluate location check-in requirements."""
         self.ensure_one()
-        if self.env.context.get("route_geo_reason_confirmed"):
-            return False
         if self.visit_process_state and self.visit_process_state != "draft":
             return False
         if not self.route_geo_enabled:
             return False
-        return self.route_geo_checkin_policy == "require_reason"
+        policy = self.route_geo_checkin_policy or "disabled"
+        if policy not in ("require_reason", "block_start"):
+            return False
+        # The outside-zone reason wizard confirms only the Require Reason policy.
+        # Block Start remains strict even if a reason exists.
+        if policy == "require_reason" and self.env.context.get("route_geo_reason_confirmed"):
+            return False
+        return True
 
     def _geo_start_missing_checkin_message(self):
-        """Return a user-facing message when Require Reason needs a check-in first."""
+        """Return a user-facing message when the active policy needs a check-in first."""
         self.ensure_one()
         if not self._is_geo_start_policy_active():
             return False
@@ -478,18 +483,29 @@ class RouteVisit(models.Model):
         return False
 
     def _should_require_geo_reason_before_start(self):
-        """Return True when policy requires an outside-zone reason before Start Visit.
+        """Return True when Require Reason needs an outside-zone reason before Start Visit.
 
-        `Require Reason` now means a location check-in is required before Start Visit.
+        `Require Reason` means a location check-in is required before Start Visit.
         If the check-in is outside the outlet radius, the salesperson must provide
         an operational reason before the visit can move to Checked In.
         """
         self.ensure_one()
         if not self._is_geo_start_policy_active():
             return False
+        if self.route_geo_checkin_policy != "require_reason":
+            return False
         if self.geo_checkin_status != "outside":
             return False
         return not bool((self.geo_checkin_outside_zone_reason or "").strip())
+
+    def _should_block_geo_before_start(self):
+        """Return True when Block Start policy forbids outside-zone visit starts."""
+        self.ensure_one()
+        if not self._is_geo_start_policy_active():
+            return False
+        if self.route_geo_checkin_policy != "block_start":
+            return False
+        return self.geo_checkin_status == "outside"
 
     def _action_open_geo_reason_wizard(self):
         self.ensure_one()
@@ -513,6 +529,10 @@ class RouteVisit(models.Model):
             missing_message = visit._geo_start_missing_checkin_message()
             if missing_message:
                 raise ValidationError(missing_message)
+            if visit._should_block_geo_before_start():
+                raise ValidationError(
+                    _("You are outside the allowed outlet radius. This visit cannot start under the current Location Check-in policy.")
+                )
             if visit._should_require_geo_reason_before_start():
                 return visit._action_open_geo_reason_wizard()
         return super().action_start_visit()
