@@ -2523,3 +2523,130 @@
         font-size: 18px;
     }
 }
+
+
+/* Salesperson Mobile Navigation Standardization */
+.route_pda_nav_btn {
+    font-weight: 700;
+}
+
+.route_pda_continue_cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.20);
+    color: inherit;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .route_pda_visit_form header {
+        gap: 8px;
+    }
+
+    .route_pda_visit_form header .route_pda_nav_btn {
+        min-height: 40px;
+        border-radius: 10px;
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+
+    .route_pda_visit_form .o_statusbar_status {
+        margin-top: 6px;
+    }
+
+    .route_geo_action_grid {
+        gap: 8px;
+    }
+
+    .route_geo_action_grid .route_geo_action_btn {
+        min-height: 42px;
+        border-radius: 10px;
+        font-weight: 800;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 480px) {
+    .route_pda_visit_form header .route_pda_nav_btn {
+        flex: 1 1 46%;
+        justify-content: center;
+    }
+
+    .route_pda_visit_form header button[name="action_pda_open_today_visits"] {
+        flex-basis: 100%;
+    }
+
+    .route_geo_action_grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Mobile-friendly outside-zone reason wizard */
+.route_geo_reason_mobile_wizard .alert {
+    border-radius: 12px;
+    padding: 10px 12px;
+    line-height: 1.4;
+}
+
+.route_geo_reason_mobile_wizard .o_group {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .modal-dialog:has(.route_geo_reason_mobile_wizard),
+    .o_dialog:has(.route_geo_reason_mobile_wizard) {
+        max-width: calc(100vw - 20px) !important;
+        margin: 10px auto !important;
+    }
+
+    .route_geo_reason_mobile_wizard .o_group,
+    .route_geo_reason_mobile_wizard .o_inner_group {
+        width: 100% !important;
+    }
+
+    .route_geo_reason_mobile_wizard footer {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .route_geo_reason_mobile_wizard footer .btn {
+        width: 100%;
+        min-height: 44px;
+        border-radius: 10px;
+        font-weight: 800;
+        white-space: normal;
+    }
+}
+
+/* Keep generic Odoo error dialogs usable on narrow PDA screens. */
+@media (max-width: 768px) {
+    .o_error_dialog .modal-dialog,
+    .modal.o_error_dialog .modal-dialog {
+        max-width: calc(100vw - 20px) !important;
+        margin: 10px auto !important;
+    }
+
+    .o_error_dialog .modal-content {
+        border-radius: 16px;
+        max-height: calc(100vh - 20px);
+        overflow: auto;
+    }
+
+    .o_error_dialog .modal-body {
+        font-size: 16px;
+        line-height: 1.45;
+    }
+
+    .o_error_dialog .modal-footer .btn {
+        min-height: 44px;
+        border-radius: 10px;
+        font-weight: 800;
+    }
+}
