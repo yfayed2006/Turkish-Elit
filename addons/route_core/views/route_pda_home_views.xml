@@ -21,6 +21,7 @@
 <field name="today_mapped_visit_count" invisible="1"/>
 <field name="today_missing_location_visit_count" invisible="1"/>
 <field name="today_outside_zone_visit_count" invisible="1"/>
+<field name="current_visit_count" invisible="1"/>
 <field name="current_visit_button_hint" invisible="1"/>
 <field name="current_visit_button_value" invisible="1"/>
 <field name="current_visit_empty_message" invisible="1"/>
@@ -75,6 +76,7 @@
 <button type="object" name="action_open_current_visit" class="btn route_pda_app_btn route_pda_app_btn_primary">
 <i class="fa fa-play-circle route_pda_app_icon"/>
 <span class="route_pda_app_label">Current Visit</span>
+<span class="route_pda_app_hint route_pda_continue_cta" invisible="current_visit_count == 0">Continue Active Visit</span>
 <span class="route_pda_app_hint">
 <field name="current_visit_button_hint" readonly="1" nolabel="1"/>
 </span>
