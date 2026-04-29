@@ -47,6 +47,7 @@
         "reports/route_salesperson_shortage_report.xml",
         "reports/route_visit_settlement_receipt_report.xml",
         "reports/route_visit_statement_report.xml",
+        "reports/route_dashboard_snapshot_reports.xml",
         "views/route_salesperson_shortage_views.xml",
         "views/route_visit_document_links_views.xml",
         "views/route_direct_return_views.xml",
