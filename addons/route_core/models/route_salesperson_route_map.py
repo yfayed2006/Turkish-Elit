@@ -134,7 +134,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
             route_map.inside_zone_count = len(inside)
             route_map.route_visit_ids = [(6, 0, visits.ids)]
             route_map.next_visit_label = next_visit.outlet_id.display_name or next_visit.display_name if next_visit else _("No visit available")
-            route_map.route_map_note = _("Map uses today's visits for the current salesperson. Use Navigate for directions and Open Visit for full execution.")
+            route_map.route_map_note = _("Map uses today's visits for the current salesperson. Use Navigate for directions and Open Visit for field execution.")
             route_map.route_map_iframe_html = route_map._get_route_map_iframe_html()
 
     @api.model
@@ -170,7 +170,9 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     def action_open_today_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not action:
+            action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
         domain = self._get_visit_domain()
         if action:
             result = action.read()[0]
@@ -181,6 +183,18 @@ class RouteSalespersonRouteMap(models.TransientModel):
                     "context": {"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
                 }
             )
+            kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
+            form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+            list_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+            views = []
+            if kanban_view:
+                views.append((kanban_view.id, "kanban"))
+            if form_view:
+                views.append((form_view.id, "form"))
+            if list_view:
+                views.append((list_view.id, "list"))
+            if views:
+                result["views"] = views
             return result
         return {
             "type": "ir.actions.act_window",
@@ -190,3 +204,4 @@ class RouteSalespersonRouteMap(models.TransientModel):
             "domain": domain,
             "context": {"create": False, "edit": True, "delete": False},
         }
+
