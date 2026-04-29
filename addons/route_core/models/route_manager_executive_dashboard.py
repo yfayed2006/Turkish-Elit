@@ -65,7 +65,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 "name": _("Manager Executive Dashboard"),
                 "company_id": self.env.company.id,
                 "period_filter": "last_30",
-                "dashboard_focus_mode": "all",
+                "dashboard_focus_mode": self._get_user_dashboard_focus_mode(target="manager"),
                 "date_from": today - timedelta(days=29),
                 "date_to": today,
             }
@@ -91,7 +91,7 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
                 "name": _("Supervisor Performance Dashboard"),
                 "company_id": self.company_id.id,
                 "period_filter": self.period_filter,
-                "dashboard_focus_mode": self.dashboard_focus_mode or "all",
+                "dashboard_focus_mode": self._get_user_dashboard_focus_mode(target="supervisor"),
                 "date_from": self.date_from,
                 "date_to": self.date_to,
                 "salesperson_id": self.salesperson_id.id or False,
