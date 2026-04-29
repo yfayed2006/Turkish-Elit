@@ -86,30 +86,6 @@ class RoutePdaRedirectController(http.Controller):
             menu_xmlid="route_core.menu_route_outlet",
         )
 
-    @http.route("/route_core/pda/visit/<int:visit_id>", type="http", auth="user", website=False)
-    def route_core_open_pda_visit_form(self, visit_id, **kwargs):
-        visit = request.env["route.visit"].browse(visit_id).exists()
-        if not visit:
-            return redirect("/route_core/pda/product_center")
-
-        user = request.env.user
-        can_open = (
-            visit.user_id == user
-            or user.has_group("route_core.group_route_supervisor")
-            or user.has_group("route_core.group_route_management")
-        )
-        if not can_open:
-            return redirect("/route_core/pda/product_center")
-
-        action_xmlid = "route_core.action_route_visit_pda_salesperson" if visit.user_id == user else "route_core.action_route_visit_pda"
-        return self._build_web_redirect(
-            model="route.visit",
-            record_id=visit.id,
-            view_xmlid="route_core.view_route_visit_pda_form",
-            action_xmlid=action_xmlid,
-            menu_xmlid="route_core.menu_route_salesperson_my_visits",
-        )
-
 
 class RouteGeoLiveMapController(http.Controller):
     def _selection_label(self, record, field_name, value):
@@ -174,7 +150,7 @@ class RouteGeoLiveMapController(http.Controller):
             "checkin_lng": checkin_lng,
             "outlet_lat": outlet_lat,
             "outlet_lng": outlet_lng,
-            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "visit_url": self._pda_visit_url(visit),
             "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
             "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
             "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
@@ -437,6 +413,41 @@ class RouteSalespersonTodayMapController(http.Controller):
             return "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s" % (latitude, longitude, latitude, longitude)
         return "https://www.google.com/maps/dir/?api=1&destination=%s,%s" % (latitude, longitude)
 
+    def _web_form_url(self, model, record_id, view_xmlid=False, action_xmlid=False, menu_xmlid=False):
+        env = request.env
+        params = {
+            "id": record_id,
+            "model": model,
+            "view_type": "form",
+            "cids": env.company.id,
+        }
+        if action_xmlid:
+            action = env.ref(action_xmlid, raise_if_not_found=False)
+            if action:
+                params["action"] = action.id
+        if view_xmlid:
+            view = env.ref(view_xmlid, raise_if_not_found=False)
+            if view:
+                params["view_id"] = view.id
+        if menu_xmlid:
+            menu = env.ref(menu_xmlid, raise_if_not_found=False)
+            if menu:
+                params["menu_id"] = menu.id
+        return "/web#" + "&".join(
+            "%s=%s" % (quote_plus(str(key)), quote_plus(str(value)))
+            for key, value in params.items()
+            if value not in (False, None, "")
+        )
+
+    def _pda_visit_url(self, visit):
+        return self._web_form_url(
+            "route.visit",
+            visit.id,
+            view_xmlid="route_core.view_route_visit_pda_form",
+            action_xmlid="route_core.action_route_visit_pda_salesperson",
+            menu_xmlid="route_core.menu_route_salesperson_my_visits",
+        )
+
     def _visit_bucket(self, visit):
         process = visit.visit_process_state or False
         state = visit.state or False
@@ -512,7 +523,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": "/route_core/pda/visit/%s" % visit.id,
+            "visit_url": self._pda_visit_url(visit),
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
@@ -711,3 +722,4 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
