@@ -19,55 +19,55 @@
 </record>
 <template id="route_dashboard_snapshot_layout">
 <t t-set="data" t-value="doc._dashboard_pdf_payload()"/>
-<div class="page" style="font-family:Arial, sans-serif; color:#1f2937; font-size:12px;">
-<style> .route_pdf_header{border-bottom:3px solid #6d28d9;padding-bottom:12px;margin-bottom:14px;} .route_pdf_title{font-size:24px;font-weight:800;color:#111827;margin:0;} .route_pdf_subtitle{font-size:11px;color:#6b7280;margin-top:4px;} .route_pdf_company{text-align:right;font-size:12px;color:#374151;} .route_pdf_section{margin-top:14px;page-break-inside:avoid;} .route_pdf_section h3{font-size:15px;margin:0 0 8px 0;color:#111827;border-left:4px solid #7c3aed;padding-left:8px;} .route_pdf_kpi{display:inline-block;vertical-align:top;width:23.5%;min-height:74px;border:1px solid #d9e2ef;border-radius:10px;margin:0 0.7% 8px 0;padding:9px;background:#ffffff;box-sizing:border-box;} .route_pdf_kpi span{display:block;font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;} .route_pdf_kpi strong{display:block;font-size:18px;margin:5px 0;color:#111827;} .route_pdf_kpi small{display:block;color:#64748b;font-size:10px;} .route_pdf_table{width:100%;border-collapse:collapse;margin-bottom:8px;} .route_pdf_table th{background:#f3f4f6;color:#374151;font-size:10px;text-transform:uppercase;text-align:left;border:1px solid #d1d5db;padding:6px;} .route_pdf_table td{border:1px solid #e5e7eb;padding:6px;vertical-align:top;} .route_pdf_grid_2{width:100%;border-collapse:collapse;} .route_pdf_grid_2 td{width:50%;vertical-align:top;padding:0 6px 8px 0;border:0;} .route_pdf_note{font-size:10px;color:#6b7280;} .route_pdf_badge{display:inline-block;border-radius:999px;background:#ede9fe;color:#5b21b6;padding:3px 8px;font-weight:700;font-size:10px;} </style>
-<table style="width:100%;" class="route_pdf_header">
+<div class="page route-dashboard-pdf-page">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<style> .route-dashboard-pdf-page{ font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif; color:#182235; font-size:11px; line-height:1.35; } .route_pdf_header{ border:1px solid #dbe4f0; border-left:5px solid #6d28d9; border-radius:14px; padding:14px 16px; margin-bottom:12px; background:#fbfbff; } .route_pdf_title{font-size:25px;font-weight:800;color:#111827;margin:0 0 4px 0;letter-spacing:-0.2px;} .route_pdf_subtitle{font-size:11px;color:#64748b;margin-top:3px;} .route_pdf_company{text-align:right;font-size:11px;color:#475569;} .route_pdf_company_name{font-size:15px;font-weight:800;color:#111827;} .route_pdf_badge{display:inline-block;border-radius:999px;background:#ede9fe;color:#5b21b6;padding:4px 10px;font-weight:800;font-size:10px;margin-top:7px;} .route_pdf_section{margin-top:12px;page-break-inside:avoid;} .route_pdf_section h3{ font-size:14px; margin:0 0 7px 0; color:#111827; border-left:4px solid #7c3aed; padding-left:8px; font-weight:800; } .route_pdf_scope_table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #dbe4f0;border-radius:10px;overflow:hidden;margin-bottom:4px;} .route_pdf_scope_table td{border-bottom:1px solid #e5e7eb;padding:7px 8px;vertical-align:middle;} .route_pdf_scope_table tr:last-child td{border-bottom:0;} .route_pdf_scope_label{width:22%;font-weight:800;color:#334155;background:#f8fafc;} .route_pdf_scope_value{width:38%;font-weight:700;color:#0f172a;} .route_pdf_note{font-size:9px;color:#64748b;} .route_pdf_kpi_wrap{font-size:0;} .route_pdf_kpi{ display:inline-block; vertical-align:top; width:23.7%; min-height:70px; border:1px solid #dbe4f0; border-radius:12px; margin:0 1.2% 8px 0; padding:9px 10px; background:#ffffff; box-sizing:border-box; box-shadow:0 1px 3px rgba(15,23,42,0.05); font-size:11px; } .route_pdf_kpi span{display:block;font-size:9px;text-transform:uppercase;color:#64748b;font-weight:800;letter-spacing:0.2px;} .route_pdf_kpi strong{display:block;font-size:17px;margin:4px 0 2px 0;color:#111827;line-height:1.15;} .route_pdf_kpi small{display:block;color:#64748b;font-size:9px;line-height:1.2;} .route_pdf_kpi.primary{border-left:4px solid #0ea5e9;} .route_pdf_kpi.success{border-left:4px solid #16a34a;} .route_pdf_kpi.warning{border-left:4px solid #f59e0b;} .route_pdf_kpi.danger{border-left:4px solid #ef4444;} .route_pdf_kpi.purple{border-left:4px solid #7c3aed;} .route_pdf_kpi.neutral{border-left:4px solid #94a3b8;} .route_pdf_grid_2{width:100%;border-collapse:collapse;} .route_pdf_grid_2 > tbody > tr > td{width:50%;vertical-align:top;padding:0 8px 8px 0;border:0;} .route_pdf_table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #dbe4f0;border-radius:10px;overflow:hidden;margin-bottom:8px;} .route_pdf_table th{background:#f1f5f9;color:#334155;font-size:9px;text-transform:uppercase;text-align:left;border-bottom:1px solid #cbd5e1;padding:6px 7px;font-weight:800;} .route_pdf_table td{border-bottom:1px solid #e5e7eb;padding:6px 7px;vertical-align:top;} .route_pdf_table tr:last-child td{border-bottom:0;} .route_pdf_table .num{text-align:right;font-weight:800;white-space:nowrap;color:#111827;} .route_pdf_table .compact{font-size:10px;} .route_pdf_footer{margin-top:16px;border-top:1px solid #d1d5db;padding-top:9px;font-size:9px;color:#64748b;} .route_pdf_footer strong{color:#334155;} .route_pdf_page_break{page-break-before:always;} .route_pdf_small_table td{padding:5px 6px;font-size:10px;} .route_pdf_small_table th{padding:5px 6px;font-size:8.5px;} .route_pdf_nowrap{white-space:nowrap;} </style>
+<table style="width:100%;border-collapse:collapse;" class="route_pdf_header">
 <tr>
-<td style="width:65%;vertical-align:top;">
-<h1 class="route_pdf_title" t-esc="data.get('title')"/>
-<div class="route_pdf_subtitle" t-esc="data.get('subtitle') or 'All Operations'"/>
-<div style="margin-top:6px;">
+<td style="width:68%;vertical-align:top;">
+<h1 class="route_pdf_title" t-out="data.get('title')"/>
+<div class="route_pdf_subtitle" t-out="data.get('subtitle') or 'All Operations'"/>
 <span class="route_pdf_badge">PDF Snapshot</span>
-</div>
 </td>
-<td class="route_pdf_company" style="width:35%;vertical-align:top;">
-<div t-if="data.get('company') and data.get('company').logo" style="margin-bottom:6px;">
-<img t-att-src="image_data_uri(data.get('company').logo)" style="max-height:45px;max-width:150px;"/>
+<td class="route_pdf_company" style="width:32%;vertical-align:top;">
+<div t-if="data.get('show_company_logo') and data.get('company') and data.get('company').logo" style="margin-bottom:6px;">
+<img t-att-src="image_data_uri(data.get('company').logo)" style="max-height:44px;max-width:150px;"/>
 </div>
-<strong t-esc="data.get('company').display_name if data.get('company') else ''"/>
+<div class="route_pdf_company_name" t-out="data.get('company_name')"/>
 <div>
 Generated:
-<span t-esc="data.get('generated_on')"/>
+<span t-out="data.get('generated_on')"/>
 </div>
+<div class="route_pdf_note">Live dashboard export</div>
 </td>
 </tr>
 </table>
 <div class="route_pdf_section">
 <h3>Dashboard Scope</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_scope_table">
 <tbody>
 <tr t-foreach="data.get('filter_rows')" t-as="line">
-<td style="width:25%;font-weight:700;" t-esc="line.get('label')"/>
-<td style="width:35%;" t-esc="line.get('value')"/>
-<td class="route_pdf_note" t-esc="line.get('note')"/>
+<td class="route_pdf_scope_label" t-out="line.get('label')"/>
+<td class="route_pdf_scope_value" t-out="line.get('value')"/>
+<td class="route_pdf_note" t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="route_pdf_section">
 <h3>Executive KPI Snapshot</h3>
-<div>
-<div t-foreach="data.get('kpis')" t-as="kpi" class="route_pdf_kpi">
-<span t-esc="kpi.get('label')"/>
-<strong t-esc="kpi.get('value')"/>
-<small t-esc="kpi.get('note')"/>
+<div class="route_pdf_kpi_wrap">
+<div t-foreach="data.get('kpis')" t-as="kpi" t-attf-class="route_pdf_kpi #{kpi.get('tone') or 'neutral'}">
+<span t-out="kpi.get('label')"/>
+<strong t-out="kpi.get('value')"/>
+<small t-out="kpi.get('note')"/>
 </div>
 </div>
 </div>
 <t t-if="data.get('comparison_rows')">
-<div class="route_pdf_section">
+<div class="route_pdf_section route_pdf_page_break">
 <h3>This Period vs Previous Period</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Metric</th>
@@ -77,9 +77,9 @@ Generated:
 </thead>
 <tbody>
 <tr t-foreach="data.get('comparison_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td t-esc="line.get('value')"/>
-<td t-esc="line.get('note')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
+<td t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
@@ -93,9 +93,9 @@ Generated:
 <table class="route_pdf_table">
 <tbody>
 <tr t-foreach="data.get('visit_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
-<td class="route_pdf_note" t-esc="line.get('note')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
+<td class="route_pdf_note" t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
@@ -107,9 +107,9 @@ Generated:
 <table class="route_pdf_table">
 <tbody>
 <tr t-foreach="data.get('financial_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
-<td class="route_pdf_note" t-esc="line.get('note')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
+<td class="route_pdf_note" t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
@@ -123,9 +123,9 @@ Generated:
 <table class="route_pdf_table">
 <tbody>
 <tr t-foreach="data.get('attention_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
-<td class="route_pdf_note" t-esc="line.get('note')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
+<td class="route_pdf_note" t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
@@ -140,8 +140,8 @@ Generated:
 <td colspan="2" class="route_pdf_note">No confirmed payments in this period.</td>
 </tr>
 <tr t-foreach="data.get('payment_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
 </tr>
 </tbody>
 </table>
@@ -151,7 +151,7 @@ Generated:
 </table>
 <div class="route_pdf_section">
 <h3>Smart Drill-down Totals</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Action</th>
@@ -161,16 +161,16 @@ Generated:
 </thead>
 <tbody>
 <tr t-foreach="data.get('drill_rows')" t-as="line">
-<td t-esc="line.get('label')"/>
-<td t-esc="line.get('value')"/>
-<td t-esc="line.get('note')"/>
+<td t-out="line.get('label')"/>
+<td class="num" t-out="line.get('value')"/>
+<td class="num" t-out="line.get('note')"/>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="route_pdf_section">
 <h3>Salesperson Performance</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Salesperson</th>
@@ -188,14 +188,14 @@ Generated:
 <td colspan="8" class="route_pdf_note">No salesperson data for this period.</td>
 </tr>
 <tr t-foreach="data.get('salesperson_rows')" t-as="line">
-<td t-esc="line.get('name')"/>
-<td t-esc="line.get('visits')"/>
-<td t-esc="line.get('done')"/>
-<td t-esc="line.get('unfinished')"/>
-<td t-esc="line.get('sales')"/>
-<td t-esc="line.get('collection')"/>
-<td t-esc="line.get('promises')"/>
-<td t-esc="line.get('issues')"/>
+<td t-out="line.get('name')"/>
+<td class="num" t-out="line.get('visits')"/>
+<td class="num" t-out="line.get('done')"/>
+<td class="num" t-out="line.get('unfinished')"/>
+<td class="num" t-out="line.get('sales')"/>
+<td class="num" t-out="line.get('collection')"/>
+<td class="num" t-out="line.get('promises')"/>
+<td class="num" t-out="line.get('issues')"/>
 </tr>
 </tbody>
 </table>
@@ -203,7 +203,7 @@ Generated:
 <t t-if="data.get('vehicle_rows')">
 <div class="route_pdf_section">
 <h3>Vehicle Risk / Closing Issues</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Vehicle</th>
@@ -216,20 +216,20 @@ Generated:
 </thead>
 <tbody>
 <tr t-foreach="data.get('vehicle_rows')" t-as="line">
-<td t-esc="line.get('name')"/>
-<td t-esc="line.get('visits')"/>
-<td t-esc="line.get('unfinished')"/>
-<td t-esc="line.get('variance')"/>
-<td t-esc="line.get('pending')"/>
-<td t-esc="line.get('issues')"/>
+<td t-out="line.get('name')"/>
+<td class="num" t-out="line.get('visits')"/>
+<td class="num" t-out="line.get('unfinished')"/>
+<td class="num" t-out="line.get('variance')"/>
+<td class="num" t-out="line.get('pending')"/>
+<td class="num" t-out="line.get('issues')"/>
 </tr>
 </tbody>
 </table>
 </div>
 </t>
-<div class="route_pdf_section">
+<div class="route_pdf_section route_pdf_page_break">
 <h3>Top Products by Sales</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Product</th>
@@ -244,11 +244,11 @@ Generated:
 <td colspan="5" class="route_pdf_note">No product movement for this period.</td>
 </tr>
 <tr t-foreach="data.get('product_rows')" t-as="line">
-<td t-esc="line.get('name')"/>
-<td t-esc="line.get('qty')"/>
-<td t-esc="line.get('sales')"/>
-<td t-esc="line.get('returns')"/>
-<td t-esc="line.get('profit')"/>
+<td t-out="line.get('name')"/>
+<td class="num" t-out="line.get('qty')"/>
+<td class="num" t-out="line.get('sales')"/>
+<td class="num" t-out="line.get('returns')"/>
+<td class="num" t-out="line.get('profit')"/>
 </tr>
 </tbody>
 </table>
@@ -256,7 +256,7 @@ Generated:
 <t t-if="data.get('returned_product_rows')">
 <div class="route_pdf_section">
 <h3>Top Returned Products</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Product</th>
@@ -267,10 +267,10 @@ Generated:
 </thead>
 <tbody>
 <tr t-foreach="data.get('returned_product_rows')" t-as="line">
-<td t-esc="line.get('name')"/>
-<td t-esc="line.get('returns')"/>
-<td t-esc="line.get('sales')"/>
-<td t-esc="line.get('profit')"/>
+<td t-out="line.get('name')"/>
+<td class="num" t-out="line.get('returns')"/>
+<td class="num" t-out="line.get('sales')"/>
+<td class="num" t-out="line.get('profit')"/>
 </tr>
 </tbody>
 </table>
@@ -278,7 +278,7 @@ Generated:
 </t>
 <div class="route_pdf_section">
 <h3>Outlet / Customer Risk</h3>
-<table class="route_pdf_table">
+<table class="route_pdf_table route_pdf_small_table">
 <thead>
 <tr>
 <th>Outlet</th>
@@ -295,18 +295,21 @@ Generated:
 <td colspan="7" class="route_pdf_note">No outlet activity for this period.</td>
 </tr>
 <tr t-foreach="data.get('outlet_rows')" t-as="line">
-<td t-esc="line.get('name')"/>
-<td t-esc="line.get('mode')"/>
-<td t-esc="line.get('visits')"/>
-<td t-esc="line.get('sales')"/>
-<td t-esc="line.get('collection')"/>
-<td t-esc="line.get('open_due')"/>
-<td t-esc="line.get('returns')"/>
+<td t-out="line.get('name')"/>
+<td t-out="line.get('mode')"/>
+<td class="num" t-out="line.get('visits')"/>
+<td class="num" t-out="line.get('sales')"/>
+<td class="num" t-out="line.get('collection')"/>
+<td class="num" t-out="line.get('open_due')"/>
+<td class="num" t-out="line.get('returns')"/>
 </tr>
 </tbody>
 </table>
 </div>
-<div style="margin-top:16px;border-top:1px solid #d1d5db;padding-top:8px;font-size:10px;color:#6b7280;"> This PDF is a management snapshot generated from the dashboard filters. Use the live dashboard drill-down actions for operational details and record-level review. </div>
+<div class="route_pdf_footer">
+<strong>Route Core Dashboard Snapshot.</strong>
+This PDF is generated from the current dashboard filters. Use the live dashboard drill-down actions for record-level review and operational follow-up.
+</div>
 </div>
 </template>
 <template id="report_route_supervisor_performance_snapshot">
