@@ -1,4 +1,171 @@
 <odoo>
+<record id="view_route_vehicle_closing_dashboard_kanban" model="ir.ui.view">
+<field name="name">route.vehicle.closing.dashboard.kanban</field>
+<field name="model">route.vehicle.closing</field>
+<field name="arch" type="xml">
+<kanban string="Vehicle Issue Cards" class="o_kanban_mobile route_dashboard_drill_kanban" create="0" delete="0" quick_create="0" default_order="plan_date desc, id desc">
+<field name="name"/>
+<field name="plan_id"/>
+<field name="plan_date"/>
+<field name="vehicle_id"/>
+<field name="user_id"/>
+<field name="state"/>
+<field name="pending_variance_line_count"/>
+<field name="pending_execution_line_count"/>
+<field name="total_abs_variance_qty"/>
+<field name="reconciliation_picking_count"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_dashboard_drill_card">
+<div class="route_dashboard_drill_card_head">
+<div>
+<strong>
+<field name="name"/>
+</strong>
+<span>
+<field name="plan_id"/>
+</span>
+</div>
+<span t-attf-class="route_dashboard_drill_badge route_dashboard_drill_state_#{record.state.raw_value or 'draft'}">
+<t t-esc="record.state.value or ''"/>
+</span>
+</div>
+<div class="route_dashboard_drill_card_body">
+<div>
+<span>Plan Date</span>
+<b>
+<field name="plan_date"/>
+</b>
+</div>
+<div>
+<span>Vehicle</span>
+<b>
+<field name="vehicle_id"/>
+</b>
+</div>
+<div>
+<span>Salesperson</span>
+<b>
+<field name="user_id"/>
+</b>
+</div>
+<div>
+<span>Variance Qty</span>
+<b>
+<field name="total_abs_variance_qty"/>
+</b>
+</div>
+<div>
+<span>Pending Variance</span>
+<b>
+<field name="pending_variance_line_count"/>
+</b>
+</div>
+<div>
+<span>Pending Execution</span>
+<b>
+<field name="pending_execution_line_count"/>
+</b>
+</div>
+</div>
+<div class="route_dashboard_drill_card_foot">
+<span>Reconciliation Transfers</span>
+<b>
+<field name="reconciliation_picking_count"/>
+</b>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_daily_closing_dashboard_kanban" model="ir.ui.view">
+<field name="name">route.daily.closing.dashboard.kanban</field>
+<field name="model">route.daily.closing</field>
+<field name="arch" type="xml">
+<kanban string="Daily Closing Cards" class="o_kanban_mobile route_dashboard_drill_kanban" create="0" delete="0" quick_create="0" default_order="closing_date desc, id desc">
+<field name="name"/>
+<field name="closing_date"/>
+<field name="state"/>
+<field name="scope_label"/>
+<field name="company_id"/>
+<field name="currency_id"/>
+<field name="visit_count"/>
+<field name="done_visit_count"/>
+<field name="unfinished_visit_count"/>
+<field name="open_due_amount"/>
+<field name="open_promise_count"/>
+<field name="pending_transfer_count"/>
+<field name="closed_by_id"/>
+<field name="closed_at"/>
+<field name="reopened_at"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_dashboard_drill_card">
+<div class="route_dashboard_drill_card_head">
+<div>
+<strong>
+<field name="name"/>
+</strong>
+<span>
+<field name="closing_date"/>
+</span>
+</div>
+<span t-attf-class="route_dashboard_drill_badge route_dashboard_drill_state_#{record.state.raw_value or 'closed'}">
+<t t-esc="record.state.value or ''"/>
+</span>
+</div>
+<div class="route_dashboard_drill_card_body">
+<div>
+<span>Scope</span>
+<b>
+<field name="scope_label"/>
+</b>
+</div>
+<div>
+<span>Visits</span>
+<b>
+<field name="visit_count"/>
+</b>
+</div>
+<div>
+<span>Done</span>
+<b>
+<field name="done_visit_count"/>
+</b>
+</div>
+<div>
+<span>Unfinished</span>
+<b>
+<field name="unfinished_visit_count"/>
+</b>
+</div>
+<div>
+<span>Open Due</span>
+<b>
+<field name="open_due_amount"/>
+</b>
+</div>
+<div>
+<span>Open Promises</span>
+<b>
+<field name="open_promise_count"/>
+</b>
+</div>
+</div>
+<div class="route_dashboard_drill_card_foot">
+<span>Pending Transfers</span>
+<b>
+<field name="pending_transfer_count"/>
+</b>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_supervisor_performance_dashboard_form" model="ir.ui.view">
 <field name="name">route.supervisor.performance.dashboard.form</field>
 <field name="model">route.supervisor.performance.dashboard</field>
@@ -107,6 +274,35 @@
 <field name="net_sales_amount" invisible="1"/>
 <field name="open_promise_amount" invisible="1"/>
 <field name="gross_profit_amount" invisible="1"/>
+<field name="drill_all_visit_count" invisible="1"/>
+<field name="drill_completed_visit_count" invisible="1"/>
+<field name="drill_unfinished_visit_count" invisible="1"/>
+<field name="drill_not_started_visit_count" invisible="1"/>
+<field name="drill_open_due_visit_count" invisible="1"/>
+<field name="drill_open_due_amount" invisible="1"/>
+<field name="drill_collection_count" invisible="1"/>
+<field name="drill_collection_amount" invisible="1"/>
+<field name="drill_open_promise_count" invisible="1"/>
+<field name="drill_open_promise_amount" invisible="1"/>
+<field name="drill_due_promise_count" invisible="1"/>
+<field name="drill_due_promise_amount" invisible="1"/>
+<field name="drill_sales_order_count" invisible="1"/>
+<field name="drill_sales_order_amount" invisible="1"/>
+<field name="drill_return_count" invisible="1"/>
+<field name="drill_return_amount" invisible="1"/>
+<field name="drill_return_transfer_count" invisible="1"/>
+<field name="drill_refill_transfer_count" invisible="1"/>
+<field name="drill_loading_proposal_count" invisible="1"/>
+<field name="drill_pending_transfer_count" invisible="1"/>
+<field name="drill_top_product_count" invisible="1"/>
+<field name="drill_returned_product_count" invisible="1"/>
+<field name="drill_outlet_count" invisible="1"/>
+<field name="drill_top_sales_outlet_count" invisible="1"/>
+<field name="drill_highest_due_outlet_count" invisible="1"/>
+<field name="drill_risk_outlet_count" invisible="1"/>
+<field name="drill_location_review_count" invisible="1"/>
+<field name="drill_vehicle_issue_count" invisible="1"/>
+<field name="drill_closing_record_count" invisible="1"/>
 <div class="route_dash_drilldown_panel">
 <div class="route_dash_drilldown_head">
 <div>
@@ -115,29 +311,225 @@
 </div>
 </div>
 <div class="route_dash_drilldown_grid">
-<button name="action_open_visits" type="object" string="All Visits" icon="fa-calendar-check-o" class="route_dash_drill_btn"/>
-<button name="action_open_completed_visits" type="object" string="Completed Visits" icon="fa-check-circle" class="route_dash_drill_btn"/>
-<button name="action_open_unfinished_visits" type="object" string="Unfinished Visits" icon="fa-exclamation-circle" class="route_dash_drill_btn"/>
-<button name="action_open_not_started_visits" type="object" string="Not Started" icon="fa-clock-o" class="route_dash_drill_btn"/>
-<button name="action_open_open_due_visits" type="object" string="Open Due Visits" icon="fa-money" class="route_dash_drill_btn"/>
-<button name="action_open_collections" type="object" string="Collections" icon="fa-money" class="route_dash_drill_btn"/>
-<button name="action_open_promises" type="object" string="Open Promises" icon="fa-calendar-o" class="route_dash_drill_btn"/>
-<button name="action_open_due_overdue_promises" type="object" string="Due Promises" icon="fa-bell" class="route_dash_drill_btn"/>
-<button name="action_open_sales_orders" type="object" string="Sales Orders" icon="fa-shopping-cart" class="route_dash_drill_btn" invisible="not show_direct_sale_sections"/>
-<button name="action_open_returns" type="object" string="Returns" icon="fa-undo" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections"/>
-<button name="action_open_return_transfers" type="object" string="Return Transfers" icon="fa-undo" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections"/>
-<button name="action_open_refill_transfers" type="object" string="Refill Transfers" icon="fa-refresh" class="route_dash_drill_btn" invisible="not show_consignment_sections"/>
-<button name="action_open_loading_proposals" type="object" string="Loading Proposals" icon="fa-cubes" class="route_dash_drill_btn" invisible="not show_loading_sections"/>
-<button name="action_open_pending_transfers" type="object" string="Pending Transfers" icon="fa-exchange" class="route_dash_drill_btn" invisible="not show_stock_transfer_sections"/>
-<button name="action_open_top_selling_products" type="object" string="Top Products" icon="fa-cube" class="route_dash_drill_btn"/>
-<button name="action_open_top_returned_products" type="object" string="Returned Products" icon="fa-reply" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections"/>
-<button name="action_open_dashboard_outlets" type="object" string="Outlets" icon="fa-map-signs" class="route_dash_drill_btn"/>
-<button name="action_open_top_sales_outlets" type="object" string="Top Sales Outlets" icon="fa-line-chart" class="route_dash_drill_btn"/>
-<button name="action_open_highest_due_outlets" type="object" string="Highest Due Outlets" icon="fa-warning" class="route_dash_drill_btn"/>
-<button name="action_open_high_risk_outlets" type="object" string="Risk Outlets" icon="fa-bolt" class="route_dash_drill_btn"/>
-<button name="action_open_location_review" type="object" string="Location Review" icon="fa-map-marker" class="route_dash_drill_btn" invisible="not show_location_sections"/>
-<button name="action_open_vehicle_issues" type="object" string="Vehicle Issues" icon="fa-truck" class="route_dash_drill_btn" invisible="not show_vehicle_closing_sections"/>
-<button name="action_open_closing_records" type="object" string="Closing Records" icon="fa-folder-open-o" class="route_dash_drill_btn"/>
+<button name="action_open_visits" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-calendar-check-o"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">All Visits</span>
+<span class="route_dash_drill_metric">
+<field name="drill_all_visit_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_completed_visits" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-check-circle"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Completed Visits</span>
+<span class="route_dash_drill_metric">
+<field name="drill_completed_visit_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_unfinished_visits" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-exclamation-circle"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Unfinished Visits</span>
+<span class="route_dash_drill_metric">
+<field name="drill_unfinished_visit_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_not_started_visits" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-clock-o"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Not Started</span>
+<span class="route_dash_drill_metric">
+<field name="drill_not_started_visit_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_open_due_visits" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-money"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Open Due Visits</span>
+<span class="route_dash_drill_metric">
+<field name="drill_open_due_visit_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_open_due_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_collections" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-money"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Collections</span>
+<span class="route_dash_drill_metric">
+<field name="drill_collection_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_collection_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_promises" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-calendar-o"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Open Promises</span>
+<span class="route_dash_drill_metric">
+<field name="drill_open_promise_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_open_promise_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_due_overdue_promises" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-bell"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Due Promises</span>
+<span class="route_dash_drill_metric">
+<field name="drill_due_promise_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_due_promise_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_sales_orders" type="object" class="route_dash_drill_btn" invisible="not show_direct_sale_sections">
+<span class="route_dash_drill_icon fa fa-shopping-cart"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Sales Orders</span>
+<span class="route_dash_drill_metric">
+<field name="drill_sales_order_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_sales_order_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_returns" type="object" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections">
+<span class="route_dash_drill_icon fa fa-undo"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Returns</span>
+<span class="route_dash_drill_metric">
+<field name="drill_return_count" nolabel="1" readonly="1"/>
+<span class="route_dash_metric_sep">•</span>
+<field name="drill_return_amount" nolabel="1" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+</span>
+</span>
+</button>
+<button name="action_open_return_transfers" type="object" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections">
+<span class="route_dash_drill_icon fa fa-undo"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Return Transfers</span>
+<span class="route_dash_drill_metric">
+<field name="drill_return_transfer_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_refill_transfers" type="object" class="route_dash_drill_btn" invisible="not show_consignment_sections">
+<span class="route_dash_drill_icon fa fa-refresh"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Refill Transfers</span>
+<span class="route_dash_drill_metric">
+<field name="drill_refill_transfer_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_loading_proposals" type="object" class="route_dash_drill_btn" invisible="not show_loading_sections">
+<span class="route_dash_drill_icon fa fa-cubes"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Loading Proposals</span>
+<span class="route_dash_drill_metric">
+<field name="drill_loading_proposal_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_pending_transfers" type="object" class="route_dash_drill_btn" invisible="not show_stock_transfer_sections">
+<span class="route_dash_drill_icon fa fa-exchange"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Pending Transfers</span>
+<span class="route_dash_drill_metric">
+<field name="drill_pending_transfer_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_top_selling_products" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-cube"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Top Products</span>
+<span class="route_dash_drill_metric">
+<field name="drill_top_product_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_top_returned_products" type="object" class="route_dash_drill_btn" invisible="not show_direct_return_sections and not show_consignment_sections">
+<span class="route_dash_drill_icon fa fa-reply"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Returned Products</span>
+<span class="route_dash_drill_metric">
+<field name="drill_returned_product_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_dashboard_outlets" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-map-signs"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Outlets</span>
+<span class="route_dash_drill_metric">
+<field name="drill_outlet_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_top_sales_outlets" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-line-chart"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Top Sales Outlets</span>
+<span class="route_dash_drill_metric">
+<field name="drill_top_sales_outlet_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_highest_due_outlets" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-warning"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Highest Due Outlets</span>
+<span class="route_dash_drill_metric">
+<field name="drill_highest_due_outlet_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_high_risk_outlets" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-bolt"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Risk Outlets</span>
+<span class="route_dash_drill_metric">
+<field name="drill_risk_outlet_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_location_review" type="object" class="route_dash_drill_btn" invisible="not show_location_sections">
+<span class="route_dash_drill_icon fa fa-map-marker"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Location Review</span>
+<span class="route_dash_drill_metric">
+<field name="drill_location_review_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_vehicle_issues" type="object" class="route_dash_drill_btn" invisible="not show_vehicle_closing_sections">
+<span class="route_dash_drill_icon fa fa-truck"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Vehicle Issues</span>
+<span class="route_dash_drill_metric">
+<field name="drill_vehicle_issue_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
+<button name="action_open_closing_records" type="object" class="route_dash_drill_btn">
+<span class="route_dash_drill_icon fa fa-folder-open-o"/>
+<span class="route_dash_drill_content">
+<span class="route_dash_drill_label">Closing Records</span>
+<span class="route_dash_drill_metric">
+<field name="drill_closing_record_count" nolabel="1" readonly="1"/>
+</span>
+</span>
+</button>
 </div>
 </div>
 <field name="executive_html" nolabel="1" readonly="1" widget="html"/>
