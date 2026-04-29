@@ -8,6 +8,33 @@ from dateutil.relativedelta import relativedelta
 from odoo import _, api, fields, models
 
 
+DASHBOARD_FOCUS_SELECTION = [
+    ("all", "All Widgets"),
+    ("executive", "Executive Summary"),
+    ("closing", "Daily Closing Focus"),
+    ("collections", "Collections Focus"),
+    ("sales_profit", "Sales & Profit Focus"),
+    ("outlet_risk", "Outlet Risk Focus"),
+    ("visit_execution", "Visit Execution Focus"),
+    ("vehicle_risk", "Vehicle Risk Focus"),
+]
+
+
+class ResUsersRouteDashboardFocus(models.Model):
+    _inherit = "res.users"
+
+    route_supervisor_dashboard_focus_mode = fields.Selection(
+        DASHBOARD_FOCUS_SELECTION,
+        string="Supervisor Dashboard Focus Mode",
+        default="all",
+    )
+    route_manager_dashboard_focus_mode = fields.Selection(
+        DASHBOARD_FOCUS_SELECTION,
+        string="Manager Dashboard Focus Mode",
+        default="all",
+    )
+
+
 class RouteSupervisorPerformanceDashboard(models.TransientModel):
     _name = "route.supervisor.performance.dashboard"
     _description = "Supervisor Performance Dashboard"
@@ -43,16 +70,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         required=True,
     )
     dashboard_focus_mode = fields.Selection(
-        [
-            ("all", "All Widgets"),
-            ("executive", "Executive Summary"),
-            ("closing", "Daily Closing Focus"),
-            ("collections", "Collections Focus"),
-            ("sales_profit", "Sales & Profit Focus"),
-            ("outlet_risk", "Outlet Risk Focus"),
-            ("visit_execution", "Visit Execution Focus"),
-            ("vehicle_risk", "Vehicle Risk Focus"),
-        ],
+        DASHBOARD_FOCUS_SELECTION,
         string="Focus Mode",
         default="all",
         required=True,
@@ -137,7 +155,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 "name": _("Supervisor Performance Dashboard"),
                 "company_id": self.env.company.id,
                 "period_filter": "last_30",
-                "dashboard_focus_mode": "all",
+                "dashboard_focus_mode": self._get_user_dashboard_focus_mode(target="supervisor"),
                 "date_from": today - timedelta(days=29),
                 "date_to": today,
             }
@@ -155,6 +173,35 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
+    @api.model
+    def _dashboard_focus_user_field(self, target=False):
+        target = target or self._dashboard_target()
+        if target == "manager":
+            return "route_manager_dashboard_focus_mode"
+        return "route_supervisor_dashboard_focus_mode"
+
+    @api.model
+    def _get_user_dashboard_focus_mode(self, target=False):
+        field_name = self._dashboard_focus_user_field(target=target)
+        value = getattr(self.env.user.sudo(), field_name, False)
+        allowed = dict(DASHBOARD_FOCUS_SELECTION)
+        return value if value in allowed else "all"
+
+    def _save_user_dashboard_focus_mode(self):
+        allowed = dict(DASHBOARD_FOCUS_SELECTION)
+        for rec in self:
+            mode = rec.dashboard_focus_mode or "all"
+            if mode not in allowed:
+                mode = "all"
+            field_name = rec._dashboard_focus_user_field(target=rec._dashboard_target())
+            current = getattr(rec.env.user.sudo(), field_name, False)
+            if current != mode:
+                rec.env.user.sudo().write({field_name: mode})
+
+    @api.onchange("dashboard_focus_mode")
+    def _onchange_dashboard_focus_mode(self):
+        self._save_user_dashboard_focus_mode()
 
     @api.onchange("period_filter")
     def _onchange_period_filter(self):
@@ -293,6 +340,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         return visits.browse()
 
     def action_refresh_dashboard(self):
+        self._save_user_dashboard_focus_mode()
         return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_open_daily_closing(self):
