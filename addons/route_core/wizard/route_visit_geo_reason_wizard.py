@@ -63,10 +63,21 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
     def _return_visit_action_after_confirm(self, result=None):
         self.ensure_one()
 
-        # Do not return a client reload here.
-        # The browser may currently be sitting on the geo-capture client action URL.
-        # Returning "reload" can re-run route_core_capture_geo_checkin without an active visit
-        # and causes repeated "Missing visit reference for geo check-in" errors.
+        # Always return the salesperson/PDA form after confirming the reason.
+        # This avoids reopening the heavy supervisor form on mobile and keeps
+        # the salesperson in the same field-execution flow.
+        if hasattr(self.visit_id, "_get_pda_form_action"):
+            action = self.visit_id.with_context(route_geo_reason_confirmed=True)._get_pda_form_action()
+            action.setdefault("context", {})
+            action["context"].update({
+                "route_geo_reason_confirmed": True,
+                "pda_mode": True,
+                "create": 0,
+                "edit": 1,
+                "delete": 0,
+            })
+            return action
+
         visit_form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
         if not visit_form_view:
             visit_form_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
@@ -85,6 +96,9 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
             "target": "current",
             "context": {
                 "create": False,
+                "edit": True,
+                "delete": False,
+                "pda_mode": True,
                 "route_geo_reason_confirmed": True,
             },
         }
@@ -101,4 +115,5 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
 
         result = self.visit_id.with_context(route_geo_reason_confirmed=True).action_start_visit()
         return self._return_visit_action_after_confirm(result)
+
 
