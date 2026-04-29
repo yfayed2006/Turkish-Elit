@@ -170,9 +170,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     def action_open_today_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
-        if not action:
-            action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
         domain = self._get_visit_domain()
         if action:
             result = action.read()[0]
@@ -183,18 +181,6 @@ class RouteSalespersonRouteMap(models.TransientModel):
                     "context": {"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
                 }
             )
-            kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
-            form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
-            list_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
-            views = []
-            if kanban_view:
-                views.append((kanban_view.id, "kanban"))
-            if form_view:
-                views.append((form_view.id, "form"))
-            if list_view:
-                views.append((list_view.id, "list"))
-            if views:
-                result["views"] = views
             return result
         return {
             "type": "ir.actions.act_window",
