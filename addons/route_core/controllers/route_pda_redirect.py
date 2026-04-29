@@ -376,3 +376,311 @@ window.addEventListener('load', () => {{
                 visit.action_geo_review_reset_decision()
                 message = "Location review decision reset."
         return redirect("/route_core/geo/live_map/frame/%s?message=%s&ts=%s" % (center_id, quote_plus(message), int(time.time())))
+
+
+class RouteSalespersonTodayMapController(http.Controller):
+    def _selection_label(self, record, field_name, value):
+        if not value or field_name not in record._fields:
+            return ""
+        selection = record._fields[field_name].selection
+        if callable(selection):
+            selection = selection(record.env[record._name])
+        return dict(selection or []).get(value, value)
+
+    def _has_point(self, latitude, longitude):
+        return bool(latitude or longitude)
+
+    def _format_datetime(self, env, value):
+        if not value:
+            return ""
+        try:
+            user_dt = fields.Datetime.context_timestamp(env.user, value)
+            return user_dt.strftime("%b %d, %I:%M %p")
+        except Exception:
+            return str(value)
+
+    def _map_url(self, provider, latitude, longitude):
+        if not self._has_point(latitude, longitude):
+            return "#"
+        if provider == "openstreetmap":
+            return "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s" % (latitude, longitude, latitude, longitude)
+        return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
+
+    def _navigation_url(self, provider, latitude, longitude):
+        if not self._has_point(latitude, longitude):
+            return "#"
+        if provider == "openstreetmap":
+            return "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s" % (latitude, longitude, latitude, longitude)
+        return "https://www.google.com/maps/dir/?api=1&destination=%s,%s" % (latitude, longitude)
+
+    def _visit_bucket(self, visit):
+        process = visit.visit_process_state or False
+        state = visit.state or False
+        if state in ("done", "cancel", "cancelled") or process in ("done", "cancel"):
+            return "done"
+        if state == "in_progress" or process in ("checked_in", "counting", "reconciled", "collection_done", "ready_to_close"):
+            return "active"
+        return "pending"
+
+    def _can_start_from_map(self, visit):
+        if visit.visit_process_state != "draft" or visit.state in ("done", "cancel", "cancelled"):
+            return False
+        if not getattr(visit, "route_geo_enabled", False):
+            return True
+        policy = visit.route_geo_checkin_policy or "disabled"
+        status = visit.geo_checkin_status or "disabled"
+        if policy in ("disabled", "review_only"):
+            return True
+        if policy == "block_start":
+            return status == "inside"
+        if policy == "require_reason":
+            if status == "inside":
+                return True
+            if status == "outside" and (visit.geo_checkin_outside_zone_reason or "").strip():
+                return True
+        return False
+
+    def _start_block_hint(self, visit):
+        if visit.visit_process_state != "draft":
+            return "Visit already started or finished."
+        if not getattr(visit, "route_geo_enabled", False):
+            return "Ready to start."
+        policy = visit.route_geo_checkin_policy or "disabled"
+        status = visit.geo_checkin_status or "disabled"
+        if policy in ("disabled", "review_only"):
+            return "Ready to start."
+        if status == "pending":
+            return "Capture location before start."
+        if status == "outlet_missing":
+            return "Outlet location missing."
+        if policy == "block_start" and status == "outside":
+            return "Outside zone: start blocked."
+        if policy == "require_reason" and status == "outside" and not (visit.geo_checkin_outside_zone_reason or "").strip():
+            return "Outside zone: reason required."
+        return "Open visit to continue."
+
+    def _visit_payload(self, route_map, visit, index):
+        outlet = visit.outlet_id
+        lat = outlet.geo_latitude if outlet else 0.0
+        lng = outlet.geo_longitude if outlet else 0.0
+        provider = route_map.route_map_provider or "google"
+        bucket = self._visit_bucket(visit)
+        can_start = self._can_start_from_map(visit)
+        geo_status = visit.geo_checkin_status or "disabled"
+        start_hint = self._start_block_hint(visit)
+        return {
+            "id": visit.id,
+            "index": index,
+            "name": visit.display_name or visit.name or "",
+            "outlet": outlet.display_name if outlet else "",
+            "customer": visit.partner_id.display_name or "",
+            "area": visit.area_id.display_name or "",
+            "vehicle": visit.vehicle_id.display_name or "",
+            "process": self._selection_label(visit, "visit_process_state", visit.visit_process_state) or visit.visit_process_state or "",
+            "bucket": bucket,
+            "geo_status": geo_status,
+            "geo_status_label": self._selection_label(visit, "geo_checkin_status", geo_status) or geo_status,
+            "distance": visit.geo_checkin_distance_display or "",
+            "checkin_time": self._format_datetime(route_map.env, visit.geo_checkin_datetime),
+            "outside_reason": visit.geo_checkin_outside_zone_reason or "",
+            "lat": lat,
+            "lng": lng,
+            "has_point": self._has_point(lat, lng),
+            "navigate_url": self._navigation_url(provider, lat, lng),
+            "outlet_map_url": self._map_url(provider, lat, lng),
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
+            "can_start": can_start,
+            "start_hint": start_hint,
+        }
+
+    def _render_today_route_map_html(self, route_map, message="", message_type="info"):
+        visits = route_map.route_visit_ids
+        payload = [self._visit_payload(route_map, visit, index + 1) for index, visit in enumerate(visits)]
+        mapped = [visit for visit in payload if visit.get("has_point")]
+        data_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+        title = escape(route_map.name or "Today's Route Map")
+        subtitle = escape("%s • %s visits • %s mapped" % (route_map.visit_date or "", len(payload), len(mapped)))
+        message_html = ""
+        if message:
+            css_class = "toast-note toast-%s" % (message_type or "info")
+            message_html = '<div class="%s">%s</div>' % (css_class, escape(message))
+        html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{title}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root {{ --route-primary:#7b4b6f; --green:#16a34a; --blue:#0ea5e9; --orange:#f59e0b; --red:#ef4444; --gray:#64748b; --line:#e5e7eb; }}
+html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:#111827; background:#f8fafc; }}
+.route-map-page {{ min-height:100vh; display:flex; flex-direction:column; }}
+.route-map-header {{ background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }}
+.route-map-title {{ font-size:18px; font-weight:900; line-height:1.2; }}
+.route-map-subtitle {{ margin-top:3px; color:#64748b; font-size:12px; font-weight:700; }}
+.legend {{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }}
+.legend-pill {{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px; }}
+.legend-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
+.route-map-body {{ flex:1; display:grid; grid-template-columns:minmax(0,1fr) 380px; min-height:0; }}
+#map {{ min-height:520px; background:#e5e7eb; }}
+.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; padding:10px; }}
+.visit-card {{ border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); }}
+.visit-card:hover {{ border-color:var(--route-primary); cursor:pointer; }}
+.visit-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }}
+.visit-title {{ font-size:15px; font-weight:900; line-height:1.25; }}
+.visit-ref {{ color:#64748b; font-size:12px; margin-top:2px; }}
+.badge {{ border-radius:999px; padding:3px 8px; font-size:11px; font-weight:900; white-space:nowrap; }}
+.badge-pending {{ background:#e0f2fe; color:#075985; }}
+.badge-active {{ background:#fef3c7; color:#92400e; }}
+.badge-done {{ background:#dcfce7; color:#166534; }}
+.badge-outside {{ background:#fee2e2; color:#991b1b; }}
+.badge-missing {{ background:#f1f5f9; color:#475569; }}
+.grid {{ display:grid; grid-template-columns:1fr 1fr; gap:7px 9px; margin-top:9px; font-size:12px; }}
+.label {{ color:#64748b; display:block; font-weight:700; }}
+.value {{ font-weight:850; color:#111827; }}
+.actions {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:10px; }}
+.map-btn {{ display:flex; align-items:center; justify-content:center; min-height:34px; text-decoration:none; border-radius:8px; font-size:12px; font-weight:900; background:#eef2f7; color:#111827; padding:6px 8px; border:1px solid transparent; }}
+.map-btn.primary {{ background:var(--route-primary); color:#fff; }}
+.map-btn.green {{ background:var(--green); color:#fff; }}
+.map-btn.light {{ background:#fff; color:#111827; border-color:var(--line); }}
+.hint {{ margin-top:8px; font-size:12px; color:#64748b; font-weight:700; }}
+.toast-note {{ margin:8px 10px; border-radius:10px; padding:9px 10px; font-weight:850; font-size:13px; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; }}
+.toast-success {{ background:#ecfdf5; color:#14532d; border-color:#bbf7d0; }}
+.toast-danger {{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }}
+.marker-dot {{ width:30px; height:30px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 7px rgba(15,23,42,.35); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }}
+.marker-dot span {{ transform:rotate(45deg); font-size:12px; }}
+.marker-pending {{ background:var(--blue); }}
+.marker-active {{ background:var(--orange); color:#111827; }}
+.marker-done {{ background:var(--green); }}
+.marker-outside {{ background:var(--red); }}
+.marker-missing {{ background:var(--gray); }}
+.popup-title {{ font-weight:900; font-size:15px; margin-bottom:4px; }}
+.popup-row {{ margin:3px 0; font-size:12px; }}
+.no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
+@media (max-width: 900px) {{
+  .route-map-header {{ flex-direction:column; }}
+  .legend {{ justify-content:flex-start; }}
+  .route-map-body {{ display:block; }}
+  #map {{ height:48vh; min-height:330px; }}
+  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:8px; }}
+  .actions {{ grid-template-columns:1fr 1fr; }}
+}}
+@media (max-width: 420px) {{
+  .grid {{ grid-template-columns:1fr 1fr; }}
+  .visit-title {{ font-size:14px; }}
+  .map-btn {{ font-size:11px; }}
+}}
+</style>
+</head>
+<body>
+<div class="route-map-page">
+  <div class="route-map-header">
+    <div><div class="route-map-title">Today Route Map</div><div class="route-map-subtitle">{subtitle}</div></div>
+    <div class="legend">
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--blue)"></span>Pending</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--orange)"></span>In Progress</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--green)"></span>Done</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--red)"></span>Outside Zone</span>
+    </div>
+  </div>
+  {message_html}
+  <div class="route-map-body">
+    <div id="map"><div class="no-map">Loading map...</div></div>
+    <aside class="visit-side" id="visitList"></aside>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const visits = {data_json};
+function escapeHtml(value) {{ return String(value || '').replace(/[&<>'"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}}[c])); }}
+function color(v) {{ if (v.geo_status === 'outside') return 'outside'; if (v.bucket === 'done') return 'done'; if (v.bucket === 'active') return 'active'; if (!v.has_point) return 'missing'; return 'pending'; }}
+function badgeText(v) {{ if (v.geo_status === 'outside') return 'Outside Zone'; if (v.bucket === 'done') return 'Done'; if (v.bucket === 'active') return 'In Progress'; if (!v.has_point) return 'No Location'; return 'Pending'; }}
+function actions(v) {{
+  let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
+  if (v.has_point) html += `<a class="map-btn" href="${{v.navigate_url}}" target="_blank">Navigate</a>`;
+  if (v.can_start) html += `<a class="map-btn green" href="${{v.start_url}}">Start Visit</a>`;
+  if (v.has_point) html += `<a class="map-btn light" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a>`;
+  return html;
+}}
+function card(v) {{
+  const c = color(v);
+  return `<article class="visit-card" data-visit-id="${{v.id}}">
+    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge badge-${{c}}">${{escapeHtml(badgeText(v))}}</span></div>
+    <div class="grid">
+      <div><span class="label">Customer</span><span class="value">${{escapeHtml(v.customer || '-')}}</span></div>
+      <div><span class="label">Area</span><span class="value">${{escapeHtml(v.area || '-')}}</span></div>
+      <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle || '-')}}</span></div>
+      <div><span class="label">Process</span><span class="value">${{escapeHtml(v.process || '-')}}</span></div>
+      <div><span class="label">Location</span><span class="value">${{escapeHtml(v.geo_status_label || '-')}}</span></div>
+      <div><span class="label">Distance</span><span class="value">${{escapeHtml(v.distance || '-')}}</span></div>
+    </div>
+    <div class="hint">${{escapeHtml(v.start_hint || '')}}</div>
+    <div class="actions">${{actions(v)}}</div>
+  </article>`;
+}}
+function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="popup-row">${{escapeHtml(v.process || '')}} • ${{escapeHtml(v.geo_status_label || '')}}</div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div><div class="actions">${{actions(v)}}</div></div>`; }}
+function renderList() {{ const list = document.getElementById('visitList'); list.innerHTML = visits.length ? visits.map(card).join('') : '<div class="no-map">No visits are scheduled for today.</div>'; }}
+function initMap() {{
+  renderList();
+  const mappable = visits.filter(v => v.has_point);
+  if (!mappable.length) {{ document.getElementById('map').innerHTML = '<div class="no-map">No outlet coordinates for today. Open Customer and Outlets to set locations.</div>'; return; }}
+  const map = L.map('map', {{ zoomControl:true }});
+  L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{ maxZoom:19, attribution:'&copy; OpenStreetMap contributors' }}).addTo(map);
+  const bounds = [];
+  const markers = {{}};
+  for (const v of mappable) {{
+    const c = color(v);
+    const icon = L.divIcon({{ className:'', html:`<div class="marker-dot marker-${{c}}"><span>${{v.index}}</span></div>`, iconSize:[30,30], iconAnchor:[15,30], popupAnchor:[0,-26] }});
+    const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popup(v));
+    markers[v.id] = marker;
+    bounds.push([v.lat, v.lng]);
+  }}
+  if (bounds.length === 1) map.setView(bounds[0], 15); else map.fitBounds(bounds, {{ padding:[30,30] }});
+  document.querySelectorAll('[data-visit-id]').forEach(el => el.addEventListener('click', ev => {{
+    if (ev.target.closest('a')) return;
+    const marker = markers[parseInt(el.getAttribute('data-visit-id'), 10)];
+    if (marker) {{ map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15)); marker.openPopup(); }}
+  }}));
+}}
+window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ document.getElementById('map').innerHTML = '<div class="no-map">Map library could not load. Visit cards and Navigate buttons are still available.</div>'; return; }} initMap(); }});
+</script>
+</body>
+</html>'''
+        return request.make_response(html, headers=[("Content-Type", "text/html; charset=utf-8")])
+
+    @http.route("/route_core/pda/today_route_map/frame/<int:route_map_id>", type="http", auth="user", website=False)
+    def route_core_today_route_map_frame(self, route_map_id, **kwargs):
+        route_map = request.env["route.salesperson.route.map"].browse(route_map_id).exists()
+        if not route_map:
+            return request.make_response(
+                "<html><body><p>Today Route Map session was not found. Please reopen Route Workspace.</p></body></html>",
+                headers=[("Content-Type", "text/html; charset=utf-8")],
+            )
+        if route_map.user_id != request.env.user and not request.env.user.has_group("route_core.group_route_supervisor") and not request.env.user.has_group("route_core.group_route_management"):
+            return request.make_response(
+                "<html><body><p>You can only open your own route map.</p></body></html>",
+                headers=[("Content-Type", "text/html; charset=utf-8")],
+            )
+        return self._render_today_route_map_html(route_map, message=kwargs.get("message") or "", message_type=kwargs.get("message_type") or "info")
+
+    @http.route("/route_core/pda/today_route_map/start/<int:route_map_id>/<int:visit_id>", type="http", auth="user", website=False, csrf=False)
+    def route_core_today_route_map_start_visit(self, route_map_id, visit_id, **kwargs):
+        route_map = request.env["route.salesperson.route.map"].browse(route_map_id).exists()
+        visit = request.env["route.visit"].browse(visit_id).exists()
+        message = "Visit could not be started."
+        message_type = "danger"
+        if route_map and visit and visit.user_id == request.env.user and visit.date == route_map.visit_date:
+            try:
+                if not self._can_start_from_map(visit):
+                    message = self._start_block_hint(visit)
+                    message_type = "danger"
+                else:
+                    visit.action_ux_start_visit() if hasattr(visit, "action_ux_start_visit") else visit.action_start_visit()
+                    message = "Visit started. Open Visit to continue execution."
+                    message_type = "success"
+            except Exception as exc:
+                message = str(exc)
+                message_type = "danger"
+        return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
