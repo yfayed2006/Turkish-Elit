@@ -2448,3 +2448,78 @@
         min-height: 720px !important;
     }
 }
+
+
+/* Salesperson Route Map final mobile polish */
+.route_pda_detail_header_compact {
+    margin-bottom: 8px;
+}
+
+.route_salesperson_route_map_sheet .alert {
+    border-radius: 12px;
+    padding: 10px 14px;
+}
+
+@media (max-width: 768px) {
+    .route_salesperson_route_map_sheet {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .route_salesperson_route_map_sheet .route_pda_detail_title {
+        font-size: 28px;
+        line-height: 1.15;
+        margin-bottom: 8px;
+    }
+
+    .route_salesperson_route_map_sheet .alert {
+        font-size: 15px;
+        line-height: 1.45;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+    }
+
+    .route_salesperson_route_map_kpis.route_pda_card_grid_2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_card {
+        min-height: 94px;
+        padding: 14px 16px;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_label {
+        font-size: 18px;
+        line-height: 1.25;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_value {
+        font-size: 19px;
+        line-height: 1.25;
+    }
+
+    .route_salesperson_route_map_sheet .o_field_html iframe {
+        min-height: 650px !important;
+        border-radius: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .route_salesperson_route_map_sheet .route_pda_detail_title {
+        font-size: 24px;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_card {
+        min-height: 86px;
+        padding: 12px 14px;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_label {
+        font-size: 16px;
+    }
+
+    .route_salesperson_route_map_kpis .route_pda_info_value {
+        font-size: 18px;
+    }
+}
