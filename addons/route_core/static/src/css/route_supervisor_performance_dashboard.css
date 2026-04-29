@@ -1536,3 +1536,195 @@
 }
 
 
+/* Stage 8B - Smart Drill-down Metrics and Card Drill-down Lists */
+.route_dash_drilldown_grid .route_dash_drill_btn {
+    justify-content: flex-start !important;
+    text-align: left;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_icon {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--route-drill-icon) !important;
+    background: var(--route-drill-bg);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55);
+    font-size: 14px !important;
+    line-height: 1 !important;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_content {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    color: #263449;
+    font-weight: 900;
+    line-height: 1.12;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_metric {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--route-drill-icon);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_metric .o_field_widget,
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_metric span:not(.route_dash_metric_sep) {
+    display: inline-flex;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.route_dash_drilldown_grid .route_dash_drill_btn .route_dash_metric_sep {
+    color: #94a3b8;
+    font-weight: 700;
+}
+.route_dash_drilldown_grid .route_dash_drill_primary .route_dash_drill_label,
+.route_dash_drilldown_grid .route_dash_drill_primary .route_dash_drill_metric {
+    color: #ffffff !important;
+}
+.route_dash_drilldown_grid .route_dash_drill_primary .route_dash_metric_sep {
+    color: rgba(255, 255, 255, 0.70);
+}
+
+/* Kanban cards opened from Smart Drill-down actions */
+.route_dashboard_drill_kanban .o_kanban_renderer,
+.route_dashboard_drill_kanban.o_kanban_renderer {
+    gap: 12px;
+}
+.route_dashboard_drill_card {
+    padding: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.route_dashboard_drill_card_head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.route_dashboard_drill_card_head strong {
+    display: block;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+.route_dashboard_drill_card_head span {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+.route_dashboard_drill_badge {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 62px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: capitalize;
+}
+.route_dashboard_drill_state_done,
+.route_dashboard_drill_state_closed {
+    background: #dcfce7;
+    color: #15803d;
+}
+.route_dashboard_drill_state_reopened,
+.route_dashboard_drill_state_cancelled,
+.route_dashboard_drill_state_cancel {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.route_dashboard_drill_state_draft,
+.route_dashboard_drill_state_assigned,
+.route_dashboard_drill_state_ready,
+.route_dashboard_drill_state_confirmed,
+.route_dashboard_drill_state_waiting {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+.route_dashboard_drill_card_body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.route_dashboard_drill_card_body > div,
+.route_dashboard_drill_card_foot {
+    padding: 9px 10px;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.78);
+}
+.route_dashboard_drill_card_body span,
+.route_dashboard_drill_card_foot span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+.route_dashboard_drill_card_body b,
+.route_dashboard_drill_card_foot b {
+    display: block;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.route_dashboard_drill_card_foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+}
+@media (max-width: 768px) {
+    .route_dash_drilldown_grid .route_dash_drill_btn {
+        min-height: 54px;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_icon {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 11px;
+        font-size: 12px !important;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_label {
+        font-size: 12px;
+    }
+    .route_dash_drilldown_grid .route_dash_drill_btn .route_dash_drill_metric {
+        font-size: 10px;
+    }
+    .route_dashboard_drill_card_body {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
