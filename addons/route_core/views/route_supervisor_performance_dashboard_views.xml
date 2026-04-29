@@ -110,8 +110,8 @@
 <div class="route_dash_drilldown_panel">
 <div class="route_dash_drilldown_head">
 <div>
-<strong>Dashboard Drill-down Actions</strong>
-<span>Open operational records behind the current dashboard filters.</span>
+<strong>Smart Drill-down Actions</strong>
+<span>Open filtered operational records using the same period, salesperson, vehicle, city, area, and outlet filters.</span>
 </div>
 </div>
 <div class="route_dash_drilldown_grid">
