@@ -376,10 +376,18 @@ class RouteVisit(models.Model):
         return True
 
     def action_geo_checkin_from_outlet_location(self):
-        """Safe foundation helper: copy outlet coordinates into the visit check-in fields.
+        """Supervisor/manager helper for demos and correction testing.
 
-        This does not enforce geo rules. The browser/device capture flow will be added in the next phase.
+        Salespeople must capture their real device location so the visit audit trail
+        stays trustworthy in daily operations.
         """
+        if not (
+            self.env.user.has_group("route_core.group_route_supervisor")
+            or self.env.user.has_group("route_core.group_route_management")
+        ):
+            raise ValidationError(
+                _("The Use Outlet Coordinates shortcut is reserved for supervisors/managers. Please use Capture My Location on the device.")
+            )
         self._geo_checkin_edit_allowed()
         now = fields.Datetime.now()
         for visit in self:
@@ -523,6 +531,13 @@ class RouteVisit(models.Model):
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
+
+    def action_pda_back_to_today_route_map(self):
+        return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
+
+    def action_pda_back_to_workspace(self):
+        return self.env["route.pda.home"].action_open_dashboard()
 
     def action_start_visit(self):
         for visit in self:
