@@ -32,12 +32,16 @@ class RoutePdaHome(models.TransientModel):
     route_show_direct_return_tools = fields.Boolean(string="Show Direct Return Tools", compute="_compute_route_ui_mode")
     route_show_lot_ui = fields.Boolean(string="Show Lot and Expiry Labels", compute="_compute_route_ui_mode")
     route_workspace_show_vehicle_closing = fields.Boolean(related="company_id.route_workspace_show_vehicle_closing", readonly=True, store=False)
+    route_geo_enabled = fields.Boolean(related="company_id.route_enable_outlet_geolocation", readonly=True, store=False)
 
     today_plan_count = fields.Integer(string="Today's Plans", compute="_compute_dashboard")
     today_visit_count = fields.Integer(string="Today's Visits", compute="_compute_dashboard")
     today_done_visit_count = fields.Integer(string="Done Today", compute="_compute_dashboard")
     today_in_progress_visit_count = fields.Integer(string="In Progress Today", compute="_compute_dashboard")
     today_pending_visit_count = fields.Integer(string="Pending Today", compute="_compute_dashboard")
+    today_mapped_visit_count = fields.Integer(string="Mapped Visits Today", compute="_compute_dashboard")
+    today_missing_location_visit_count = fields.Integer(string="Missing Outlet Location Today", compute="_compute_dashboard")
+    today_outside_zone_visit_count = fields.Integer(string="Outside Zone Today", compute="_compute_dashboard")
     current_visit_count = fields.Integer(string="Current Visit", compute="_compute_dashboard")
     vehicle_closing_count = fields.Integer(string="Vehicle Closings", compute="_compute_dashboard")
     shortage_count = fields.Integer(string="Shortages", compute="_compute_dashboard")
@@ -696,6 +700,8 @@ class RoutePdaHome(models.TransientModel):
             done_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "done")
             in_progress_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "in_progress")
             pending_visits = today_visits - done_visits - in_progress_visits
+            mapped_visits = today_visits.filtered(lambda v: v.outlet_id and (v.outlet_id.geo_latitude or v.outlet_id.geo_longitude))
+            outside_zone_visits = today_visits.filtered(lambda v: getattr(v, "geo_checkin_status", False) == "outside")
 
             if current_visit:
                 rec.current_visit_empty_message = _("Visit %s at %s is already in progress. Use Current Visit to continue it.") % (
@@ -732,6 +738,9 @@ class RoutePdaHome(models.TransientModel):
             rec.today_done_visit_count = len(done_visits)
             rec.today_in_progress_visit_count = len(in_progress_visits)
             rec.today_pending_visit_count = len(pending_visits)
+            rec.today_mapped_visit_count = len(mapped_visits)
+            rec.today_missing_location_visit_count = len(today_visits) - len(mapped_visits)
+            rec.today_outside_zone_visit_count = len(outside_zone_visits)
             rec.current_visit_count = 1 if current_visit else 0
             rec.vehicle_closing_count = len(today_closings)
             rec.shortage_count = len(open_shortages)
@@ -855,6 +864,10 @@ class RoutePdaHome(models.TransientModel):
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_plans": 1, "search_default_filter_today": 1},
         )
+
+    def action_open_today_route_map(self):
+        self.ensure_one()
+        return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
 
     def action_open_my_pda_visits(self):
         self.ensure_one()
@@ -1509,4 +1522,5 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
+
 
