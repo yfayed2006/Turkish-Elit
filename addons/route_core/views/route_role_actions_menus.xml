@@ -113,7 +113,7 @@
 <field name="group_ids" eval="[(6, 0, [ref('route_core.group_route_management')])]"/>
 <field name="sequence">15</field>
 </record>
-<!--   Action-level role separation removed for Odoo 19 compatibility   -->
+<!--    Action-level role separation removed for Odoo 19 compatibility    -->
 <record id="action_route_plan_salesperson" model="ir.actions.act_window">
 <field name="name">My Daily Plans</field>
 <field name="res_model">route.plan</field>
@@ -141,6 +141,24 @@
 <field name="search_view_id" ref="route_core.view_route_visit_search"/>
 <field name="domain">[("user_id", "=", uid), ("date", "=", context_today())]</field>
 <field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+</record>
+<record id="action_route_visit_pda_salesperson_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="route_core.view_route_visit_pda_kanban"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
+</record>
+<record id="action_route_visit_pda_salesperson_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_visit_pda_form"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
+</record>
+<record id="action_route_visit_pda_salesperson_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_visit_tree"/>
+<field name="act_window_id" ref="route_core.action_route_visit_pda_salesperson"/>
 </record>
 <record id="action_route_visit_history_salesperson" model="ir.actions.act_window">
 <field name="name">My Visit History</field>
