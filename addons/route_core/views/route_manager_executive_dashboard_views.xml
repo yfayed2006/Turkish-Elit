@@ -6,6 +6,7 @@
 <form string="Manager Executive Dashboard" create="0" delete="0" class="route_supervisor_performance_dashboard_form route_manager_executive_dashboard_form">
 <header>
 <button name="action_refresh_dashboard" type="object" string="Refresh" icon="fa-refresh"/>
+<button name="action_print_pdf_snapshot" type="object" string="Print PDF Snapshot" icon="fa-print"/>
 <button name="action_open_supervisor_dashboard" type="object" string="Supervisor Dashboard" icon="fa-dashboard" class="btn-primary"/>
 <button name="action_open_dashboard_configuration" type="object" string="Dashboard Setup" icon="fa-sliders"/>
 <button name="action_customize_dashboard" type="object" string="Customize Dashboard" icon="fa-eye"/>
