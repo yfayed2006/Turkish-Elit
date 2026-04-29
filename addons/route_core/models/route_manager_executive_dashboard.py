@@ -58,6 +58,12 @@ class RouteManagerExecutiveDashboard(models.TransientModel):
             user=self.env.user,
         )
 
+
+    def action_print_pdf_snapshot(self):
+        self.ensure_one()
+        self._save_user_dashboard_focus_mode()
+        return self.env.ref("route_core.action_report_route_manager_executive_snapshot").report_action(self)
+
     def action_open_manager_dashboard(self):
         today = fields.Date.context_today(self)
         dashboard = self.create(
