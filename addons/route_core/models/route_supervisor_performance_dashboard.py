@@ -96,6 +96,36 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard_html")
     gross_profit_amount = fields.Monetary(string="Estimated Gross Profit", currency_field="currency_id", compute="_compute_dashboard_html")
 
+    drill_all_visit_count = fields.Integer(string="All Visits", compute="_compute_dashboard_html")
+    drill_completed_visit_count = fields.Integer(string="Completed Visits", compute="_compute_dashboard_html")
+    drill_unfinished_visit_count = fields.Integer(string="Unfinished Visits", compute="_compute_dashboard_html")
+    drill_not_started_visit_count = fields.Integer(string="Not Started Visits", compute="_compute_dashboard_html")
+    drill_open_due_visit_count = fields.Integer(string="Open Due Visits", compute="_compute_dashboard_html")
+    drill_open_due_amount = fields.Monetary(string="Open Due Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_collection_count = fields.Integer(string="Collections", compute="_compute_dashboard_html")
+    drill_collection_amount = fields.Monetary(string="Collection Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_open_promise_count = fields.Integer(string="Open Promises", compute="_compute_dashboard_html")
+    drill_open_promise_amount = fields.Monetary(string="Open Promise Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_due_promise_count = fields.Integer(string="Due Promises", compute="_compute_dashboard_html")
+    drill_due_promise_amount = fields.Monetary(string="Due Promise Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_sales_order_count = fields.Integer(string="Sales Orders", compute="_compute_dashboard_html")
+    drill_sales_order_amount = fields.Monetary(string="Sales Order Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_return_count = fields.Integer(string="Returns", compute="_compute_dashboard_html")
+    drill_return_amount = fields.Monetary(string="Return Amount", currency_field="currency_id", compute="_compute_dashboard_html")
+    drill_return_transfer_count = fields.Integer(string="Return Transfers", compute="_compute_dashboard_html")
+    drill_refill_transfer_count = fields.Integer(string="Refill Transfers", compute="_compute_dashboard_html")
+    drill_loading_proposal_count = fields.Integer(string="Loading Proposals", compute="_compute_dashboard_html")
+    drill_pending_transfer_count = fields.Integer(string="Pending Transfers", compute="_compute_dashboard_html")
+    drill_top_product_count = fields.Integer(string="Top Products", compute="_compute_dashboard_html")
+    drill_returned_product_count = fields.Integer(string="Returned Products", compute="_compute_dashboard_html")
+    drill_outlet_count = fields.Integer(string="Outlets", compute="_compute_dashboard_html")
+    drill_top_sales_outlet_count = fields.Integer(string="Top Sales Outlets", compute="_compute_dashboard_html")
+    drill_highest_due_outlet_count = fields.Integer(string="Highest Due Outlets", compute="_compute_dashboard_html")
+    drill_risk_outlet_count = fields.Integer(string="Risk Outlets", compute="_compute_dashboard_html")
+    drill_location_review_count = fields.Integer(string="Location Review", compute="_compute_dashboard_html")
+    drill_vehicle_issue_count = fields.Integer(string="Vehicle Issues", compute="_compute_dashboard_html")
+    drill_closing_record_count = fields.Integer(string="Closing Records", compute="_compute_dashboard_html")
+
     executive_html = fields.Html(
         string="Executive Snapshot",
         compute="_compute_dashboard_html",
@@ -400,7 +430,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_sales_orders(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Sales Orders"), payload["sale_orders"], "sale.order", "list,form", "sale.action_orders")
+        return self._action_open_records(_("Sales Orders"), payload["sale_orders"], "sale.order", "kanban,list,form")
 
     def action_open_returns(self):
         self.ensure_one()
@@ -410,7 +440,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         pickings = self.env["stock.picking"]
         if payload["settings"].get("show_consignment"):
             pickings |= payload["visits"].mapped("return_picking_ids")
-        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "list,form")
+        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "kanban,list,form")
 
     def action_open_vehicle_issues(self):
         self.ensure_one()
@@ -421,12 +451,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             closings = payload["vehicle_closings"].filtered(
                 lambda closing: closing.state != "closed" or (closing.pending_variance_line_count or 0) > 0 or (closing.pending_execution_line_count or 0) > 0
             )
-        return self._action_open_records(_("Vehicle Issues"), closings, "route.vehicle.closing", "list,form")
+        return self._action_open_records(_("Vehicle Issues"), closings, "route.vehicle.closing", "kanban,list,form")
 
     def action_open_closing_records(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Closing Records"), payload["closing_records"], "route.daily.closing", "list,form")
+        return self._action_open_records(_("Closing Records"), payload["closing_records"], "route.daily.closing", "kanban,list,form")
 
     def action_open_completed_visits(self):
         self.ensure_one()
@@ -471,7 +501,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_pending_transfers(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Pending Transfers"), payload["pending_transfers"], "stock.picking", "list,form")
+        return self._action_open_records(_("Pending Transfers"), payload["pending_transfers"], "stock.picking", "kanban,list,form")
 
     def action_open_loading_proposals(self):
         self.ensure_one()
@@ -481,18 +511,14 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_return_transfers(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        pickings = self.env["stock.picking"]
-        if payload["settings"].get("show_consignment"):
-            pickings |= payload["visits"].mapped("return_picking_ids")
-        if payload["settings"].get("show_direct_return"):
-            pickings |= payload["direct_returns"].mapped("picking_ids")
-        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "list,form")
+        pickings = self._dashboard_return_transfer_records(payload)
+        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "kanban,list,form")
 
     def action_open_refill_transfers(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        pickings = payload["visits"].mapped("refill_picking_id") if payload["settings"].get("show_consignment") else self.env["stock.picking"]
-        return self._action_open_records(_("Refill Transfers"), pickings, "stock.picking", "list,form")
+        pickings = self._dashboard_refill_transfer_records(payload)
+        return self._action_open_records(_("Refill Transfers"), pickings, "stock.picking", "kanban,list,form")
 
     def action_open_dashboard_products(self):
         self.ensure_one()
@@ -503,15 +529,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_top_selling_products(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        lines = sorted(payload["product_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
-        products = self._products_from_product_lines(lines)
+        products = self._dashboard_top_selling_products(payload)
         return self._action_open_records(_("Top Selling Products"), products, "product.product", "kanban,list,form")
 
     def action_open_top_returned_products(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        lines = sorted(payload["product_lines"], key=lambda line: line.get("returns", 0.0), reverse=True)[:20]
-        products = self._products_from_product_lines(lines)
+        products = self._dashboard_top_returned_products(payload)
         return self._action_open_records(_("Top Returned Products"), products, "product.product", "kanban,list,form")
 
     def action_open_dashboard_outlets(self):
@@ -523,15 +547,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_top_sales_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
-        outlets = self._outlets_from_outlet_lines(lines)
+        outlets = self._dashboard_top_sales_outlets(payload)
         return self._action_open_records(_("Top Sales Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def action_open_highest_due_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("open_due", 0.0), reverse=True)[:20]
-        outlets = self._outlets_from_outlet_lines(lines)
+        outlets = self._dashboard_highest_due_outlets(payload)
         return self._action_open_records(_("Highest Open Due Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def action_open_high_risk_outlets(self):
@@ -556,6 +578,117 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             if outlet_id and outlet_id not in outlet_ids:
                 outlet_ids.append(outlet_id)
         return self.env["route.outlet"].browse(outlet_ids)
+
+
+    def _dashboard_return_transfer_records(self, payload):
+        pickings = self.env["stock.picking"]
+        if payload["settings"].get("show_consignment"):
+            pickings |= payload["visits"].mapped("return_picking_ids")
+        if payload["settings"].get("show_direct_return"):
+            pickings |= payload["direct_returns"].mapped("picking_ids")
+        return pickings
+
+    def _dashboard_refill_transfer_records(self, payload):
+        if not payload["settings"].get("show_consignment"):
+            return self.env["stock.picking"]
+        return payload["visits"].mapped("refill_picking_id")
+
+    def _dashboard_top_selling_products(self, payload):
+        lines = sorted(payload["product_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
+        return self._products_from_product_lines(lines)
+
+    def _dashboard_top_returned_products(self, payload):
+        lines = sorted(payload["product_lines"], key=lambda line: line.get("returns", 0.0), reverse=True)[:20]
+        return self._products_from_product_lines(lines)
+
+    def _dashboard_top_sales_outlets(self, payload):
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
+        return self._outlets_from_outlet_lines(lines)
+
+    def _dashboard_highest_due_outlets(self, payload):
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("open_due", 0.0), reverse=True)[:20]
+        return self._outlets_from_outlet_lines(lines)
+
+    def _dashboard_high_risk_outlets(self, payload):
+        lines = sorted(payload["outlet_lines"], key=lambda line: line.get("risk_score", 0.0), reverse=True)[:20]
+        return self._outlets_from_outlet_lines(lines)
+
+    def _compute_drilldown_metrics(self, payload):
+        self.ensure_one()
+        return_transfers = self._dashboard_return_transfer_records(payload)
+        refill_transfers = self._dashboard_refill_transfer_records(payload)
+        top_products = self._dashboard_top_selling_products(payload)
+        returned_products = self._dashboard_top_returned_products(payload)
+        outlets = self._outlets_from_outlet_lines(payload["outlet_lines"])
+        top_sales_outlets = self._dashboard_top_sales_outlets(payload)
+        highest_due_outlets = self._dashboard_highest_due_outlets(payload)
+        high_risk_outlets = self._dashboard_high_risk_outlets(payload)
+        unfinished_visits = payload["unfinished_visits"]
+        not_started_visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "draft")
+        completed_visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "done")
+        return {
+            "all_visit_count": len(payload["visits"]),
+            "completed_visit_count": len(completed_visits),
+            "unfinished_visit_count": len(unfinished_visits),
+            "not_started_visit_count": len(not_started_visits),
+            "open_due_visit_count": len(payload["open_due_visits"]),
+            "open_due_amount": payload["open_due_amount"],
+            "collection_count": len(payload["confirmed_payments"]),
+            "collection_amount": payload["total_collected"],
+            "open_promise_count": len(payload["open_promises"]),
+            "open_promise_amount": payload["open_promise_amount"],
+            "due_promise_count": len(payload["due_overdue_promises"]),
+            "due_promise_amount": payload["due_overdue_promise_amount"],
+            "sales_order_count": len(payload["sale_orders"]),
+            "sales_order_amount": sum(payload["sale_orders"].mapped("amount_total")),
+            "return_count": len(payload["direct_returns"]) + len(return_transfers),
+            "return_amount": payload["total_returns"],
+            "return_transfer_count": len(return_transfers),
+            "refill_transfer_count": len(refill_transfers),
+            "loading_proposal_count": len(payload["loading_proposals"]),
+            "pending_transfer_count": len(payload["pending_transfers"]),
+            "top_product_count": len(top_products),
+            "returned_product_count": len(returned_products),
+            "outlet_count": len(outlets),
+            "top_sales_outlet_count": len(top_sales_outlets),
+            "highest_due_outlet_count": len(highest_due_outlets),
+            "risk_outlet_count": len(high_risk_outlets),
+            "location_review_count": len(payload["location_issue_visits"]),
+            "vehicle_issue_count": payload["pending_vehicle_issues"],
+            "closing_record_count": len(payload["closing_records"]),
+        }
+
+    def _assign_drilldown_metrics(self, metrics):
+        self.ensure_one()
+        self.drill_all_visit_count = metrics.get("all_visit_count", 0)
+        self.drill_completed_visit_count = metrics.get("completed_visit_count", 0)
+        self.drill_unfinished_visit_count = metrics.get("unfinished_visit_count", 0)
+        self.drill_not_started_visit_count = metrics.get("not_started_visit_count", 0)
+        self.drill_open_due_visit_count = metrics.get("open_due_visit_count", 0)
+        self.drill_open_due_amount = metrics.get("open_due_amount", 0.0)
+        self.drill_collection_count = metrics.get("collection_count", 0)
+        self.drill_collection_amount = metrics.get("collection_amount", 0.0)
+        self.drill_open_promise_count = metrics.get("open_promise_count", 0)
+        self.drill_open_promise_amount = metrics.get("open_promise_amount", 0.0)
+        self.drill_due_promise_count = metrics.get("due_promise_count", 0)
+        self.drill_due_promise_amount = metrics.get("due_promise_amount", 0.0)
+        self.drill_sales_order_count = metrics.get("sales_order_count", 0)
+        self.drill_sales_order_amount = metrics.get("sales_order_amount", 0.0)
+        self.drill_return_count = metrics.get("return_count", 0)
+        self.drill_return_amount = metrics.get("return_amount", 0.0)
+        self.drill_return_transfer_count = metrics.get("return_transfer_count", 0)
+        self.drill_refill_transfer_count = metrics.get("refill_transfer_count", 0)
+        self.drill_loading_proposal_count = metrics.get("loading_proposal_count", 0)
+        self.drill_pending_transfer_count = metrics.get("pending_transfer_count", 0)
+        self.drill_top_product_count = metrics.get("top_product_count", 0)
+        self.drill_returned_product_count = metrics.get("returned_product_count", 0)
+        self.drill_outlet_count = metrics.get("outlet_count", 0)
+        self.drill_top_sales_outlet_count = metrics.get("top_sales_outlet_count", 0)
+        self.drill_highest_due_outlet_count = metrics.get("highest_due_outlet_count", 0)
+        self.drill_risk_outlet_count = metrics.get("risk_outlet_count", 0)
+        self.drill_location_review_count = metrics.get("location_review_count", 0)
+        self.drill_vehicle_issue_count = metrics.get("vehicle_issue_count", 0)
+        self.drill_closing_record_count = metrics.get("closing_record_count", 0)
 
     def _dashboard_scope_label(self):
         self.ensure_one()
@@ -638,6 +771,38 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 "help": self._dashboard_empty_help(name),
             }
         )
+
+        preferred_view_map = {
+            "sale.order": [
+                ("route_core.view_sale_order_outlet_pda_kanban", "kanban"),
+                ("route_core.view_sale_order_outlet_pda_list", "list"),
+                (False, "form"),
+            ],
+            "stock.picking": [
+                ("route_core.view_stock_picking_outlet_pda_kanban", "kanban"),
+                ("route_core.view_stock_picking_outlet_pda_list", "list"),
+                (False, "form"),
+            ],
+            "route.vehicle.closing": [
+                ("route_core.view_route_vehicle_closing_dashboard_kanban", "kanban"),
+                (False, "list"),
+                (False, "form"),
+            ],
+            "route.daily.closing": [
+                ("route_core.view_route_daily_closing_dashboard_kanban", "kanban"),
+                (False, "list"),
+                (False, "form"),
+            ],
+        }
+        preferred_views = []
+        for xmlid, mode in preferred_view_map.get(res_model, []):
+            view = self.env.ref(xmlid, raise_if_not_found=False) if xmlid else False
+            preferred_views.append((view.id if view else False, mode))
+        if preferred_views and "kanban" in (view_mode or ""):
+            result["views"] = preferred_views
+            if preferred_views[0][0]:
+                result["view_id"] = preferred_views[0][0]
+
         if res_model == "route.visit.payment" and "kanban" in (view_mode or ""):
             kanban_view = self.env.ref("route_core.view_route_visit_collection_kanban", raise_if_not_found=False)
             list_view = self.env.ref("route_core.view_route_visit_payment_list", raise_if_not_found=False)
@@ -675,6 +840,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             rec.net_sales_amount = payload["net_sales"]
             rec.open_promise_amount = payload["open_promise_amount"]
             rec.gross_profit_amount = payload["gross_profit"]
+            rec._assign_drilldown_metrics(rec._compute_drilldown_metrics(payload))
             rec.executive_html = rec._render_executive_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("executive")) else ""
             rec.visit_chart_html = rec._render_visit_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("visits")) else ""
             rec.collection_chart_html = rec._render_collection_chart_html(payload) if rec._dashboard_any_widget_enabled(rec._dashboard_section_widget_codes("collections")) else ""
