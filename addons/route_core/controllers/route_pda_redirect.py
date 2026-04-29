@@ -86,6 +86,30 @@ class RoutePdaRedirectController(http.Controller):
             menu_xmlid="route_core.menu_route_outlet",
         )
 
+    @http.route("/route_core/pda/visit/<int:visit_id>", type="http", auth="user", website=False)
+    def route_core_open_pda_visit_form(self, visit_id, **kwargs):
+        visit = request.env["route.visit"].browse(visit_id).exists()
+        if not visit:
+            return redirect("/route_core/pda/product_center")
+
+        user = request.env.user
+        can_open = (
+            visit.user_id == user
+            or user.has_group("route_core.group_route_supervisor")
+            or user.has_group("route_core.group_route_management")
+        )
+        if not can_open:
+            return redirect("/route_core/pda/product_center")
+
+        action_xmlid = "route_core.action_route_visit_pda_salesperson" if visit.user_id == user else "route_core.action_route_visit_pda"
+        return self._build_web_redirect(
+            model="route.visit",
+            record_id=visit.id,
+            view_xmlid="route_core.view_route_visit_pda_form",
+            action_xmlid=action_xmlid,
+            menu_xmlid="route_core.menu_route_salesperson_my_visits",
+        )
+
 
 class RouteGeoLiveMapController(http.Controller):
     def _selection_label(self, record, field_name, value):
@@ -488,7 +512,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "visit_url": "/route_core/pda/visit/%s" % visit.id,
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
