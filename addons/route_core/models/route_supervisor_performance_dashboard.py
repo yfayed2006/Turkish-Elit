@@ -20,20 +20,6 @@ DASHBOARD_FOCUS_SELECTION = [
 ]
 
 
-class ResUsersRouteDashboardFocus(models.Model):
-    _inherit = "res.users"
-
-    route_supervisor_dashboard_focus_mode = fields.Selection(
-        DASHBOARD_FOCUS_SELECTION,
-        string="Supervisor Dashboard Focus Mode",
-        default="all",
-    )
-    route_manager_dashboard_focus_mode = fields.Selection(
-        DASHBOARD_FOCUS_SELECTION,
-        string="Manager Dashboard Focus Mode",
-        default="all",
-    )
-
 
 class RouteSupervisorPerformanceDashboard(models.TransientModel):
     _name = "route.supervisor.performance.dashboard"
@@ -175,29 +161,27 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         return action
 
     @api.model
-    def _dashboard_focus_user_field(self, target=False):
+    def _dashboard_focus_user_key(self, target=False):
         target = target or self._dashboard_target()
-        if target == "manager":
-            return "route_manager_dashboard_focus_mode"
-        return "route_supervisor_dashboard_focus_mode"
+        return "route_core.dashboard_focus_mode.%s.%s" % (target, self.env.uid)
 
     @api.model
     def _get_user_dashboard_focus_mode(self, target=False):
-        field_name = self._dashboard_focus_user_field(target=target)
-        value = getattr(self.env.user.sudo(), field_name, False)
         allowed = dict(DASHBOARD_FOCUS_SELECTION)
+        key = self._dashboard_focus_user_key(target=target)
+        value = self.env["ir.config_parameter"].sudo().get_param(key, default="all")
         return value if value in allowed else "all"
 
     def _save_user_dashboard_focus_mode(self):
         allowed = dict(DASHBOARD_FOCUS_SELECTION)
+        Config = self.env["ir.config_parameter"].sudo()
         for rec in self:
             mode = rec.dashboard_focus_mode or "all"
             if mode not in allowed:
                 mode = "all"
-            field_name = rec._dashboard_focus_user_field(target=rec._dashboard_target())
-            current = getattr(rec.env.user.sudo(), field_name, False)
-            if current != mode:
-                rec.env.user.sudo().write({field_name: mode})
+            key = rec._dashboard_focus_user_key(target=rec._dashboard_target())
+            if Config.get_param(key, default="all") != mode:
+                Config.set_param(key, mode)
 
     @api.onchange("dashboard_focus_mode")
     def _onchange_dashboard_focus_mode(self):
@@ -374,13 +358,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Visits"), payload["visits"], "route.visit", "kanban,list,form")
+        return self._action_open_records(_("All Visits"), payload["visits"], "route.visit", "kanban,list,form")
 
     def action_open_unfinished_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         visits = payload["visits"].filtered(lambda visit: visit.visit_process_state not in ("done", "cancel"))
-        return self._action_open_records(_("Dashboard Unfinished Visits"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Unfinished Visits"), visits, "route.visit", "kanban,list,form")
 
     def action_open_location_review(self):
         self.ensure_one()
@@ -389,13 +373,13 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             visits = self.env["route.visit"].browse()
         else:
             visits = payload["location_issue_visits"]
-        return self._action_open_records(_("Dashboard Location Review"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Location Review"), visits, "route.visit", "kanban,list,form")
 
     def action_open_collections(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         return self._action_open_records(
-            _("Dashboard Collections"),
+            _("Collections"),
             payload["payments"],
             "route.visit.payment",
             "kanban,list,form",
@@ -406,7 +390,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         return self._action_open_records(
-            _("Dashboard Open Promises"),
+            _("Open Promises"),
             payload["open_promises"],
             "route.visit.payment",
             "kanban,list,form",
@@ -416,65 +400,68 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_sales_orders(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Sales Orders"), payload["sale_orders"], "sale.order", "list,form", "sale.action_orders")
+        return self._action_open_records(_("Sales Orders"), payload["sale_orders"], "sale.order", "list,form", "sale.action_orders")
 
     def action_open_returns(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         if payload["direct_returns"]:
-            return self._action_open_records(_("Dashboard Return Orders"), payload["direct_returns"], "route.direct.return", "kanban,list,form")
+            return self._action_open_records(_("Return Orders"), payload["direct_returns"], "route.direct.return", "kanban,list,form")
         pickings = self.env["stock.picking"]
         if payload["settings"].get("show_consignment"):
             pickings |= payload["visits"].mapped("return_picking_ids")
-        return self._action_open_records(_("Dashboard Return Transfers"), pickings, "stock.picking", "list,form")
+        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "list,form")
 
     def action_open_vehicle_issues(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        closings = payload["vehicle_closings"].filtered(
-            lambda closing: closing.state != "closed" or (closing.pending_variance_line_count or 0) > 0 or (closing.pending_execution_line_count or 0) > 0
-        )
-        return self._action_open_records(_("Dashboard Vehicle Issues"), closings, "route.vehicle.closing", "list,form")
+        if not payload["settings"].get("show_vehicle_closing"):
+            closings = self.env["route.vehicle.closing"].browse()
+        else:
+            closings = payload["vehicle_closings"].filtered(
+                lambda closing: closing.state != "closed" or (closing.pending_variance_line_count or 0) > 0 or (closing.pending_execution_line_count or 0) > 0
+            )
+        return self._action_open_records(_("Vehicle Issues"), closings, "route.vehicle.closing", "list,form")
 
     def action_open_closing_records(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Closing Records"), payload["closing_records"], "route.daily.closing", "list,form")
+        return self._action_open_records(_("Closing Records"), payload["closing_records"], "route.daily.closing", "list,form")
 
     def action_open_completed_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "done")
-        return self._action_open_records(_("Dashboard Completed Visits"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Completed Visits"), visits, "route.visit", "kanban,list,form")
 
     def action_open_started_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         visits = payload["visits"].filtered(lambda visit: visit.visit_process_state not in ("draft", "done", "cancel"))
-        return self._action_open_records(_("Dashboard Started Visits"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Started Visits"), visits, "route.visit", "kanban,list,form")
 
     def action_open_not_started_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "draft")
-        return self._action_open_records(_("Dashboard Not Started Visits"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Not Started Visits"), visits, "route.visit", "kanban,list,form")
 
     def action_open_cancelled_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         visits = payload["visits"].filtered(lambda visit: visit.visit_process_state == "cancel")
-        return self._action_open_records(_("Dashboard Cancelled Visits"), visits, "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Cancelled Visits"), visits, "route.visit", "kanban,list,form")
 
     def action_open_open_due_visits(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Open Due Visits"), payload["open_due_visits"], "route.visit", "kanban,list,form")
+        return self._action_open_records(_("Open Due Visits"), payload["open_due_visits"], "route.visit", "kanban,list,form")
 
     def action_open_due_overdue_promises(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         return self._action_open_records(
-            _("Dashboard Due / Overdue Promises"),
+            _("Due / Overdue Promises"),
             payload["due_overdue_promises"],
             "route.visit.payment",
             "kanban,list,form",
@@ -484,12 +471,12 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def action_open_pending_transfers(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Pending Transfers"), payload["pending_transfers"], "stock.picking", "list,form")
+        return self._action_open_records(_("Pending Transfers"), payload["pending_transfers"], "stock.picking", "list,form")
 
     def action_open_loading_proposals(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
-        return self._action_open_records(_("Dashboard Loading Proposals"), payload["loading_proposals"], "route.loading.proposal", "list,form")
+        return self._action_open_records(_("Loading Proposals"), payload["loading_proposals"], "route.loading.proposal", "list,form")
 
     def action_open_return_transfers(self):
         self.ensure_one()
@@ -499,60 +486,60 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             pickings |= payload["visits"].mapped("return_picking_ids")
         if payload["settings"].get("show_direct_return"):
             pickings |= payload["direct_returns"].mapped("picking_ids")
-        return self._action_open_records(_("Dashboard Return Transfers"), pickings, "stock.picking", "list,form")
+        return self._action_open_records(_("Return Transfers"), pickings, "stock.picking", "list,form")
 
     def action_open_refill_transfers(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         pickings = payload["visits"].mapped("refill_picking_id") if payload["settings"].get("show_consignment") else self.env["stock.picking"]
-        return self._action_open_records(_("Dashboard Refill Transfers"), pickings, "stock.picking", "list,form")
+        return self._action_open_records(_("Refill Transfers"), pickings, "stock.picking", "list,form")
 
     def action_open_dashboard_products(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         products = self._products_from_product_lines(payload["product_lines"])
-        return self._action_open_records(_("Dashboard Products"), products, "product.product", "kanban,list,form")
+        return self._action_open_records(_("Products"), products, "product.product", "kanban,list,form")
 
     def action_open_top_selling_products(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         lines = sorted(payload["product_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
         products = self._products_from_product_lines(lines)
-        return self._action_open_records(_("Dashboard Top Selling Products"), products, "product.product", "kanban,list,form")
+        return self._action_open_records(_("Top Selling Products"), products, "product.product", "kanban,list,form")
 
     def action_open_top_returned_products(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         lines = sorted(payload["product_lines"], key=lambda line: line.get("returns", 0.0), reverse=True)[:20]
         products = self._products_from_product_lines(lines)
-        return self._action_open_records(_("Dashboard Top Returned Products"), products, "product.product", "kanban,list,form")
+        return self._action_open_records(_("Top Returned Products"), products, "product.product", "kanban,list,form")
 
     def action_open_dashboard_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         outlets = self._outlets_from_outlet_lines(payload["outlet_lines"])
-        return self._action_open_records(_("Dashboard Outlets"), outlets, "route.outlet", "kanban,list,form")
+        return self._action_open_records(_("Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def action_open_top_sales_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         lines = sorted(payload["outlet_lines"], key=lambda line: line.get("sales", 0.0), reverse=True)[:20]
         outlets = self._outlets_from_outlet_lines(lines)
-        return self._action_open_records(_("Dashboard Top Sales Outlets"), outlets, "route.outlet", "kanban,list,form")
+        return self._action_open_records(_("Top Sales Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def action_open_highest_due_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         lines = sorted(payload["outlet_lines"], key=lambda line: line.get("open_due", 0.0), reverse=True)[:20]
         outlets = self._outlets_from_outlet_lines(lines)
-        return self._action_open_records(_("Dashboard Highest Open Due Outlets"), outlets, "route.outlet", "kanban,list,form")
+        return self._action_open_records(_("Highest Open Due Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def action_open_high_risk_outlets(self):
         self.ensure_one()
         payload = self._get_dashboard_payload()
         lines = sorted(payload["outlet_lines"], key=lambda line: line.get("risk", 0.0), reverse=True)[:20]
         outlets = self._outlets_from_outlet_lines(lines)
-        return self._action_open_records(_("Dashboard High Risk Outlets"), outlets, "route.outlet", "kanban,list,form")
+        return self._action_open_records(_("High Risk Outlets"), outlets, "route.outlet", "kanban,list,form")
 
     def _products_from_product_lines(self, lines):
         product_ids = []
@@ -570,7 +557,68 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
                 outlet_ids.append(outlet_id)
         return self.env["route.outlet"].browse(outlet_ids)
 
+    def _dashboard_scope_label(self):
+        self.ensure_one()
+        date_from, date_to = self._get_date_range()
+        period_label = dict(self._fields["period_filter"].selection).get(self.period_filter or "custom", self.period_filter or "")
+        parts = []
+        if period_label:
+            parts.append(str(period_label))
+        if date_from and date_to:
+            parts.append("%s → %s" % (fields.Date.to_string(date_from), fields.Date.to_string(date_to)))
+        if self.salesperson_id:
+            parts.append(_("Salesperson: %s") % self.salesperson_id.display_name)
+        if self.vehicle_id:
+            parts.append(_("Vehicle: %s") % self.vehicle_id.display_name)
+        if self.city_id:
+            parts.append(_("City: %s") % self.city_id.display_name)
+        if self.area_id:
+            parts.append(_("Area: %s") % self.area_id.display_name)
+        if self.outlet_id:
+            parts.append(_("Outlet: %s") % self.outlet_id.display_name)
+        return " | ".join(parts)
+
+    def _dashboard_action_title(self, name, count=0):
+        self.ensure_one()
+        scope = self._dashboard_scope_label()
+        if scope:
+            return _("%(name)s — %(count)s record(s) — %(scope)s") % {
+                "name": name,
+                "count": count,
+                "scope": scope,
+            }
+        return _("%(name)s — %(count)s record(s)") % {"name": name, "count": count}
+
+    def _dashboard_action_context(self):
+        self.ensure_one()
+        date_from, date_to = self._get_date_range()
+        return {
+            "create": False,
+            "edit": True,
+            "delete": False,
+            "dashboard_source": self._name,
+            "dashboard_target": self._dashboard_target(),
+            "dashboard_period_filter": self.period_filter or "custom",
+            "dashboard_date_from": fields.Date.to_string(date_from) if date_from else False,
+            "dashboard_date_to": fields.Date.to_string(date_to) if date_to else False,
+            "dashboard_salesperson_id": self.salesperson_id.id or False,
+            "dashboard_vehicle_id": self.vehicle_id.id or False,
+            "dashboard_city_id": self.city_id.id or False,
+            "dashboard_area_id": self.area_id.id or False,
+            "dashboard_outlet_id": self.outlet_id.id or False,
+            "default_company_id": self.company_id.id or self.env.company.id,
+        }
+
+    def _dashboard_empty_help(self, name):
+        scope = self._dashboard_scope_label()
+        message = _("No records matched this drill-down action for the current dashboard filters.")
+        if scope:
+            message += " " + _("Scope: %s") % scope
+        return "<p class='o_view_nocontent_smiling_face'>%s</p><p>%s</p>" % (escape(str(name)), escape(message))
+
     def _action_open_records(self, name, records, res_model, view_mode="list,form", action_xmlid=False):
+        self.ensure_one()
+        records = records or self.env[res_model].browse()
         action = self.env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
         result = action.read()[0] if action else {
             "type": "ir.actions.act_window",
@@ -578,13 +626,16 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
             "res_model": res_model,
             "view_mode": view_mode,
         }
+        record_count = len(records)
         result.update(
             {
-                "name": name,
+                "name": self._dashboard_action_title(name, record_count),
                 "res_model": res_model,
                 "view_mode": view_mode,
                 "domain": [("id", "in", records.ids or [0])],
-                "context": {"create": False, "edit": True, "delete": False},
+                "context": self._dashboard_action_context(),
+                "target": "current",
+                "help": self._dashboard_empty_help(name),
             }
         )
         if res_model == "route.visit.payment" and "kanban" in (view_mode or ""):
