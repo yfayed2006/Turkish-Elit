@@ -1,0 +1,326 @@
+<odoo>
+<record id="action_report_route_supervisor_performance_snapshot" model="ir.actions.report">
+<field name="name">Supervisor Performance PDF Snapshot</field>
+<field name="model">route.supervisor.performance.dashboard</field>
+<field name="report_type">qweb-pdf</field>
+<field name="report_name">route_core.report_route_supervisor_performance_snapshot</field>
+<field name="report_file">route_core.report_route_supervisor_performance_snapshot</field>
+<field name="print_report_name">'Supervisor Performance Snapshot - %s' % (object.date_to or '')</field>
+<field name="binding_model_id" eval="False"/>
+</record>
+<record id="action_report_route_manager_executive_snapshot" model="ir.actions.report">
+<field name="name">Manager Executive PDF Snapshot</field>
+<field name="model">route.manager.executive.dashboard</field>
+<field name="report_type">qweb-pdf</field>
+<field name="report_name">route_core.report_route_manager_executive_snapshot</field>
+<field name="report_file">route_core.report_route_manager_executive_snapshot</field>
+<field name="print_report_name">'Manager Executive Snapshot - %s' % (object.date_to or '')</field>
+<field name="binding_model_id" eval="False"/>
+</record>
+<template id="route_dashboard_snapshot_layout">
+<t t-set="data" t-value="doc._dashboard_pdf_payload()"/>
+<div class="page" style="font-family:Arial, sans-serif; color:#1f2937; font-size:12px;">
+<style> .route_pdf_header{border-bottom:3px solid #6d28d9;padding-bottom:12px;margin-bottom:14px;} .route_pdf_title{font-size:24px;font-weight:800;color:#111827;margin:0;} .route_pdf_subtitle{font-size:11px;color:#6b7280;margin-top:4px;} .route_pdf_company{text-align:right;font-size:12px;color:#374151;} .route_pdf_section{margin-top:14px;page-break-inside:avoid;} .route_pdf_section h3{font-size:15px;margin:0 0 8px 0;color:#111827;border-left:4px solid #7c3aed;padding-left:8px;} .route_pdf_kpi{display:inline-block;vertical-align:top;width:23.5%;min-height:74px;border:1px solid #d9e2ef;border-radius:10px;margin:0 0.7% 8px 0;padding:9px;background:#ffffff;box-sizing:border-box;} .route_pdf_kpi span{display:block;font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;} .route_pdf_kpi strong{display:block;font-size:18px;margin:5px 0;color:#111827;} .route_pdf_kpi small{display:block;color:#64748b;font-size:10px;} .route_pdf_table{width:100%;border-collapse:collapse;margin-bottom:8px;} .route_pdf_table th{background:#f3f4f6;color:#374151;font-size:10px;text-transform:uppercase;text-align:left;border:1px solid #d1d5db;padding:6px;} .route_pdf_table td{border:1px solid #e5e7eb;padding:6px;vertical-align:top;} .route_pdf_grid_2{width:100%;border-collapse:collapse;} .route_pdf_grid_2 td{width:50%;vertical-align:top;padding:0 6px 8px 0;border:0;} .route_pdf_note{font-size:10px;color:#6b7280;} .route_pdf_badge{display:inline-block;border-radius:999px;background:#ede9fe;color:#5b21b6;padding:3px 8px;font-weight:700;font-size:10px;} </style>
+<table style="width:100%;" class="route_pdf_header">
+<tr>
+<td style="width:65%;vertical-align:top;">
+<h1 class="route_pdf_title" t-esc="data.get('title')"/>
+<div class="route_pdf_subtitle" t-esc="data.get('subtitle') or 'All Operations'"/>
+<div style="margin-top:6px;">
+<span class="route_pdf_badge">PDF Snapshot</span>
+</div>
+</td>
+<td class="route_pdf_company" style="width:35%;vertical-align:top;">
+<div t-if="data.get('company') and data.get('company').logo" style="margin-bottom:6px;">
+<img t-att-src="image_data_uri(data.get('company').logo)" style="max-height:45px;max-width:150px;"/>
+</div>
+<strong t-esc="data.get('company').display_name if data.get('company') else ''"/>
+<div>
+Generated:
+<span t-esc="data.get('generated_on')"/>
+</div>
+</td>
+</tr>
+</table>
+<div class="route_pdf_section">
+<h3>Dashboard Scope</h3>
+<table class="route_pdf_table">
+<tbody>
+<tr t-foreach="data.get('filter_rows')" t-as="line">
+<td style="width:25%;font-weight:700;" t-esc="line.get('label')"/>
+<td style="width:35%;" t-esc="line.get('value')"/>
+<td class="route_pdf_note" t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="route_pdf_section">
+<h3>Executive KPI Snapshot</h3>
+<div>
+<div t-foreach="data.get('kpis')" t-as="kpi" class="route_pdf_kpi">
+<span t-esc="kpi.get('label')"/>
+<strong t-esc="kpi.get('value')"/>
+<small t-esc="kpi.get('note')"/>
+</div>
+</div>
+</div>
+<t t-if="data.get('comparison_rows')">
+<div class="route_pdf_section">
+<h3>This Period vs Previous Period</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Metric</th>
+<th>Current</th>
+<th>Comparison</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="data.get('comparison_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td t-esc="line.get('value')"/>
+<td t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</t>
+<table class="route_pdf_grid_2">
+<tr>
+<td>
+<div class="route_pdf_section">
+<h3>Visit Execution</h3>
+<table class="route_pdf_table">
+<tbody>
+<tr t-foreach="data.get('visit_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
+<td class="route_pdf_note" t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</td>
+<td>
+<div class="route_pdf_section">
+<h3>Financial Summary</h3>
+<table class="route_pdf_table">
+<tbody>
+<tr t-foreach="data.get('financial_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
+<td class="route_pdf_note" t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</td>
+</tr>
+<tr>
+<td>
+<div class="route_pdf_section">
+<h3>Attention / Risk Summary</h3>
+<table class="route_pdf_table">
+<tbody>
+<tr t-foreach="data.get('attention_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
+<td class="route_pdf_note" t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</td>
+<td>
+<div class="route_pdf_section">
+<h3>Payment Method Mix</h3>
+<table class="route_pdf_table">
+<tbody>
+<tr t-if="not data.get('payment_rows')">
+<td colspan="2" class="route_pdf_note">No confirmed payments in this period.</td>
+</tr>
+<tr t-foreach="data.get('payment_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td style="text-align:right;font-weight:700;" t-esc="line.get('value')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</td>
+</tr>
+</table>
+<div class="route_pdf_section">
+<h3>Smart Drill-down Totals</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Action</th>
+<th>Count / Value</th>
+<th>Amount / Note</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="data.get('drill_rows')" t-as="line">
+<td t-esc="line.get('label')"/>
+<td t-esc="line.get('value')"/>
+<td t-esc="line.get('note')"/>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="route_pdf_section">
+<h3>Salesperson Performance</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Salesperson</th>
+<th>Visits</th>
+<th>Done</th>
+<th>Unfinished</th>
+<th>Sales</th>
+<th>Collected</th>
+<th>Promises</th>
+<th>Issues</th>
+</tr>
+</thead>
+<tbody>
+<tr t-if="not data.get('salesperson_rows')">
+<td colspan="8" class="route_pdf_note">No salesperson data for this period.</td>
+</tr>
+<tr t-foreach="data.get('salesperson_rows')" t-as="line">
+<td t-esc="line.get('name')"/>
+<td t-esc="line.get('visits')"/>
+<td t-esc="line.get('done')"/>
+<td t-esc="line.get('unfinished')"/>
+<td t-esc="line.get('sales')"/>
+<td t-esc="line.get('collection')"/>
+<td t-esc="line.get('promises')"/>
+<td t-esc="line.get('issues')"/>
+</tr>
+</tbody>
+</table>
+</div>
+<t t-if="data.get('vehicle_rows')">
+<div class="route_pdf_section">
+<h3>Vehicle Risk / Closing Issues</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Vehicle</th>
+<th>Visits</th>
+<th>Unfinished</th>
+<th>Variance Lines</th>
+<th>Pending Closings</th>
+<th>Issues</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="data.get('vehicle_rows')" t-as="line">
+<td t-esc="line.get('name')"/>
+<td t-esc="line.get('visits')"/>
+<td t-esc="line.get('unfinished')"/>
+<td t-esc="line.get('variance')"/>
+<td t-esc="line.get('pending')"/>
+<td t-esc="line.get('issues')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</t>
+<div class="route_pdf_section">
+<h3>Top Products by Sales</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Product</th>
+<th>Qty</th>
+<th>Sales</th>
+<th>Returns</th>
+<th>Estimated Profit</th>
+</tr>
+</thead>
+<tbody>
+<tr t-if="not data.get('product_rows')">
+<td colspan="5" class="route_pdf_note">No product movement for this period.</td>
+</tr>
+<tr t-foreach="data.get('product_rows')" t-as="line">
+<td t-esc="line.get('name')"/>
+<td t-esc="line.get('qty')"/>
+<td t-esc="line.get('sales')"/>
+<td t-esc="line.get('returns')"/>
+<td t-esc="line.get('profit')"/>
+</tr>
+</tbody>
+</table>
+</div>
+<t t-if="data.get('returned_product_rows')">
+<div class="route_pdf_section">
+<h3>Top Returned Products</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Product</th>
+<th>Returns</th>
+<th>Sales</th>
+<th>Estimated Profit</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="data.get('returned_product_rows')" t-as="line">
+<td t-esc="line.get('name')"/>
+<td t-esc="line.get('returns')"/>
+<td t-esc="line.get('sales')"/>
+<td t-esc="line.get('profit')"/>
+</tr>
+</tbody>
+</table>
+</div>
+</t>
+<div class="route_pdf_section">
+<h3>Outlet / Customer Risk</h3>
+<table class="route_pdf_table">
+<thead>
+<tr>
+<th>Outlet</th>
+<th>Mode</th>
+<th>Visits</th>
+<th>Sales</th>
+<th>Collected</th>
+<th>Open Due</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr t-if="not data.get('outlet_rows')">
+<td colspan="7" class="route_pdf_note">No outlet activity for this period.</td>
+</tr>
+<tr t-foreach="data.get('outlet_rows')" t-as="line">
+<td t-esc="line.get('name')"/>
+<td t-esc="line.get('mode')"/>
+<td t-esc="line.get('visits')"/>
+<td t-esc="line.get('sales')"/>
+<td t-esc="line.get('collection')"/>
+<td t-esc="line.get('open_due')"/>
+<td t-esc="line.get('returns')"/>
+</tr>
+</tbody>
+</table>
+</div>
+<div style="margin-top:16px;border-top:1px solid #d1d5db;padding-top:8px;font-size:10px;color:#6b7280;"> This PDF is a management snapshot generated from the dashboard filters. Use the live dashboard drill-down actions for operational details and record-level review. </div>
+</div>
+</template>
+<template id="report_route_supervisor_performance_snapshot">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+<t t-call="route_core.route_dashboard_snapshot_layout"/>
+</t>
+</t>
+</template>
+<template id="report_route_manager_executive_snapshot">
+<t t-call="web.html_container">
+<t t-foreach="docs" t-as="doc">
+<t t-call="route_core.route_dashboard_snapshot_layout"/>
+</t>
+</t>
+</template>
+</odoo>
