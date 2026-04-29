@@ -160,7 +160,7 @@
 <div class="route_mobile_visit_actions">
 <t t-if="record.state.raw_value not in ['visited', 'skipped'] and not record.visit_id.raw_value">
 <button name="action_open_skip_visit_wizard" type="object" class="btn btn-light route_mobile_action_btn">Skip Visit</button>
-<button name="action_open_or_create_visit" type="object" class="btn btn-primary route_mobile_action_btn">Execute Visit</button>
+<button name="action_open_or_create_visit" type="object" class="btn btn-primary route_mobile_action_btn">Create Visit</button>
 </t>
 <t t-if="record.visit_id.raw_value and record.state.raw_value not in ['visited', 'skipped']">
 <button name="action_open_skip_visit_wizard" type="object" class="btn btn-light route_mobile_action_btn">Skip Visit</button>
@@ -193,6 +193,7 @@
 <button name="action_open_pda_screen" type="object" string="Route Workspace" class="btn-primary"/>
 <button name="action_view_visits" type="object" string="Open Visits" class="btn-secondary" invisible="visit_count == 0"/>
 <button name="action_finalize_daily_plan" type="object" string="Finalize Daily Plan" class="btn-primary" invisible="planning_finalized or state == 'cancel'"/>
+<button name="action_generate_missing_visits" type="object" string="Generate Missing Visits" class="btn-secondary" icon="fa-magic" invisible="not planning_finalized or visit_count >= line_count" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_reopen_daily_plan" type="object" string="Reopen Daily Plan" class="btn-secondary" invisible="not planning_finalized or state == 'cancel'"/>
 <button name="action_generate_loading_proposal" type="object" string="Generate Loading Proposal" class="btn-primary" invisible="loading_workflow_enabled == False or not planning_finalized or state == 'cancel' or loading_proposal_count > 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_view_loading_proposal" type="object" string="Open Loading Proposal" class="btn-secondary" invisible="loading_workflow_enabled == False or loading_proposal_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
@@ -233,7 +234,7 @@
 pending visit(s) were found for this planning area.
 </div>
 <div class="alert alert-info" role="alert" invisible="planning_finalized or previous_pending_visit_count != 0">Complete the setup, build the stop list, then finalize the daily plan.</div>
-<div class="alert alert-success" role="alert" invisible="not planning_finalized or previous_pending_visit_count != 0">This daily plan is ready for execution. Use Open Visits to monitor the route.</div>
+<div class="alert alert-success" role="alert" invisible="not planning_finalized or previous_pending_visit_count != 0">This daily plan is ready for execution. Visits are generated automatically; the salesperson can start them from Today’s Visits or Today’s Route Map.</div>
 <notebook>
 <page string="Overview">
 <group string="Planning Setup" col="2" invisible="planning_finalized">
@@ -399,7 +400,7 @@ pending visit(s) were found for this planning area.
 </page>
 <page string="Planned Visits" invisible="not id">
 <div class="alert alert-info" role="alert" invisible="planning_finalized">Add, reorder, and review the final stop list before daily execution is locked.</div>
-<div class="alert alert-info" role="alert" invisible="not planning_finalized">Planning is locked after finalization. Monitor line status, open visits, and skipped stops here.</div>
+<div class="alert alert-info" role="alert" invisible="not planning_finalized">Planning is locked after finalization. Visits are generated automatically; monitor line status, open visits, and skipped stops here.</div>
 <div class="mb-2">
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_load_previous_pending_visits" type="object" string="Load Pending Visits" class="btn-secondary" icon="fa-history" invisible="previous_pending_visit_count == 0" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
@@ -417,7 +418,7 @@ pending visit(s) were found for this planning area.
 <field name="note" string="Line Note" optional="hide"/>
 <button name="action_open_skip_visit_wizard" type="object" string="Skip Visit" icon="fa-step-forward" invisible="state in ('visited', 'skipped') or visit_id.state == 'done'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_reopen_line" type="object" string="Reopen Line" icon="fa-undo" invisible="state != 'skipped'" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<button name="action_open_or_create_visit" type="object" string="Execute Visit" icon="fa-play" invisible="visit_id or state == 'skipped'"/>
+<button name="action_open_or_create_visit" type="object" string="Create Visit" icon="fa-magic" invisible="visit_id or state == 'skipped'"/>
 <button name="action_open_or_create_visit" type="object" string="Open Visit" icon="fa-external-link" invisible="not visit_id or state in ('visited', 'skipped') or visit_id.state in ('done', 'cancel')"/>
 <button name="action_open_or_create_visit" type="object" string="View Visit" icon="fa-eye" invisible="not visit_id or (state not in ('visited', 'skipped') and visit_id.state not in ('done', 'cancel'))"/>
 </list>
