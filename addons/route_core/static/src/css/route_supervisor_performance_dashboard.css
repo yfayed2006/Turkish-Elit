@@ -1499,3 +1499,40 @@
 }
 
 
+/* Stage 6 - Personal Focus Mode polish */
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ede9fe;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #faf5ff 0%, #ffffff 70%);
+    color: #64748b;
+    font-size: 13px;
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.05);
+}
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_hint i.fa {
+    color: #7c3aed;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.10);
+}
+.route_supervisor_performance_dashboard_form .route_dashboard_focus_filter_card span.text-muted {
+    font-weight: 800;
+    color: #6d28d9 !important;
+}
+@media (max-width: 768px) {
+    .route_supervisor_performance_dashboard_form .route_dashboard_focus_hint {
+        align-items: flex-start;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+}
+
+
