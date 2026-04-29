@@ -1925,7 +1925,7 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
         html = self._section_title(_("Products, Sales, and Stock Movement Signals"), quality_note)
         html += "<div class='route_dash_chart_grid'>"
         html += self._dashboard_chart_card("product_operations_pulse", _("Product Operations Pulse"), self._spotlight_tiles(product_tiles), _("Quick product signals for daily supervision."), wide=True)
-        html += self._dashboard_chart_card("commercial_mix_columns", _("Sales / Returns / Profit Columns"), self._column_chart(sales_return_rows, money=True), _("Visual commercial mix for the selected period."), wide=True)
+        html += self._dashboard_chart_card("commercial_mix_columns", _("Sales / Returns / Profit Columns"), self._column_chart(sales_return_rows, money=True), _("Compact visual commercial mix for the selected period."))
         html += self._dashboard_chart_card("top_products_sales", _("Top Products by Sales"), self._horizontal_bars(product_sales, money=True), "")
         html += self._dashboard_chart_card("top_products_quantity", _("Top Products by Quantity"), self._horizontal_bars(product_qty), "")
         if settings["show_consignment"] or settings["show_direct_return"]:
@@ -2359,19 +2359,51 @@ class RouteSupervisorPerformanceDashboard(models.TransientModel):
     def _ranking_table(self, title, headers, rows):
         if not rows:
             body = f"<tr><td colspan='{len(headers)}' class='route_dash_empty_cell'>No data</td></tr>"
+            mobile_cards = self._empty_chart()
         else:
             body = "".join(
                 "<tr>" + "".join(f"<td>{escape(str(cell))}</td>" for cell in row) + "</tr>"
                 for row in rows
             )
+            mobile_cards = self._ranking_mobile_cards(headers, rows)
         return (
-            "<div class='route_dash_table_card'>"
+            "<div class='route_dash_table_card route_dash_ranking_card'>"
             f"<h3>{escape(str(title))}</h3>"
-            "<div class='table-responsive'><table class='table table-sm route_dash_table'>"
+            "<div class='table-responsive route_dash_table_wrap'><table class='table table-sm route_dash_table'>"
             "<thead><tr>" + "".join(f"<th>{escape(str(header))}</th>" for header in headers) + "</tr></thead>"
             f"<tbody>{body}</tbody>"
-            "</table></div></div>"
+            "</table></div>"
+            f"<div class='route_dash_mobile_rank_cards'>{mobile_cards}</div>"
+            "</div>"
         )
+
+    def _ranking_mobile_cards(self, headers, rows):
+        if not rows:
+            return self._empty_chart()
+        safe_headers = [str(header) for header in headers]
+        html = "<div class='route_dash_mobile_rank_list'>"
+        for index, row in enumerate(rows, start=1):
+            safe_row = list(row or [])
+            title = safe_row[0] if safe_row else _("No data")
+            html += (
+                "<div class='route_dash_mobile_rank_card'>"
+                "<div class='route_dash_mobile_rank_head'>"
+                f"<strong>{escape(str(title))}</strong>"
+                f"<span>#{index}</span>"
+                "</div>"
+                "<div class='route_dash_mobile_rank_metrics'>"
+            )
+            for col_index, value in enumerate(safe_row[1:], start=1):
+                label = safe_headers[col_index] if col_index < len(safe_headers) else _("Value")
+                html += (
+                    "<div>"
+                    f"<span>{escape(str(label))}</span>"
+                    f"<b>{escape(str(value))}</b>"
+                    "</div>"
+                )
+            html += "</div></div>"
+        html += "</div>"
+        return html
 
     def _num(self, value):
         try:
