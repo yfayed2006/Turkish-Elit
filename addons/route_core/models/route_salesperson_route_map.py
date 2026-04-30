@@ -170,7 +170,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     def action_open_today_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
         domain = self._get_visit_domain()
         if action:
             result = action.read()[0]
@@ -190,4 +190,3 @@ class RouteSalespersonRouteMap(models.TransientModel):
             "domain": domain,
             "context": {"create": False, "edit": True, "delete": False},
         }
-
