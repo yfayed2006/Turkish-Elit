@@ -56,7 +56,7 @@ class RouteGeoControlCenter(models.TransientModel):
     )
     geo_review_filter = fields.Selection(
         [
-            ("all", "All Location Statuss"),
+            ("all", "All Location Statuses"),
             ("pending_checkin", "Pending Check-in"),
             ("outlet_missing", "Outlet Location Missing"),
             ("inside_zone", "Inside Zone"),
