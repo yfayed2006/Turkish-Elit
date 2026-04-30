@@ -19,8 +19,8 @@ class RouteGeoCaptureCheckinAction extends Component {
 
     async captureCurrentLocation() {
         if (!this.visitId) {
-            this.notification.add(_t("Missing visit reference for geo check-in."), {
-                title: _t("Geo Check-in"),
+            this.notification.add(_t("Missing visit reference for location check-in."), {
+                title: _t("Location Check-in"),
                 type: "danger",
             });
             await this.returnToVisit();
@@ -30,7 +30,7 @@ class RouteGeoCaptureCheckinAction extends Component {
         if (!window.isSecureContext) {
             this.notification.add(
                 _t("Location capture requires HTTPS. Please open Odoo through the secure https:// address."),
-                { title: _t("Geo Check-in"), type: "danger" }
+                { title: _t("Location Check-in"), type: "danger" }
             );
             await this.returnToVisit();
             return;
@@ -38,7 +38,7 @@ class RouteGeoCaptureCheckinAction extends Component {
 
         if (!navigator.geolocation) {
             this.notification.add(_t("This browser does not support GPS location capture."), {
-                title: _t("Geo Check-in"),
+                title: _t("Location Check-in"),
                 type: "danger",
             });
             await this.returnToVisit();
@@ -66,7 +66,7 @@ class RouteGeoCaptureCheckinAction extends Component {
             const message = distanceLabel
                 ? _t("Current location captured. Distance from outlet:") + " " + distanceLabel
                 : _t("Current location captured.");
-            this.notification.add(message, { title: _t("Geo Check-in"), type: "success" });
+            this.notification.add(message, { title: _t("Location Check-in"), type: "success" });
         } catch (error) {
             let message = _t("Could not capture current location.");
             if (error && error.code === 1) {
@@ -78,7 +78,7 @@ class RouteGeoCaptureCheckinAction extends Component {
             } else if (error && error.message) {
                 message = error.message;
             }
-            this.notification.add(message, { title: _t("Geo Check-in"), type: "warning" });
+            this.notification.add(message, { title: _t("Location Check-in"), type: "warning" });
         }
 
         await this.returnToVisit();
@@ -113,7 +113,7 @@ class RouteGeoCaptureCheckinAction extends Component {
 RouteGeoCaptureCheckinAction.template = xml`
     <div class="o_action route_geo_capture_action p-4">
         <div class="alert alert-info" role="alert">
-            <strong>Geo Check-in</strong><br/>
+            <strong>Location Check-in</strong><br/>
             Capturing your current GPS location. Please allow location access when your browser asks.
         </div>
     </div>
