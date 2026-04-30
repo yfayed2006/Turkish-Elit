@@ -2841,3 +2841,311 @@
 
 
 
+
+/* Salesperson visit list/detail polish - compact Odoo App Store ready PDA flow */
+.route_pda_visit_card_compact {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fbf7fb 100%) !important;
+}
+
+.route_pda_visit_card_compact::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #7b4b6f;
+}
+
+.route_pda_visit_title_block {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.route_pda_visit_card_compact .route_pda_visit_title {
+    margin-bottom: 4px;
+    overflow-wrap: anywhere;
+}
+
+.route_pda_visit_card_compact .route_pda_visit_meta {
+    margin-bottom: 0;
+    font-size: 0.84rem;
+}
+
+.route_pda_visit_status_badges_stack {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.route_pda_visit_mini_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.route_pda_visit_mini_box {
+    min-width: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.78);
+    padding: 8px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.route_pda_visit_mini_box_full {
+    grid-column: 1 / -1;
+}
+
+.route_pda_visit_mini_box_mode {
+    background: #f8fafc;
+}
+
+.route_pda_visit_mini_box_money .route_pda_visit_value,
+.route_pda_visit_mini_box_money .o_field_widget,
+.route_pda_visit_mini_box_money .o_input {
+    font-weight: 900 !important;
+}
+
+.route_pda_visit_value_wrap,
+.route_pda_visit_value_wrap .o_field_widget,
+.route_pda_visit_value_wrap .o_input {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    line-height: 1.18 !important;
+}
+
+.route_pda_visit_badge_location_inside {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.route_pda_visit_badge_location_outside {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.route_pda_visit_badge_location_pending {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.route_pda_visit_card_compact .route_pda_visit_open_btn {
+    border-radius: 12px !important;
+    min-height: 42px !important;
+}
+
+.route_pda_visit_nav_bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 12px;
+}
+
+.route_pda_visit_nav_btn {
+    min-height: 42px;
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+}
+
+.route_pda_visit_quick_panel {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 12px;
+}
+
+.route_pda_visit_quick_card {
+    min-width: 0;
+    min-height: 92px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 12px 13px;
+    background: #ffffff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.route_pda_visit_quick_card_primary {
+    background: linear-gradient(145deg, #ffffff 0%, #faf5ff 100%);
+    border-color: #eadde7;
+}
+
+.route_pda_visit_quick_card_subtle {
+    background: #f8fafc;
+}
+
+.route_pda_visit_quick_card_status {
+    background: #fbf7fb;
+    border-color: #eadde7;
+}
+
+.route_pda_visit_quick_label {
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.route_pda_visit_quick_value,
+.route_pda_visit_quick_value .o_field_widget,
+.route_pda_visit_quick_value .o_input {
+    display: block !important;
+    width: 100% !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    font-size: 1.06rem !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+}
+
+.route_pda_visit_quick_value_small,
+.route_pda_visit_quick_value_small .o_field_widget,
+.route_pda_visit_quick_value_small .o_input {
+    font-size: 0.96rem !important;
+}
+
+.route_pda_visit_form .route_pda_visit_command_header_block,
+.route_pda_visit_form .route_pda_visit_command_header_title {
+    display: none !important;
+}
+
+.route_pda_visit_form .route_pda_visit_stage_alert {
+    border: 1px solid #dbeafe;
+    border-left: 5px solid #7b4b6f;
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 10px !important;
+}
+
+.route_pda_current_snapshot_header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.route_pda_current_snapshot_header .route_pda_detail_title {
+    flex: 1 1 100%;
+    margin-top: 4px;
+}
+
+.route_pda_snapshot_open_btn {
+    min-height: 42px;
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 7px;
+}
+
+@media (max-width: 992px) {
+    .route_pda_visit_quick_panel {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .route_pda_visit_nav_bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+
+    .route_pda_visit_nav_btn {
+        min-height: 48px;
+        padding: 8px 6px !important;
+        font-size: 0.78rem !important;
+    }
+
+    .route_pda_visit_quick_panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .route_pda_visit_quick_card {
+        min-height: 82px;
+        border-radius: 14px;
+        padding: 10px 11px;
+    }
+
+    .route_pda_visit_quick_label {
+        font-size: 0.66rem;
+    }
+
+    .route_pda_visit_quick_value,
+    .route_pda_visit_quick_value .o_field_widget,
+    .route_pda_visit_quick_value .o_input {
+        font-size: 0.96rem !important;
+    }
+
+    .route_pda_visit_card_compact {
+        border-radius: 16px !important;
+        padding: 12px 12px 13px !important;
+    }
+
+    .route_pda_visit_mini_grid {
+        gap: 7px;
+    }
+
+    .route_pda_visit_mini_box {
+        padding: 7px 8px;
+        border-radius: 11px;
+    }
+
+    .route_pda_visit_badge {
+        min-height: 24px;
+        padding: 0 8px;
+        font-size: 0.72rem;
+    }
+
+    .route_pda_current_snapshot_header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .route_pda_current_snapshot_header .route_pda_detail_title {
+        grid-column: 1 / -1;
+    }
+
+    .route_pda_snapshot_open_btn,
+    .route_pda_current_snapshot_header .route_pda_back_btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 390px) {
+    .route_pda_visit_nav_bar {
+        grid-template-columns: 1fr;
+    }
+
+    .route_pda_visit_quick_panel,
+    .route_pda_visit_mini_grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+
+
