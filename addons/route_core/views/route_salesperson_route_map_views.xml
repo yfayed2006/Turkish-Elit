@@ -22,63 +22,60 @@
 <field name="inside_zone_count" invisible="1"/>
 <field name="route_visit_ids" invisible="1"/>
 <field name="route_map_note" invisible="1"/>
-<div class="route_pda_detail_header route_pda_detail_header_compact">
-<h2 class="route_pda_detail_title">Today's Route Map</h2>
-</div>
-<div class="alert alert-warning route_sales_map_disabled_alert" role="alert" invisible="route_geo_enabled == True"> Visit location is disabled in Route Settings. Enable outlet locations to use the route map. </div>
-<div class="route_sales_map_summary_title">Route Summary</div>
-<div class="route_sales_map_kpi_grid route_salesperson_route_map_kpis">
-<div class="route_sales_map_kpi_card route_sales_map_kpi_date">
-<div class="route_sales_map_kpi_icon">
+<h2 class="route_pda_detail_title route_salesperson_route_map_title">Today's Route Map</h2>
+<div class="route_salesperson_route_map_summary_title">Route Summary</div>
+<div class="route_salesperson_route_map_summary">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_date">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-calendar-o"/>
 </div>
-<div class="route_sales_map_kpi_label">Visit Date</div>
-<div class="route_sales_map_kpi_value">
+<div class="route_salesperson_route_summary_label">Visit Date</div>
+<div class="route_salesperson_route_summary_value">
 <field name="visit_date" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_sales_map_kpi_card route_sales_map_kpi_total">
-<div class="route_sales_map_kpi_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_total">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-map-marker"/>
 </div>
-<div class="route_sales_map_kpi_label">Today's Visits</div>
-<div class="route_sales_map_kpi_value">
+<div class="route_salesperson_route_summary_label">Today's Visits</div>
+<div class="route_salesperson_route_summary_value">
 <field name="total_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_sales_map_kpi_card route_sales_map_kpi_pending">
-<div class="route_sales_map_kpi_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_pending">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-clock-o"/>
 </div>
-<div class="route_sales_map_kpi_label">Pending</div>
-<div class="route_sales_map_kpi_value">
+<div class="route_salesperson_route_summary_label">Pending</div>
+<div class="route_salesperson_route_summary_value">
 <field name="pending_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_sales_map_kpi_card route_sales_map_kpi_active">
-<div class="route_sales_map_kpi_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_active">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-play-circle"/>
 </div>
-<div class="route_sales_map_kpi_label">In Progress</div>
-<div class="route_sales_map_kpi_value">
+<div class="route_salesperson_route_summary_label">In Progress</div>
+<div class="route_salesperson_route_summary_value">
 <field name="active_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_sales_map_kpi_card route_sales_map_kpi_done">
-<div class="route_sales_map_kpi_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_done">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-check-circle"/>
 </div>
-<div class="route_sales_map_kpi_label">Done</div>
-<div class="route_sales_map_kpi_value">
+<div class="route_salesperson_route_summary_label">Done</div>
+<div class="route_salesperson_route_summary_value">
 <field name="done_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_sales_map_kpi_card route_sales_map_kpi_next">
-<div class="route_sales_map_kpi_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_card_next">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-location-arrow"/>
 </div>
-<div class="route_sales_map_kpi_label">Next Visit</div>
-<div class="route_sales_map_kpi_value route_sales_map_next_value">
+<div class="route_salesperson_route_summary_label">Next Visit</div>
+<div class="route_salesperson_route_summary_value route_salesperson_route_summary_value_text">
 <field name="next_visit_label" readonly="1" nolabel="1"/>
 </div>
 </div>
