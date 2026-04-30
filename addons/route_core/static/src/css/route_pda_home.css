@@ -2414,6 +2414,7 @@
     font-weight: 600;
 }
 
+
 /* Salesperson Today Route Map */
 .route_pda_app_btn_map {
     background: linear-gradient(135deg, #0ea5e9 0%, #7a536f 100%) !important;
@@ -2434,230 +2435,186 @@
     max-width: 1280px;
 }
 
-.route_pda_detail_header_compact {
-    margin-bottom: 8px;
-}
-
-.route_sales_map_disabled_alert {
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 14px;
-}
-
-.route_sales_map_summary_title {
-    margin-top: 8px;
+.route_salesperson_route_map_kpis {
     margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e5e7eb;
-    color: #111827;
-    font-size: 1.15rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .02em;
-}
-
-.route_sales_map_kpi_grid {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.route_sales_map_kpi_card {
-    position: relative;
-    overflow: hidden;
-    min-height: 132px;
-    padding: 18px 18px 16px;
-    border: 1px solid #eadce8;
-    border-radius: 22px;
-    background: linear-gradient(145deg, #ffffff 0%, #fbfafc 100%);
-    box-shadow: 0 14px 30px rgba(15, 23, 42, .06);
-}
-
-.route_sales_map_kpi_card::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 5px;
-    background: #7a536f;
-}
-
-.route_sales_map_kpi_icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 14px;
-    background: #7a536f;
-    color: #ffffff;
-    font-size: 24px;
-    box-shadow: 0 12px 26px rgba(123, 83, 111, .20);
-}
-
-.route_sales_map_kpi_label {
-    color: #6b7280;
-    font-size: .92rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    line-height: 1.2;
-}
-
-.route_sales_map_kpi_value,
-.route_sales_map_kpi_value .o_field_widget,
-.route_sales_map_kpi_value .o_input {
-    margin-top: 8px;
-    color: #111827;
-    font-size: 1.85rem;
-    font-weight: 950;
-    line-height: 1.08;
-    text-align: left;
-}
-
-.route_sales_map_next_value,
-.route_sales_map_next_value .o_field_widget,
-.route_sales_map_next_value .o_input {
-    font-size: 1.1rem;
-    overflow-wrap: anywhere;
-}
-
-.route_sales_map_kpi_total .route_sales_map_kpi_icon,
-.route_sales_map_kpi_total::after { background: #0ea5e9; }
-.route_sales_map_kpi_pending .route_sales_map_kpi_icon,
-.route_sales_map_kpi_pending::after { background: #f59e0b; }
-.route_sales_map_kpi_active .route_sales_map_kpi_icon,
-.route_sales_map_kpi_active::after { background: #f97316; }
-.route_sales_map_kpi_done .route_sales_map_kpi_icon,
-.route_sales_map_kpi_done::after { background: #16a34a; }
-.route_sales_map_kpi_next .route_sales_map_kpi_icon,
-.route_sales_map_kpi_next::after { background: #7a536f; }
-
-.route_sales_map_kpi_total {
-    background: linear-gradient(145deg, #f0f9ff 0%, #ffffff 100%);
-}
-.route_sales_map_kpi_pending {
-    background: linear-gradient(145deg, #fffbeb 0%, #ffffff 100%);
-}
-.route_sales_map_kpi_active {
-    background: linear-gradient(145deg, #fff7ed 0%, #ffffff 100%);
-}
-.route_sales_map_kpi_done {
-    background: linear-gradient(145deg, #f0fdf4 0%, #ffffff 100%);
-}
-.route_sales_map_kpi_next {
-    background: linear-gradient(145deg, #faf5ff 0%, #ffffff 100%);
 }
 
 .route_salesperson_route_map_sheet .o_field_html iframe {
     width: 100% !important;
-    border-radius: 16px !important;
 }
 
-@media (max-width: 1200px) {
-    .route_sales_map_kpi_grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 768px) {
+    .route_salesperson_route_map_sheet .o_field_html iframe {
+        min-height: 720px !important;
     }
+}
+
+/* Salesperson Today Route Map - compact KPI and stable map frame polish */
+.route_salesperson_route_map_sheet .route_pda_detail_header_compact {
+    margin-bottom: 4px !important;
+}
+
+.route_salesperson_route_map_sheet .route_pda_detail_title {
+    font-size: 1.45rem !important;
+    line-height: 1.15 !important;
+    margin: 0 0 8px !important;
+}
+
+.route_salesperson_route_map_summary_title {
+    margin-top: 4px !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 5px !important;
+    font-size: 1.05rem !important;
+    line-height: 1.15 !important;
+}
+
+.route_salesperson_route_map_summary {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+}
+
+.route_salesperson_route_summary_card {
+    min-height: 108px !important;
+    border-radius: 16px !important;
+    padding: 14px 16px 12px !important;
+}
+
+.route_salesperson_route_summary_icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 13px !important;
+    margin-bottom: 10px !important;
+    font-size: 1rem !important;
+}
+
+.route_salesperson_route_summary_label {
+    font-size: 0.78rem !important;
+    line-height: 1.15 !important;
+}
+
+.route_salesperson_route_summary_value,
+.route_salesperson_route_summary_value .o_field_widget,
+.route_salesperson_route_summary_value .o_input {
+    font-size: 1.55rem !important;
+    line-height: 1.08 !important;
+    margin-top: 6px !important;
+}
+
+.route_salesperson_route_summary_value_text,
+.route_salesperson_route_summary_value_text .o_field_widget,
+.route_salesperson_route_summary_value_text .o_input {
+    font-size: 1rem !important;
+    line-height: 1.15 !important;
+}
+
+.route_salesperson_route_map_sheet .o_field_html iframe {
+    height: clamp(620px, 78vh, 780px) !important;
+    min-height: 620px !important;
+    max-height: 780px !important;
 }
 
 @media (max-width: 768px) {
     .route_salesperson_route_map_sheet {
-        padding-left: 10px !important;
-        padding-right: 10px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
     }
 
     .route_salesperson_route_map_sheet .route_pda_detail_title {
-        font-size: 28px;
-        line-height: 1.15;
-        margin-bottom: 8px;
+        font-size: 1.35rem !important;
+        margin-bottom: 6px !important;
     }
 
-    .route_sales_map_summary_title {
-        font-size: 28px;
-        line-height: 1.15;
-        margin-top: 14px;
-        margin-bottom: 14px;
+    .route_salesperson_route_map_summary_title {
+        font-size: 1.15rem !important;
+        margin-top: 4px !important;
+        margin-bottom: 8px !important;
     }
 
-    .route_sales_map_kpi_grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
+    .route_salesperson_route_map_summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        margin-bottom: 10px !important;
     }
 
-    .route_sales_map_kpi_card {
-        min-height: 178px;
-        border-radius: 22px;
-        padding: 24px 20px 18px;
-        box-shadow: 0 18px 34px rgba(15, 23, 42, .08);
+    .route_salesperson_route_summary_card {
+        min-height: 112px !important;
+        border-radius: 17px !important;
+        padding: 12px 13px 10px !important;
     }
 
-    .route_sales_map_kpi_icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 18px;
-        font-size: 29px;
-        margin-bottom: 22px;
+    .route_salesperson_route_summary_icon {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 13px !important;
+        margin-bottom: 9px !important;
+        font-size: 1rem !important;
     }
 
-    .route_sales_map_kpi_label {
-        font-size: 22px;
-        line-height: 1.18;
+    .route_salesperson_route_summary_label {
+        font-size: 0.78rem !important;
+        letter-spacing: 0.035em !important;
     }
 
-    .route_sales_map_kpi_value,
-    .route_sales_map_kpi_value .o_field_widget,
-    .route_sales_map_kpi_value .o_input {
-        font-size: 34px;
-        line-height: 1.12;
-        margin-top: 12px;
+    .route_salesperson_route_summary_value,
+    .route_salesperson_route_summary_value .o_field_widget,
+    .route_salesperson_route_summary_value .o_input {
+        font-size: 1.45rem !important;
+        margin-top: 5px !important;
     }
 
-    .route_sales_map_next_value,
-    .route_sales_map_next_value .o_field_widget,
-    .route_sales_map_next_value .o_input {
-        font-size: 24px;
-        line-height: 1.18;
+    .route_salesperson_route_summary_value_text,
+    .route_salesperson_route_summary_value_text .o_field_widget,
+    .route_salesperson_route_summary_value_text .o_input {
+        font-size: 0.95rem !important;
+        line-height: 1.12 !important;
     }
 
     .route_salesperson_route_map_sheet .o_field_html iframe {
-        min-height: 650px !important;
+        height: calc(100vh - 120px) !important;
+        min-height: 560px !important;
+        max-height: 720px !important;
+        border-radius: 14px !important;
     }
 }
 
-@media (max-width: 480px) {
-    .route_salesperson_route_map_sheet .route_pda_detail_title {
-        font-size: 24px;
+@media (max-width: 430px) {
+    .route_salesperson_route_map_summary {
+        gap: 8px !important;
     }
 
-    .route_sales_map_kpi_card {
-        min-height: 150px;
-        padding: 18px 16px 14px;
+    .route_salesperson_route_summary_card {
+        min-height: 102px !important;
+        padding: 11px 12px 9px !important;
     }
 
-    .route_sales_map_kpi_icon {
-        width: 54px;
-        height: 54px;
-        font-size: 24px;
-        margin-bottom: 16px;
+    .route_salesperson_route_summary_icon {
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 12px !important;
+        margin-bottom: 8px !important;
+        font-size: 0.9rem !important;
     }
 
-    .route_sales_map_kpi_label {
-        font-size: 17px;
+    .route_salesperson_route_summary_label {
+        font-size: 0.72rem !important;
     }
 
-    .route_sales_map_kpi_value,
-    .route_sales_map_kpi_value .o_field_widget,
-    .route_sales_map_kpi_value .o_input {
-        font-size: 28px;
+    .route_salesperson_route_summary_value,
+    .route_salesperson_route_summary_value .o_field_widget,
+    .route_salesperson_route_summary_value .o_input {
+        font-size: 1.3rem !important;
+        margin-top: 4px !important;
     }
 
-    .route_sales_map_next_value,
-    .route_sales_map_next_value .o_field_widget,
-    .route_sales_map_next_value .o_input {
-        font-size: 21px;
+    .route_salesperson_route_summary_value_text,
+    .route_salesperson_route_summary_value_text .o_field_widget,
+    .route_salesperson_route_summary_value_text .o_input {
+        font-size: 0.86rem !important;
+    }
+
+    .route_salesperson_route_map_sheet .o_field_html iframe {
+        height: calc(100vh - 105px) !important;
+        min-height: 520px !important;
     }
 }
 
