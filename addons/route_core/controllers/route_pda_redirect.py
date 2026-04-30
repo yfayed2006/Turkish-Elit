@@ -86,35 +86,6 @@ class RoutePdaRedirectController(http.Controller):
             menu_xmlid="route_core.menu_route_outlet",
         )
 
-    @http.route("/route_core/pda/visit/<int:visit_id>", type="http", auth="user", website=False)
-    def route_core_open_pda_visit(self, visit_id, **kwargs):
-        """Open a visit through the compact salesperson/PDA action.
-
-        Today Route Map is rendered as a controller page, so its buttons cannot
-        call Python object methods directly. This bridge keeps map navigation
-        inside the same PDA visit form instead of letting Odoo choose the heavy
-        default supervisor/full visit form.
-        """
-        visit = request.env["route.visit"].browse(visit_id).exists()
-        if not visit:
-            return redirect("/web")
-
-        user = request.env.user
-        is_supervisor = user.has_group("route_core.group_route_supervisor") or user.has_group("route_core.group_route_management")
-        if visit.user_id and visit.user_id != user and not is_supervisor:
-            return request.make_response(
-                "<html><body><p>You can only open your own route visits.</p></body></html>",
-                headers=[("Content-Type", "text/html; charset=utf-8")],
-            )
-
-        return self._build_web_redirect(
-            model="route.visit",
-            record_id=visit.id,
-            view_xmlid="route_core.view_route_visit_pda_form",
-            action_xmlid="route_core.action_route_visit_pda_salesperson",
-            menu_xmlid="route_core.menu_route_salesperson_my_visits",
-        )
-
 
 class RouteGeoLiveMapController(http.Controller):
     def _selection_label(self, record, field_name, value):
@@ -141,38 +112,6 @@ class RouteGeoLiveMapController(http.Controller):
         if not self._has_point(latitude, longitude):
             return "#"
         return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
-
-    def _web_record_url(self, *, model, record_id, view_xmlid=None, action_xmlid=None, menu_xmlid=None):
-        """Build a stable Odoo form URL for supervisor map links.
-
-        Live Map is a controller-rendered page, so links must carry the intended
-        action/view explicitly. Without this, Odoo may reopen the last/default
-        route.visit form and mix the supervisor location-review flow with the
-        salesperson PDA execution form.
-        """
-        env = request.env
-        company = env.company
-        action = env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
-        view = env.ref(view_xmlid, raise_if_not_found=False) if view_xmlid else False
-        menu = env.ref(menu_xmlid, raise_if_not_found=False) if menu_xmlid else False
-        params = {
-            "id": record_id,
-            "model": model,
-            "view_type": "form",
-            "cids": company.id,
-        }
-        if action:
-            params["action"] = action.id
-        if view:
-            params["view_id"] = view.id
-        if menu:
-            params["menu_id"] = menu.id
-        fragment = "&".join(
-            f"{quote_plus(str(key))}={quote_plus(str(value))}"
-            for key, value in params.items()
-            if value not in (False, None, "")
-        )
-        return f"/web#{fragment}"
 
     def _visit_payload(self, center, visit):
         checkin_lat = visit.geo_checkin_latitude or 0.0
@@ -214,13 +153,7 @@ class RouteGeoLiveMapController(http.Controller):
             "checkin_lng": checkin_lng,
             "outlet_lat": outlet_lat,
             "outlet_lng": outlet_lng,
-            "visit_url": self._web_record_url(
-                model="route.visit",
-                record_id=visit.id,
-                view_xmlid="route_core.view_route_geo_review_form",
-                action_xmlid="route_core.action_route_geo_review",
-                menu_xmlid="route_core.menu_route_geo_review",
-            ),
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
             "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
             "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
             "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
@@ -578,7 +511,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": "/route_core/pda/visit/%s" % visit.id,
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
@@ -603,10 +536,10 @@ class RouteSalespersonTodayMapController(http.Controller):
 <title>{title}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-:root {{ --route-primary:#7b4b6f; --green:#16a34a; --blue:#0ea5e9; --orange:#f59e0b; --red:#ef4444; --gray:#64748b; --line:#e5e7eb; }}
-html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:#111827; background:#f8fafc; }}
+:root {{ --route-primary:#7b4b6f; --green:#16a34a; --blue:#0ea5e9; --orange:#f59e0b; --red:#ef4444; --gray:#64748b; --line:#e5e7eb; --ink:#111827; }}
+html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#f8fafc; }}
 .route-map-page {{ min-height:100vh; display:flex; flex-direction:column; }}
-.route-map-header {{ background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }}
+.route-map-header {{ background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; z-index:8; }}
 .route-map-title {{ font-size:18px; font-weight:900; line-height:1.2; }}
 .route-map-subtitle {{ margin-top:3px; color:#64748b; font-size:12px; font-weight:700; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }}
@@ -614,32 +547,40 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .legend-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
 .route-map-body {{ flex:1; display:grid; grid-template-columns:minmax(0,1fr) 380px; min-height:0; }}
 #map {{ min-height:520px; background:#e5e7eb; }}
-.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; padding:10px; }}
-.visit-card {{ border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); }}
-.visit-card:hover {{ border-color:var(--route-primary); cursor:pointer; }}
+.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; padding:10px; scroll-behavior:smooth; }}
+.visit-card {{ position:relative; border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease; }}
+.visit-card:hover, .visit-card.active-card {{ border-color:var(--route-primary); box-shadow:0 12px 26px rgba(123,75,111,.14); cursor:pointer; }}
+.visit-card.active-card {{ transform:translateY(-1px); }}
 .visit-top {{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }}
-.visit-title {{ font-size:15px; font-weight:900; line-height:1.25; }}
+.visit-title-row {{ display:flex; align-items:flex-start; gap:9px; min-width:0; }}
+.visit-number {{ width:32px; height:32px; flex:0 0 32px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:var(--route-primary); color:#fff; font-size:15px; font-weight:950; box-shadow:0 8px 18px rgba(123,75,111,.24); }}
+.visit-title-text {{ min-width:0; }}
+.visit-title {{ font-size:15px; font-weight:950; line-height:1.25; overflow-wrap:anywhere; }}
 .visit-ref {{ color:#64748b; font-size:12px; margin-top:2px; }}
+.badge-stack {{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex:0 0 auto; }}
 .badge {{ border-radius:999px; padding:3px 8px; font-size:11px; font-weight:900; white-space:nowrap; }}
 .badge-pending {{ background:#e0f2fe; color:#075985; }}
 .badge-active {{ background:#fef3c7; color:#92400e; }}
 .badge-done {{ background:#dcfce7; color:#166534; }}
 .badge-outside {{ background:#fee2e2; color:#991b1b; }}
 .badge-missing {{ background:#f1f5f9; color:#475569; }}
-.grid {{ display:grid; grid-template-columns:1fr 1fr; gap:7px 9px; margin-top:9px; font-size:12px; }}
-.label {{ color:#64748b; display:block; font-weight:700; }}
-.value {{ font-weight:850; color:#111827; }}
+.grid {{ display:grid; grid-template-columns:1fr 1fr; gap:7px 9px; margin-top:10px; font-size:12px; }}
+.label {{ color:#64748b; display:block; font-weight:800; }}
+.value {{ font-weight:900; color:#111827; }}
 .actions {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:10px; }}
-.map-btn {{ display:flex; align-items:center; justify-content:center; min-height:34px; text-decoration:none; border-radius:8px; font-size:12px; font-weight:900; background:#eef2f7; color:#111827; padding:6px 8px; border:1px solid transparent; }}
+.map-btn {{ display:flex; align-items:center; justify-content:center; min-height:34px; text-decoration:none; border-radius:9px; font-size:12px; font-weight:950; background:#eef2f7; color:#111827; padding:6px 8px; border:1px solid transparent; }}
 .map-btn.primary {{ background:var(--route-primary); color:#fff; }}
 .map-btn.green {{ background:var(--green); color:#fff; }}
 .map-btn.light {{ background:#fff; color:#111827; border-color:var(--line); }}
-.hint {{ margin-top:8px; font-size:12px; color:#64748b; font-weight:700; }}
+.hint {{ margin-top:8px; font-size:12px; color:#64748b; font-weight:800; }}
 .toast-note {{ margin:8px 10px; border-radius:10px; padding:9px 10px; font-weight:850; font-size:13px; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; }}
 .toast-success {{ background:#ecfdf5; color:#14532d; border-color:#bbf7d0; }}
 .toast-danger {{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }}
-.marker-dot {{ width:30px; height:30px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 7px rgba(15,23,42,.35); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }}
+.marker-dot {{ width:30px; height:30px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 7px rgba(15,23,42,.35); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:950; transition:width .18s ease, height .18s ease, transform .18s ease, box-shadow .18s ease, filter .18s ease; }}
 .marker-dot span {{ transform:rotate(45deg); font-size:12px; }}
+.route-marker-focused {{ z-index:1200 !important; }}
+.route-marker-focused .marker-dot {{ width:42px; height:42px; transform:rotate(-45deg) scale(1.06); border-width:3px; box-shadow:0 10px 24px rgba(15,23,42,.38); filter:saturate(1.2); }}
+.route-marker-focused .marker-dot span {{ font-size:15px; }}
 .marker-pending {{ background:var(--blue); }}
 .marker-active {{ background:var(--orange); color:#111827; }}
 .marker-done {{ background:var(--green); }}
@@ -649,17 +590,21 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .popup-row {{ margin:3px 0; font-size:12px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
 @media (max-width: 900px) {{
-  .route-map-header {{ flex-direction:column; }}
+  html,body {{ height:auto; min-height:100%; }}
+  .route-map-page {{ min-height:100vh; display:block; }}
+  .route-map-header {{ flex-direction:column; position:relative; }}
   .legend {{ justify-content:flex-start; }}
   .route-map-body {{ display:block; }}
-  #map {{ height:48vh; min-height:330px; }}
-  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:8px; }}
+  #map {{ height:50vh; min-height:310px; max-height:430px; position:sticky; top:0; z-index:7; border-bottom:1px solid var(--line); box-shadow:0 8px 18px rgba(15,23,42,.08); }}
+  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:12px 10px 18px; overflow:visible; }}
+  .visit-card {{ border-radius:18px; padding:14px; margin-bottom:12px; }}
   .actions {{ grid-template-columns:1fr 1fr; }}
 }}
 @media (max-width: 420px) {{
   .grid {{ grid-template-columns:1fr 1fr; }}
-  .visit-title {{ font-size:14px; }}
-  .map-btn {{ font-size:11px; }}
+  .visit-title {{ font-size:15px; }}
+  .map-btn {{ font-size:11px; min-height:38px; }}
+  .visit-number {{ width:34px; height:34px; flex-basis:34px; }}
 }}
 </style>
 </head>
@@ -701,7 +646,10 @@ function card(v) {{
     ? `<div class="hint" style="color:#991b1b">Outside outlet radius${{v.outside_reason ? ': ' + escapeHtml(v.outside_reason) : '. Reason review required.'}}</div>`
     : `<div class="hint">${{escapeHtml(v.start_hint || '')}}</div>`;
   return `<article class="visit-card" data-visit-id="${{v.id}}">
-    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="badge ${{processBadgeClass(v)}}">${{escapeHtml(processBadgeText(v))}}</span><span class="badge ${{locationBadgeClass(v)}}">${{escapeHtml(locationBadgeText(v))}}</span></div></div>
+    <div class="visit-top">
+      <div class="visit-title-row"><span class="visit-number">${{escapeHtml(v.index)}}</span><div class="visit-title-text"><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div></div>
+      <div class="badge-stack"><span class="badge ${{processBadgeClass(v)}}">${{escapeHtml(processBadgeText(v))}}</span><span class="badge ${{locationBadgeClass(v)}}">${{escapeHtml(locationBadgeText(v))}}</span></div>
+    </div>
     <div class="grid">
       <div><span class="label">Customer</span><span class="value">${{escapeHtml(v.customer || '-')}}</span></div>
       <div><span class="label">Area</span><span class="value">${{escapeHtml(v.area || '-')}}</span></div>
@@ -714,7 +662,7 @@ function card(v) {{
     <div class="actions">${{actions(v)}}</div>
   </article>`;
 }}
-function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="popup-row">Visit Status: <b>${{escapeHtml(processBadgeText(v))}}</b></div><div class="popup-row">Location Status: <b>${{escapeHtml(locationBadgeText(v))}}</b></div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div>${{v.outside_reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.outside_reason)}}</div>` : ''}}<div class="actions">${{actions(v)}}</div></div>`; }}
+function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="popup-row">Visit Status: <b>${{escapeHtml(processBadgeText(v))}}</b></div><div class="popup-row">Location Status: <b>${{escapeHtml(locationBadgeText(v))}}</b></div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div>${{v.outside_reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.outside_reason)}}</div>` : ''}}<div class="actions">${{actions(v)}}</div></div>`; }}
 function renderList() {{ const list = document.getElementById('visitList'); list.innerHTML = visits.length ? visits.map(card).join('') : '<div class="no-map">No visits are scheduled for today.</div>'; }}
 function initMap() {{
   renderList();
@@ -726,24 +674,46 @@ function initMap() {{
   const markers = {{}};
   for (const v of mappable) {{
     const c = color(v);
-    const icon = L.divIcon({{ className:'', html:`<div class="marker-dot marker-${{c}}"><span>${{v.index}}</span></div>`, iconSize:[30,30], iconAnchor:[15,30], popupAnchor:[0,-26] }});
+    const icon = L.divIcon({{ className:'route-marker-icon', html:`<div class="marker-dot marker-${{c}}"><span>${{v.index}}</span></div>`, iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-30] }});
     const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popup(v));
     markers[v.id] = marker;
     bounds.push([v.lat, v.lng]);
   }}
   if (bounds.length === 1) map.setView(bounds[0], 15); else map.fitBounds(bounds, {{ padding:[30,30] }});
-  document.querySelectorAll('[data-visit-id]').forEach(el => el.addEventListener('click', ev => {{
+
+  function setActiveVisit(visitId, openPopup=false) {{
+    document.querySelectorAll('.visit-card').forEach(cardEl => cardEl.classList.toggle('active-card', parseInt(cardEl.getAttribute('data-visit-id'), 10) === visitId));
+    Object.values(markers).forEach(marker => {{ const el = marker.getElement && marker.getElement(); if (el) el.classList.remove('route-marker-focused'); }});
+    const marker = markers[visitId];
+    if (marker) {{
+      const markerElement = marker.getElement && marker.getElement();
+      if (markerElement) markerElement.classList.add('route-marker-focused');
+      if (openPopup) {{ map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15)); marker.openPopup(); }}
+    }}
+  }}
+
+  const cards = Array.from(document.querySelectorAll('[data-visit-id]'));
+  cards.forEach(el => el.addEventListener('click', ev => {{
     if (ev.target.closest('a')) return;
-    const marker = markers[parseInt(el.getAttribute('data-visit-id'), 10)];
-    if (marker) {{ map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15)); marker.openPopup(); }}
+    setActiveVisit(parseInt(el.getAttribute('data-visit-id'), 10), true);
   }}));
+
+  if ('IntersectionObserver' in window && cards.length) {{
+    const rootEl = window.matchMedia('(min-width: 901px)').matches ? document.getElementById('visitList') : null;
+    const observer = new IntersectionObserver(entries => {{
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActiveVisit(parseInt(visible.target.getAttribute('data-visit-id'), 10), false);
+    }}, {{ root: rootEl, threshold:[0.35, 0.6, 0.85] }});
+    cards.forEach(cardEl => observer.observe(cardEl));
+  }}
+  const firstMappable = visits.find(v => v.has_point);
+  if (firstMappable) setTimeout(() => setActiveVisit(firstMappable.id, false), 250);
 }}
 window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ document.getElementById('map').innerHTML = '<div class="no-map">Map library could not load. Visit cards and Navigate buttons are still available.</div>'; return; }} initMap(); }});
 </script>
 </body>
 </html>'''
         return request.make_response(html, headers=[("Content-Type", "text/html; charset=utf-8")])
-
     @http.route("/route_core/pda/today_route_map/frame/<int:route_map_id>", type="http", auth="user", website=False)
     def route_core_today_route_map_frame(self, route_map_id, **kwargs):
         route_map = request.env["route.salesperson.route.map"].browse(route_map_id).exists()
@@ -778,5 +748,4 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
-
 
