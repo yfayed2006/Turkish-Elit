@@ -327,6 +327,7 @@ function renderList() {{
 }}
 function initMap() {{
   renderList();
+  bindVisitListScroll();
   const mappable = visits.filter(v => v.lat || v.lng);
   if (!mappable.length) {{
     document.getElementById('map').innerHTML = '<div class="no-map">No map coordinates for the current filtered visits.</div>';
@@ -537,17 +538,17 @@ class RouteSalespersonTodayMapController(http.Controller):
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {{ --route-primary:#7b4b6f; --green:#16a34a; --blue:#0ea5e9; --orange:#f59e0b; --red:#ef4444; --gray:#64748b; --line:#e5e7eb; --ink:#111827; }}
-html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#f8fafc; }}
-.route-map-page {{ min-height:100vh; display:flex; flex-direction:column; }}
-.route-map-header {{ background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; z-index:8; }}
-.route-map-title {{ font-size:18px; font-weight:900; line-height:1.2; }}
-.route-map-subtitle {{ margin-top:3px; color:#64748b; font-size:12px; font-weight:700; }}
+html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#f8fafc; overscroll-behavior:contain; }}
+.route-map-page {{ height:100vh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
+.route-map-header {{ flex:0 0 auto; background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:8px 10px; display:flex; justify-content:space-between; gap:10px; align-items:flex-start; z-index:8; }}
+.route-map-title {{ font-size:16px; font-weight:900; line-height:1.2; }}
+.route-map-subtitle {{ margin-top:2px; color:#64748b; font-size:11px; font-weight:700; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }}
 .legend-pill {{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px; }}
 .legend-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
-.route-map-body {{ flex:1; display:grid; grid-template-columns:minmax(0,1fr) 380px; min-height:0; }}
-#map {{ min-height:520px; background:#e5e7eb; }}
-.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; padding:10px; scroll-behavior:smooth; }}
+.route-map-body {{ flex:1 1 auto; display:grid; grid-template-columns:minmax(0,1fr) 360px; min-height:0; height:100%; overflow:hidden; }}
+#map {{ height:100%; min-height:0; background:#e5e7eb; }}
+.visit-side {{ height:100%; max-height:100%; min-height:0; background:#fff; border-left:1px solid var(--line); overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:10px; scroll-behavior:smooth; scrollbar-gutter:stable; }}
 .visit-card {{ position:relative; border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease; }}
 .visit-card:hover, .visit-card.active-card {{ border-color:var(--route-primary); box-shadow:0 12px 26px rgba(123,75,111,.14); cursor:pointer; }}
 .visit-card.active-card {{ transform:translateY(-1px); }}
@@ -590,13 +591,13 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .popup-row {{ margin:3px 0; font-size:12px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
 @media (max-width: 900px) {{
-  html,body {{ height:100%; min-height:100%; overflow:hidden; }}
-  .route-map-page {{ height:100dvh; min-height:620px; display:flex; flex-direction:column; overflow:hidden; }}
-  .route-map-header {{ flex:0 0 auto; flex-direction:column; position:relative; z-index:4; }}
+  html,body {{ height:100%; min-height:0; overflow:hidden; }}
+  .route-map-page {{ height:100vh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
+  .route-map-header {{ display:none; }}
   .legend {{ justify-content:flex-start; }}
-  .route-map-body {{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
-  #map {{ flex:0 0 46dvh; height:auto; min-height:280px; max-height:420px; position:relative; top:auto; z-index:1; border-bottom:1px solid var(--line); box-shadow:0 8px 18px rgba(15,23,42,.08); }}
-  .visit-side {{ flex:1 1 auto; min-height:260px; border-left:0; border-top:1px solid var(--line); padding:12px 10px 18px; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; background:#ffffff; }}
+  .route-map-body {{ flex:1 1 auto; height:100vh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
+  #map {{ flex:0 0 48vh; height:48vh; min-height:285px; max-height:50vh; position:relative; z-index:7; border-bottom:1px solid var(--line); box-shadow:0 8px 18px rgba(15,23,42,.08); }}
+  .visit-side {{ flex:1 1 auto; height:auto; max-height:none; min-height:0; border-left:0; border-top:1px solid var(--line); padding:12px 10px 18px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }}
   .visit-card {{ border-radius:18px; padding:14px; margin-bottom:12px; }}
   .actions {{ grid-template-columns:1fr 1fr; }}
 }}
@@ -664,21 +665,45 @@ function card(v) {{
 }}
 function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="popup-row">Visit Status: <b>${{escapeHtml(processBadgeText(v))}}</b></div><div class="popup-row">Location Status: <b>${{escapeHtml(locationBadgeText(v))}}</b></div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div>${{v.outside_reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.outside_reason)}}</div>` : ''}}<div class="actions">${{actions(v)}}</div></div>`; }}
 function renderList() {{ const list = document.getElementById('visitList'); list.innerHTML = visits.length ? visits.map(card).join('') : '<div class="no-map">No visits are scheduled for today.</div>'; }}
+function bindVisitListScroll() {{
+  const list = document.getElementById('visitList');
+  if (!list || list.dataset.scrollBound === '1') return;
+  list.dataset.scrollBound = '1';
+  list.addEventListener('wheel', ev => {{
+    if (list.scrollHeight <= list.clientHeight) return;
+    const before = list.scrollTop;
+    list.scrollTop += ev.deltaY;
+    if (list.scrollTop !== before) ev.preventDefault();
+  }}, {{ passive:false }});
+}}
 function initMap() {{
   renderList();
+  bindVisitListScroll();
   const mappable = visits.filter(v => v.has_point);
   if (!mappable.length) {{ document.getElementById('map').innerHTML = '<div class="no-map">No outlet coordinates for today. Open Customer and Outlets to set locations.</div>'; return; }}
   const map = L.map('map', {{ zoomControl:true }});
   L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{ maxZoom:19, attribution:'&copy; OpenStreetMap contributors' }}).addTo(map);
   const bounds = [];
   const markers = {{}};
+  function scrollCardIntoView(visitId) {{
+    const cardEl = document.querySelector(`[data-visit-id="${{visitId}}"]`);
+    const listEl = document.getElementById('visitList');
+    if (!cardEl || !listEl) return;
+    const listRect = listEl.getBoundingClientRect();
+    const cardRect = cardEl.getBoundingClientRect();
+    if (cardRect.top < listRect.top || cardRect.bottom > listRect.bottom) {{
+      cardEl.scrollIntoView({{ behavior:'smooth', block:'center' }});
+    }}
+  }}
   for (const v of mappable) {{
     const c = color(v);
     const icon = L.divIcon({{ className:'route-marker-icon', html:`<div class="marker-dot marker-${{c}}"><span>${{v.index}}</span></div>`, iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-30] }});
     const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popup(v));
+    marker.on('click', () => {{ setActiveVisit(v.id, false); scrollCardIntoView(v.id); }});
     markers[v.id] = marker;
     bounds.push([v.lat, v.lng]);
   }}
+  setTimeout(() => map.invalidateSize(), 180);
   if (bounds.length === 1) map.setView(bounds[0], 15); else map.fitBounds(bounds, {{ padding:[30,30] }});
 
   function setActiveVisit(visitId, openPopup=false) {{
@@ -699,17 +724,17 @@ function initMap() {{
   }}));
 
   if ('IntersectionObserver' in window && cards.length) {{
-    const rootEl = window.matchMedia('(min-width: 901px)').matches ? document.getElementById('visitList') : null;
+    const rootEl = document.getElementById('visitList') || null;
     const observer = new IntersectionObserver(entries => {{
       const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (visible) setActiveVisit(parseInt(visible.target.getAttribute('data-visit-id'), 10), false);
-    }}, {{ root: rootEl, threshold:[0.35, 0.6, 0.85] }});
+    }}, {{ root: rootEl, rootMargin:'-8% 0px -45% 0px', threshold:[0.25, 0.5, 0.75] }});
     cards.forEach(cardEl => observer.observe(cardEl));
   }}
   const firstMappable = visits.find(v => v.has_point);
   if (firstMappable) setTimeout(() => setActiveVisit(firstMappable.id, false), 250);
 }}
-window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ document.getElementById('map').innerHTML = '<div class="no-map">Map library could not load. Visit cards and Navigate buttons are still available.</div>'; return; }} initMap(); }});
+window.addEventListener('load', () => {{ renderList(); bindVisitListScroll(); if (!window.L) {{ document.getElementById('map').innerHTML = '<div class="no-map">Map library could not load. Visit cards and Navigate buttons are still available.</div>'; return; }} initMap(); }});
 </script>
 </body>
 </html>'''
@@ -748,5 +773,6 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
 
 
