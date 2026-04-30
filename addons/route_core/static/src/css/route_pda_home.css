@@ -2723,7 +2723,7 @@
     }
 
     .route_salesperson_route_map_counter_next {
-        grid-column: span 2;
+        grid-column: auto;
     }
 }
 
