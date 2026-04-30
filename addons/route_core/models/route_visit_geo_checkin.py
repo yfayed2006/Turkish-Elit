@@ -373,20 +373,32 @@ class RouteVisit(models.Model):
             "edit": 1,
             "delete": 0,
         }
+        kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        tree_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+        ordered_views = [
+            (view.id, mode)
+            for view, mode in ((kanban_view, "kanban"), (form_view, "form"), (tree_view, "list"))
+            if view
+        ]
         if action:
             result = action.read()[0]
             result.update({
                 "name": _("Today's Visits"),
                 "domain": domain,
                 "context": context,
+                "view_mode": "kanban,form,list",
                 "target": "current",
             })
+            if ordered_views:
+                result["views"] = ordered_views
             return result
         return {
             "type": "ir.actions.act_window",
             "name": _("Today's Visits"),
             "res_model": "route.visit",
             "view_mode": "kanban,form,list",
+            "views": ordered_views,
             "domain": domain,
             "target": "current",
             "context": context,
