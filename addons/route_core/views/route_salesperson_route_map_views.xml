@@ -14,12 +14,47 @@
 <field name="route_geo_enabled" invisible="1"/>
 <field name="route_map_provider" invisible="1"/>
 <field name="route_geo_checkin_policy" invisible="1"/>
-<div class="route_pda_detail_header route_pda_detail_header_compact">
+<div class="route_pda_detail_header">
+<button type="object" name="action_back_to_workspace" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left"/>
+<span>Back to Route Workspace</span>
+</button>
 <h2 class="route_pda_detail_title">Today's Route Map</h2>
 </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled == False"> Today's outlets, visit status, navigation, and location readiness. </div>
+<div class="alert alert-info" role="alert" invisible="route_geo_enabled == False"> Your route map shows today's outlets, visit status, navigation buttons, and location check-in readiness. </div>
 <div class="alert alert-warning" role="alert" invisible="route_geo_enabled == True"> Visit location is disabled in Route Settings. Enable outlet locations to use the route map. </div>
-<div class="route_pda_card_grid route_pda_card_grid_2 route_salesperson_route_map_kpis">
+<div class="route_pda_section route_salesperson_route_map_summary_section">
+<div class="route_pda_section_title">Route Summary</div>
+<div class="route_pda_card_grid route_salesperson_route_map_identity_cards">
+<div class="route_pda_info_card route_pda_info_card_emphasis">
+<div class="route_pda_info_label">Salesperson</div>
+<div class="route_pda_info_value route_pda_info_value_left route_geo_wrap_value">
+<field name="user_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Visit Date</div>
+<div class="route_pda_info_value">
+<field name="visit_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Location Policy</div>
+<div class="route_pda_info_value route_pda_info_value_left route_geo_wrap_value">
+<field name="route_geo_checkin_policy" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Map Provider</div>
+<div class="route_pda_info_value route_pda_info_value_left route_geo_wrap_value">
+<field name="route_map_provider" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_section route_salesperson_route_map_summary_section">
+<div class="route_pda_section_title">Today's Execution</div>
+<div class="route_pda_card_grid route_salesperson_route_map_kpis">
 <div class="route_pda_info_card route_pda_info_card_emphasis">
 <div class="route_pda_info_label">Today's Visits</div>
 <div class="route_pda_info_value">
@@ -51,6 +86,12 @@
 </div>
 </div>
 <div class="route_pda_info_card">
+<div class="route_pda_info_label">Inside Zone</div>
+<div class="route_pda_info_value">
+<field name="inside_zone_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
 <div class="route_pda_info_label">Outside Zone</div>
 <div class="route_pda_info_value">
 <field name="outside_zone_count" readonly="1" nolabel="1"/>
@@ -62,10 +103,11 @@
 <field name="missing_location_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card">
+<div class="route_pda_info_card route_salesperson_route_map_next_card">
 <div class="route_pda_info_label">Next Visit</div>
 <div class="route_pda_info_value route_pda_info_value_left route_geo_wrap_value">
 <field name="next_visit_label" readonly="1" nolabel="1"/>
+</div>
 </div>
 </div>
 </div>
