@@ -158,10 +158,9 @@ class RouteVisit(models.Model):
                 rec.write(vals)
 
                 message = _(
-                    "No previous consignment stock was found for this outlet. "
-                    "This looks like the first consignment visit. "
-                    "The visit will continue with an empty shelf balance. "
-                    "If products need to be placed on the shelf, continue with Scan Shelf and the vehicle refill/transfer flow."
+                    "First consignment visit. "
+                    "No previous shelf stock was found. "
+                    "The visit will continue with an empty shelf balance."
                 )
 
                 if hasattr(rec, "message_post"):
