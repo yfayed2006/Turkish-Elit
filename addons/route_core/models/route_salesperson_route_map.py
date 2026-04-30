@@ -134,7 +134,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
             route_map.inside_zone_count = len(inside)
             route_map.route_visit_ids = [(6, 0, visits.ids)]
             route_map.next_visit_label = next_visit.outlet_id.display_name or next_visit.display_name if next_visit else _("No visit available")
-            route_map.route_map_note = _("Map uses today's visits for the current salesperson. Use Navigate for directions and Open Visit for full execution.")
+            route_map.route_map_note = ""
             route_map.route_map_iframe_html = route_map._get_route_map_iframe_html()
 
     @api.model
