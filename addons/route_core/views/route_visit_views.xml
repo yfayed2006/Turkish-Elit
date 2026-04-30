@@ -525,6 +525,11 @@
 <field name="ux_can_receipt_actions" invisible="1"/>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
+<div class="route_pda_visit_nav_bar">
+<button name="action_pda_back_route_workspace" type="object" string="Route Workspace" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-home"/>
+<button name="action_pda_back_today_route_map" type="object" string="Today Route Map" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-map"/>
+<button name="action_pda_back_today_visits" type="object" string="Today's Visits" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-list"/>
+</div>
 <div class="alert alert-info mb-3" role="alert">
 <strong>
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
