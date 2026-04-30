@@ -37,24 +37,24 @@
 <field name="visit_process_state"/>
 <field name="state"/>
 <field name="sale_order_id"/>
+<field name="visit_execution_mode"/>
+<field name="visit_execution_mode_label"/>
+<field name="consignment_amount_due_now"/>
+<field name="direct_stop_grand_due_amount"/>
+<field name="collected_amount"/>
+<field name="direct_stop_settlement_paid_amount"/>
+<field name="consignment_immediate_remaining_amount"/>
+<field name="direct_stop_immediate_remaining_amount"/>
+<field name="route_geo_enabled"/>
+<field name="geo_checkin_status"/>
+<field name="currency_id"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_visit_card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_visit_card route_pda_visit_card_compact">
 <div class="route_pda_visit_title_row">
+<div class="route_pda_visit_title_block">
 <div class="route_pda_visit_title">
 <field name="outlet_id"/>
-</div>
-<div class="route_pda_visit_status_badges">
-<t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
-<span class="route_pda_visit_badge route_pda_visit_badge_done">Done</span>
-</t>
-<t t-elif="record.state.raw_value == 'in_progress' or record.visit_process_state.raw_value in ['checked_in', 'counting', 'reconciled', 'collection_done', 'ready_to_close']">
-<span class="route_pda_visit_badge route_pda_visit_badge_in_progress">In Progress</span>
-</t>
-<t t-else="">
-<span class="route_pda_visit_badge route_pda_visit_badge_pending">Draft</span>
-</t>
-</div>
 </div>
 <div class="route_pda_visit_meta">
 <span class="route_pda_visit_ref">
@@ -65,21 +65,73 @@
 <field name="date"/>
 </span>
 </div>
-<div class="route_pda_visit_line">
-<span class="route_pda_visit_label">Area:</span>
-<span class="route_pda_visit_value">
+</div>
+<div class="route_pda_visit_status_badges route_pda_visit_status_badges_stack">
+<t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
+<span class="route_pda_visit_badge route_pda_visit_badge_done">Done</span>
+</t>
+<t t-elif="record.state.raw_value == 'in_progress' or record.visit_process_state.raw_value in ['checked_in', 'counting', 'reconciled', 'collection_done', 'ready_to_close']">
+<span class="route_pda_visit_badge route_pda_visit_badge_in_progress">In Progress</span>
+</t>
+<t t-else="">
+<span class="route_pda_visit_badge route_pda_visit_badge_pending">Pending</span>
+</t>
+<t t-if="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value == 'outside'">
+<span class="route_pda_visit_badge route_pda_visit_badge_location_outside">Outside Zone</span>
+</t>
+<t t-elif="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value == 'inside'">
+<span class="route_pda_visit_badge route_pda_visit_badge_location_inside">Inside Zone</span>
+</t>
+<t t-elif="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value in ['pending', 'outlet_missing']">
+<span class="route_pda_visit_badge route_pda_visit_badge_location_pending">Location Pending</span>
+</t>
+</div>
+</div>
+<div class="route_pda_visit_mini_grid">
+<div class="route_pda_visit_mini_box route_pda_visit_mini_box_mode">
+<span class="route_pda_visit_label">Mode</span>
+<span class="route_pda_visit_value route_pda_visit_value_wrap">
+<field name="visit_execution_mode_label"/>
+</span>
+</div>
+<div class="route_pda_visit_mini_box">
+<span class="route_pda_visit_label">Area</span>
+<span class="route_pda_visit_value route_pda_visit_value_wrap">
 <field name="area_id"/>
 </span>
 </div>
-<div class="route_pda_visit_line">
-<span class="route_pda_visit_label">Process:</span>
+<div class="route_pda_visit_mini_box route_pda_visit_mini_box_money">
+<span class="route_pda_visit_label">Due Now</span>
 <span class="route_pda_visit_value">
+<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
+<field name="direct_stop_grand_due_amount"/>
+</t>
+<t t-else="">
+<field name="consignment_amount_due_now"/>
+</t>
+</span>
+</div>
+<div class="route_pda_visit_mini_box route_pda_visit_mini_box_money">
+<span class="route_pda_visit_label">Remaining</span>
+<span class="route_pda_visit_value">
+<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
+<field name="direct_stop_immediate_remaining_amount"/>
+</t>
+<t t-else="">
+<field name="consignment_immediate_remaining_amount"/>
+</t>
+</span>
+</div>
+<div class="route_pda_visit_mini_box route_pda_visit_mini_box_full">
+<span class="route_pda_visit_label">Current Step</span>
+<span class="route_pda_visit_value route_pda_visit_value_wrap">
 <field name="visit_process_state"/>
 </span>
 </div>
+</div>
 <div class="route_pda_visit_btn_wrap">
 <t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
-<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">View Visit</a>
+<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">View Visit Summary</a>
 </t>
 <t t-else="">
 <a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">Open Visit</a>
@@ -145,6 +197,7 @@
 <field name="ux_can_open_payments" invisible="1"/>
 <field name="ux_can_finish_visit" invisible="1"/>
 <field name="visit_execution_mode" invisible="1"/>
+<field name="visit_execution_mode_label" invisible="1"/>
 <field name="outlet_operation_mode" invisible="1"/>
 <field name="ux_can_receipt_actions" invisible="1"/>
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
@@ -565,7 +618,25 @@
 <field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_visit_quick_card">
+<div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
+<div class="route_pda_visit_quick_label">Remaining</div>
+<div class="route_pda_visit_quick_value">
+<field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
+<div class="route_pda_visit_quick_label">Remaining</div>
+<div class="route_pda_visit_quick_value">
+<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_visit_quick_card route_pda_visit_quick_card_subtle">
+<div class="route_pda_visit_quick_label">Mode</div>
+<div class="route_pda_visit_quick_value route_pda_visit_quick_value_small">
+<field name="visit_execution_mode_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_visit_quick_card route_pda_visit_quick_card_status">
 <div class="route_pda_visit_quick_label">Status</div>
 <div class="route_pda_visit_quick_value">
 <field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
