@@ -106,7 +106,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
         url = "/route_core/pda/today_route_map/frame/%s?ts=%s" % (self.id, int(time.time()))
         return Markup(
             '<iframe src="%s" '
-            'style="width:100%%; min-height:760px; border:0; border-radius:14px; background:#f5f6f7;" '
+            'style="width:100%%; height:clamp(640px, 76vh, 900px); min-height:640px; border:0; border-radius:14px; background:#f5f6f7;" '
             'loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' % url
         )
 
