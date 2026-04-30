@@ -2650,3 +2650,36 @@
         font-weight: 800;
     }
 }
+
+/* Stable in-form navigation buttons for the salesperson visit screen. */
+.route_pda_visit_nav_bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 12px 0;
+}
+
+.route_pda_visit_nav_bar .route_pda_visit_nav_btn {
+    min-height: 38px;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .route_pda_visit_nav_bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .route_pda_visit_nav_bar .route_pda_visit_nav_btn {
+        width: 100%;
+        min-height: 44px;
+        white-space: normal;
+    }
+
+    .route_pda_visit_nav_bar .route_pda_visit_nav_btn:first-child {
+        grid-column: 1 / -1;
+    }
+}
