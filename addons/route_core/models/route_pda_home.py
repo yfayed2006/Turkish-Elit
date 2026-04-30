@@ -881,7 +881,7 @@ class RoutePdaHome(models.TransientModel):
             return self.action_open_today_visits_empty_screen()
 
         action = self._prepare_action(
-            "route_core.action_route_visit_pda",
+            "route_core.action_route_visit_pda_salesperson",
             name="Today's Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
@@ -1522,5 +1522,4 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
-
 
