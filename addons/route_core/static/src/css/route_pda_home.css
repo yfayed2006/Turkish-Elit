@@ -3271,6 +3271,94 @@
         font-size: 0.78rem;
     }
 }
+/* Route Core - Location reason wizard mobile polish */
+.route_geo_reason_mobile_wizard .route_geo_reason_notice {
+    border: 0;
+    border-left: 6px solid #7c4a6d;
+    border-radius: 14px;
+    margin: 10px 0 18px;
+    padding: 14px 16px;
+    font-size: 1.05rem;
+    line-height: 1.45;
+}
+
+.route_geo_reason_mobile_wizard .route_geo_reason_section_title {
+    color: #111827;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    margin: 12px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+    text-transform: uppercase;
+}
+
+.route_geo_reason_mobile_wizard .route_geo_reason_review_cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.route_geo_reason_mobile_wizard .route_geo_reason_card {
+    border: 1px solid #e1e5ea;
+    border-radius: 16px;
+    background: #fff;
+    padding: 14px 16px;
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+}
+
+.route_geo_reason_mobile_wizard .route_geo_reason_card_label {
+    color: #6b7280;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.route_geo_reason_mobile_wizard .route_geo_reason_required_group {
+    margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+    .route_geo_reason_mobile_wizard .o_form_sheet {
+        max-width: none !important;
+        padding: 16px !important;
+    }
+
+    .route_geo_reason_mobile_wizard .route_geo_reason_review_cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_geo_reason_mobile_wizard .route_geo_reason_card {
+        min-height: 86px;
+        padding: 12px 14px;
+    }
+
+    .route_geo_reason_mobile_wizard footer,
+    .route_geo_reason_mobile_wizard .modal-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .route_geo_reason_mobile_wizard footer .btn,
+    .route_geo_reason_mobile_wizard .modal-footer .btn {
+        width: 100%;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_geo_reason_mobile_wizard .route_geo_reason_review_cards {
+        grid-template-columns: 1fr;
+    }
+}
 
 
 
