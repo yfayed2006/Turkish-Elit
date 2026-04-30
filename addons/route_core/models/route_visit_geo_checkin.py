@@ -756,3 +756,4 @@ class RouteVisit(models.Model):
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
             "distance_display": first.geo_checkin_distance_display if first else False,
         }
+
