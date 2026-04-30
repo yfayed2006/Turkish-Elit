@@ -24,10 +24,6 @@
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
 <kanban class="o_kanban_mobile route_pda_visit_kanban" create="0" delete="0">
-<header>
-<button name="action_pda_open_workspace" type="object" string="Route Workspace" class="btn-primary route_pda_nav_btn" icon="fa-home" display="always"/>
-<button name="action_pda_open_today_route_map" type="object" string="Today Route Map" class="btn-secondary route_pda_nav_btn" icon="fa-map" display="always"/>
-</header>
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -114,9 +110,6 @@
 <button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
 <button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_pda_open_today_route_map" string="Today Route Map" type="object" class="btn-secondary route_pda_nav_btn" icon="fa-map"/>
-<button name="action_pda_open_workspace" string="Route Workspace" type="object" class="btn-secondary route_pda_nav_btn" icon="fa-home"/>
-<button name="action_pda_open_today_visits" string="Today's Visits" type="object" class="btn-secondary route_pda_nav_btn" icon="fa-list"/>
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="visit_process_state in ('draft', 'cancel', 'done')"/>
 <button name="action_open_statement_of_account" string="Visit Summary" type="object" class="btn-secondary" invisible="visit_process_state != 'done'"/>
 <button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
@@ -373,7 +366,7 @@
 <button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" context="{'allow_outlet_coordinate_checkin': True}" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="context.get('route_pda_salesperson_mode') or not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
 <button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
@@ -970,7 +963,7 @@
 <button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" context="{'allow_outlet_coordinate_checkin': True}" invisible="1"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="context.get('route_pda_salesperson_mode') or not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
 <button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
@@ -1135,7 +1128,7 @@
 <field name="res_model">route.visit</field>
 <field name="view_mode">kanban,form,list</field>
 <field name="search_view_id" ref="view_route_visit_search"/>
-<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0, 'route_pda_salesperson_mode': 1}</field>
 <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in workspace mode. </p>
 </field>
