@@ -158,15 +158,15 @@
 <field name="note"/>
 </div>
 <div class="route_mobile_visit_actions">
-<t t-if="record.state.raw_value not in ['visited', 'skipped'] and not record.visit_id.raw_value">
+<t t-if="record.state.raw_value !== 'visited' && record.state.raw_value !== 'skipped' && !record.visit_id.raw_value">
 <button name="action_open_skip_visit_wizard" type="object" class="btn btn-light route_mobile_action_btn">Skip Visit</button>
 <button name="action_open_or_create_visit" type="object" class="btn btn-primary route_mobile_action_btn">Create Visit</button>
 </t>
-<t t-if="record.visit_id.raw_value and record.state.raw_value not in ['visited', 'skipped']">
+<t t-if="record.visit_id.raw_value && record.state.raw_value !== 'visited' && record.state.raw_value !== 'skipped'">
 <button name="action_open_skip_visit_wizard" type="object" class="btn btn-light route_mobile_action_btn">Skip Visit</button>
 <button name="action_open_or_create_visit" type="object" class="btn btn-primary route_mobile_action_btn">Open Visit</button>
 </t>
-<t t-if="record.visit_id.raw_value and record.state.raw_value in ['visited', 'skipped']">
+<t t-if="record.visit_id.raw_value && (record.state.raw_value === 'visited' || record.state.raw_value === 'skipped')">
 <button name="action_open_or_create_visit" type="object" class="btn btn-secondary route_mobile_action_btn route_mobile_action_btn_full">View Visit</button>
 </t>
 </div>
