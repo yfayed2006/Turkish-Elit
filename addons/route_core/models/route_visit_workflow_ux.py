@@ -8,6 +8,11 @@ from odoo.exceptions import UserError
 class RouteVisit(models.Model):
     _inherit = "route.visit"
 
+    first_consignment_empty_balance = fields.Boolean(
+        string="First Consignment Empty Balance",
+        default=False,
+        copy=False,
+    )
 
     route_operation_mode = fields.Selection(
         related="company_id.route_operation_mode",
@@ -390,6 +395,7 @@ class RouteVisit(models.Model):
     @api.depends(
         "state",
         "visit_process_state",
+        "first_consignment_empty_balance",
         "route_operation_mode",
         "route_enable_direct_sale",
         "route_enable_direct_return",
@@ -429,6 +435,7 @@ class RouteVisit(models.Model):
                 rec.state == "in_progress"
                 and rec.visit_process_state == "checked_in"
                 and not has_lines
+                and not rec.first_consignment_empty_balance
             )
 
             can_enter_collection = (
@@ -569,7 +576,7 @@ class RouteVisit(models.Model):
             rec.ux_can_scan_barcode = (
                 rec.state == "in_progress"
                 and rec.visit_process_state in ("checked_in", "counting")
-                and has_lines
+                and (has_lines or rec.first_consignment_empty_balance)
             )
 
             rec.ux_can_scan_returns = (
