@@ -348,15 +348,19 @@ class RouteVisit(models.Model):
         return action
 
     def action_pda_back_route_workspace(self):
-        self.ensure_one()
+        """Open Route Workspace from visit form or list/kanban header buttons.
+
+        Odoo header object buttons can be called with an empty route.visit
+        recordset. Navigation actions must therefore not require ensure_one().
+        """
         return self.env["route.pda.home"].action_open_dashboard()
 
     def action_pda_back_today_route_map(self):
-        self.ensure_one()
+        """Open Today's Route Map from visit form or list/kanban header buttons."""
         return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
 
     def action_pda_back_today_visits(self):
-        self.ensure_one()
+        """Open Today's Visits without requiring a selected visit record."""
         today = fields.Date.context_today(self)
         action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
         domain = [("user_id", "=", self.env.user.id), ("date", "=", today)]
