@@ -113,41 +113,6 @@ class RouteGeoLiveMapController(http.Controller):
             return "#"
         return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
 
-    def _web_form_url(self, model, record_id, view_xmlid=False, action_xmlid=False, menu_xmlid=False):
-        env = request.env
-        params = {
-            "id": record_id,
-            "model": model,
-            "view_type": "form",
-            "cids": env.company.id,
-        }
-        if action_xmlid:
-            action = env.ref(action_xmlid, raise_if_not_found=False)
-            if action:
-                params["action"] = action.id
-        if view_xmlid:
-            view = env.ref(view_xmlid, raise_if_not_found=False)
-            if view:
-                params["view_id"] = view.id
-        if menu_xmlid:
-            menu = env.ref(menu_xmlid, raise_if_not_found=False)
-            if menu:
-                params["menu_id"] = menu.id
-        return "/web#" + "&".join(
-            "%s=%s" % (quote_plus(str(key)), quote_plus(str(value)))
-            for key, value in params.items()
-            if value not in (False, None, "")
-        )
-
-    def _pda_visit_url(self, visit):
-        return self._web_form_url(
-            "route.visit",
-            visit.id,
-            view_xmlid="route_core.view_route_visit_pda_form",
-            action_xmlid="route_core.action_route_visit_pda_salesperson",
-            menu_xmlid="route_core.menu_route_salesperson_my_visits",
-        )
-
     def _visit_payload(self, center, visit):
         checkin_lat = visit.geo_checkin_latitude or 0.0
         checkin_lng = visit.geo_checkin_longitude or 0.0
@@ -177,6 +142,9 @@ class RouteGeoLiveMapController(http.Controller):
             "decision": decision,
             "decision_label": self._selection_label(visit, "geo_review_supervisor_decision", decision),
             "process": self._selection_label(visit, "visit_process_state", visit.visit_process_state) or visit.visit_process_state or "",
+            "process_code": visit.visit_process_state or "",
+            "is_outside": geo_state in ("outside_no_reason", "outside_with_reason"),
+            "has_review_decision": bool(decision),
             "has_checkin": has_checkin,
             "has_outlet": has_outlet,
             "lat": main_lat,
@@ -185,7 +153,7 @@ class RouteGeoLiveMapController(http.Controller):
             "checkin_lng": checkin_lng,
             "outlet_lat": outlet_lat,
             "outlet_lng": outlet_lng,
-            "visit_url": self._pda_visit_url(visit),
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
             "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
             "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
             "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
@@ -244,13 +212,16 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
 .map-btn.orange {{ color:#111827; background:var(--route-orange); }}
 .map-btn.light {{ background:#fff; border:1px solid #d9dee3; }}
 .toast-note {{ background:#e8f5e9; color:#14532d; border:1px solid #bbf7d0; border-radius:8px; margin:8px 12px; padding:8px 10px; font-weight:700; }}
-.marker-dot {{ width:28px; height:28px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }}
-.marker-dot span {{ transform:rotate(45deg); font-size:12px; }}
+.marker-dot {{ width:34px; height:34px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:3px solid #fff; box-shadow:0 3px 10px rgba(15,23,42,.38); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; }}
+.marker-dot span {{ transform:rotate(45deg); font-size:13px; }}
 .marker-green {{ background:var(--route-green); }}
 .marker-orange {{ background:var(--route-orange); color:#111827; }}
 .marker-red {{ background:var(--route-red); }}
 .marker-blue {{ background:var(--route-blue); }}
 .marker-gray {{ background:var(--route-gray); }}
+.outlet-marker {{ width:34px; height:34px; border-radius:12px; background:#fff; border:3px solid #64748b; box-shadow:0 2px 8px rgba(15,23,42,.28); display:flex; align-items:center; justify-content:center; color:#334155; font-weight:900; font-size:15px; }}
+.outlet-marker.missing {{ border-color:#94a3b8; color:#64748b; }}
+.distance-line-note {{ font-size:11px; color:#64748b; margin-top:4px; }}
 .popup-title {{ font-weight:900; font-size:15px; margin-bottom:4px; }}
 .popup-row {{ font-size:12px; margin:2px 0; }}
 .popup-actions {{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }}
@@ -268,10 +239,11 @@ html, body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFon
   <div class="route-map-header">
     <div><div class="route-map-title">Visit Location Map</div><div class="route-map-subtitle">{subtitle}</div></div>
     <div class="route-map-legend">
-      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-green)"></span>Inside/Accepted</span>
-      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-orange)"></span>Outside/Correction</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-green)"></span>Inside / Accepted</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-red)"></span>Outside Zone</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-orange)"></span>Needs Correction</span>
       <span class="legend-pill"><span class="legend-dot" style="background:var(--route-blue)"></span>No Check-in</span>
-      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-gray)"></span>No Location</span>
+      <span class="legend-pill"><span class="legend-dot" style="background:var(--route-gray)"></span>Outlet Location</span>
     </div>
   </div>
   {message_html}
@@ -287,20 +259,27 @@ function escapeHtml(value) {{ return String(value || '').replace(/[&<>'"]/g, c =
 function markerColor(v) {{
   if (v.decision === 'needs_correction') return 'orange';
   if (v.decision === 'accepted') return 'green';
+  if (v.is_outside || v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'red';
   if (v.geo_state === 'inside_zone') return 'green';
-  if (v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'orange';
   if (v.geo_state === 'pending_checkin') return 'blue';
   return 'gray';
 }}
-function badgeClass(v) {{
+function locationBadgeClass(v) {{
   if (v.decision === 'needs_correction') return 'badge-orange';
   if (v.decision === 'accepted') return 'badge-green';
+  if (v.is_outside || v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'badge-red';
   if (v.geo_state === 'inside_zone') return 'badge-green';
-  if (v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') return 'badge-orange';
   if (v.geo_state === 'pending_checkin') return 'badge-blue';
   return 'badge-gray';
 }}
-function statusText(v) {{ return v.decision_label || v.geo_state_label || 'Location Status'; }}
+function processBadgeClass(v) {{
+  if (v.process_code === 'done') return 'badge-green';
+  if (v.process_code === 'cancel') return 'badge-gray';
+  if (v.process_code && v.process_code !== 'draft') return 'badge-orange';
+  return 'badge-blue';
+}}
+function processText(v) {{ return v.process || 'Visit Status'; }}
+function locationText(v) {{ return v.decision_label || v.geo_state_label || 'Location Status'; }}
 function actionButtons(v) {{
   let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
   if (v.has_outlet) html += `<a class="map-btn" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a>`;
@@ -311,8 +290,10 @@ function actionButtons(v) {{
   return html;
 }}
 function visitCard(v) {{
+  const outsideNote = (v.is_outside || v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason')
+    ? `<div class="distance-line-note">Outside outlet radius${{v.reason ? ': ' + escapeHtml(v.reason) : ''}}</div>` : '';
   return `<article class="visit-card" data-visit-id="${{v.id}}">
-    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge ${{badgeClass(v)}}">${{escapeHtml(statusText(v))}}</span></div>
+    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="badge ${{processBadgeClass(v)}}">${{escapeHtml(processText(v))}}</span><span class="badge ${{locationBadgeClass(v)}}">${{escapeHtml(locationText(v))}}</span></div></div>
     <div class="visit-grid">
       <div><span class="label">Salesperson</span><span class="value">${{escapeHtml(v.salesperson)}}</span></div>
       <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle)}}</span></div>
@@ -321,17 +302,21 @@ function visitCard(v) {{
       <div><span class="label">Check-in</span><span class="value">${{escapeHtml(v.checkin_time || 'No check-in')}}</span></div>
       <div><span class="label">Accuracy</span><span class="value">${{escapeHtml(v.accuracy || '-')}}</span></div>
     </div>
-    ${{v.reason ? `<div class="popup-row" style="margin-top:8px"><span class="label">Reason</span>${{escapeHtml(v.reason)}}</div>` : ''}}
+    ${{outsideNote}}
+    ${{v.reason && !(v.is_outside || v.geo_state === 'outside_no_reason' || v.geo_state === 'outside_with_reason') ? `<div class="popup-row" style="margin-top:8px"><span class="label">Reason</span>${{escapeHtml(v.reason)}}</div>` : ''}}
     <div class="actions">${{actionButtons(v)}}</div>
   </article>`;
 }}
 function popupHtml(v) {{
   return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div>
     <div class="popup-row"><b>${{escapeHtml(v.name)}}</b></div>
-    <div class="popup-row">${{escapeHtml(statusText(v))}}</div>
+    <div class="popup-row">Visit Status: <b>${{escapeHtml(processText(v))}}</b></div>
+    <div class="popup-row">Location Status: <b>${{escapeHtml(locationText(v))}}</b></div>
     <div class="popup-row">Salesperson: ${{escapeHtml(v.salesperson)}}</div>
     <div class="popup-row">Vehicle: ${{escapeHtml(v.vehicle)}}</div>
-    <div class="popup-row">Distance: ${{escapeHtml(v.distance)}}</div>
+    <div class="popup-row">Outlet Location: ${{v.has_outlet ? escapeHtml(v.outlet_lat + ', ' + v.outlet_lng) : 'Missing'}}</div>
+    <div class="popup-row">Check-in Location: ${{v.has_checkin ? escapeHtml(v.checkin_lat + ', ' + v.checkin_lng) : 'No check-in'}}</div>
+    <div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div>
     ${{v.reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.reason)}}</div>` : ''}}
     <div class="popup-actions">${{actionButtons(v)}}</div></div>`;
 }}
@@ -357,9 +342,10 @@ function initMap() {{
     const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popupHtml(v));
     markerByVisit[v.id] = marker;
     bounds.push([v.lat, v.lng]);
-    if (v.has_checkin && v.has_outlet) {{
-      L.circleMarker([v.outlet_lat, v.outlet_lng], {{ radius:5, color:'#7b4b6f', fillColor:'#fff', fillOpacity:1, weight:2 }}).addTo(map).bindPopup(`<b>Outlet Location</b><br/>${{escapeHtml(v.outlet)}}`);
-      L.polyline([[v.checkin_lat, v.checkin_lng], [v.outlet_lat, v.outlet_lng]], {{ color:'#7b4b6f', weight:2, opacity:.55, dashArray:'5,6' }}).addTo(map);
+    if (v.has_outlet && v.has_checkin) {{
+      const outletIcon = L.divIcon({{ className:'', html:'<div class="outlet-marker">🏪</div>', iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-18] }});
+      L.marker([v.outlet_lat, v.outlet_lng], {{ icon: outletIcon, zIndexOffset:-250 }}).addTo(map).bindPopup(`<b>Outlet Location</b><br/>${{escapeHtml(v.outlet)}}<br/>Visit: ${{escapeHtml(v.name)}}`);
+      L.polyline([[v.checkin_lat, v.checkin_lng], [v.outlet_lat, v.outlet_lng]], {{ color: (v.is_outside ? '#ef4444' : '#7b4b6f'), weight:3, opacity:.7, dashArray:'6,8' }}).addTo(map);
       bounds.push([v.outlet_lat, v.outlet_lng]);
     }}
   }}
@@ -448,41 +434,6 @@ class RouteSalespersonTodayMapController(http.Controller):
             return "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s" % (latitude, longitude, latitude, longitude)
         return "https://www.google.com/maps/dir/?api=1&destination=%s,%s" % (latitude, longitude)
 
-    def _web_form_url(self, model, record_id, view_xmlid=False, action_xmlid=False, menu_xmlid=False):
-        env = request.env
-        params = {
-            "id": record_id,
-            "model": model,
-            "view_type": "form",
-            "cids": env.company.id,
-        }
-        if action_xmlid:
-            action = env.ref(action_xmlid, raise_if_not_found=False)
-            if action:
-                params["action"] = action.id
-        if view_xmlid:
-            view = env.ref(view_xmlid, raise_if_not_found=False)
-            if view:
-                params["view_id"] = view.id
-        if menu_xmlid:
-            menu = env.ref(menu_xmlid, raise_if_not_found=False)
-            if menu:
-                params["menu_id"] = menu.id
-        return "/web#" + "&".join(
-            "%s=%s" % (quote_plus(str(key)), quote_plus(str(value)))
-            for key, value in params.items()
-            if value not in (False, None, "")
-        )
-
-    def _pda_visit_url(self, visit):
-        return self._web_form_url(
-            "route.visit",
-            visit.id,
-            view_xmlid="route_core.view_route_visit_pda_form",
-            action_xmlid="route_core.action_route_visit_pda_salesperson",
-            menu_xmlid="route_core.menu_route_salesperson_my_visits",
-        )
-
     def _visit_bucket(self, visit):
         process = visit.visit_process_state or False
         state = visit.state or False
@@ -547,7 +498,9 @@ class RouteSalespersonTodayMapController(http.Controller):
             "area": visit.area_id.display_name or "",
             "vehicle": visit.vehicle_id.display_name or "",
             "process": self._selection_label(visit, "visit_process_state", visit.visit_process_state) or visit.visit_process_state or "",
+            "process_code": visit.visit_process_state or "",
             "bucket": bucket,
+            "is_outside": geo_status == "outside",
             "geo_status": geo_status,
             "geo_status_label": self._selection_label(visit, "geo_checkin_status", geo_status) or geo_status,
             "distance": visit.geo_checkin_distance_display or "",
@@ -558,7 +511,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": self._pda_visit_url(visit),
+            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
@@ -629,21 +582,17 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .popup-row {{ margin:3px 0; font-size:12px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
 @media (max-width: 900px) {{
-  .route-map-header {{ flex-direction:column; padding:10px; }}
+  .route-map-header {{ flex-direction:column; }}
   .legend {{ justify-content:flex-start; }}
   .route-map-body {{ display:block; }}
-  #map {{ height:46vh; min-height:320px; }}
-  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:10px; }}
+  #map {{ height:48vh; min-height:330px; }}
+  .visit-side {{ border-left:0; border-top:1px solid var(--line); padding:8px; }}
   .actions {{ grid-template-columns:1fr 1fr; }}
 }}
 @media (max-width: 420px) {{
-  .route-map-title {{ font-size:16px; }}
-  .route-map-subtitle {{ font-size:11px; }}
-  .legend-pill {{ font-size:11px; padding:4px 7px; }}
-  .grid {{ grid-template-columns:1fr 1fr; gap:8px 12px; }}
-  .visit-card {{ padding:12px; border-radius:16px; }}
-  .visit-title {{ font-size:15px; }}
-  .map-btn {{ min-height:40px; font-size:12px; }}
+  .grid {{ grid-template-columns:1fr 1fr; }}
+  .visit-title {{ font-size:14px; }}
+  .map-btn {{ font-size:11px; }}
 }}
 </style>
 </head>
@@ -669,7 +618,10 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 const visits = {data_json};
 function escapeHtml(value) {{ return String(value || '').replace(/[&<>'"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}}[c])); }}
 function color(v) {{ if (v.geo_status === 'outside') return 'outside'; if (v.bucket === 'done') return 'done'; if (v.bucket === 'active') return 'active'; if (!v.has_point) return 'missing'; return 'pending'; }}
-function badgeText(v) {{ if (v.geo_status === 'outside') return 'Outside Zone'; if (v.bucket === 'done') return 'Done'; if (v.bucket === 'active') return 'In Progress'; if (!v.has_point) return 'No Location'; return 'Pending'; }}
+function processBadgeText(v) {{ if (v.bucket === 'done') return 'Done'; if (v.bucket === 'active') return 'In Progress'; return 'Pending'; }}
+function processBadgeClass(v) {{ if (v.bucket === 'done') return 'badge-done'; if (v.bucket === 'active') return 'badge-active'; return 'badge-pending'; }}
+function locationBadgeText(v) {{ if (v.geo_status === 'outside') return 'Outside Zone'; if (v.geo_status === 'inside') return 'Inside Zone'; if (!v.has_point) return 'No Location'; if (v.geo_status === 'pending') return 'Pending Check-in'; return v.geo_status_label || 'Location'; }}
+function locationBadgeClass(v) {{ if (v.geo_status === 'outside') return 'badge-outside'; if (v.geo_status === 'inside') return 'badge-done'; if (!v.has_point) return 'badge-missing'; return 'badge-pending'; }}
 function actions(v) {{
   let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
   if (v.has_point) html += `<a class="map-btn" href="${{v.navigate_url}}" target="_blank">Navigate</a>`;
@@ -678,22 +630,24 @@ function actions(v) {{
   return html;
 }}
 function card(v) {{
-  const c = color(v);
+  const outsideNote = v.geo_status === 'outside'
+    ? `<div class="hint" style="color:#991b1b">Outside outlet radius${{v.outside_reason ? ': ' + escapeHtml(v.outside_reason) : '. Reason review required.'}}</div>`
+    : `<div class="hint">${{escapeHtml(v.start_hint || '')}}</div>`;
   return `<article class="visit-card" data-visit-id="${{v.id}}">
-    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><span class="badge badge-${{c}}">${{escapeHtml(badgeText(v))}}</span></div>
+    <div class="visit-top"><div><div class="visit-title">${{escapeHtml(v.index + '. ' + (v.outlet || v.name))}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="badge ${{processBadgeClass(v)}}">${{escapeHtml(processBadgeText(v))}}</span><span class="badge ${{locationBadgeClass(v)}}">${{escapeHtml(locationBadgeText(v))}}</span></div></div>
     <div class="grid">
       <div><span class="label">Customer</span><span class="value">${{escapeHtml(v.customer || '-')}}</span></div>
       <div><span class="label">Area</span><span class="value">${{escapeHtml(v.area || '-')}}</span></div>
       <div><span class="label">Vehicle</span><span class="value">${{escapeHtml(v.vehicle || '-')}}</span></div>
       <div><span class="label">Process</span><span class="value">${{escapeHtml(v.process || '-')}}</span></div>
-      <div><span class="label">Location</span><span class="value">${{escapeHtml(v.geo_status_label || '-')}}</span></div>
+      <div><span class="label">Location</span><span class="value">${{escapeHtml(locationBadgeText(v) || '-')}}</span></div>
       <div><span class="label">Distance</span><span class="value">${{escapeHtml(v.distance || '-')}}</span></div>
     </div>
-    <div class="hint">${{escapeHtml(v.start_hint || '')}}</div>
+    ${{outsideNote}}
     <div class="actions">${{actions(v)}}</div>
   </article>`;
 }}
-function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="popup-row">${{escapeHtml(v.process || '')}} • ${{escapeHtml(v.geo_status_label || '')}}</div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div><div class="actions">${{actions(v)}}</div></div>`; }}
+function popup(v) {{ return `<div><div class="popup-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="popup-row">Visit Status: <b>${{escapeHtml(processBadgeText(v))}}</b></div><div class="popup-row">Location Status: <b>${{escapeHtml(locationBadgeText(v))}}</b></div><div class="popup-row">Area: ${{escapeHtml(v.area || '-')}}</div><div class="popup-row">Distance: ${{escapeHtml(v.distance || '-')}}</div>${{v.outside_reason ? `<div class="popup-row">Reason: ${{escapeHtml(v.outside_reason)}}</div>` : ''}}<div class="actions">${{actions(v)}}</div></div>`; }}
 function renderList() {{ const list = document.getElementById('visitList'); list.innerHTML = visits.length ? visits.map(card).join('') : '<div class="no-map">No visits are scheduled for today.</div>'; }}
 function initMap() {{
   renderList();
@@ -757,5 +711,4 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
-
 
