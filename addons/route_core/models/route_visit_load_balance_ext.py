@@ -144,12 +144,45 @@ class RouteVisit(models.Model):
                 balance_rows = rec._get_outlet_previous_balance_fallback_records()
 
             if not balance_rows:
-                if rec.outlet_id.stock_location_id:
+                if not rec.outlet_id.stock_location_id:
                     raise UserError(_(
-                        "No previous stock balance was found for this outlet. "
-                        "The linked outlet stock location exists, but no positive quantities were found in it."
+                        "No outlet stock location is configured for this outlet. "
+                        "Please set an Outlet Stock Location before loading previous balance."
                     ))
-                raise UserError(_("No previous stock balance was found for this outlet."))
+
+                vals = {
+                    "visit_process_state": "checked_in",
+                }
+                if "check_in_datetime" in rec._fields:
+                    vals["check_in_datetime"] = rec.check_in_datetime or fields.Datetime.now()
+                rec.write(vals)
+
+                message = _(
+                    "No previous consignment stock was found for this outlet. "
+                    "This looks like the first consignment visit. "
+                    "The visit will continue with an empty shelf balance. "
+                    "If products need to be placed on the shelf, continue with Scan Shelf and the vehicle refill/transfer flow."
+                )
+
+                if hasattr(rec, "message_post"):
+                    rec.message_post(body=message)
+
+                next_action = (
+                    rec._get_pda_form_action()
+                    if hasattr(rec, "_get_pda_form_action")
+                    else {"type": "ir.actions.client", "tag": "reload"}
+                )
+                return {
+                    "type": "ir.actions.client",
+                    "tag": "display_notification",
+                    "params": {
+                        "title": _("First Consignment Visit"),
+                        "message": message,
+                        "type": "info",
+                        "sticky": False,
+                        "next": next_action,
+                    },
+                }
 
             line_vals_list = []
             for row in balance_rows:
