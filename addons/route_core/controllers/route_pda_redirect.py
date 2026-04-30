@@ -538,16 +538,16 @@ class RouteSalespersonTodayMapController(http.Controller):
 <style>
 :root {{ --route-primary:#7b4b6f; --green:#16a34a; --blue:#0ea5e9; --orange:#f59e0b; --red:#ef4444; --gray:#64748b; --line:#e5e7eb; --ink:#111827; }}
 html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; color:var(--ink); background:#f8fafc; }}
-.route-map-page {{ height:100vh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
-.route-map-header {{ flex:0 0 auto; background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; z-index:8; }}
+.route-map-page {{ min-height:100vh; display:flex; flex-direction:column; }}
+.route-map-header {{ background:#fff; border:1px solid #e9d5ff; border-left:6px solid var(--route-primary); padding:10px 12px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; z-index:8; }}
 .route-map-title {{ font-size:18px; font-weight:900; line-height:1.2; }}
 .route-map-subtitle {{ margin-top:3px; color:#64748b; font-size:12px; font-weight:700; }}
 .legend {{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }}
 .legend-pill {{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:5px; }}
 .legend-dot {{ width:10px; height:10px; border-radius:50%; display:inline-block; }}
-.route-map-body {{ flex:1 1 auto; display:grid; grid-template-columns:minmax(0,1fr) 380px; min-height:0; overflow:hidden; }}
-#map {{ height:100%; min-height:0; background:#e5e7eb; }}
-.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; -webkit-overflow-scrolling:touch; padding:10px; scroll-behavior:smooth; }}
+.route-map-body {{ flex:1; display:grid; grid-template-columns:minmax(0,1fr) 380px; min-height:0; }}
+#map {{ min-height:520px; background:#e5e7eb; }}
+.visit-side {{ background:#fff; border-left:1px solid var(--line); overflow:auto; padding:10px; scroll-behavior:smooth; }}
 .visit-card {{ position:relative; border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:10px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.04); transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease; }}
 .visit-card:hover, .visit-card.active-card {{ border-color:var(--route-primary); box-shadow:0 12px 26px rgba(123,75,111,.14); cursor:pointer; }}
 .visit-card.active-card {{ transform:translateY(-1px); }}
@@ -590,13 +590,13 @@ html,body {{ height:100%; margin:0; font-family:-apple-system,BlinkMacSystemFont
 .popup-row {{ margin:3px 0; font-size:12px; }}
 .no-map {{ height:100%; display:flex; align-items:center; justify-content:center; text-align:center; padding:22px; color:#64748b; font-weight:800; }}
 @media (max-width: 900px) {{
-  html,body {{ height:100%; min-height:0; overflow:hidden; }}
-  .route-map-page {{ height:100vh; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
-  .route-map-header {{ flex:0 0 auto; flex-direction:column; position:relative; padding:10px 12px; }}
+  html,body {{ height:100%; min-height:100%; overflow:hidden; }}
+  .route-map-page {{ height:100dvh; min-height:620px; display:flex; flex-direction:column; overflow:hidden; }}
+  .route-map-header {{ flex:0 0 auto; flex-direction:column; position:relative; z-index:4; }}
   .legend {{ justify-content:flex-start; }}
   .route-map-body {{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }}
-  #map {{ flex:0 0 45vh; height:45vh; min-height:280px; max-height:380px; position:relative; z-index:7; border-bottom:1px solid var(--line); box-shadow:0 8px 18px rgba(15,23,42,.08); }}
-  .visit-side {{ flex:1 1 auto; min-height:220px; border-left:0; border-top:1px solid var(--line); padding:12px 10px 18px; overflow:auto; -webkit-overflow-scrolling:touch; }}
+  #map {{ flex:0 0 46dvh; height:auto; min-height:280px; max-height:420px; position:relative; top:auto; z-index:1; border-bottom:1px solid var(--line); box-shadow:0 8px 18px rgba(15,23,42,.08); }}
+  .visit-side {{ flex:1 1 auto; min-height:260px; border-left:0; border-top:1px solid var(--line); padding:12px 10px 18px; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; background:#ffffff; }}
   .visit-card {{ border-radius:18px; padding:14px; margin-bottom:12px; }}
   .actions {{ grid-template-columns:1fr 1fr; }}
 }}
@@ -672,21 +672,10 @@ function initMap() {{
   L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{ maxZoom:19, attribution:'&copy; OpenStreetMap contributors' }}).addTo(map);
   const bounds = [];
   const markers = {{}};
-  function scrollCardIntoView(visitId) {{
-    const cardEl = document.querySelector(`[data-visit-id="${{visitId}}"]`);
-    const listEl = document.getElementById('visitList');
-    if (!cardEl || !listEl) return;
-    const listRect = listEl.getBoundingClientRect();
-    const cardRect = cardEl.getBoundingClientRect();
-    if (cardRect.top < listRect.top || cardRect.bottom > listRect.bottom) {{
-      cardEl.scrollIntoView({{ behavior:'smooth', block:'center' }});
-    }}
-  }}
   for (const v of mappable) {{
     const c = color(v);
     const icon = L.divIcon({{ className:'route-marker-icon', html:`<div class="marker-dot marker-${{c}}"><span>${{v.index}}</span></div>`, iconSize:[34,34], iconAnchor:[17,34], popupAnchor:[0,-30] }});
     const marker = L.marker([v.lat, v.lng], {{ icon }}).addTo(map).bindPopup(popup(v));
-    marker.on('click', () => {{ setActiveVisit(v.id, false); scrollCardIntoView(v.id); }});
     markers[v.id] = marker;
     bounds.push([v.lat, v.lng]);
   }}
@@ -710,11 +699,11 @@ function initMap() {{
   }}));
 
   if ('IntersectionObserver' in window && cards.length) {{
-    const rootEl = document.getElementById('visitList') || null;
+    const rootEl = window.matchMedia('(min-width: 901px)').matches ? document.getElementById('visitList') : null;
     const observer = new IntersectionObserver(entries => {{
       const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (visible) setActiveVisit(parseInt(visible.target.getAttribute('data-visit-id'), 10), false);
-    }}, {{ root: rootEl, rootMargin:'-8% 0px -45% 0px', threshold:[0.25, 0.5, 0.75] }});
+    }}, {{ root: rootEl, threshold:[0.35, 0.6, 0.85] }});
     cards.forEach(cardEl => observer.observe(cardEl));
   }}
   const firstMappable = visits.find(v => v.has_point);
