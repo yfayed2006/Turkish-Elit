@@ -253,6 +253,85 @@ class RouteVisit(models.Model):
             action["views"] = [(view.id, "form")]
         return action
 
+    def _get_pda_form_action(self):
+        """Return the compact salesperson visit form with stable PDA context."""
+        self.ensure_one()
+        parent = getattr(super(), "_get_pda_form_action", None)
+        action = parent() if parent else {}
+        if not isinstance(action, dict):
+            action = {}
+
+        form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        action_ref = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        context = action.get("context") or {}
+        if not isinstance(context, dict):
+            context = {}
+        context.update({
+            "search_default_filter_my_visits": 1,
+            "search_default_filter_today": 1,
+            "pda_mode": True,
+            "route_pda_salesperson_mode": True,
+            "create": 0,
+            "edit": 1,
+            "delete": 0,
+        })
+        action.update({
+            "type": "ir.actions.act_window",
+            "name": _("Today's Visits"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": context,
+        })
+        if action_ref:
+            action["id"] = action_ref.id
+        if form_view:
+            action["view_id"] = form_view.id
+            action["views"] = [(form_view.id, "form")]
+        return action
+
+    def action_pda_back_route_workspace(self):
+        self.ensure_one()
+        return self.env["route.pda.home"].action_open_dashboard()
+
+    def action_pda_back_today_route_map(self):
+        self.ensure_one()
+        return self.env["route.salesperson.route.map"].action_open_salesperson_today_route_map()
+
+    def action_pda_back_today_visits(self):
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        domain = [("user_id", "=", self.env.user.id), ("date", "=", today)]
+        context = {
+            "search_default_filter_my_visits": 1,
+            "search_default_filter_today": 1,
+            "pda_mode": True,
+            "route_pda_salesperson_mode": True,
+            "create": 0,
+            "edit": 1,
+            "delete": 0,
+        }
+        if action:
+            result = action.read()[0]
+            result.update({
+                "name": _("Today's Visits"),
+                "domain": domain,
+                "context": context,
+                "target": "current",
+            })
+            return result
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Today's Visits"),
+            "res_model": "route.visit",
+            "view_mode": "kanban,form,list",
+            "domain": domain,
+            "target": "current",
+            "context": context,
+        }
+
     def _geo_review_reset_supervisor_decision_values(self):
         """Return values used when a fresh check-in replaces the previous review context."""
         return {
@@ -461,14 +540,18 @@ class RouteVisit(models.Model):
         if not self.route_geo_enabled:
             raise ValidationError(_("Visit location tracking is disabled in Route Settings."))
         pda_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        pda_action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
         return {
             "type": "ir.actions.client",
+            "name": _("Capture My Location"),
             "tag": "route_core_capture_geo_checkin",
             "target": "current",
             "params": {
                 "visit_id": self.id,
                 "visit_name": self.display_name,
                 "view_id": pda_view.id if pda_view else False,
+                "action_id": pda_action.id if pda_action else False,
+                "return_action_name": _("Today's Visits"),
             },
         }
 
