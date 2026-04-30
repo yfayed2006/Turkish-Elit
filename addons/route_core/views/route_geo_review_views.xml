@@ -86,7 +86,7 @@
 <field name="arch" type="xml">
 <form string="Visit Location Review" create="0" delete="0">
 <header>
-<button name="action_open_geo_review_visit" type="object" string="Open Full Visit" class="btn-primary" icon="fa-external-link" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+<button name="action_open_full_visit" type="object" string="Open Full Visit" class="btn-primary" icon="fa-external-link" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <button name="action_open_visit_outlet_map" type="object" string="Outlet Map" icon="fa-map-marker" invisible="outlet_geo_status == 'missing'"/>
 <button name="action_open_visit_checkin_map" type="object" string="Check-in Map" icon="fa-location-arrow" invisible="geo_review_state in ['disabled', 'pending_checkin', 'outlet_missing']"/>
 <button name="action_geo_review_accept" type="object" string="Accept Location Review" class="btn-primary" icon="fa-check" invisible="not geo_review_required or geo_review_supervisor_decision == 'accepted'"/>
@@ -176,7 +176,7 @@
 <field name="act_window_id" ref="route_core.action_route_geo_review"/>
 </record>
 <menuitem id="menu_route_geo_review" name="Visit Location Review" parent="route_core.menu_route_control_workspace" action="route_core.action_route_geo_review" sequence="12" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
-<!--    Force the menu back to active in case a previous uploaded patch left the existing menu inactive in the database.    -->
+<!--     Force the menu back to active in case a previous uploaded patch left the existing menu inactive in the database.     -->
 <record id="menu_route_geo_review" model="ir.ui.menu">
 <field name="active" eval="True"/>
 <field name="sequence" eval="12"/>
