@@ -246,11 +246,40 @@ class RouteVisit(models.Model):
         is_supervisor = user.has_group("route_core.group_route_supervisor") or user.has_group("route_core.group_route_management")
         return bool(is_salesperson and not is_supervisor)
 
-    def action_open_geo_review_visit(self):
-        self.ensure_one()
-        if self._route_geo_should_use_pda_visit_form() and hasattr(self, "_get_pda_form_action"):
-            return self.with_context(pda_mode=True)._get_pda_form_action()
+    def _get_geo_review_form_action(self):
+        """Open the supervisor Visit Location Review form for this visit.
 
+        This keeps supervisor map/control links in the review context instead of
+        accidentally dropping into the salesperson execution form or the heavy
+        operational visit form.
+        """
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_geo_review_form", raise_if_not_found=False)
+        action_ref = self.env.ref("route_core.action_route_geo_review", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Visit Location Review"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "create": False,
+                "edit": True,
+                "delete": False,
+                "route_location_review_mode": True,
+            },
+        }
+        if action_ref:
+            action["id"] = action_ref.id
+        if view:
+            action["view_id"] = view.id
+            action["views"] = [(view.id, "form")]
+        return action
+
+    def _get_full_visit_form_action(self):
+        """Open the full operational visit form for supervisor/management users."""
+        self.ensure_one()
         view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
@@ -262,11 +291,23 @@ class RouteVisit(models.Model):
             "context": {
                 "create": False,
                 "edit": True,
+                "delete": False,
             },
         }
         if view:
+            action["view_id"] = view.id
             action["views"] = [(view.id, "form")]
         return action
+
+    def action_open_geo_review_visit(self):
+        self.ensure_one()
+        if self._route_geo_should_use_pda_visit_form() and hasattr(self, "_get_pda_form_action"):
+            return self.with_context(pda_mode=True, route_pda_salesperson_mode=True)._get_pda_form_action()
+        return self._get_geo_review_form_action()
+
+    def action_open_full_visit(self):
+        self.ensure_one()
+        return self._get_full_visit_form_action()
 
     def _get_pda_form_action(self):
         """Return the compact salesperson visit form with stable PDA context."""
