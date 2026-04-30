@@ -598,10 +598,14 @@
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_consignment_tools" invisible="1"/>
 <field name="route_show_lot_ui" invisible="1"/>
-<div class="route_pda_detail_header">
-<button type="object" name="action_open_snapshot_center_screen" class="btn route_pda_back_btn">
+<div class="route_pda_detail_header route_pda_current_snapshot_header">
+<button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Collections</span>
+<span>Back to Route Workspace</span>
+</button>
+<button type="object" name="action_open_current_visit" class="btn btn-primary route_pda_snapshot_open_btn">
+<i class="fa fa-external-link"/>
+<span>Open Visit</span>
 </button>
 <h2 class="route_pda_detail_title">Current Visit Snapshot</h2>
 </div>
