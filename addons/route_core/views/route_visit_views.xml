@@ -24,6 +24,10 @@
 <field name="model">route.visit</field>
 <field name="arch" type="xml">
 <kanban class="o_kanban_mobile route_pda_visit_kanban" create="0" delete="0">
+<header>
+<button name="action_pda_open_workspace" type="object" string="Route Workspace" class="btn-primary route_pda_nav_btn" icon="fa-home" display="always"/>
+<button name="action_pda_open_today_route_map" type="object" string="Today Route Map" class="btn-secondary route_pda_nav_btn" icon="fa-map" display="always"/>
+</header>
 <field name="name"/>
 <field name="date"/>
 <field name="outlet_id"/>
@@ -369,7 +373,7 @@
 <button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" context="{'allow_outlet_coordinate_checkin': True}" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
 <button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
@@ -966,7 +970,7 @@
 <button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
 <button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
 <button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" invisible="not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
+<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" context="{'allow_outlet_coordinate_checkin': True}" invisible="1"/>
 <button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
 </div>
 <separator string="Outlet Location"/>
