@@ -2524,134 +2524,12 @@
     }
 }
 
-
-/* Salesperson Mobile Navigation Standardization */
-.route_pda_nav_btn {
-    font-weight: 700;
+/* Salesperson visit execution screen - compact and stable PDA layout */
+.route_pda_visit_form .route_pda_visit_command_header_block,
+.route_pda_visit_form .route_pda_visit_command_header_title {
+    display: none !important;
 }
 
-.route_pda_continue_cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    align-self: center;
-    border-radius: 999px;
-    padding: 4px 10px;
-    margin-bottom: 4px;
-    background: rgba(255, 255, 255, 0.20);
-    color: inherit;
-    font-size: 13px;
-    font-weight: 800;
-}
-
-@media (max-width: 768px) {
-    .route_pda_visit_form header {
-        gap: 8px;
-    }
-
-    .route_pda_visit_form header .route_pda_nav_btn {
-        min-height: 40px;
-        border-radius: 10px;
-        font-size: 13px;
-        padding: 8px 10px;
-    }
-
-    .route_pda_visit_form .o_statusbar_status {
-        margin-top: 6px;
-    }
-
-    .route_geo_action_grid {
-        gap: 8px;
-    }
-
-    .route_geo_action_grid .route_geo_action_btn {
-        min-height: 42px;
-        border-radius: 10px;
-        font-weight: 800;
-        white-space: normal;
-    }
-}
-
-@media (max-width: 480px) {
-    .route_pda_visit_form header .route_pda_nav_btn {
-        flex: 1 1 46%;
-        justify-content: center;
-    }
-
-    .route_pda_visit_form header button[name="action_pda_open_today_visits"] {
-        flex-basis: 100%;
-    }
-
-    .route_geo_action_grid {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-/* Mobile-friendly outside-zone reason wizard */
-.route_geo_reason_mobile_wizard .alert {
-    border-radius: 12px;
-    padding: 10px 12px;
-    line-height: 1.4;
-}
-
-.route_geo_reason_mobile_wizard .o_group {
-    margin-bottom: 10px;
-}
-
-@media (max-width: 768px) {
-    .modal-dialog:has(.route_geo_reason_mobile_wizard),
-    .o_dialog:has(.route_geo_reason_mobile_wizard) {
-        max-width: calc(100vw - 20px) !important;
-        margin: 10px auto !important;
-    }
-
-    .route_geo_reason_mobile_wizard .o_group,
-    .route_geo_reason_mobile_wizard .o_inner_group {
-        width: 100% !important;
-    }
-
-    .route_geo_reason_mobile_wizard footer {
-        display: grid !important;
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-
-    .route_geo_reason_mobile_wizard footer .btn {
-        width: 100%;
-        min-height: 44px;
-        border-radius: 10px;
-        font-weight: 800;
-        white-space: normal;
-    }
-}
-
-/* Keep generic Odoo error dialogs usable on narrow PDA screens. */
-@media (max-width: 768px) {
-    .o_error_dialog .modal-dialog,
-    .modal.o_error_dialog .modal-dialog {
-        max-width: calc(100vw - 20px) !important;
-        margin: 10px auto !important;
-    }
-
-    .o_error_dialog .modal-content {
-        border-radius: 16px;
-        max-height: calc(100vh - 20px);
-        overflow: auto;
-    }
-
-    .o_error_dialog .modal-body {
-        font-size: 16px;
-        line-height: 1.45;
-    }
-
-    .o_error_dialog .modal-footer .btn {
-        min-height: 44px;
-        border-radius: 10px;
-        font-weight: 800;
-    }
-}
-
-/* Stable in-form navigation buttons for the salesperson visit screen. */
 .route_pda_visit_nav_bar {
     display: flex;
     flex-wrap: wrap;
@@ -2665,21 +2543,202 @@
     font-weight: 800;
 }
 
+.route_pda_visit_quick_panel {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 12px 0;
+}
+
+.route_pda_visit_quick_card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 12px 14px;
+    min-height: 78px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.route_pda_visit_quick_card_primary {
+    border-color: #ddd6fe;
+    background: #faf5ff;
+}
+
+.route_pda_visit_quick_label {
+    font-size: 0.76rem;
+    line-height: 1.2;
+    font-weight: 800;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.route_pda_visit_quick_value,
+.route_pda_visit_quick_value .o_field_widget,
+.route_pda_visit_quick_value .o_input {
+    font-size: 1.02rem;
+    line-height: 1.25;
+    font-weight: 800;
+    color: #111827;
+}
+
+.route_pda_visit_quick_value .o_field_widget {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.route_pda_visit_quick_value .o_input {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+.route_pda_visit_quick_value_link,
+.route_pda_visit_quick_value_link .o_field_widget,
+.route_pda_visit_quick_value_link .o_input {
+    color: #008080;
+}
+
+.route_pda_visit_stage_alert {
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 12px !important;
+}
+
+.route_pda_visit_form .route_mobile_summary_grid {
+    margin-top: 4px;
+}
+
+.route_pda_visit_form .route_mobile_info_card,
+.route_pda_visit_form .route_mobile_detail_box {
+    min-height: 88px;
+}
+
+.route_pda_visit_form .route_mobile_info_label,
+.route_pda_visit_form .route_mobile_detail_label {
+    line-height: 1.25;
+}
+
+@media (max-width: 991.98px) {
+    .route_pda_visit_quick_panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
+    .route_pda_visit_form .o_form_sheet_bg,
+    .route_pda_visit_form .o_form_sheet {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
     .route_pda_visit_nav_bar {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
-        margin-bottom: 14px;
+        margin-bottom: 10px;
     }
 
     .route_pda_visit_nav_bar .route_pda_visit_nav_btn {
         width: 100%;
-        min-height: 44px;
+        min-height: 42px;
+        border-radius: 12px;
         white-space: normal;
+        justify-content: center;
+        font-size: 0.88rem;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
     }
 
-    .route_pda_visit_nav_bar .route_pda_visit_nav_btn:first-child {
-        grid-column: 1 / -1;
+    .route_pda_visit_quick_panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .route_pda_visit_quick_card {
+        min-height: 78px;
+        padding: 10px 12px;
+        border-radius: 12px;
+    }
+
+    .route_pda_visit_quick_label {
+        font-size: 0.72rem;
+    }
+
+    .route_pda_visit_quick_value,
+    .route_pda_visit_quick_value .o_field_widget,
+    .route_pda_visit_quick_value .o_input {
+        font-size: 0.96rem;
+    }
+
+    .route_pda_visit_stage_alert {
+        padding: 10px 12px;
+        font-size: 0.92rem;
+        line-height: 1.4;
+    }
+
+    .route_pda_visit_form .o_notebook .nav-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .route_pda_visit_form .o_notebook .nav-link {
+        min-height: 42px;
+        padding: 7px 8px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        line-height: 1.2;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .route_pda_visit_form .route_mobile_info_card,
+    .route_pda_visit_form .route_mobile_detail_box {
+        min-height: 84px;
+        padding: 11px 12px;
+        border-radius: 13px;
+    }
+
+    .route_pda_visit_form .route_mobile_info_value,
+    .route_pda_visit_form .route_mobile_detail_value {
+        font-size: 0.98rem;
+        line-height: 1.25;
+    }
+
+    .route_pda_visit_form .route_geo_action_grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+
+    .route_pda_visit_form .route_geo_action_grid .route_geo_action_btn {
+        min-height: 42px;
+        border-radius: 12px;
+        font-weight: 800;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_pda_visit_nav_bar {
+        grid-template-columns: 1fr;
+    }
+
+    .route_pda_visit_quick_panel,
+    .route_pda_visit_form .route_mobile_summary_grid,
+    .route_pda_visit_form .route_mobile_detail_grid,
+    .route_pda_visit_form .route_geo_card_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+
+    .route_pda_visit_form .o_notebook .nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
