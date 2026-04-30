@@ -3148,4 +3148,129 @@
 }
 
 
+/* Salesperson visit form - polished section tabs */
+.route_pda_visit_form .route_pda_visit_section_header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 14px 0 8px;
+    padding: 0 2px;
+}
+
+.route_pda_visit_form .route_pda_visit_section_eyebrow {
+    color: #7a536f;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+.route_pda_visit_form .route_pda_visit_section_title {
+    color: #64748b;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.route_pda_visit_form .route_pda_visit_notebook {
+    margin-top: 0 !important;
+}
+
+.route_pda_visit_form .route_pda_visit_notebook > .nav-tabs,
+.route_pda_visit_form .route_pda_visit_notebook .nav.nav-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    border: 1px solid #eef2f7 !important;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #f8fafc 0%, #fbf7fb 100%);
+    padding: 8px !important;
+    margin: 0 0 14px !important;
+}
+
+.route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-item {
+    min-width: 0 !important;
+    margin: 0 !important;
+}
+
+.route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    box-shadow: 0 7px 16px rgba(15, 23, 42, 0.04);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 8px !important;
+    font-size: 0.88rem;
+    font-weight: 900 !important;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal !important;
+}
+
+.route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link.active,
+.route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link:hover,
+.route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link:focus {
+    border-color: #d8bfd0 !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f7edf4 100%) !important;
+    color: #7a536f !important;
+    box-shadow: 0 10px 22px rgba(122, 83, 111, 0.12);
+}
+
+.route_pda_visit_form .route_pda_visit_notebook .tab-content,
+.route_pda_visit_form .route_pda_visit_notebook .o_notebook_content {
+    border-radius: 18px;
+}
+
+@media (max-width: 767.98px) {
+    .route_pda_visit_form .route_pda_visit_section_header {
+        display: block;
+        margin: 12px 0 8px;
+    }
+
+    .route_pda_visit_form .route_pda_visit_section_title {
+        display: block;
+        margin-top: 2px;
+        text-align: left;
+        font-size: 0.78rem;
+    }
+
+    .route_pda_visit_form .route_pda_visit_notebook > .nav-tabs,
+    .route_pda_visit_form .route_pda_visit_notebook .nav.nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        border-radius: 16px;
+        padding: 7px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link {
+        min-height: 48px;
+        border-radius: 13px !important;
+        padding: 8px 6px !important;
+        font-size: 0.82rem;
+    }
+
+    .route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-item:nth-child(5):last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 390px) {
+    .route_pda_visit_form .route_pda_visit_notebook > .nav-tabs,
+    .route_pda_visit_form .route_pda_visit_notebook .nav.nav-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .route_pda_visit_form .route_pda_visit_notebook .nav-tabs .nav-link {
+        font-size: 0.78rem;
+    }
+}
+
+
 
