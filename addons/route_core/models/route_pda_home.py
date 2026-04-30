@@ -884,8 +884,25 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_pda_salesperson",
             name="Today's Visits",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
-            context={"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
+            context={
+                "search_default_filter_my_visits": 1,
+                "search_default_filter_today": 1,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+                "create": 0,
+                "edit": 1,
+                "delete": 0,
+            },
         )
+        kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        tree_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+        action["view_mode"] = "kanban,form,list"
+        action["views"] = [
+            (view.id, mode)
+            for view, mode in ((kanban_view, "kanban"), (form_view, "form"), (tree_view, "list"))
+            if view
+        ]
         action["help"] = _("<p class='o_view_nocontent_smiling_face'>No visits are scheduled for today.</p><p>Open My Daily Plans or My Weekly Schedule to review the next working day.</p>")
         return action
 
