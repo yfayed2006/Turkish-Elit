@@ -62,20 +62,36 @@
 </span>
 </div>
 <div class="text-end d-flex flex-column align-items-end gap-1">
+<t t-if="record.visit_process_state.raw_value == 'done'">
+<span class="badge rounded-pill bg-success text-white">Done</span>
+</t>
+<t t-elif="record.visit_process_state.raw_value and record.visit_process_state.raw_value != 'draft' and record.visit_process_state.raw_value != 'cancel'">
+<span class="badge rounded-pill bg-warning text-dark">
+<field name="visit_process_state"/>
+</span>
+</t>
+<t t-elif="record.visit_process_state.raw_value == 'cancel'">
+<span class="badge rounded-pill bg-secondary text-white">Cancelled</span>
+</t>
+<t t-else="">
+<span class="badge rounded-pill bg-info text-dark">Draft</span>
+</t>
 <t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
-<span class="badge rounded-pill bg-light text-dark border">Pending Check-in</span>
+<span class="badge rounded-pill bg-primary text-white">Pending Check-in</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
 <span class="badge rounded-pill bg-light text-dark border">Outlet Location Missing</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'inside_zone'">
-<span class="badge rounded-pill bg-light text-dark border">Inside Zone</span>
+<span class="badge rounded-pill bg-success text-white">Inside Zone</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
-<span class="badge rounded-pill bg-warning text-dark">Outside - Missing Reason</span>
+<span class="badge rounded-pill bg-danger text-white">Outside Zone</span>
+<span class="badge rounded-pill bg-warning text-dark">Reason Missing</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
-<span class="badge rounded-pill bg-light text-dark border">Outside - Reason Recorded</span>
+<span class="badge rounded-pill bg-danger text-white">Outside Zone</span>
+<span class="badge rounded-pill bg-light text-dark border">Reason Recorded</span>
 </t>
 <t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
 <span class="badge rounded-pill bg-success text-white">Accepted</span>
@@ -83,9 +99,6 @@
 <t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
 <span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
 </t>
-<span class="badge rounded-pill bg-light text-dark border">
-<field name="visit_process_state"/>
-</span>
 </div>
 </div>
 <div class="row g-2 small mb-2">
@@ -249,20 +262,36 @@ m
 </span>
 </div>
 <div class="text-end d-flex flex-column align-items-end gap-1">
+<t t-if="record.visit_process_state.raw_value == 'done'">
+<span class="badge rounded-pill bg-success text-white">Done</span>
+</t>
+<t t-elif="record.visit_process_state.raw_value and record.visit_process_state.raw_value != 'draft' and record.visit_process_state.raw_value != 'cancel'">
+<span class="badge rounded-pill bg-warning text-dark">
+<field name="visit_process_state"/>
+</span>
+</t>
+<t t-elif="record.visit_process_state.raw_value == 'cancel'">
+<span class="badge rounded-pill bg-secondary text-white">Cancelled</span>
+</t>
+<t t-else="">
+<span class="badge rounded-pill bg-info text-dark">Draft</span>
+</t>
 <t t-if="record.geo_review_state.raw_value == 'pending_checkin'">
-<span class="badge rounded-pill bg-light text-dark border">Pending Check-in</span>
+<span class="badge rounded-pill bg-primary text-white">Pending Check-in</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outlet_missing'">
 <span class="badge rounded-pill bg-light text-dark border">Outlet Location Missing</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'inside_zone'">
-<span class="badge rounded-pill bg-light text-dark border">Inside Zone</span>
+<span class="badge rounded-pill bg-success text-white">Inside Zone</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outside_no_reason'">
-<span class="badge rounded-pill bg-warning text-dark">Outside - Missing Reason</span>
+<span class="badge rounded-pill bg-danger text-white">Outside Zone</span>
+<span class="badge rounded-pill bg-warning text-dark">Reason Missing</span>
 </t>
 <t t-if="record.geo_review_state.raw_value == 'outside_with_reason'">
-<span class="badge rounded-pill bg-light text-dark border">Outside - Reason Recorded</span>
+<span class="badge rounded-pill bg-danger text-white">Outside Zone</span>
+<span class="badge rounded-pill bg-light text-dark border">Reason Recorded</span>
 </t>
 <t t-if="record.geo_review_supervisor_decision.raw_value == 'accepted'">
 <span class="badge rounded-pill bg-success text-white">Accepted</span>
@@ -270,9 +299,6 @@ m
 <t t-if="record.geo_review_supervisor_decision.raw_value == 'needs_correction'">
 <span class="badge rounded-pill bg-warning text-dark">Needs Correction</span>
 </t>
-<span class="badge rounded-pill bg-light text-dark border">
-<field name="visit_process_state"/>
-</span>
 </div>
 </div>
 <div class="row g-2 small mb-2">
@@ -356,7 +382,7 @@ m
 <field name="name" invisible="1"/>
 <div class="oe_title">
 <h2>Visit Location Map</h2>
-<p class="text-muted">Live supervisor map for filtered geo visits. Markers use the check-in point when available, otherwise the outlet location point.</p>
+<p class="text-muted">Live supervisor map for filtered visit locations. Outside-zone visits show both the salesperson check-in and outlet point with a connecting line.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
