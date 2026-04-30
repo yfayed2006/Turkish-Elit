@@ -1064,7 +1064,9 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if self._is_direct_sales_stop():
             raise UserError(_("Previous balance is not used for Direct Sales stops."))
-        self.action_load_previous_balance()
+        result = self.action_load_previous_balance()
+        if isinstance(result, dict):
+            return result
         return self._get_pda_form_action()
 
     def action_ux_scan_shelf(self):
@@ -1905,6 +1907,7 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
+
 
 
 
