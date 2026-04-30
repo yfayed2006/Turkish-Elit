@@ -12,6 +12,8 @@ class RouteGeoCaptureCheckinAction extends Component {
         this.notification = useService("notification");
         this.visitId = this.props.action.params.visit_id;
         this.viewId = this.props.action.params.view_id || false;
+        this.actionId = this.props.action.params.action_id || false;
+        this.returnActionName = this.props.action.params.return_action_name || _t("Today's Visits");
         onMounted(() => this.captureCurrentLocation());
     }
 
@@ -83,14 +85,28 @@ class RouteGeoCaptureCheckinAction extends Component {
     }
 
     async returnToVisit() {
-        await this.action.doAction({
+        const action = {
             type: "ir.actions.act_window",
-            name: _t("Visit"),
+            name: this.returnActionName,
             res_model: "route.visit",
             res_id: this.visitId,
+            view_mode: "form",
             views: [[this.viewId || false, "form"]],
             target: "current",
-        });
+            context: {
+                search_default_filter_my_visits: 1,
+                search_default_filter_today: 1,
+                pda_mode: true,
+                route_pda_salesperson_mode: true,
+                create: false,
+                edit: true,
+                delete: false,
+            },
+        };
+        if (this.actionId) {
+            action.id = this.actionId;
+        }
+        await this.action.doAction(action);
     }
 }
 
@@ -104,4 +120,5 @@ RouteGeoCaptureCheckinAction.template = xml`
 `;
 
 registry.category("actions").add("route_core_capture_geo_checkin", RouteGeoCaptureCheckinAction);
+
 
