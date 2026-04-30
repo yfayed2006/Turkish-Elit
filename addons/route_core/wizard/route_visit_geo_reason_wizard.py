@@ -38,7 +38,6 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
             ("customer_location_inaccurate", "Customer location is inaccurate"),
             ("gps_accuracy_issue", "GPS accuracy issue"),
             ("customer_met_outside_outlet", "Customer met outside outlet"),
-            ("supervisor_approved", "Supervisor approved"),
             ("other", "Other"),
         ],
         string="Reason",
