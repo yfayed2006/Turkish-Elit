@@ -234,8 +234,23 @@ class RouteVisit(models.Model):
             visit.geo_review_required = review_required
             visit.geo_review_missing_reason = missing_reason
 
+    def _route_geo_should_use_pda_visit_form(self):
+        """Keep salesperson navigation inside the compact PDA visit form.
+
+        Supervisor and manager users still need the full operational form from
+        review/control screens. Salesperson users should never be pushed from
+        location review cards into the heavy supervisor form.
+        """
+        user = self.env.user
+        is_salesperson = user.has_group("route_core.group_route_salesperson")
+        is_supervisor = user.has_group("route_core.group_route_supervisor") or user.has_group("route_core.group_route_management")
+        return bool(is_salesperson and not is_supervisor)
+
     def action_open_geo_review_visit(self):
         self.ensure_one()
+        if self._route_geo_should_use_pda_visit_form() and hasattr(self, "_get_pda_form_action"):
+            return self.with_context(pda_mode=True)._get_pda_form_action()
+
         view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
