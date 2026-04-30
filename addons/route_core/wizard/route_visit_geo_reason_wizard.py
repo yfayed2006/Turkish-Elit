@@ -4,7 +4,7 @@ from odoo.exceptions import ValidationError
 
 class RouteVisitGeoReasonWizard(models.TransientModel):
     _name = "route.visit.geo.reason.wizard"
-    _description = "Route Visit Geo Outside Zone Reason"
+    _description = "Route Visit Location Outside Zone Reason"
     _rec_name = "visit_id"
 
     visit_id = fields.Many2one(
@@ -20,7 +20,7 @@ class RouteVisitGeoReasonWizard(models.TransientModel):
     )
     geo_checkin_status = fields.Selection(
         related="visit_id.geo_checkin_status",
-        string="Geo Status",
+        string="Location Status",
         readonly=True,
     )
     geo_checkin_distance_display = fields.Char(
