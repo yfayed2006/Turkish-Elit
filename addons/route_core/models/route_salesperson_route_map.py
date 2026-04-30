@@ -171,23 +171,49 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     def action_open_today_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not action:
+            action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
         domain = self._get_visit_domain()
+        context = {
+            "search_default_filter_my_visits": 1,
+            "search_default_filter_today": 1,
+            "pda_mode": True,
+            "route_pda_salesperson_mode": True,
+            "create": 0,
+            "edit": 1,
+            "delete": 0,
+        }
+        kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        tree_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+        ordered_views = [
+            (view.id, mode)
+            for view, mode in ((kanban_view, "kanban"), (form_view, "form"), (tree_view, "list"))
+            if view
+        ]
         if action:
             result = action.read()[0]
             result.update(
                 {
                     "name": _("Today's Visits"),
                     "domain": domain,
-                    "context": {"search_default_filter_my_visits": 1, "search_default_filter_today": 1, "edit": 1},
+                    "context": context,
+                    "view_mode": "kanban,form,list",
+                    "target": "current",
                 }
             )
+            if ordered_views:
+                result["views"] = ordered_views
             return result
         return {
             "type": "ir.actions.act_window",
             "name": _("Today's Visits"),
             "res_model": "route.visit",
-            "view_mode": "kanban,list,form",
+            "view_mode": "kanban,form,list",
+            "views": ordered_views,
             "domain": domain,
-            "context": {"create": False, "edit": True, "delete": False},
+            "target": "current",
+            "context": context,
         }
+
