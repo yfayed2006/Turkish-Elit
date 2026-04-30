@@ -490,6 +490,25 @@ class RouteSalespersonTodayMapController(http.Controller):
         can_start = self._can_start_from_map(visit)
         geo_status = visit.geo_checkin_status or "disabled"
         start_hint = self._start_block_hint(visit)
+        pda_action = route_map.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        if not pda_action:
+            pda_action = route_map.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
+        pda_view = route_map.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        visit_url_params = {
+            "id": visit.id,
+            "model": "route.visit",
+            "view_type": "form",
+            "cids": route_map.env.company.id,
+        }
+        if pda_action:
+            visit_url_params["action"] = pda_action.id
+        if pda_view:
+            visit_url_params["view_id"] = pda_view.id
+        visit_url = "/web#" + "&".join(
+            "%s=%s" % (quote_plus(str(key)), quote_plus(str(value)))
+            for key, value in visit_url_params.items()
+            if value not in (False, None, "")
+        )
         return {
             "id": visit.id,
             "index": index,
@@ -512,7 +531,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "visit_url": visit_url,
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
@@ -773,6 +792,7 @@ window.addEventListener('load', () => {{ renderList(); bindVisitListScroll(); if
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
 
 
 
