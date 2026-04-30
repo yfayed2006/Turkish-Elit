@@ -2914,3 +2914,64 @@
 }
 
 
+
+/* Salesperson Today Route Map - final mobile focus pass */
+.route_salesperson_route_map_sheet .o_field_html iframe {
+    display: block;
+    width: 100%;
+}
+
+.route_salesperson_route_map_sheet .route_pda_detail_header_compact {
+    display: none !important;
+}
+
+.route_salesperson_route_map_sheet .o_form_label,
+.route_salesperson_route_map_sheet .o_inner_group,
+.route_salesperson_route_map_sheet .o_group {
+    max-width: 100%;
+}
+
+.route_salesperson_route_map_summary {
+    align-items: stretch;
+}
+
+.route_salesperson_route_summary_next {
+    grid-column: auto !important;
+}
+
+@media (max-width: 768px) {
+    .route_salesperson_route_map_summary_title {
+        margin-top: 4px;
+    }
+
+    .route_salesperson_route_map_summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .route_salesperson_route_summary_card {
+        min-height: 152px;
+    }
+
+    .route_salesperson_route_summary_next {
+        min-height: 152px;
+    }
+
+    .route_salesperson_route_map_sheet .o_field_html iframe {
+        height: calc(100vh - 96px) !important;
+        min-height: 640px !important;
+        border-radius: 18px !important;
+    }
+}
+
+@media (max-width: 430px) {
+    .route_salesperson_route_summary_card {
+        min-height: 142px;
+        padding: 14px 12px 12px;
+    }
+
+    .route_salesperson_route_summary_next {
+        min-height: 142px;
+    }
+}
+
+
