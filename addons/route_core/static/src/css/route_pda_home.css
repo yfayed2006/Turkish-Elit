@@ -2551,4 +2551,195 @@
     }
 }
 
+/* Salesperson Today Route Map - focused salesperson counters */
+.route_salesperson_route_map_title_header .route_pda_detail_title {
+    margin-bottom: 4px;
+}
+
+.route_salesperson_route_map_focus_section {
+    margin-top: 14px;
+}
+
+.route_salesperson_route_map_counter_dashboard {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    margin: 12px 0 14px;
+}
+
+.route_salesperson_route_map_counter_card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 104px;
+    padding: 16px 16px;
+    border: 1px solid rgba(122, 83, 111, 0.16);
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.route_salesperson_route_map_counter_card::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 5px;
+    background: rgba(122, 83, 111, 0.22);
+}
+
+.route_salesperson_route_map_counter_icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 16px;
+    color: #ffffff;
+    background: #7a536f;
+    box-shadow: 0 8px 18px rgba(122, 83, 111, 0.20);
+    font-size: 20px;
+}
+
+.route_salesperson_route_map_counter_content {
+    min-width: 0;
+}
+
+.route_salesperson_route_map_counter_label {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    line-height: 1.25;
+}
+
+.route_salesperson_route_map_counter_value {
+    margin-top: 6px;
+    color: #111827;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.05;
+}
+
+.route_salesperson_route_map_counter_value .o_field_widget,
+.route_salesperson_route_map_counter_value span,
+.route_salesperson_route_map_counter_value a {
+    font-weight: 900 !important;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.route_salesperson_route_map_counter_text {
+    font-size: 20px;
+    line-height: 1.2;
+}
+
+.route_salesperson_route_map_counter_total {
+    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 72%);
+}
+
+.route_salesperson_route_map_counter_total::after,
+.route_salesperson_route_map_counter_total .route_salesperson_route_map_counter_icon {
+    background: #0ea5e9;
+}
+
+.route_salesperson_route_map_counter_pending {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffffff 72%);
+}
+
+.route_salesperson_route_map_counter_pending::after,
+.route_salesperson_route_map_counter_pending .route_salesperson_route_map_counter_icon {
+    background: #f59e0b;
+}
+
+.route_salesperson_route_map_counter_active {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffffff 72%);
+}
+
+.route_salesperson_route_map_counter_active::after,
+.route_salesperson_route_map_counter_active .route_salesperson_route_map_counter_icon {
+    background: #f97316;
+}
+
+.route_salesperson_route_map_counter_done {
+    background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 72%);
+}
+
+.route_salesperson_route_map_counter_done::after,
+.route_salesperson_route_map_counter_done .route_salesperson_route_map_counter_icon {
+    background: #16a34a;
+}
+
+.route_salesperson_route_map_counter_next {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 72%);
+}
+
+.route_salesperson_route_map_counter_next::after,
+.route_salesperson_route_map_counter_next .route_salesperson_route_map_counter_icon {
+    background: #7a536f;
+}
+
+@media (max-width: 1200px) {
+    .route_salesperson_route_map_counter_dashboard {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .route_salesperson_route_map_counter_dashboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .route_salesperson_route_map_counter_card {
+        min-height: 112px;
+        padding: 14px 13px;
+        border-radius: 18px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .route_salesperson_route_map_counter_icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 14px;
+        font-size: 18px;
+    }
+
+    .route_salesperson_route_map_counter_label {
+        font-size: 13px;
+    }
+
+    .route_salesperson_route_map_counter_value {
+        font-size: 30px;
+    }
+
+    .route_salesperson_route_map_counter_text {
+        font-size: 20px;
+    }
+
+    .route_salesperson_route_map_counter_next {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_salesperson_route_map_counter_card {
+        min-height: 104px;
+        padding: 12px;
+    }
+
+    .route_salesperson_route_map_counter_value {
+        font-size: 27px;
+    }
+
+    .route_salesperson_route_map_counter_text {
+        font-size: 18px;
+    }
+}
+
 
