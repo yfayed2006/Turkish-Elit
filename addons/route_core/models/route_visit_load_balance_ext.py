@@ -150,36 +150,21 @@ class RouteVisit(models.Model):
                         "Please set an Outlet Stock Location before loading previous balance."
                     ))
 
-                vals = {
-                    "visit_process_state": "checked_in",
-                }
-                if "check_in_datetime" in rec._fields:
-                    vals["check_in_datetime"] = rec.check_in_datetime or fields.Datetime.now()
-                rec.write(vals)
-
-                message = _(
-                    "First consignment visit. "
-                    "No previous shelf stock was found. "
-                    "The visit will continue with an empty shelf balance."
-                )
-
-                if hasattr(rec, "message_post"):
-                    rec.message_post(body=message)
-
-                next_action = (
-                    rec._get_pda_form_action()
-                    if hasattr(rec, "_get_pda_form_action")
-                    else {"type": "ir.actions.client", "tag": "reload"}
-                )
+                # First consignment visit: open the setup wizard instead of
+                # silently continuing with a notification. This gives the
+                # salesperson a clear choice: empty shelf balance, add products
+                # from vehicle stock, or continue visit only.
                 return {
-                    "type": "ir.actions.client",
-                    "tag": "display_notification",
-                    "params": {
-                        "title": _("First Consignment Visit"),
-                        "message": message,
-                        "type": "info",
-                        "sticky": False,
-                        "next": next_action,
+                    "type": "ir.actions.act_window",
+                    "name": _("First Consignment Setup"),
+                    "res_model": "route.visit.first.consignment.wizard",
+                    "view_mode": "form",
+                    "target": "new",
+                    "context": {
+                        "default_visit_id": rec.id,
+                        "active_model": "route.visit",
+                        "active_id": rec.id,
+                        "active_ids": [rec.id],
                     },
                 }
 
