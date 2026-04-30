@@ -1,7 +1,7 @@
 import math
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 
 class RouteVisit(models.Model):
@@ -410,11 +410,14 @@ class RouteVisit(models.Model):
         return True
 
     def _can_use_outlet_coordinates_for_checkin(self):
-        """Return True for supervisor/manager testing or controlled corrections only.
+        """Return True for explicit supervisor/manager test shortcuts only.
 
-        Salespeople must use the browser/mobile GPS capture flow so the check-in
-        remains a trustworthy field-execution audit point.
+        The server requires both a privileged user and an explicit action context.
+        This prevents a salesperson, or a mixed-role user working through the PDA
+        screen, from using outlet coordinates as a field check-in by mistake.
         """
+        if not self.env.context.get("allow_outlet_coordinate_checkin"):
+            return False
         user = self.env.user
         return bool(
             user.has_group("route_core.group_route_supervisor")
@@ -614,7 +617,10 @@ class RouteVisit(models.Model):
                 _("Start Visit Blocked"),
                 _("You are outside the allowed outlet radius. This visit cannot start under the current Location Check-in policy."),
             )
-        action = self.action_start_visit()
+        try:
+            action = self.action_start_visit()
+        except UserError as error:
+            return self._geo_pda_warning_action(_("Invalid Operation"), str(error))
         if isinstance(action, dict):
             return action
         if hasattr(self, "_get_pda_form_action"):
@@ -675,3 +681,4 @@ class RouteVisit(models.Model):
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
             "distance_display": first.geo_checkin_distance_display if first else False,
         }
+
