@@ -142,6 +142,38 @@ class RouteGeoLiveMapController(http.Controller):
             return "#"
         return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
 
+    def _web_record_url(self, *, model, record_id, view_xmlid=None, action_xmlid=None, menu_xmlid=None):
+        """Build a stable Odoo form URL for supervisor map links.
+
+        Live Map is a controller-rendered page, so links must carry the intended
+        action/view explicitly. Without this, Odoo may reopen the last/default
+        route.visit form and mix the supervisor location-review flow with the
+        salesperson PDA execution form.
+        """
+        env = request.env
+        company = env.company
+        action = env.ref(action_xmlid, raise_if_not_found=False) if action_xmlid else False
+        view = env.ref(view_xmlid, raise_if_not_found=False) if view_xmlid else False
+        menu = env.ref(menu_xmlid, raise_if_not_found=False) if menu_xmlid else False
+        params = {
+            "id": record_id,
+            "model": model,
+            "view_type": "form",
+            "cids": company.id,
+        }
+        if action:
+            params["action"] = action.id
+        if view:
+            params["view_id"] = view.id
+        if menu:
+            params["menu_id"] = menu.id
+        fragment = "&".join(
+            f"{quote_plus(str(key))}={quote_plus(str(value))}"
+            for key, value in params.items()
+            if value not in (False, None, "")
+        )
+        return f"/web#{fragment}"
+
     def _visit_payload(self, center, visit):
         checkin_lat = visit.geo_checkin_latitude or 0.0
         checkin_lng = visit.geo_checkin_longitude or 0.0
@@ -182,7 +214,13 @@ class RouteGeoLiveMapController(http.Controller):
             "checkin_lng": checkin_lng,
             "outlet_lat": outlet_lat,
             "outlet_lng": outlet_lng,
-            "visit_url": "/route_core/pda/visit/%s" % visit.id,
+            "visit_url": self._web_record_url(
+                model="route.visit",
+                record_id=visit.id,
+                view_xmlid="route_core.view_route_geo_review_form",
+                action_xmlid="route_core.action_route_geo_review",
+                menu_xmlid="route_core.menu_route_geo_review",
+            ),
             "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
             "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
             "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
@@ -540,7 +578,7 @@ class RouteSalespersonTodayMapController(http.Controller):
             "has_point": self._has_point(lat, lng),
             "navigate_url": self._navigation_url(provider, lat, lng),
             "outlet_map_url": self._map_url(provider, lat, lng),
-            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "visit_url": "/route_core/pda/visit/%s" % visit.id,
             "start_url": "/route_core/pda/today_route_map/start/%s/%s" % (route_map.id, visit.id),
             "can_start": can_start,
             "start_hint": start_hint,
@@ -740,4 +778,5 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
 
