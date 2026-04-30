@@ -134,7 +134,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
             route_map.inside_zone_count = len(inside)
             route_map.route_visit_ids = [(6, 0, visits.ids)]
             route_map.next_visit_label = next_visit.outlet_id.display_name or next_visit.display_name if next_visit else _("No visit available")
-            route_map.route_map_note = _("Map uses today's visits for the current salesperson. Use Navigate for directions and Open Visit for field execution.")
+            route_map.route_map_note = _("Map uses today's visits for the current salesperson. Use Navigate for directions and Open Visit for full execution.")
             route_map.route_map_iframe_html = route_map._get_route_map_iframe_html()
 
     @api.model
@@ -158,6 +158,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
             "context": {"create": False, "edit": False, "delete": False},
         }
         if view:
+            action["view_id"] = view.id
             action["views"] = [(view.id, "form")]
         return action
 
@@ -170,7 +171,7 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     def action_open_today_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda_salesperson", raise_if_not_found=False)
+        action = self.env.ref("route_core.action_route_visit_pda", raise_if_not_found=False)
         domain = self._get_visit_domain()
         if action:
             result = action.read()[0]
