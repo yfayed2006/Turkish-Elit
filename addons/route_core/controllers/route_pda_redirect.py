@@ -86,6 +86,35 @@ class RoutePdaRedirectController(http.Controller):
             menu_xmlid="route_core.menu_route_outlet",
         )
 
+    @http.route("/route_core/pda/visit/<int:visit_id>", type="http", auth="user", website=False)
+    def route_core_open_pda_visit(self, visit_id, **kwargs):
+        """Open a visit through the compact salesperson/PDA action.
+
+        Today Route Map is rendered as a controller page, so its buttons cannot
+        call Python object methods directly. This bridge keeps map navigation
+        inside the same PDA visit form instead of letting Odoo choose the heavy
+        default supervisor/full visit form.
+        """
+        visit = request.env["route.visit"].browse(visit_id).exists()
+        if not visit:
+            return redirect("/web")
+
+        user = request.env.user
+        is_supervisor = user.has_group("route_core.group_route_supervisor") or user.has_group("route_core.group_route_management")
+        if visit.user_id and visit.user_id != user and not is_supervisor:
+            return request.make_response(
+                "<html><body><p>You can only open your own route visits.</p></body></html>",
+                headers=[("Content-Type", "text/html; charset=utf-8")],
+            )
+
+        return self._build_web_redirect(
+            model="route.visit",
+            record_id=visit.id,
+            view_xmlid="route_core.view_route_visit_pda_form",
+            action_xmlid="route_core.action_route_visit_pda_salesperson",
+            menu_xmlid="route_core.menu_route_salesperson_my_visits",
+        )
+
 
 class RouteGeoLiveMapController(http.Controller):
     def _selection_label(self, record, field_name, value):
@@ -153,7 +182,7 @@ class RouteGeoLiveMapController(http.Controller):
             "checkin_lng": checkin_lng,
             "outlet_lat": outlet_lat,
             "outlet_lng": outlet_lng,
-            "visit_url": "/web#id=%s&model=route.visit&view_type=form" % visit.id,
+            "visit_url": "/route_core/pda/visit/%s" % visit.id,
             "outlet_map_url": self._google_map_url(outlet_lat, outlet_lng),
             "checkin_map_url": self._google_map_url(checkin_lat, checkin_lng),
             "accept_url": "/route_core/geo/live_map/decision/%s/%s/accept" % (center.id, visit.id),
