@@ -113,6 +113,41 @@ class RouteGeoLiveMapController(http.Controller):
             return "#"
         return "https://www.google.com/maps/search/?api=1&query=%s,%s" % (latitude, longitude)
 
+    def _web_form_url(self, model, record_id, view_xmlid=False, action_xmlid=False, menu_xmlid=False):
+        env = request.env
+        params = {
+            "id": record_id,
+            "model": model,
+            "view_type": "form",
+            "cids": env.company.id,
+        }
+        if action_xmlid:
+            action = env.ref(action_xmlid, raise_if_not_found=False)
+            if action:
+                params["action"] = action.id
+        if view_xmlid:
+            view = env.ref(view_xmlid, raise_if_not_found=False)
+            if view:
+                params["view_id"] = view.id
+        if menu_xmlid:
+            menu = env.ref(menu_xmlid, raise_if_not_found=False)
+            if menu:
+                params["menu_id"] = menu.id
+        return "/web#" + "&".join(
+            "%s=%s" % (quote_plus(str(key)), quote_plus(str(value)))
+            for key, value in params.items()
+            if value not in (False, None, "")
+        )
+
+    def _pda_visit_url(self, visit):
+        return self._web_form_url(
+            "route.visit",
+            visit.id,
+            view_xmlid="route_core.view_route_visit_pda_form",
+            action_xmlid="route_core.action_route_visit_pda_salesperson",
+            menu_xmlid="route_core.menu_route_salesperson_my_visits",
+        )
+
     def _visit_payload(self, center, visit):
         checkin_lat = visit.geo_checkin_latitude or 0.0
         checkin_lng = visit.geo_checkin_longitude or 0.0
@@ -722,4 +757,5 @@ window.addEventListener('load', () => {{ renderList(); if (!window.L) {{ documen
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
 
