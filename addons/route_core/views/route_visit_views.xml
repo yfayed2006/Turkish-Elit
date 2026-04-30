@@ -411,7 +411,7 @@
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Geo location is disabled in Route Settings. </div>
+<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Location check-in is disabled in Route Settings. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy not in ('require_reason', 'block_start') or visit_process_state != 'draft'"> Please capture your location before starting the visit. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outlet_missing' or route_geo_checkin_policy not in ('require_reason', 'block_start') or visit_process_state != 'draft'"> Outlet location is missing. Please set and verify outlet coordinates before starting the visit. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
@@ -762,6 +762,10 @@
 <field name="end_datetime" readonly="1" invisible="1"/>
 </group>
 </group>
+<div class="route_pda_visit_section_header">
+<span class="route_pda_visit_section_eyebrow">Visit Sections</span>
+<span class="route_pda_visit_section_title">Open the step you need now</span>
+</div>
 <notebook class="route_pda_visit_notebook">
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
@@ -1070,7 +1074,7 @@
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
 <div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Geo location is disabled in Route Settings. </div>
+<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Location check-in is disabled in Route Settings. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Please capture your location before starting the visit. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
 <div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft' or geo_checkin_outside_zone_reason"> You are outside the allowed outlet radius. A reason is required before starting the visit. </div>
