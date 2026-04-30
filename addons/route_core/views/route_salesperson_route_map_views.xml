@@ -14,84 +14,66 @@
 <field name="route_geo_enabled" invisible="1"/>
 <field name="route_map_provider" invisible="1"/>
 <field name="route_geo_checkin_policy" invisible="1"/>
-<div class="route_pda_detail_header route_salesperson_route_map_title_header">
+<div class="route_pda_detail_header route_pda_detail_header_compact">
 <h2 class="route_pda_detail_title">Today's Route Map</h2>
 </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled == False"> Your route map shows today's outlets, visit status, navigation buttons, and location check-in readiness. </div>
 <div class="alert alert-warning" role="alert" invisible="route_geo_enabled == True"> Visit location is disabled in Route Settings. Enable outlet locations to use the route map. </div>
-<div class="route_pda_section route_salesperson_route_map_summary_section route_salesperson_route_map_focus_section">
-<div class="route_pda_section_title">Route Summary</div>
-<div class="route_salesperson_route_map_counter_dashboard">
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_date">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_map_summary_title">Route Summary</div>
+<div class="route_salesperson_route_map_summary">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_date">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-calendar-o"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">Visit Date</div>
-<div class="route_salesperson_route_map_counter_value">
+<div class="route_salesperson_route_summary_label">Visit Date</div>
+<div class="route_salesperson_route_summary_value">
 <field name="visit_date" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_total">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_total">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-map-marker"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">Today's Visits</div>
-<div class="route_salesperson_route_map_counter_value">
+<div class="route_salesperson_route_summary_label">Today's Visits</div>
+<div class="route_salesperson_route_summary_value">
 <field name="total_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_pending">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_pending">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-clock-o"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">Pending</div>
-<div class="route_salesperson_route_map_counter_value">
+<div class="route_salesperson_route_summary_label">Pending</div>
+<div class="route_salesperson_route_summary_value">
 <field name="pending_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_active">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_active">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-play-circle"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">In Progress</div>
-<div class="route_salesperson_route_map_counter_value">
+<div class="route_salesperson_route_summary_label">In Progress</div>
+<div class="route_salesperson_route_summary_value">
 <field name="active_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_done">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_done">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-check-circle"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">Done</div>
-<div class="route_salesperson_route_map_counter_value">
+<div class="route_salesperson_route_summary_label">Done</div>
+<div class="route_salesperson_route_summary_value">
 <field name="done_visit_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_salesperson_route_map_counter_card route_salesperson_route_map_counter_next">
-<div class="route_salesperson_route_map_counter_icon">
+<div class="route_salesperson_route_summary_card route_salesperson_route_summary_next">
+<div class="route_salesperson_route_summary_icon">
 <i class="fa fa-location-arrow"/>
 </div>
-<div class="route_salesperson_route_map_counter_content">
-<div class="route_salesperson_route_map_counter_label">Next Visit</div>
-<div class="route_salesperson_route_map_counter_value route_salesperson_route_map_counter_text">
+<div class="route_salesperson_route_summary_label">Next Visit</div>
+<div class="route_salesperson_route_summary_value route_salesperson_route_summary_value_text">
 <field name="next_visit_label" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-</div>
-</div>
-<div class="route_pda_info_hint_inline">
-<field name="route_map_note" readonly="1" nolabel="1"/>
 </div>
 <separator string="Map and Visit Cards"/>
 <field name="route_map_iframe_html" readonly="1" nolabel="1" widget="html"/>
