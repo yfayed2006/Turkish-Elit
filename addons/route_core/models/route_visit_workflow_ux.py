@@ -1167,9 +1167,15 @@ class RouteVisit(models.Model):
 
     def action_open_statement_of_account(self):
         self.ensure_one()
+
+        # Once the visit is done, the salesperson should see the final visit
+        # summary/receipt dialog, not the pre-collection Statement of Account.
+        if self.visit_process_state == "done" or self.state == "done":
+            return self._get_route_visit_finish_summary_action()
+
         return {
             "type": "ir.actions.act_window",
-            "name": _("Visit Summary") if self.visit_process_state == "done" else _("Statement of Account"),
+            "name": _("Statement of Account"),
             "res_model": "route.visit.statement.wizard",
             "view_mode": "form",
             "target": "new",
@@ -1914,6 +1920,7 @@ class RouteVisit(models.Model):
             "url": "https://wa.me/%s?text=%s" % (phone, quote(message, safe="")),
             "target": "new",
         }
+
 
 
 
