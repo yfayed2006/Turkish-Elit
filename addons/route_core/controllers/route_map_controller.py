@@ -373,6 +373,30 @@ body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
+    display: block;
+    padding: 14px;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card {
+    margin-bottom: 12px;
+    overflow: visible;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card:last-child {
+    margin-bottom: 0;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card-body {
+    display: block;
+    overflow: visible;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-metric {
+    min-height: 60px;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-metric-value {
+    display: block;
 }
 .route-map-header,
 .route-cards-header {
@@ -653,15 +677,17 @@ body {
     .route-map-floating-badge { top: 10px; right: 10px; }
     .route-map-header, .route-cards-header { padding: 10px 12px; align-items: flex-start; flex-direction: column; }
     .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-grid {
-        grid-template-columns: 1fr;
+        display: block;
         padding: 10px;
-        gap: 10px;
         height: 100%%;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         touch-action: pan-y;
+    }
+    .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card {
+        margin-bottom: 10px;
     }
     .route-card-head { padding: 12px; }
     .route-card-title { font-size: 16px; }
