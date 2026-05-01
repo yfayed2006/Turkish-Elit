@@ -3392,4 +3392,63 @@
 }
 
 
+/* Visit Summary Popup Final Polish */
+.route_pda_finish_summary_sheet .route_pda_reference_card .o_field_widget,
+.route_pda_finish_summary_sheet .route_pda_reference_card span {
+    display: block;
+    max-width: 100%;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.25;
+}
+
+@media (max-width: 768px) {
+    .modal-dialog .route_pda_finish_summary_footer,
+    .o_dialog .route_pda_finish_summary_footer {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.75rem;
+        padding: 1rem;
+        align-items: stretch;
+    }
+
+    .modal-dialog .route_pda_finish_summary_footer .btn,
+    .o_dialog .route_pda_finish_summary_footer .btn {
+        width: 100%;
+        min-height: 3.75rem;
+        margin: 0 !important;
+        border-radius: 0.85rem;
+        font-weight: 800;
+        font-size: 1rem;
+        line-height: 1.2;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .modal-dialog .route_pda_finish_summary_sheet .route_pda_reference_card .o_field_widget,
+    .modal-dialog .route_pda_finish_summary_sheet .route_pda_reference_card span,
+    .o_dialog .route_pda_finish_summary_sheet .route_pda_reference_card .o_field_widget,
+    .o_dialog .route_pda_finish_summary_sheet .route_pda_reference_card span {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 430px) {
+    .modal-dialog .route_pda_finish_summary_footer,
+    .o_dialog .route_pda_finish_summary_footer {
+        gap: 0.6rem;
+        padding: 0.85rem;
+    }
+
+    .modal-dialog .route_pda_finish_summary_footer .btn,
+    .o_dialog .route_pda_finish_summary_footer .btn {
+        min-height: 3.4rem;
+        font-size: 0.95rem;
+    }
+}
+
+
 
