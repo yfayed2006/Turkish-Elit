@@ -182,13 +182,13 @@ class RouteVisit(models.Model):
         store=False,
     )
     consignment_amount_due_now = fields.Monetary(
-        string="Amount Due Now",
+        string="Total Outlet Due",
         currency_field="currency_id",
         compute="_compute_consignment_financial_snapshot",
         store=False,
     )
     consignment_immediate_remaining_amount = fields.Monetary(
-        string="Immediate Remaining",
+        string="Current Visit Remaining",
         currency_field="currency_id",
         compute="_compute_consignment_financial_snapshot",
         store=False,
@@ -200,7 +200,7 @@ class RouteVisit(models.Model):
         store=False,
     )
     direct_stop_immediate_remaining_amount = fields.Monetary(
-        string="Immediate Remaining",
+        string="Remaining After Collection",
         currency_field="currency_id",
         compute="_compute_direct_stop_financial_snapshot",
         store=False,
@@ -1496,19 +1496,32 @@ class RouteVisit(models.Model):
         refill_ref = self.summary_refill_transfer_ref or (self.refill_picking_id.name or "-")
         return_refs = self.summary_return_transfer_refs or self._get_route_receipt_return_refs()
         remaining_amount = self.remaining_due_amount or 0.0
+        settled_amount = sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0)
+        visit_sale_amount = sum(item.get("sold_amount", 0.0) for item in line_items)
+        returned_value = sum(item.get("return_amount", 0.0) for item in line_items)
+        refill_value = sum(item.get("supply_value", 0.0) for item in line_items)
+        current_visit_net = visit_sale_amount - returned_value
+        total_outlet_due = self.outlet_current_due_amount or 0.0
+        previous_due = max(total_outlet_due - max(current_visit_net, 0.0), 0.0)
+        total_outstanding_after_collection = max(total_outlet_due - settled_amount, 0.0)
         raw_promise_amount = sum((getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0) for payment in promise_payments) if promise_payments else 0.0
         return {
             "sale_order_ref": sale_order_ref,
             "refill_ref": refill_ref,
             "return_refs": return_refs,
-            "current_due": self.outlet_current_due_amount or 0.0,
-            "settled_amount": sum(payments.mapped("amount")) if payments else (self.collected_amount or 0.0),
+            "current_due": total_outlet_due,
+            "total_outlet_due": total_outlet_due,
+            "previous_due": previous_due,
+            "settled_amount": settled_amount,
             "remaining_amount": remaining_amount,
+            "current_visit_remaining": remaining_amount,
+            "total_outstanding_after_collection": total_outstanding_after_collection,
             "promise_amount": min(raw_promise_amount, remaining_amount) if raw_promise_amount else 0.0,
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
-            "visit_sale_amount": sum(item.get("sold_amount", 0.0) for item in line_items),
-            "returned_value": sum(item.get("return_amount", 0.0) for item in line_items),
-            "refill_value": sum(item.get("supply_value", 0.0) for item in line_items),
+            "visit_sale_amount": visit_sale_amount,
+            "returned_value": returned_value,
+            "current_visit_net": current_visit_net,
+            "refill_value": refill_value,
             "confirmed_payment_total": sum(payments.mapped("amount")) if payments else 0.0,
         }
 
@@ -1526,6 +1539,7 @@ class RouteVisit(models.Model):
                 "barcode": line.barcode or line.product_id.default_code or "",
                 "product_name": line.product_id.display_name or "",
                 "lot_name": line.lot_id.name or "",
+                "lot_display": (line.lot_id.name or "").replace("-", "‑") if line.lot_id else "",
                 "expiry_date": line.expiry_date or False,
                 "previous_qty": line.previous_qty or 0.0,
                 "display_previous_qty": display_previous_qty,
@@ -1607,9 +1621,11 @@ class RouteVisit(models.Model):
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
             _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
-            _("Amount Due Now: %.2f %s") % (summary.get("current_due", 0.0), currency_code),
-            _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
-            _("Immediate Remaining: %.2f %s") % (summary.get("remaining_amount", 0.0), currency_code),
+            _("Total Outlet Due: %.2f %s") % (summary.get("total_outlet_due", summary.get("current_due", 0.0)), currency_code),
+            _("Current Visit Net: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
+            _("Collected Now: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
+            _("Current Visit Remaining: %.2f %s") % (summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)), currency_code),
+            _("Total Outlet Balance After Collection: %.2f %s") % (summary.get("total_outstanding_after_collection", 0.0), currency_code),
         ]
         if summary.get("promise_amount"):
             lines.append(_("Promise Amount: %.2f %s") % (summary["promise_amount"], currency_code))
@@ -1722,9 +1738,9 @@ class RouteVisit(models.Model):
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
-            _("Amount Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
+            _("Total Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
-            _("Immediate Remaining: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
+            _("Remaining After Collection: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
         ]
 
         promise_amount = summary.get("promise_amount") or 0.0
