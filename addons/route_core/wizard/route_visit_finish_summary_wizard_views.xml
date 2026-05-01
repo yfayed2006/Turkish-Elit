@@ -76,7 +76,7 @@
 <field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Amount Due Now</span>
+<span class="route_pda_payment_meta_label">Total Due Now</span>
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
@@ -84,7 +84,7 @@
 <field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<span class="route_pda_payment_meta_label">Remaining After Collection</span>
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="not direct_stop_open_promise_amount">
@@ -112,21 +112,41 @@
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Financial Result</div>
 <div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Previous Due</span>
+<field name="consignment_previous_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Current Visit Sale</span>
+<field name="consignment_current_visit_sale_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Current Visit Returns</span>
+<field name="consignment_current_visit_return_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Current Visit Net</span>
+<field name="consignment_net_amount_for_visit" readonly="1" nolabel="1"/>
+</div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Amount Due Now</span>
+<span class="route_pda_payment_meta_label">Total Outlet Due</span>
 <field name="consignment_current_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
-<span class="route_pda_payment_meta_label">Collected</span>
+<span class="route_pda_payment_meta_label">Collected Now</span>
 <field name="consignment_collected_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<span class="route_pda_payment_meta_label">Current Visit Remaining</span>
 <field name="consignment_remaining_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="not consignment_promise_amount">
 <span class="route_pda_payment_meta_label">Promise Amount</span>
 <field name="consignment_promise_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Total Outlet Balance After Collection</span>
+<field name="consignment_total_outstanding_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
