@@ -113,4 +113,45 @@
 <field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
 <field name="domain_force">[('schedule_id.user_id', '=', user.id)]</field>
 </record>
+<!--  Route Core PDA product visibility: required for salesperson/mobile visit screens and missing-lot popups.  -->
+<record id="rule_route_product_product_internal_read" model="ir.rule">
+<field name="name">Route Core - Product Variants readable by internal route users</field>
+<field name="model_id" ref="product.model_product_product"/>
+<field name="groups" eval="[(4, ref('base.group_user'))]"/>
+<field name="domain_force">['|', ('product_tmpl_id.company_id', '=', False), ('product_tmpl_id.company_id', 'in', user.company_ids.ids)]</field>
+<field name="perm_read" eval="True"/>
+<field name="perm_write" eval="False"/>
+<field name="perm_create" eval="False"/>
+<field name="perm_unlink" eval="False"/>
+</record>
+<record id="rule_route_product_template_internal_read" model="ir.rule">
+<field name="name">Route Core - Product Templates readable by internal route users</field>
+<field name="model_id" ref="product.model_product_template"/>
+<field name="groups" eval="[(4, ref('base.group_user'))]"/>
+<field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', user.company_ids.ids)]</field>
+<field name="perm_read" eval="True"/>
+<field name="perm_write" eval="False"/>
+<field name="perm_create" eval="False"/>
+<field name="perm_unlink" eval="False"/>
+</record>
+<record id="rule_route_stock_lot_internal_read" model="ir.rule">
+<field name="name">Route Core - Lots readable by internal route users</field>
+<field name="model_id" ref="stock.model_stock_lot"/>
+<field name="groups" eval="[(4, ref('base.group_user'))]"/>
+<field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', user.company_ids.ids)]</field>
+<field name="perm_read" eval="True"/>
+<field name="perm_write" eval="False"/>
+<field name="perm_create" eval="False"/>
+<field name="perm_unlink" eval="False"/>
+</record>
+<record id="rule_route_uom_uom_internal_read" model="ir.rule">
+<field name="name">Route Core - Units of Measure readable by internal route users</field>
+<field name="model_id" ref="uom.model_uom_uom"/>
+<field name="groups" eval="[(4, ref('base.group_user'))]"/>
+<field name="domain_force">[(1, '=', 1)]</field>
+<field name="perm_read" eval="True"/>
+<field name="perm_write" eval="False"/>
+<field name="perm_create" eval="False"/>
+<field name="perm_unlink" eval="False"/>
+</record>
 </odoo>
