@@ -23,6 +23,18 @@ class RouteVisitLine(models.Model):
         compute="_compute_can_delete_refill_line",
         store=False,
     )
+    route_refill_already_approved_qty = fields.Float(
+        string="Already Approved",
+        compute="_compute_route_refill_availability",
+        store=False,
+        help="Quantity already approved for refill on other visit lines for the same product/lot.",
+    )
+    route_refill_available_to_add_qty = fields.Float(
+        string="Available to Add",
+        compute="_compute_route_refill_availability",
+        store=False,
+        help="Vehicle quantity still available for adding to this refill after other approved refill lines.",
+    )
 
     @api.model
     def _route_get_quant_available_field(self):
@@ -75,22 +87,42 @@ class RouteVisitLine(models.Model):
         for line in self:
             line.can_delete_refill_line = bool(line.route_manual_refill_line or line._route_is_manual_refill_candidate())
 
-    @api.depends("visit_id", "visit_id.source_location_id", "visit_id.vehicle_id")
+    @api.depends(
+        "visit_id",
+        "visit_id.source_location_id",
+        "visit_id.vehicle_id",
+        "visit_id.line_ids.product_id",
+        "visit_id.line_ids.lot_id",
+        "visit_id.line_ids.supplied_qty",
+    )
     def _compute_vehicle_product_ids(self):
         Product = self.env["product.product"].with_user(SUPERUSER_ID).sudo()
         Quant = self.env["stock.quant"].with_user(SUPERUSER_ID).sudo()
 
         for line in self:
-            products = Product.browse()
             source_location = line._route_get_vehicle_source_location()
 
+            # Outside the refill-confirmation step, keep normal Odoo product selection.
+            # During refill confirmation, restrict products to what can still be added
+            # from the vehicle after quantities already approved on this visit.
+            if not line._route_is_refill_edit_stage():
+                line.vehicle_product_ids = Product.search([])
+                continue
+
+            products = Product.browse()
             if source_location:
                 quants = Quant.search([
                     ("location_id", "child_of", source_location.id),
-                ])
-                products = quants.filtered(
-                    lambda quant: line._route_get_quant_available_qty(quant) > 0
-                ).mapped("product_id")
+                ]).filtered(lambda quant: line._route_get_quant_available_qty(quant) > 0)
+
+                for product in quants.mapped("product_id"):
+                    available_qty = sum(
+                        line._route_get_quant_available_qty(quant)
+                        for quant in quants.filtered(lambda q: q.product_id.id == product.id)
+                    )
+                    already_approved_qty = line._get_other_refill_qty_for_product(product)
+                    if (available_qty - already_approved_qty) > 0 or line.product_id.id == product.id:
+                        products |= product
 
             line.vehicle_product_ids = products
 
@@ -121,29 +153,61 @@ class RouteVisitLine(models.Model):
             if qty > 0
         )
 
-    def _get_other_refill_qty_for_same_stock(self):
+    def _get_other_refill_qty_for_product(self, product, lot=False):
         self.ensure_one()
-        if not self.visit_id or not self.product_id:
+        product = product.with_user(SUPERUSER_ID).sudo() if product else product
+        if not self.visit_id or not product:
             return 0.0
 
         other_lines = self.visit_id.with_user(SUPERUSER_ID).sudo().line_ids.filtered(
             lambda l: l.id != self.id
-            and l.product_id.id == self.product_id.id
+            and l.product_id.id == product.id
             and (l.supplied_qty or 0.0) > 0
         )
-        if self.lot_id:
-            other_lines = other_lines.filtered(lambda l: l.lot_id.id == self.lot_id.id)
+        if lot:
+            other_lines = other_lines.filtered(lambda l: l.lot_id.id == lot.id)
 
         return sum(other_lines.mapped("supplied_qty"))
 
-    def _get_vehicle_refill_remaining_qty(self):
+    def _get_other_refill_qty_for_same_stock(self):
         self.ensure_one()
-        available_qty = self._get_vehicle_available_qty(
+        return self._get_other_refill_qty_for_product(
             self.product_id,
             lot=self.lot_id if self.lot_id else False,
         )
-        other_refill_qty = self._get_other_refill_qty_for_same_stock()
+
+    def _get_vehicle_refill_remaining_qty_for_product(self, product=None, lot=False):
+        self.ensure_one()
+        product = product or self.product_id
+        available_qty = self._get_vehicle_available_qty(product, lot=lot)
+        other_refill_qty = self._get_other_refill_qty_for_product(product, lot=lot)
         return max(available_qty - other_refill_qty, 0.0)
+
+    def _get_vehicle_refill_remaining_qty(self):
+        self.ensure_one()
+        return self._get_vehicle_refill_remaining_qty_for_product(
+            self.product_id,
+            lot=self.lot_id if self.lot_id else False,
+        )
+
+    @api.depends(
+        "visit_id",
+        "product_id",
+        "lot_id",
+        "supplied_qty",
+        "visit_id.line_ids.product_id",
+        "visit_id.line_ids.lot_id",
+        "visit_id.line_ids.supplied_qty",
+    )
+    def _compute_route_refill_availability(self):
+        for line in self:
+            if not line.product_id or not line.visit_id:
+                line.route_refill_already_approved_qty = 0.0
+                line.route_refill_available_to_add_qty = 0.0
+                continue
+
+            line.route_refill_already_approved_qty = line._get_other_refill_qty_for_same_stock()
+            line.route_refill_available_to_add_qty = line._get_vehicle_refill_remaining_qty()
 
     @api.onchange("visit_id", "product_id", "lot_id")
     def _onchange_vehicle_available_qty(self):
@@ -154,19 +218,42 @@ class RouteVisitLine(models.Model):
                     line.product_id,
                     lot=line.lot_id if line.lot_id else False,
                 )
+                remaining_qty = line._get_vehicle_refill_remaining_qty_for_product(
+                    line.product_id,
+                    lot=line.lot_id if line.lot_id else False,
+                )
+                already_approved_qty = line._get_other_refill_qty_for_product(
+                    line.product_id,
+                    lot=line.lot_id if line.lot_id else False,
+                )
                 line.vehicle_available_qty = available_qty
 
-                if line._route_is_manual_refill_candidate() and available_qty <= 0:
+                if line._route_is_manual_refill_candidate() and remaining_qty <= 0:
                     product_name = line.product_id.display_name
                     line.product_id = False
                     line.lot_id = False
                     line.supplied_qty = 0.0
-                    warning = {
-                        "title": _("Product is not available in the vehicle"),
-                        "message": _(
+                    if available_qty > 0 and already_approved_qty > 0:
+                        message = _(
+                            "%(product)s has vehicle stock, but the available quantity is already approved "
+                            "on another refill line for this visit.\n\n"
+                            "Vehicle balance: %(available).2f\n"
+                            "Already approved on other lines: %(approved).2f\n"
+                            "Available to add now: 0.00\n\n"
+                            "Reduce the existing approved refill line first, or choose another vehicle product."
+                        ) % {
+                            "product": product_name,
+                            "available": available_qty,
+                            "approved": already_approved_qty,
+                        }
+                    else:
+                        message = _(
                             "%(product)s is not available in the selected vehicle stock location. "
                             "Only products currently available in the vehicle can be added to this refill."
-                        ) % {"product": product_name},
+                        ) % {"product": product_name}
+                    warning = {
+                        "title": _("Product is not available to add"),
+                        "message": message,
                     }
             else:
                 line.vehicle_available_qty = 0.0
@@ -189,11 +276,17 @@ class RouteVisitLine(models.Model):
                 warning = {
                     "title": _("Refill quantity adjusted"),
                     "message": _(
-                        "Qty to refill cannot be greater than the vehicle available quantity.\n\n"
-                        "Product: %(product)s\nAvailable to add now: %(available).2f\nEntered qty: %(qty).2f\n\n"
+                        "Qty to refill cannot be greater than the vehicle quantity still available for this visit.\n\n"
+                        "Product: %(product)s\n"
+                        "Vehicle balance: %(vehicle).2f\n"
+                        "Already approved on other lines: %(approved).2f\n"
+                        "Available to add now: %(available).2f\n"
+                        "Entered qty: %(qty).2f\n\n"
                         "The approved refill quantity has been adjusted to %(available).2f."
                     ) % {
                         "product": line.product_id.display_name,
+                        "vehicle": line._get_vehicle_available_qty(line.product_id, lot=line.lot_id if line.lot_id else False),
+                        "approved": line._get_other_refill_qty_for_same_stock(),
                         "available": remaining_qty,
                         "qty": current_qty,
                     },
@@ -239,8 +332,8 @@ class RouteVisitLine(models.Model):
         for line in self:
             if not line.can_delete_refill_line:
                 raise ValidationError(_("Only manually added refill lines can be removed from this step."))
-        self.unlink()
-        return True
+        self.with_user(SUPERUSER_ID).sudo().unlink()
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def unlink(self):
         protected_lines = self.filtered(
@@ -272,8 +365,9 @@ class RouteVisitLine(models.Model):
             remaining_qty = max(available_qty - other_refill_qty, 0.0)
             if float_compare(line.supplied_qty, remaining_qty, precision_digits=precision) > 0:
                 raise ValidationError(_(
-                    "Qty to Refill cannot be greater than the vehicle available quantity.\n\n"
-                    "Product: %(product)s\nAvailable in vehicle: %(available).2f\nAlready approved on other lines: %(other).2f\nAvailable to add now: %(remaining).2f\nQty to refill: %(qty).2f"
+                    "Qty to Refill cannot be greater than the vehicle quantity still available for this visit.\n\n"
+                    "Product: %(product)s\nAvailable in vehicle: %(available).2f\nAlready approved on other lines: %(other).2f\nAvailable to add now: %(remaining).2f\nQty to refill: %(qty).2f\n\n"
+                    "If Available to add now is 0.00, this product may already be approved on another refill line in the same visit."
                 ) % {
                     "product": line.product_id.display_name,
                     "available": available_qty,
