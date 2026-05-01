@@ -174,3 +174,7 @@ access_route_stock_lot_management_read,access.route.stock.lot.management.read,st
 access_route_uom_uom_salesperson_read,access.route.uom.uom.salesperson.read,uom.model_uom_uom,route_core.group_route_salesperson,1,0,0,0
 access_route_uom_uom_supervisor_read,access.route.uom.uom.supervisor.read,uom.model_uom_uom,route_core.group_route_supervisor,1,0,0,0
 access_route_uom_uom_management_read,access.route.uom.uom.management.read,uom.model_uom_uom,route_core.group_route_management,1,0,0,0
+access_route_product_product_internal_read,access.route.product.product.internal.read,product.model_product_product,base.group_user,1,0,0,0
+access_route_product_template_internal_read,access.route.product.template.internal.read,product.model_product_template,base.group_user,1,0,0,0
+access_route_stock_lot_internal_read,access.route.stock.lot.internal.read,stock.model_stock_lot,base.group_user,1,0,0,0
+access_route_uom_uom_internal_read,access.route.uom.uom.internal.read,uom.model_uom_uom,base.group_user,1,0,0,0
