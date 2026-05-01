@@ -83,7 +83,7 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
     product_id = fields.Many2one(
         "product.product",
         string="Product",
-        required=True,
+        required=False,
         readonly=True,
     )
     product_ref_id = fields.Integer(
@@ -108,9 +108,9 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
     def create(self, vals_list):
         Product = self.env["product.product"].sudo()
         for vals in vals_list:
-            product_id = vals.get("product_id")
+            product_id = vals.get("product_id") or vals.get("product_ref_id")
             if product_id:
                 product = Product.browse(product_id)
                 vals.setdefault("product_ref_id", product.id)
-                vals.setdefault("product_display_name", product.display_name or str(product.id))
-        return super().create(vals_list)
+                vals.setdefault("product_display_name", product.display_name or product.name or str(product.id))
+        return super().sudo().create(vals_list)
