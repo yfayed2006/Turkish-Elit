@@ -343,7 +343,22 @@ class RouteVisitLine(models.Model):
         )
         if protected_lines:
             raise ValidationError(_("Only manually added refill lines can be removed from this step."))
-        return super().unlink()
+
+        # Salespeople may need to remove only the manual refill lines they added
+        # during refill confirmation. Use sudo after the business rule above so
+        # the normal Route Visit Line unlink access rule does not block this safe case.
+        refill_manual_lines = self.filtered(
+            lambda line: line.visit_id
+            and line.visit_id.visit_process_state in ("reconciled", "collection_done", "ready_to_close")
+            and line.can_delete_refill_line
+        )
+        normal_lines = self - refill_manual_lines
+
+        if normal_lines:
+            super(RouteVisitLine, normal_lines).unlink()
+        if refill_manual_lines:
+            super(RouteVisitLine, refill_manual_lines.with_user(SUPERUSER_ID).sudo()).unlink()
+        return True
 
     @api.constrains("product_id", "supplied_qty", "visit_id", "lot_id")
     def _check_refill_qty_available_in_vehicle(self):
