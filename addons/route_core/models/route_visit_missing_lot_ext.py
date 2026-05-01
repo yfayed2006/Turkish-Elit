@@ -98,7 +98,17 @@ class RouteVisit(models.Model):
             action = self._open_missing_lots_wizard("confirm_refill")
             if action:
                 return action
-        return super().action_ux_confirm_refill()
+
+        # After Missing Lots are completed, do not continue through older UX
+        # overrides. Confirm the refill transfer directly as superuser because
+        # salesperson/PDA users can be intentionally restricted from reading
+        # product.product by inventory/product record rules.
+        visit = self.with_user(SUPERUSER_ID).sudo()
+        if visit._is_direct_sales_stop():
+            raise UserError(_("Refill transfer is not used for Direct Sales stops."))
+
+        visit.action_confirm_refill_transfer()
+        return self._get_pda_form_action()
 
     def action_ux_confirm_return_transfers(self):
         self.ensure_one()
