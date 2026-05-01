@@ -569,6 +569,19 @@ body {
 .route-btn.warning { background: var(--route-orange); color: #111827; }
 .route-btn.danger { background: var(--route-red); color: #fff; }
 .route-btn:disabled { opacity: .55; cursor: default; }
+
+.leaflet-control-layers {
+    border: 1px solid rgba(130, 70, 111, 0.18) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14) !important;
+    font-weight: 800;
+}
+.leaflet-control-layers-expanded {
+    padding: 8px 10px 8px 8px !important;
+}
+.leaflet-control-layers label {
+    margin-bottom: 4px;
+}
 .leaflet-popup-content { min-width: 210px; }
 .route-popup-title { font-weight: 900; font-size: 15px; margin-bottom: 4px; }
 .route-popup-ref { color: #64748b; font-size: 12px; font-weight: 800; margin-bottom: 8px; }
@@ -890,10 +903,20 @@ function renderMap() {
         return;
     }
     mapInstance = L.map('map', { scrollWheelZoom: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(mapInstance);
+    });
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+    });
+    streetLayer.addTo(mapInstance);
+    L.control.layers(
+        {'Street Map': streetLayer, 'Satellite': satelliteLayer},
+        {},
+        {collapsed: false, position: 'topright'}
+    ).addTo(mapInstance);
     const bounds = [];
     points.forEach(visit => {
         const latLng = [visit.lat, visit.lng];
@@ -1153,10 +1176,20 @@ function renderMap() {
         return;
     }
     mapInstance = L.map('map', { scrollWheelZoom: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(mapInstance);
+    });
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+    });
+    streetLayer.addTo(mapInstance);
+    L.control.layers(
+        {'Street Map': streetLayer, 'Satellite': satelliteLayer},
+        {},
+        {collapsed: false, position: 'topright'}
+    ).addTo(mapInstance);
     const bounds = [];
     visits.forEach(visit => {
         if (visit.hasOutletPoint) {
