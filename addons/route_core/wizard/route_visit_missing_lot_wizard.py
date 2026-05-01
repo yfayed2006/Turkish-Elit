@@ -26,15 +26,16 @@ class RouteVisitMissingLotWizard(models.TransientModel):
 
     def _save_selected_lots(self):
         self.ensure_one()
-        if not self.line_ids:
+        wizard = self.sudo()
+        if not wizard.line_ids:
             raise UserError(_("There are no missing lot lines to complete."))
 
-        missing = self.line_ids.filtered(lambda line: not line.lot_id)
+        missing = wizard.line_ids.filtered(lambda line: not line.lot_id)
         if missing:
             raise UserError(_("Please select a Lot/Serial Number for every listed product before continuing."))
 
-        for line in self.line_ids:
-            line.visit_line_id.write({"lot_id": line.lot_id.id})
+        for line in wizard.line_ids:
+            line.visit_line_id.sudo().write({"lot_id": line.lot_id.id})
 
     def action_save_only(self):
         self.ensure_one()
@@ -45,7 +46,10 @@ class RouteVisitMissingLotWizard(models.TransientModel):
         self.ensure_one()
         self._save_selected_lots()
 
-        visit = self.visit_id.with_context(skip_missing_lot_check=True)
+        # Continue the route workflow with elevated access because this step
+        # creates and validates route stock operations while the salesperson
+        # remains in the approved PDA visit flow.
+        visit = self.visit_id.sudo().with_context(skip_missing_lot_check=True)
         if self.resume_action == "reconcile_count":
             return visit.action_ux_reconcile_count()
         if self.resume_action == "confirm_return_transfers":
@@ -54,7 +58,7 @@ class RouteVisitMissingLotWizard(models.TransientModel):
             return visit.action_ux_confirm_refill()
         if self.resume_action == "create_sale_order":
             return visit.action_create_sale_order()
-        return visit._get_pda_form_action()
+        return self.visit_id._get_pda_form_action()
 
 
 class RouteVisitMissingLotWizardLine(models.TransientModel):
@@ -89,3 +93,4 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
         domain="[('product_id', '=', product_id)]",
         required=False,
     )
+
