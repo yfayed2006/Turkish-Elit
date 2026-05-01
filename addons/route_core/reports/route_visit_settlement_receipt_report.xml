@@ -178,7 +178,7 @@ Since:
 </tr>
 <tr>
 <td style="border:1px solid #bfdbfe; background:#eff6ff; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.4px; margin-bottom:6px;">Amount Due Now</div>
+<div style="font-size:10px; text-transform:uppercase; color:#1d4ed8; letter-spacing:0.4px; margin-bottom:6px;">Total Due Now</div>
 <div style="font-size:20px; font-weight:700; color:#1e3a8a;" t-esc="'%.2f %s' % (summary['grand_total_due'], currency_label)"/>
 <div style="font-size:10px; color:#1d4ed8; margin-top:5px;">Previous due plus current stop net amount.</div>
 </td>
@@ -188,9 +188,9 @@ Since:
 <div style="font-size:10px; color:#15803d; margin-top:5px;">Confirmed cash collection in this stop.</div>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; letter-spacing:0.4px; margin-bottom:6px;">Immediate Remaining</div>
+<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; letter-spacing:0.4px; margin-bottom:6px;">Remaining After Collection</div>
 <div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('immediate_remaining_amount', summary['remaining_amount']), currency_label)"/>
-<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Grand total due minus collected cash for this stop.</div>
+<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Total due minus collected cash for this stop.</div>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:10px 12px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Promise Amount / Credit</div>
@@ -529,11 +529,13 @@ Date:
 <t t-set="payments" t-value="doc._get_consignment_receipt_payments()"/>
 <t t-set="items" t-value="doc._get_consignment_receipt_line_items()"/>
 <t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
-<t t-set="previous_due" t-value="summary.get('current_due', 0.0)"/>
-<t t-set="current_sale" t-value="sum(line.sold_amount or 0.0 for line in doc.line_ids) if doc.line_ids else 0.0"/>
-<t t-set="returned_value" t-value="sum(line.return_amount or 0.0 for line in doc.line_ids) if doc.line_ids else 0.0"/>
-<t t-set="refill_value" t-value="sum(line.supply_value or 0.0 for line in doc.line_ids) if doc.line_ids else 0.0"/>
-<t t-set="confirmed_payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
+<t t-set="total_outlet_due" t-value="summary.get('total_outlet_due', summary.get('current_due', 0.0))"/>
+<t t-set="current_sale" t-value="summary.get('visit_sale_amount', 0.0)"/>
+<t t-set="returned_value" t-value="summary.get('returned_value', 0.0)"/>
+<t t-set="refill_value" t-value="summary.get('refill_value', 0.0)"/>
+<t t-set="confirmed_payment_total" t-value="summary.get('confirmed_payment_total', 0.0)"/>
+<t t-set="current_visit_net" t-value="summary.get('current_visit_net', current_sale - returned_value)"/>
+<t t-set="total_outstanding_after_collection" t-value="summary.get('total_outstanding_after_collection', (total_outlet_due - confirmed_payment_total) if (total_outlet_due - confirmed_payment_total) > 0.0 else 0.0)"/>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:10px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
 <tr>
@@ -655,9 +657,9 @@ Date:
 <table style="width:100%; border-collapse:separate; border-spacing:6px; margin:0 -6px 8px -6px;">
 <tr>
 <td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
-<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Amount Due Now</div>
-<div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (previous_due, currency_label)"/>
-<div style="font-size:10px; color:#64748b; margin-top:5px;">Outlet due before confirming new collections.</div>
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Total Outlet Due</div>
+<div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (total_outlet_due, currency_label)"/>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Outlet balance before confirming new collections.</div>
 </td>
 <td style="width:25%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Current Visit Sale</div>
@@ -681,8 +683,8 @@ Date:
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary.get('settled_amount', 0.0), currency_label)"/>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:6px 8px;">
-<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; margin-bottom:6px;">Immediate Remaining</div>
-<div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('remaining_amount', 0.0), currency_label)"/>
+<div style="font-size:10px; text-transform:uppercase; color:#b91c1c; margin-bottom:6px;">Current Visit Remaining</div>
+<div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('current_visit_remaining', summary.get('remaining_amount', 0.0)), currency_label)"/>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Promise Amount</div>
@@ -691,6 +693,20 @@ Date:
 <td style="border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Confirmed Payments</div>
 <div style="font-size:20px; font-weight:700; color:#0f172a;" t-esc="'%.0f' % (len(payments) if payments else 0)"/>
+</td>
+</tr>
+</table>
+<table style="width:100%; border-collapse:separate; border-spacing:6px; margin:0 -6px 8px -6px;">
+<tr>
+<td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Current Visit Net</div>
+<div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (current_visit_net, currency_label)"/>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Current visit sale minus current visit returns.</div>
+</td>
+<td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
+<div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Total Outlet Balance After Collection</div>
+<div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (total_outstanding_after_collection, currency_label)"/>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed cash collection in this visit.</div>
 </td>
 </tr>
 </table>
@@ -775,8 +791,8 @@ Date:
 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('product_name') or '-'"/>
 </td>
-<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
-<span t-esc="item.get('lot_name') or '-'"/>
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; white-space:nowrap;">
+<span t-esc="item.get('lot_display') or item.get('lot_name') or '-'"/>
 </td>
 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="item.get('expiry_date') or '-'"/>
