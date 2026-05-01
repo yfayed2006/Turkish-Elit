@@ -968,26 +968,18 @@ installCardFocus();
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits match the current filters.</div>'
         return self._base_head("Visit Location Map") + """
-<div class="route-frame">
-    <section class="route-map-panel">
-        <div class="route-map-header">
-            <div>
-                <h1 class="route-map-title">Visit Location Map</h1>
-                <div class="route-map-subtitle">Outlet and check-in points for the current supervisor filters.</div>
-            </div>
-            <div class="route-badges">
-                <span class="route-badge pending">%(count)s Visits</span>
-            </div>
-        </div>
+<div class="route-frame route-split-layout">
+    <section class="route-map-panel route-fixed-map">
+        <div class="route-map-floating-badge">%(count)s Visits</div>
         <div id="map"></div>
         <div id="emptyMap" class="route-map-empty">No outlet or check-in location points are available for these visits.</div>
     </section>
-    <div id="statusMessage" class="route-status-message"></div>
-    <section class="route-cards-panel">
+    <section class="route-cards-panel route-side-cards">
         <div class="route-cards-header">
             <h2 class="route-cards-title">Visit Location Cards</h2>
             <div class="route-map-subtitle">Review location status and open visit documents directly.</div>
         </div>
+        <div id="statusMessage" class="route-status-message"></div>
         <div class="route-cards-grid">%(cards)s</div>
     </section>
 </div>
