@@ -320,6 +320,12 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 .route-frame { max-width: 100%%; }
+.route-frame.route-split-layout {
+    display: grid;
+    grid-template-columns: minmax(520px, 1.35fr) minmax(340px, .85fr);
+    gap: 14px;
+    align-items: start;
+}
 .route-map-panel,
 .route-cards-panel {
     background: #fff;
@@ -331,10 +337,18 @@ body {
 .route-map-panel {
     margin-bottom: 14px;
 }
+.route-frame.route-split-layout .route-map-panel {
+    margin-bottom: 0;
+}
 .route-map-panel.route-sticky-map {
     position: sticky;
     top: 0;
     z-index: 30;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards {
+    max-height: calc(100vh - 22px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 .route-map-header,
 .route-cards-header {
@@ -360,6 +374,9 @@ body {
     width: 100%%;
     height: clamp(360px, 48vh, 460px);
     background: #eef2f7;
+}
+.route-frame.route-split-layout #map {
+    height: clamp(520px, calc(100vh - 112px), 740px);
 }
 .route-map-empty {
     display: none;
@@ -495,7 +512,7 @@ body {
 .route-marker {
     width: 34px;
     height: 34px;
-    border-radius: 999px;
+    border-radius: 50%% 50%% 50%% 8%%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -505,10 +522,21 @@ body {
     font-size: 14px;
     border: 3px solid #fff;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.30);
+    transform: rotate(-45deg) scale(1);
+    transform-origin: center;
     transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
+.route-marker span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%%;
+    height: 100%%;
+    transform: rotate(45deg);
+    line-height: 1;
+}
 .route-marker.route-marker-focus {
-    transform: scale(1.45);
+    transform: rotate(-45deg) scale(1.36);
     border-color: #fef08a;
     box-shadow: 0 0 0 8px rgba(130, 70, 111, 0.18), 0 12px 26px rgba(15, 23, 42, 0.38);
     z-index: 1000;
@@ -527,10 +555,25 @@ body {
     color: #155e75;
     font-weight: 800;
 }
+@media (max-width: 1024px) {
+    .route-frame.route-split-layout {
+        grid-template-columns: 1fr;
+    }
+    .route-frame.route-split-layout .route-cards-panel.route-side-cards {
+        max-height: none;
+        overflow-y: visible;
+    }
+}
 @media (max-width: 720px) {
     body { padding: 8px; }
-    .route-map-panel.route-sticky-map { position: relative; top: auto; }
+    .route-map-panel.route-sticky-map {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        border-radius: 14px;
+    }
     #map { height: 300px; }
+    .route-frame.route-split-layout #map { height: 50vh; min-height: 280px; max-height: 430px; }
     .route-map-header, .route-cards-header { padding: 12px; align-items: flex-start; flex-direction: column; }
     .route-cards-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
     .route-card-head { padding: 12px; }
@@ -599,7 +642,7 @@ body {
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits found for today.</div>'
         return self._base_head("Today's Route Map") + """
-<div class="route-frame">
+<div class="route-frame route-split-layout">
     <section class="route-map-panel route-sticky-map">
         <div class="route-map-header">
             <div>
@@ -613,7 +656,7 @@ body {
         <div id="map"></div>
         <div id="emptyMap" class="route-map-empty">No outlet location points are available for these visits.</div>
     </section>
-    <section class="route-cards-panel">
+    <section class="route-cards-panel route-side-cards">
         <div class="route-cards-header">
             <h2 class="route-cards-title">Visit Cards</h2>
             <div class="route-map-subtitle">Open the next visit, review completed visits, or navigate to the outlet.</div>
@@ -648,16 +691,17 @@ function popupHtml(visit) {
 let mapInstance = null;
 const routeMarkers = {};
 function markerHtml(visit, focused=false) {
-    return `<div class="route-marker ${markerClass(visit)} ${focused ? 'route-marker-focus' : ''}">${visit.index}</div>`;
+    return `<div class="route-marker ${markerClass(visit)} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`;
 }
 function markerIcon(visit, focused=false) {
     const size = focused ? 46 : 34;
-    const anchor = Math.round(size / 2);
+    const anchorX = Math.round(size / 2);
+    const anchorY = Math.max(size - 4, anchorX);
     return L.divIcon({
         className: '',
         html: markerHtml(visit, focused),
         iconSize: [size, size],
-        iconAnchor: [anchor, anchor]
+        iconAnchor: [anchorX, anchorY]
     });
 }
 function setActiveVisit(visitId, panToMarker=false) {
@@ -686,6 +730,8 @@ function installCardFocus() {
     });
     if ('IntersectionObserver' in window && cards.length) {
         let currentId = null;
+        const sideCards = document.querySelector('.route-side-cards');
+        const observerRoot = sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null;
         const observer = new IntersectionObserver(entries => {
             const visible = entries
                 .filter(entry => entry.isIntersecting)
@@ -694,7 +740,7 @@ function installCardFocus() {
                 currentId = visible.target.dataset.visitId;
                 setActiveVisit(currentId, false);
             }
-        }, {threshold: [0.35, 0.55, 0.75]});
+        }, {root: observerRoot, threshold: [0.35, 0.55, 0.75]});
         cards.forEach(card => observer.observe(card));
     }
 }
@@ -880,14 +926,14 @@ function renderMap() {
             const outletPoint = [visit.outletLat, visit.outletLng];
             bounds.push(outletPoint);
             L.marker(outletPoint, {
-                icon: L.divIcon({className:'', html:`<div class="route-marker outlet">${visit.index}</div>`, iconSize:[30,30], iconAnchor:[15,15]})
+                icon: L.divIcon({className:'', html:`<div class="route-marker outlet"><span>${visit.index}</span></div>`, iconSize:[34,34], iconAnchor:[17,30]})
             }).addTo(map).bindPopup(popupHtml(visit, 'Outlet'));
         }
         if (visit.hasCheckinPoint) {
             const checkPoint = [visit.checkinLat, visit.checkinLng];
             bounds.push(checkPoint);
             L.marker(checkPoint, {
-                icon: L.divIcon({className:'', html:`<div class="route-marker checkin">${visit.index}</div>`, iconSize:[30,30], iconAnchor:[15,15]})
+                icon: L.divIcon({className:'', html:`<div class="route-marker checkin"><span>${visit.index}</span></div>`, iconSize:[34,34], iconAnchor:[17,30]})
             }).addTo(map).bindPopup(popupHtml(visit, 'Check-in'));
         }
         if (visit.hasOutletPoint && visit.hasCheckinPoint && visit.distance) {
@@ -974,3 +1020,4 @@ renderMap();
         except Exception as error:
             return self._json_response({"ok": False, "message": self._safe_text(error)}, status=400)
         return self._json_response({"ok": True, "message": message})
+
