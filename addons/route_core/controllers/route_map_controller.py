@@ -827,29 +827,60 @@ function setActiveVisit(visitId, panToMarker=false) {
 }
 function installCardFocus() {
     const cards = Array.from(document.querySelectorAll('.route-card[data-visit-id]'));
+    const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
+    const sideCards = document.querySelector('.route-side-cards');
+    const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
+    let currentId = null;
+    function activateCard(visitId, panToMarker=false) {
+        if (!visitId || String(visitId) === String(currentId)) return;
+        currentId = visitId;
+        setActiveVisit(visitId, panToMarker);
+    }
+    function activateNearestVisibleCard() {
+        if (!cards.length) return;
+        const rootRect = observerRoot ? observerRoot.getBoundingClientRect() : {top: 0, bottom: window.innerHeight};
+        const rootCenter = rootRect.top + ((rootRect.bottom - rootRect.top) / 2);
+        let bestCard = null;
+        let bestDistance = Infinity;
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const visibleTop = Math.max(rect.top, rootRect.top);
+            const visibleBottom = Math.min(rect.bottom, rootRect.bottom);
+            if (visibleBottom <= visibleTop) return;
+            const cardCenter = rect.top + (rect.height / 2);
+            const distance = Math.abs(cardCenter - rootCenter);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestCard = card;
+            }
+        });
+        if (bestCard) activateCard(bestCard.dataset.visitId, false);
+    }
+    function scheduleNearestCheck() {
+        window.requestAnimationFrame(activateNearestVisibleCard);
+    }
     cards.forEach(card => {
-        card.addEventListener('mouseenter', () => setActiveVisit(card.dataset.visitId, true));
-        card.addEventListener('focusin', () => setActiveVisit(card.dataset.visitId, true));
+        card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
+        card.addEventListener('focusin', () => activateCard(card.dataset.visitId, true));
         card.addEventListener('click', event => {
-            if (!event.target.closest('a')) setActiveVisit(card.dataset.visitId, true);
+            if (!event.target.closest('a')) activateCard(card.dataset.visitId, true);
         });
     });
+    if (observerRoot) {
+        observerRoot.addEventListener('scroll', scheduleNearestCheck, {passive: true});
+    } else {
+        window.addEventListener('scroll', scheduleNearestCheck, {passive: true});
+    }
     if ('IntersectionObserver' in window && cards.length) {
-        let currentId = null;
-        const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
-        const sideCards = document.querySelector('.route-side-cards');
-        const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
         const observer = new IntersectionObserver(entries => {
             const visible = entries
                 .filter(entry => entry.isIntersecting)
                 .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-            if (visible && visible.target.dataset.visitId !== currentId) {
-                currentId = visible.target.dataset.visitId;
-                setActiveVisit(currentId, false);
-            }
-        }, {root: observerRoot, threshold: [0.35, 0.55, 0.75]});
+            if (visible) activateCard(visible.target.dataset.visitId, false);
+        }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
         cards.forEach(card => observer.observe(card));
     }
+    window.setTimeout(activateNearestVisibleCard, 300);
 }
 function renderMap() {
     const points = visits.filter(v => v.hasPoint);
@@ -1010,6 +1041,110 @@ function popupHtml(visit, pointType) {
         <div><strong>Review:</strong> ${esc(visit.reviewState)}</div>
         <div class="route-popup-actions">${popupActions(visit)}</div>`;
 }
+let mapInstance = null;
+const visitMarkers = {};
+function markerIcon(visit, pointType, focused=false) {
+    const size = focused ? 48 : 36;
+    const anchorX = Math.round(size / 2);
+    const anchorY = Math.max(size - 2, anchorX);
+    return L.divIcon({
+        className: '',
+        html: `<div class="route-marker ${pointType} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`,
+        iconSize: [size, size],
+        iconAnchor: [anchorX, anchorY]
+    });
+}
+function addVisitMarker(map, visit, point, pointType, popupLabel) {
+    const marker = L.marker(point, {
+        icon: markerIcon(visit, pointType, false),
+        zIndexOffset: visit.index || 1
+    }).addTo(map).bindPopup(popupHtml(visit, popupLabel));
+    marker._routePointType = pointType;
+    marker._routePoint = point;
+    marker.on('click', () => setActiveVisit(visit.id, false));
+    if (!visitMarkers[visit.id]) visitMarkers[visit.id] = [];
+    visitMarkers[visit.id].push(marker);
+    return marker;
+}
+function preferredPoint(visit) {
+    if (visit.hasCheckinPoint) return [visit.checkinLat, visit.checkinLng];
+    if (visit.hasOutletPoint) return [visit.outletLat, visit.outletLng];
+    return null;
+}
+function setActiveVisit(visitId, panToMarker=false) {
+    visits.forEach(visit => {
+        const isActive = String(visit.id) === String(visitId);
+        const markers = visitMarkers[visit.id] || [];
+        markers.forEach(marker => {
+            marker.setIcon(markerIcon(visit, marker._routePointType || 'outlet', isActive));
+            marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
+        });
+        if (isActive && panToMarker && mapInstance) {
+            const point = preferredPoint(visit);
+            if (point) mapInstance.panTo(point, {animate: true, duration: .35});
+        }
+    });
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+}
+function installCardFocus() {
+    const cards = Array.from(document.querySelectorAll('.route-card[data-visit-id]'));
+    const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
+    const sideCards = document.querySelector('.route-side-cards');
+    const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
+    let currentId = null;
+    function activateCard(visitId, panToMarker=false) {
+        if (!visitId || String(visitId) === String(currentId)) return;
+        currentId = visitId;
+        setActiveVisit(visitId, panToMarker);
+    }
+    function activateNearestVisibleCard() {
+        if (!cards.length) return;
+        const rootRect = observerRoot ? observerRoot.getBoundingClientRect() : {top: 0, bottom: window.innerHeight};
+        const rootCenter = rootRect.top + ((rootRect.bottom - rootRect.top) / 2);
+        let bestCard = null;
+        let bestDistance = Infinity;
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const visibleTop = Math.max(rect.top, rootRect.top);
+            const visibleBottom = Math.min(rect.bottom, rootRect.bottom);
+            if (visibleBottom <= visibleTop) return;
+            const cardCenter = rect.top + (rect.height / 2);
+            const distance = Math.abs(cardCenter - rootCenter);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestCard = card;
+            }
+        });
+        if (bestCard) activateCard(bestCard.dataset.visitId, false);
+    }
+    function scheduleNearestCheck() {
+        window.requestAnimationFrame(activateNearestVisibleCard);
+    }
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
+        card.addEventListener('focusin', () => activateCard(card.dataset.visitId, true));
+        card.addEventListener('click', event => {
+            if (!event.target.closest('a, button')) activateCard(card.dataset.visitId, true);
+        });
+    });
+    if (observerRoot) {
+        observerRoot.addEventListener('scroll', scheduleNearestCheck, {passive: true});
+    } else {
+        window.addEventListener('scroll', scheduleNearestCheck, {passive: true});
+    }
+    if ('IntersectionObserver' in window && cards.length) {
+        const observer = new IntersectionObserver(entries => {
+            const visible = entries
+                .filter(entry => entry.isIntersecting)
+                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+            if (visible) activateCard(visible.target.dataset.visitId, false);
+        }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
+        cards.forEach(card => observer.observe(card));
+    }
+    window.setTimeout(activateNearestVisibleCard, 300);
+}
 function renderMap() {
     const hasAnyPoint = visits.some(v => v.hasOutletPoint || v.hasCheckinPoint);
     if (!hasAnyPoint || typeof L === 'undefined') {
@@ -1017,37 +1152,40 @@ function renderMap() {
         document.getElementById('emptyMap').style.display = 'block';
         return;
     }
-    const map = L.map('map', { scrollWheelZoom: false });
+    mapInstance = L.map('map', { scrollWheelZoom: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    }).addTo(mapInstance);
     const bounds = [];
     visits.forEach(visit => {
         if (visit.hasOutletPoint) {
             const outletPoint = [visit.outletLat, visit.outletLng];
             bounds.push(outletPoint);
-            L.marker(outletPoint, {
-                icon: L.divIcon({className:'', html:`<div class="route-marker outlet"><span>${visit.index}</span></div>`, iconSize:[34,34], iconAnchor:[17,30]})
-            }).addTo(map).bindPopup(popupHtml(visit, 'Outlet'));
+            addVisitMarker(mapInstance, visit, outletPoint, 'outlet', 'Outlet');
         }
         if (visit.hasCheckinPoint) {
             const checkPoint = [visit.checkinLat, visit.checkinLng];
             bounds.push(checkPoint);
-            L.marker(checkPoint, {
-                icon: L.divIcon({className:'', html:`<div class="route-marker checkin"><span>${visit.index}</span></div>`, iconSize:[34,34], iconAnchor:[17,30]})
-            }).addTo(map).bindPopup(popupHtml(visit, 'Check-in'));
+            addVisitMarker(mapInstance, visit, checkPoint, 'checkin', 'Check-in');
         }
         if (visit.hasOutletPoint && visit.hasCheckinPoint && visit.distance) {
             L.polyline([[visit.outletLat, visit.outletLng], [visit.checkinLat, visit.checkinLng]], {
                 color: '#82466f', weight: 3, opacity: 0.65, dashArray: '7 7'
-            }).addTo(map);
+            }).addTo(mapInstance);
         }
     });
     if (bounds.length === 1) {
-        map.setView(bounds[0], 15);
+        mapInstance.setView(bounds[0], 15);
     } else {
-        map.fitBounds(bounds, { padding: [30, 30] });
+        mapInstance.fitBounds(bounds, { padding: [30, 30] });
+    }
+    window.setTimeout(() => mapInstance.invalidateSize(), 120);
+    window.setTimeout(() => mapInstance.invalidateSize(), 500);
+    window.addEventListener('resize', () => window.setTimeout(() => mapInstance.invalidateSize(), 120));
+    const firstPointVisit = visits.find(v => v.hasCheckinPoint || v.hasOutletPoint);
+    if (firstPointVisit) {
+        window.setTimeout(() => setActiveVisit(firstPointVisit.id, false), 250);
     }
 }
 async function sendReviewAction(url) {
@@ -1072,6 +1210,7 @@ document.querySelectorAll('.review-action').forEach(button => {
     });
 });
 renderMap();
+installCardFocus();
 </script>
 </body>
 </html>
