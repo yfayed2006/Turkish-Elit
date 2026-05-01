@@ -199,7 +199,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     def _compute_finish_message(self):
         for rec in self:
             if not rec.is_direct_sales_stop:
-                extra = _("Receipt, WhatsApp, and final review actions are available below.")
+                extra = _("Completed documents, receipt, WhatsApp, and final review actions are available below.")
                 rec.finish_message = "".join([
                     '<div class="alert alert-success mb-0 route_pda_finish_alert">',
                     f"<strong>{_('Visit completed successfully.')}</strong><br/>",
@@ -249,3 +249,4 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
             return self.visit_id._get_pda_form_action()
         return {"type": "ir.actions.act_window_close"}
+
