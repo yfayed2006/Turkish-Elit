@@ -466,12 +466,16 @@ class RouteVisit(models.Model):
         if len(available_lots) == 1:
             return available_lots[:1]
 
-        # Keep the route workflow flexible for field reps: allow the scan to
-        # continue on an unassigned line when multiple lots exist and no lot
-        # was selected yet. The lot will still be enforced later by the
-        # missing-lot wizard before reconciliation, return transfer validation,
-        # refill confirmation, or sale order creation.
-        return False
+        lot_names = ", ".join(available_lots[:5].mapped("display_name"))
+        more_text = _(" and more") if len(available_lots) > 5 else ""
+        raise UserError(
+            _(
+                "Product '%(product)s' is tracked by Lot/Serial and has more than one available lot.\n\n"
+                "Available lots: %(lots)s%(more)s\n\n"
+                "Please scan or select the correct lot first, then scan the product barcode again."
+            )
+            % {"product": product.display_name, "lots": lot_names, "more": more_text}
+        )
 
     def _is_product_available_in_vehicle(self, product):
         self.ensure_one()
