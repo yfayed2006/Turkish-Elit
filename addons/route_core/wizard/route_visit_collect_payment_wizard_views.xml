@@ -25,7 +25,7 @@
 <field name="visit_id" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
-<span class="route_pda_payment_meta_label">Net Due</span>
+<span class="route_pda_payment_meta_label">Current Visit Net</span>
 <field name="visit_net_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
@@ -33,7 +33,7 @@
 <field name="visit_collected_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Remaining Due</span>
+<span class="route_pda_payment_meta_label">Current Visit Remaining</span>
 <field name="visit_remaining_due" readonly="1" nolabel="1"/>
 </div>
 </div>
@@ -66,7 +66,7 @@
 <field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Amount Due Now</span>
+<span class="route_pda_payment_meta_label">Total Due Now</span>
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
@@ -74,7 +74,7 @@
 <field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
-<span class="route_pda_payment_meta_label">Immediate Remaining</span>
+<span class="route_pda_payment_meta_label">Remaining After Collection</span>
 <field name="direct_stop_settlement_remaining_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
@@ -146,7 +146,7 @@
 </div>
 </div>
 <div class="route_pda_statement_info" role="alert" invisible="not show_full_payment_help"> Full payment will save the full remaining due amount as draft settlement entries for confirmation. </div>
-<div class="route_pda_statement_info route_pda_statement_info_warning" role="alert" invisible="not show_partial_payment_help"> Partial payment will save the collected amount now and keep the remaining balance as an open promise. </div>
+<div class="route_pda_statement_info route_pda_statement_info_warning" role="alert" invisible="not show_partial_payment_help"> Partial payment will save the collected amount now and keep the remaining current visit balance as an open promise. </div>
 <div class="route_pda_statement_info" role="alert" invisible="not is_direct_sales_stop"> Direct stop collection uses automatic allocation. Review the payment lines later to see how the saved amount was allocated. </div>
 <div class="route_pda_statement_info route_pda_statement_info_warning" role="alert" invisible="not show_defer_help"> Defer to date will save a zero-amount draft settlement with a required due date, promise amount, and note. </div>
 <div class="route_pda_statement_info route_pda_statement_info_warning" role="alert" invisible="not show_next_visit_help"> Carry to next visit will save a zero-amount draft settlement with a required promise date, promise amount, and note. </div>
