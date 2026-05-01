@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import _, fields, models, SUPERUSER_ID
 from odoo.exceptions import UserError
 
 
@@ -26,7 +26,7 @@ class RouteVisitMissingLotWizard(models.TransientModel):
 
     def _save_selected_lots(self):
         self.ensure_one()
-        wizard = self.sudo()
+        wizard = self.with_user(SUPERUSER_ID).sudo()
 
         if not wizard.line_ids:
             raise UserError(_("There are no missing lot lines to complete."))
@@ -36,7 +36,7 @@ class RouteVisitMissingLotWizard(models.TransientModel):
             raise UserError(_("Please select a Lot/Serial Number for every listed product before continuing."))
 
         for line in wizard.line_ids:
-            line.visit_line_id.sudo().write({"lot_id": line.lot_id.id})
+            line.visit_line_id.with_user(SUPERUSER_ID).sudo().write({"lot_id": line.lot_id.id})
 
     def action_save_only(self):
         self.ensure_one()
@@ -47,11 +47,18 @@ class RouteVisitMissingLotWizard(models.TransientModel):
         self.ensure_one()
         self._save_selected_lots()
 
-        # Continue the route workflow with elevated access because this step
-        # creates and validates route stock operations while the salesperson
-        # remains in the approved PDA visit flow.
-        visit = self.visit_id.sudo().with_context(skip_missing_lot_check=True)
-        resume_action = self.sudo().resume_action
+        # This button continues an approved PDA workflow. The following stock
+        # operations validate internal transfers and may internally read
+        # product.product records. Salesperson users do not need inventory-level
+        # product access, so the backend continuation must run as superuser.
+        visit = (
+            self.env["route.visit"]
+            .with_user(SUPERUSER_ID)
+            .sudo()
+            .browse(self.visit_id.id)
+            .with_context(skip_missing_lot_check=True)
+        )
+        resume_action = self.with_user(SUPERUSER_ID).sudo().resume_action
 
         if resume_action == "reconcile_count":
             return visit.action_ux_reconcile_count()
@@ -80,12 +87,6 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
         required=True,
         readonly=True,
     )
-    product_id = fields.Many2one(
-        "product.product",
-        string="Product",
-        required=False,
-        readonly=True,
-    )
     product_ref_id = fields.Integer(
         string="Product ID",
         readonly=True,
@@ -103,18 +104,3 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
         string="Lot/Serial",
         required=False,
     )
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        Product = self.env["product.product"].sudo()
-        for vals in vals_list:
-            product_id = vals.get("product_id") or vals.get("product_ref_id")
-            if product_id:
-                product = Product.browse(product_id)
-                vals.setdefault("product_ref_id", product.id)
-                vals.setdefault("product_display_name", product.display_name or product.name or str(product.id))
-
-        # Do not call super().sudo().create() here.
-        # On this TransientModel, that re-enters this override and causes
-        # recursive create calls during the Missing Lots popup creation.
-        return super().create(vals_list)
