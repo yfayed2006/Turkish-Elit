@@ -113,4 +113,8 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
                 product = Product.browse(product_id)
                 vals.setdefault("product_ref_id", product.id)
                 vals.setdefault("product_display_name", product.display_name or product.name or str(product.id))
-        return super().sudo().create(vals_list)
+
+        # Do not call super().sudo().create() here.
+        # On this TransientModel, that re-enters this override and causes
+        # recursive create calls during the Missing Lots popup creation.
+        return super().create(vals_list)
