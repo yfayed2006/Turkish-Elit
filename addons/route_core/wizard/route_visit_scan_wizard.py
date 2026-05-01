@@ -72,6 +72,8 @@ class RouteVisitScanWizard(models.TransientModel):
         string="Expired Lot Decision",
     )
     scan_guidance = fields.Text(string="Scan Guidance", compute="_compute_scan_guidance", store=False)
+    product_lot_guidance = fields.Text(string="Lot/Serial Guidance", readonly=True)
+    detected_product_requires_lot = fields.Boolean(string="Requires Lot/Serial", readonly=True, default=False)
 
     detected_product_id = fields.Many2one("product.product", string="Detected Product", readonly=True)
     base_uom_id = fields.Many2one("uom.uom", string="Base UoM", readonly=True)
@@ -249,6 +251,8 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.detected_packaging_name = False
             rec.auto_quantity_locked = False
             rec.auto_uom_locked = False
+            rec.product_lot_guidance = False
+            rec.detected_product_requires_lot = False
 
             if not rec.visit_id or not rec.barcode or not rec.barcode.strip():
                 rec.scanned_uom_id = False
@@ -270,12 +274,35 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.return_qty = 0.0
                 rec.near_expiry_decision = False
                 rec.expired_decision = False
+                rec.product_lot_guidance = False
+                rec.detected_product_requires_lot = False
                 continue
 
             product = scan_info["product"]
             rec.detected_product_id = product.id
             rec.base_uom_id = product.uom_id.id
             rec.detected_scan_type = scan_info["scan_type_label"]
+            rec.detected_product_requires_lot = bool(
+                rec.route_enable_lot_serial_tracking
+                and hasattr(rec.visit_id, "_is_product_tracked_by_lot")
+                and rec.visit_id._is_product_tracked_by_lot(product)
+            )
+            if rec.detected_product_requires_lot and not rec.active_lot_id:
+                available_lots = rec.visit_id._find_available_lots_for_product(product) if hasattr(rec.visit_id, "_find_available_lots_for_product") else rec.env["stock.lot"]
+                if len(available_lots) > 1:
+                    lot_names = ", ".join(available_lots[:5].mapped("display_name"))
+                    more_text = _(" and more") if len(available_lots) > 5 else ""
+                    rec.product_lot_guidance = _(
+                        "This product is tracked by Lot/Serial. Scan or select the correct lot before pressing Scan / Add. Available lots: %(lots)s%(more)s."
+                    ) % {"lots": lot_names, "more": more_text}
+                elif not available_lots:
+                    rec.product_lot_guidance = _(
+                        "This product is tracked by Lot/Serial, but no available lot was found in the van stock or outlet stock."
+                    )
+                else:
+                    rec.product_lot_guidance = False
+            else:
+                rec.product_lot_guidance = False
 
             if scan_info.get("scan_type") == "box":
                 rec.auto_quantity_locked = False
@@ -342,16 +369,64 @@ class RouteVisitScanWizard(models.TransientModel):
                 rec.near_expiry_decision = False
                 rec.expired_decision = False
 
+    def _action_reopen_scan_wizard(self, name=None):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": name or _("Scan Barcode"),
+            "res_model": "route.visit.scan.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "res_id": self.id,
+            "context": {
+                "default_visit_id": self.visit_id.id if self.visit_id else False,
+                "default_scan_mode": self.scan_mode,
+                "default_focus_target": self.focus_target or self._default_focus_target(),
+            },
+        }
+
+    def _reset_after_successful_scan(self, product=False, counted_qty=0.0, return_qty=0.0, return_route=False):
+        self.ensure_one()
+        keep_lot = self.active_lot_id if self.route_enable_lot_serial_tracking else False
+        self.write({
+            "barcode": False,
+            "quantity": 1.0,
+            "scanned_uom_id": False,
+            "detected_product_id": False,
+            "base_uom_id": False,
+            "detected_scan_type": False,
+            "counted_increase": 0.0,
+            "detected_packaging_name": False,
+            "product_lot_guidance": False,
+            "detected_product_requires_lot": False,
+            "expiry_date": False,
+            "add_to_near_expiry_return": False,
+            "return_from_scan": False,
+            "return_qty": 0.0,
+            "return_route": "vehicle",
+            "near_expiry_decision": False,
+            "expired_decision": False,
+            "active_lot_id": keep_lot.id if keep_lot else False,
+            "lot_barcode": False,
+            "focus_target": "product" if keep_lot else self._default_focus_target(),
+            "last_product_id": product.id if product else False,
+            "last_counted_qty": counted_qty or 0.0,
+            "last_return_qty": return_qty or 0.0,
+            "last_return_route": return_route or False,
+            "auto_quantity_locked": False,
+            "auto_uom_locked": False,
+        })
+
     def action_set_active_lot(self):
         self.ensure_one()
         if not self.visit_id:
             raise UserError(_("Visit is required."))
         if not self.route_enable_lot_serial_tracking:
             self.write({"active_lot_id": False, "lot_barcode": False, "focus_target": "product"})
-            return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+            return self._action_reopen_scan_wizard()
         lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
         self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
-        return {"type": "ir.actions.act_window", "name": _("Scan Barcode"), "res_model": "route.visit.scan.wizard", "view_mode": "form", "target": "new", "res_id": self.id}
+        return self._action_reopen_scan_wizard()
 
     def action_clear_active_lot(self):
         self.ensure_one()
@@ -365,6 +440,8 @@ class RouteVisitScanWizard(models.TransientModel):
             "detected_scan_type": False,
             "counted_increase": 0.0,
             "detected_packaging_name": False,
+            "product_lot_guidance": False,
+            "detected_product_requires_lot": False,
             "expiry_date": False,
             "add_to_near_expiry_return": False,
             "return_from_scan": False,
@@ -374,31 +451,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "expired_decision": False,
             "return_route": "vehicle",
         })
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Scan Barcode"),
-            "res_model": "route.visit.scan.wizard",
-            "view_mode": "form",
-            "target": "new",
-            "res_id": self.id,
-            "context": {
-                "default_visit_id": self.visit_id.id,
-                "default_scan_mode": self.scan_mode,
-                "default_focus_target": self._default_focus_target(),
-                "default_lot_barcode": False,
-                "default_barcode": False,
-                "default_quantity": 1.0,
-                "default_return_from_scan": False,
-                "default_return_qty": 0.0,
-                "default_near_expiry_decision": False,
-                "default_expired_decision": False,
-                "default_return_route": "vehicle",
-                "default_last_product_id": self.last_product_id.id if self.last_product_id else False,
-                "default_last_counted_qty": self.last_counted_qty,
-                "default_last_return_qty": self.last_return_qty,
-                "default_last_return_route": self.last_return_route,
-            },
-        }
+        return self._action_reopen_scan_wizard()
 
     def _get_or_create_visit_line(self, product):
         self.ensure_one()
@@ -438,6 +491,39 @@ class RouteVisitScanWizard(models.TransientModel):
             raise UserError(_("Please enter or scan a barcode first."))
         if self.quantity <= 0:
             raise UserError(_("Quantity must be greater than zero."))
+
+        if self.scan_mode == "count":
+            try:
+                scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+                product = scan_info["product"]
+            except UserError:
+                raise
+            except Exception as error:
+                raise UserError(_("Could not read this barcode. Please try again or contact your supervisor.\n\nTechnical detail: %s") % str(error))
+
+            if (
+                self.route_enable_lot_serial_tracking
+                and hasattr(self.visit_id, "_is_product_tracked_by_lot")
+                and self.visit_id._is_product_tracked_by_lot(product)
+                and not self.active_lot_id
+            ):
+                available_lots = self.visit_id._find_available_lots_for_product(product) if hasattr(self.visit_id, "_find_available_lots_for_product") else self.env["stock.lot"]
+                if not available_lots:
+                    raise UserError(
+                        _("Product '%s' requires a Lot/Serial Number, but no available lot was found in the van stock or outlet stock.")
+                        % product.display_name
+                    )
+                if len(available_lots) > 1:
+                    lot_names = ", ".join(available_lots[:5].mapped("display_name"))
+                    more_text = _(" and more") if len(available_lots) > 5 else ""
+                    raise UserError(
+                        _(
+                            "Product '%(product)s' requires a Lot/Serial Number before scanning.\n\n"
+                            "Available lots: %(lots)s%(more)s\n\n"
+                            "Scan or select the correct lot first, then press Scan / Add again."
+                        )
+                        % {"product": product.display_name, "lots": lot_names, "more": more_text}
+                    )
 
         preview_counted_increase = 0.0
         if self.scan_mode == "count":
@@ -513,27 +599,13 @@ class RouteVisitScanWizard(models.TransientModel):
                 line.write(line_vals)
                 line.invalidate_recordset()
 
-            return {
-                "type": "ir.actions.act_window",
-                "name": _("Scan Barcode"),
-                "res_model": "route.visit.scan.wizard",
-                "view_mode": "form",
-                "target": "new",
-                "context": {
-                    "default_visit_id": self.visit_id.id,
-                    "default_scan_mode": self.scan_mode,
-                    "default_active_lot_id": self.active_lot_id.id if self.route_enable_lot_serial_tracking else False,
-                    "default_focus_target": "product" if (self.active_lot_id and self.route_enable_lot_serial_tracking) else self._default_focus_target(),
-                    "default_last_product_id": product.id,
-                    "default_last_counted_qty": result["counted_increase"],
-                    "default_last_return_qty": forced_return_qty,
-                    "default_last_return_route": forced_return_route,
-                    "default_return_from_scan": False,
-                    "default_return_qty": 0.0,
-                    "default_near_expiry_decision": False,
-                    "default_expired_decision": False,
-                },
-            }
+            self._reset_after_successful_scan(
+                product=product,
+                counted_qty=result["counted_increase"],
+                return_qty=forced_return_qty,
+                return_route=forced_return_route,
+            )
+            return self._action_reopen_scan_wizard()
 
         raise UserError(_("Return mode is not handled in this version."))
 
