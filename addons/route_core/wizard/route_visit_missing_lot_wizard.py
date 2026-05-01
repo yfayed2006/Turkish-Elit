@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -27,6 +27,7 @@ class RouteVisitMissingLotWizard(models.TransientModel):
     def _save_selected_lots(self):
         self.ensure_one()
         wizard = self.sudo()
+
         if not wizard.line_ids:
             raise UserError(_("There are no missing lot lines to complete."))
 
@@ -50,13 +51,15 @@ class RouteVisitMissingLotWizard(models.TransientModel):
         # creates and validates route stock operations while the salesperson
         # remains in the approved PDA visit flow.
         visit = self.visit_id.sudo().with_context(skip_missing_lot_check=True)
-        if self.resume_action == "reconcile_count":
+        resume_action = self.sudo().resume_action
+
+        if resume_action == "reconcile_count":
             return visit.action_ux_reconcile_count()
-        if self.resume_action == "confirm_return_transfers":
+        if resume_action == "confirm_return_transfers":
             return visit.action_ux_confirm_return_transfers()
-        if self.resume_action == "confirm_refill":
+        if resume_action == "confirm_refill":
             return visit.action_ux_confirm_refill()
-        if self.resume_action == "create_sale_order":
+        if resume_action == "create_sale_order":
             return visit.action_create_sale_order()
         return self.visit_id._get_pda_form_action()
 
@@ -83,6 +86,14 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
         required=True,
         readonly=True,
     )
+    product_ref_id = fields.Integer(
+        string="Product ID",
+        readonly=True,
+    )
+    product_display_name = fields.Char(
+        string="Product",
+        readonly=True,
+    )
     required_qty = fields.Float(
         string="Qty Requiring Lot",
         readonly=True,
@@ -90,7 +101,16 @@ class RouteVisitMissingLotWizardLine(models.TransientModel):
     lot_id = fields.Many2one(
         "stock.lot",
         string="Lot/Serial",
-        domain="[('product_id', '=', product_id)]",
         required=False,
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        Product = self.env["product.product"].sudo()
+        for vals in vals_list:
+            product_id = vals.get("product_id")
+            if product_id:
+                product = Product.browse(product_id)
+                vals.setdefault("product_ref_id", product.id)
+                vals.setdefault("product_display_name", product.display_name or str(product.id))
+        return super().create(vals_list)
