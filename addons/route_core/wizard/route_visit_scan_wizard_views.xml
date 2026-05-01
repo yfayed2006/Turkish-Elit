@@ -23,6 +23,20 @@
 <button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary" invisible="not active_lot_id"/>
 </group>
 </group>
+<group string="Lot Decision" invisible="scan_mode != 'count' or active_lot_status not in ('expired','near_expiry')">
+<group>
+<field name="scan_alert_message" readonly="1" widget="text" invisible="not scan_alert_message"/>
+<field name="scan_guidance" readonly="1" widget="text" invisible="not scan_guidance"/>
+<field name="expired_decision" widget="radio" invisible="active_lot_status != 'expired'"/>
+<field name="near_expiry_decision" widget="radio" invisible="active_lot_status != 'near_expiry'"/>
+</group>
+<group>
+<button name="action_choose_expired_return_damaged" type="object" string="Return To Damaged Stock" class="btn-primary" invisible="active_lot_status != 'expired' or expired_decision == 'damaged'"/>
+<button name="action_choose_near_expiry_keep" type="object" string="Keep On Shelf" class="btn-secondary" invisible="active_lot_status != 'near_expiry'"/>
+<button name="action_choose_near_expiry_return_vehicle" type="object" string="Return To Vehicle" class="btn-primary" invisible="active_lot_status != 'near_expiry'"/>
+<button name="action_choose_near_expiry_return_near_expiry" type="object" string="Return To Near Expiry Stock" class="btn-primary" invisible="active_lot_status != 'near_expiry'"/>
+</group>
+</group>
 <group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
 <group>
 <field name="visit_id" readonly="1"/>
@@ -31,8 +45,6 @@
 <field name="quantity" readonly="auto_quantity_locked"/>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
 <field name="expiry_date" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False"/>
-<field name="expired_decision" invisible="scan_mode != 'count' or active_lot_status != 'expired'"/>
-<field name="near_expiry_decision" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'"/>
 <field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
 <field name="return_qty" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)"/>
 <field name="return_route" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)" readonly="active_lot_status == 'expired'"/>
@@ -50,7 +62,6 @@
 <field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
 <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False or not expiry_date"/>
 <field name="is_near_expiry" readonly="1" invisible="1"/>
-<field name="scan_guidance" readonly="1" widget="text" invisible="not scan_guidance"/>
 </group>
 </group>
 <group string="Last Scan Result" invisible="scan_mode != 'count' or not last_product_id">
