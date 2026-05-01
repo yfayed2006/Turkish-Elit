@@ -45,6 +45,8 @@
 <field name="base_uom_id" readonly="1" invisible="not detected_product_id"/>
 <field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
 <field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
+<field name="detected_product_requires_lot" invisible="1"/>
+<field name="product_lot_guidance" readonly="1" widget="text" invisible="not product_lot_guidance"/>
 <field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
 <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False or not expiry_date"/>
 <field name="is_near_expiry" readonly="1" invisible="1"/>
