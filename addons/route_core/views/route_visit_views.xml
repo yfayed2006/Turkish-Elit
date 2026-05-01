@@ -763,8 +763,10 @@
 </group>
 </group>
 <div class="route_pda_visit_section_header">
-<span class="route_pda_visit_section_eyebrow">Visit Sections</span>
-<span class="route_pda_visit_section_title">Open the step you need now</span>
+<span class="route_pda_visit_section_eyebrow" invisible="visit_process_state != 'done'">Completed Visit</span>
+<span class="route_pda_visit_section_eyebrow" invisible="visit_process_state == 'done'">Visit Sections</span>
+<span class="route_pda_visit_section_title" invisible="visit_process_state != 'done'">Review completed visit details</span>
+<span class="route_pda_visit_section_title" invisible="visit_process_state == 'done'">Open the step you need now</span>
 </div>
 <notebook class="route_pda_visit_notebook">
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
