@@ -367,7 +367,7 @@ body {
 .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-grid {
     flex: 1 1 auto;
     min-height: 0;
-    height: 100%;
+    height: 100%%;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -598,7 +598,7 @@ body {
 }
 @media (max-width: 767px) {
     html, body {
-        width: 100%;
+        width: 100%%;
         height: 100vh;
         height: 100dvh;
         overflow: hidden;
@@ -608,7 +608,7 @@ body {
         display: flex;
         flex-direction: column;
         gap: 0;
-        width: 100%;
+        width: 100%%;
         height: 100vh;
         height: 100dvh;
         max-height: 100vh;
@@ -656,7 +656,7 @@ body {
         grid-template-columns: 1fr;
         padding: 10px;
         gap: 10px;
-        height: 100%;
+        height: 100%%;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
