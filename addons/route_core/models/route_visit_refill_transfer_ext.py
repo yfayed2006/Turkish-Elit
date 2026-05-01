@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, SUPERUSER_ID
 from odoo.exceptions import UserError
 
 
@@ -111,7 +111,8 @@ class RouteVisit(models.Model):
 
     def _get_refill_transfer_lines(self):
         self.ensure_one()
-        return self.line_ids.filtered(
+        visit = self.with_user(SUPERUSER_ID).sudo()
+        return visit.line_ids.filtered(
             lambda line: line.product_id and (line.supplied_qty or 0.0) > 0
         )
 
@@ -132,12 +133,15 @@ class RouteVisit(models.Model):
 
     def _prepare_refill_move_vals(self, picking, line):
         self.ensure_one()
-        unit_price = line.unit_price or line.product_id.lst_price or 0.0
+        line = line.with_user(SUPERUSER_ID).sudo()
+        picking = picking.with_user(SUPERUSER_ID).sudo()
+        product = line.product_id.with_user(SUPERUSER_ID).sudo()
+        unit_price = line.unit_price or product.lst_price or 0.0
         supplied_qty = line.supplied_qty or 0.0
         return {
-            "product_id": line.product_id.id,
+            "product_id": product.id,
             "product_uom_qty": supplied_qty,
-            "product_uom": line.uom_id.id or line.product_id.uom_id.id,
+            "product_uom": line.uom_id.id or product.uom_id.id,
             "location_id": picking.location_id.id,
             "location_dest_id": picking.location_dest_id.id,
             "picking_id": picking.id,
@@ -148,20 +152,23 @@ class RouteVisit(models.Model):
         }
 
     def _fill_move_line_qty_done(self, picking):
-        for move in picking.move_ids:
+        picking = picking.with_user(SUPERUSER_ID).sudo()
+        StockMoveLine = self.env["stock.move.line"].with_user(SUPERUSER_ID).sudo()
+
+        for move in picking.move_ids.with_user(SUPERUSER_ID).sudo():
             qty = move.product_uom_qty or 0.0
             if qty <= 0:
                 continue
 
             if move.move_line_ids:
                 remaining = qty
-                for ml in move.move_line_ids:
+                for ml in move.move_line_ids.with_user(SUPERUSER_ID).sudo():
                     if remaining <= 0:
                         break
                     ml.quantity = remaining
                     remaining = 0.0
             else:
-                self.env["stock.move.line"].create({
+                StockMoveLine.create({
                     "move_id": move.id,
                     "picking_id": picking.id,
                     "product_id": move.product_id.id,
@@ -212,38 +219,41 @@ class RouteVisit(models.Model):
 
     def _create_refill_picking(self):
         self.ensure_one()
+        visit = self.with_user(SUPERUSER_ID).sudo()
 
-        if self.refill_picking_id and self.refill_picking_id.state != "cancel":
-            return self.refill_picking_id
+        if visit.refill_picking_id and visit.refill_picking_id.state != "cancel":
+            return visit.refill_picking_id.with_user(SUPERUSER_ID).sudo()
 
-        if self.state != "in_progress":
+        if visit.state != "in_progress":
             raise UserError(_("Refill transfer can only be created while the visit is in progress."))
 
-        if self.visit_process_state != "reconciled":
+        if visit.visit_process_state != "reconciled":
             raise UserError(_("Refill transfer can only be created after reconciliation."))
 
-        self._check_route_stock_locations_ready()
+        visit._check_route_stock_locations_ready()
 
-        lines = self._get_refill_transfer_lines()
+        lines = visit._get_refill_transfer_lines()
         if not lines:
             raise UserError(_("There are no refill quantities to transfer."))
 
-        self._check_outlet_shelf_credit_limit()
+        visit._check_outlet_shelf_credit_limit()
 
-        picking_vals = self._prepare_refill_picking_vals()
-        picking = self.env["stock.picking"].create(picking_vals)
+        picking_vals = visit._prepare_refill_picking_vals()
+        picking = self.env["stock.picking"].with_user(SUPERUSER_ID).sudo().create(picking_vals)
 
-        for line in lines:
-            move_vals = self._prepare_refill_move_vals(picking, line)
-            self.env["stock.move"].create(move_vals)
+        StockMove = self.env["stock.move"].with_user(SUPERUSER_ID).sudo()
+        for line in lines.with_user(SUPERUSER_ID).sudo():
+            move_vals = visit._prepare_refill_move_vals(picking, line)
+            StockMove.create(move_vals)
 
-        self.refill_picking_id = picking.id
-        return picking
+        visit.write({"refill_picking_id": picking.id})
+        return picking.with_user(SUPERUSER_ID).sudo()
 
     def action_confirm_refill_transfer(self):
         self.ensure_one()
+        visit = self.with_user(SUPERUSER_ID).sudo()
 
-        picking = self._create_refill_picking()
+        picking = visit._create_refill_picking().with_user(SUPERUSER_ID).sudo()
 
         if picking.state == "draft":
             picking.action_confirm()
@@ -251,7 +261,7 @@ class RouteVisit(models.Model):
         if picking.state in ("confirmed", "waiting"):
             picking.action_assign()
 
-        self._fill_move_line_qty_done(picking)
+        visit._fill_move_line_qty_done(picking)
 
         if picking.state not in ("done", "cancel"):
             result = picking.button_validate()
