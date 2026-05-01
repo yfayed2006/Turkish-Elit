@@ -1314,7 +1314,7 @@ class RouteVisit(models.Model):
         view = self.env.ref("route_core.view_route_visit_finish_summary_wizard_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
-            "name": _("Visit Finished"),
+            "name": _("Completed Visit Summary"),
             "res_model": "route.visit.finish.summary.wizard",
             "view_mode": "form",
             "target": "new",
