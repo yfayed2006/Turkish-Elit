@@ -130,7 +130,7 @@
 </div>
 </div>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
-<div class="route_pda_group_title route_pda_payment_section_title">Visit Documents</div>
+<div class="route_pda_group_title route_pda_payment_section_title">Completed Documents</div>
 <div class="route_pda_statement_grid route_pda_statement_grid_summary">
 <div class="route_pda_payment_meta_item" invisible="not consignment_sale_order_ref or consignment_sale_order_ref == '-'">
 <span class="route_pda_payment_meta_label">Sale Order</span>
@@ -147,6 +147,23 @@
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Execution Mode</span>
 <field name="consignment_execution_mode_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="is_direct_sales_stop">
+<div class="route_pda_group_title route_pda_payment_section_title">Final Review Actions</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Receipt</span>
+<span class="fw-bold">Ready to Print</span>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">WhatsApp</span>
+<span class="fw-bold">Ready to Share</span>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Visit Status</span>
+<span class="fw-bold">Completed</span>
 </div>
 </div>
 </div>
