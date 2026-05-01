@@ -328,7 +328,14 @@ body {
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
     overflow: hidden;
 }
-.route-map-panel { margin-bottom: 14px; }
+.route-map-panel {
+    margin-bottom: 14px;
+}
+.route-map-panel.route-sticky-map {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
 .route-map-header,
 .route-cards-header {
     padding: 14px 16px;
@@ -351,7 +358,7 @@ body {
 }
 #map {
     width: 100%%;
-    height: 430px;
+    height: clamp(360px, 48vh, 460px);
     background: #eef2f7;
 }
 .route-map-empty {
@@ -373,6 +380,12 @@ body {
     background: linear-gradient(180deg, #fff, #fbfbfd);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
     overflow: hidden;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.route-card.route-card-active {
+    border-color: var(--route-primary);
+    box-shadow: 0 12px 30px rgba(130, 70, 111, 0.22);
+    transform: translateY(-2px);
 }
 .route-card-head {
     padding: 14px;
@@ -480,8 +493,8 @@ body {
 .route-popup-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .route-popup-actions .route-btn { padding: 7px 9px; font-size: 12px; }
 .route-marker {
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -489,8 +502,16 @@ body {
     background: var(--route-primary);
     color: #fff;
     font-weight: 900;
+    font-size: 14px;
     border: 3px solid #fff;
-    box-shadow: 0 5px 13px rgba(15, 23, 42, 0.28);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.30);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.route-marker.route-marker-focus {
+    transform: scale(1.45);
+    border-color: #fef08a;
+    box-shadow: 0 0 0 8px rgba(130, 70, 111, 0.18), 0 12px 26px rgba(15, 23, 42, 0.38);
+    z-index: 1000;
 }
 .route-marker.done { background: var(--route-green); }
 .route-marker.active { background: #f97316; }
@@ -508,6 +529,7 @@ body {
 }
 @media (max-width: 720px) {
     body { padding: 8px; }
+    .route-map-panel.route-sticky-map { position: relative; top: auto; }
     #map { height: 300px; }
     .route-map-header, .route-cards-header { padding: 12px; align-items: flex-start; flex-direction: column; }
     .route-cards-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
@@ -578,7 +600,7 @@ body {
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits found for today.</div>'
         return self._base_head("Today's Route Map") + """
 <div class="route-frame">
-    <section class="route-map-panel">
+    <section class="route-map-panel route-sticky-map">
         <div class="route-map-header">
             <div>
                 <h1 class="route-map-title">Today's Route Map</h1>
@@ -623,6 +645,59 @@ function popupHtml(visit) {
             <a class="route-btn" target="_blank" rel="noopener" href="${esc(mapLink)}">Navigate</a>
         </div>`;
 }
+let mapInstance = null;
+const routeMarkers = {};
+function markerHtml(visit, focused=false) {
+    return `<div class="route-marker ${markerClass(visit)} ${focused ? 'route-marker-focus' : ''}">${visit.index}</div>`;
+}
+function markerIcon(visit, focused=false) {
+    const size = focused ? 46 : 34;
+    const anchor = Math.round(size / 2);
+    return L.divIcon({
+        className: '',
+        html: markerHtml(visit, focused),
+        iconSize: [size, size],
+        iconAnchor: [anchor, anchor]
+    });
+}
+function setActiveVisit(visitId, panToMarker=false) {
+    visits.forEach(visit => {
+        const isActive = String(visit.id) === String(visitId);
+        const marker = routeMarkers[visit.id];
+        if (marker) {
+            marker.setIcon(markerIcon(visit, isActive));
+            if (isActive && panToMarker && mapInstance) {
+                mapInstance.panTo([visit.lat, visit.lng], {animate: true, duration: .35});
+            }
+        }
+    });
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+}
+function installCardFocus() {
+    const cards = Array.from(document.querySelectorAll('.route-card[data-visit-id]'));
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', () => setActiveVisit(card.dataset.visitId, true));
+        card.addEventListener('focusin', () => setActiveVisit(card.dataset.visitId, true));
+        card.addEventListener('click', event => {
+            if (!event.target.closest('a')) setActiveVisit(card.dataset.visitId, true);
+        });
+    });
+    if ('IntersectionObserver' in window && cards.length) {
+        let currentId = null;
+        const observer = new IntersectionObserver(entries => {
+            const visible = entries
+                .filter(entry => entry.isIntersecting)
+                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+            if (visible && visible.target.dataset.visitId !== currentId) {
+                currentId = visible.target.dataset.visitId;
+                setActiveVisit(currentId, false);
+            }
+        }, {threshold: [0.35, 0.55, 0.75]});
+        cards.forEach(card => observer.observe(card));
+    }
+}
 function renderMap() {
     const points = visits.filter(v => v.hasPoint);
     if (!points.length || typeof L === 'undefined') {
@@ -630,30 +705,31 @@ function renderMap() {
         document.getElementById('emptyMap').style.display = 'block';
         return;
     }
-    const map = L.map('map', { scrollWheelZoom: false });
+    mapInstance = L.map('map', { scrollWheelZoom: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    }).addTo(mapInstance);
     const bounds = [];
     points.forEach(visit => {
         const latLng = [visit.lat, visit.lng];
         bounds.push(latLng);
-        const icon = L.divIcon({
-            className: '',
-            html: `<div class="route-marker ${markerClass(visit)}">${visit.index}</div>`,
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        });
-        L.marker(latLng, { icon }).addTo(map).bindPopup(popupHtml(visit));
+        const marker = L.marker(latLng, { icon: markerIcon(visit, false), zIndexOffset: visit.index }).addTo(mapInstance).bindPopup(popupHtml(visit));
+        marker.on('click', () => setActiveVisit(visit.id, false));
+        routeMarkers[visit.id] = marker;
     });
     if (bounds.length === 1) {
-        map.setView(bounds[0], 15);
+        mapInstance.setView(bounds[0], 15);
     } else {
-        map.fitBounds(bounds, { padding: [30, 30] });
+        mapInstance.fitBounds(bounds, { padding: [34, 34] });
+    }
+    const firstPoint = points[0];
+    if (firstPoint) {
+        window.setTimeout(() => setActiveVisit(firstPoint.id, false), 250);
     }
 }
 renderMap();
+installCardFocus();
 </script>
 </body>
 </html>
