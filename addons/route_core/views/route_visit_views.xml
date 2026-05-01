@@ -218,10 +218,10 @@
 <field name="start_datetime" readonly="1"/>
 </group>
 <group>
-<field name="consignment_amount_due_now" string="Current Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="consignment_amount_due_now" string="Total Outlet Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_immediate_remaining_amount" string="Current Visit Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_immediate_remaining_amount" string="Remaining After Collection" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
@@ -323,9 +323,7 @@
 <page string="Visit Lines">
 <field name="line_ids">
 <list editable="bottom">
-<field name="can_delete_refill_line" column_invisible="1"/>
-<field name="vehicle_product_ids" column_invisible="1"/>
-<field name="product_id" domain="[('id', 'in', vehicle_product_ids)]" options="{'no_create': True}"/>
+<field name="product_id"/>
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" options="{'no_create': True}"/>
 <field name="expiry_date" readonly="1" optional="show"/>
@@ -334,11 +332,8 @@
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="route_refill_already_approved_qty" string="Already Approved" readonly="1" optional="show"/>
-<field name="route_refill_available_to_add_qty" string="Available To Add" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
-<field name="supplied_qty" string="Approved Refill" optional="show" force_save="1"/>
-<button name="action_remove_refill_line" type="object" icon="fa-trash" title="Remove added refill line" invisible="not can_delete_refill_line"/>
+<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="last_sold_date" readonly="1" optional="hide"/>
@@ -394,12 +389,12 @@
 <group>
 <field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
 <field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Total Due Now" readonly="1"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge"/>
 </group>
 <group>
 <field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Immediate Remaining" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Remaining After Collection" readonly="1"/>
 <field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
@@ -600,13 +595,13 @@
 </div>
 </div>
 <div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_pda_visit_quick_label">Amount Due Now</div>
+<div class="route_pda_visit_quick_label">Total Outlet Due</div>
 <div class="route_pda_visit_quick_value">
 <field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_pda_visit_quick_label">Amount Due Now</div>
+<div class="route_pda_visit_quick_label">Total Due Now</div>
 <div class="route_pda_visit_quick_value">
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
@@ -624,13 +619,13 @@
 </div>
 </div>
 <div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_pda_visit_quick_label">Remaining</div>
+<div class="route_pda_visit_quick_label">Visit Remaining</div>
 <div class="route_pda_visit_quick_value">
 <field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_pda_visit_quick_label">Remaining</div>
+<div class="route_pda_visit_quick_label">Remaining After Collection</div>
 <div class="route_pda_visit_quick_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -665,10 +660,10 @@
 <field name="end_datetime" readonly="1"/>
 </group>
 <group>
-<field name="consignment_amount_due_now" string="Current Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="consignment_amount_due_now" string="Total Outlet Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_immediate_remaining_amount" string="Immediate Remaining" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
+<field name="consignment_immediate_remaining_amount" string="Current Visit Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
+<field name="direct_stop_immediate_remaining_amount" string="Remaining After Collection" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
 <field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
 <field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
@@ -695,12 +690,12 @@
 <group>
 <field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
 <field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Amount Due Now" readonly="1"/>
+<field name="direct_stop_grand_due_amount" string="Total Due Now" readonly="1"/>
 <field name="direct_stop_return_status" readonly="1" widget="badge"/>
 </group>
 <group>
 <field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Immediate Remaining" readonly="1"/>
+<field name="direct_stop_settlement_remaining_amount" string="Remaining After Collection" readonly="1"/>
 <field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
 <field name="direct_stop_settlement_ready" readonly="1"/>
 </group>
@@ -777,9 +772,7 @@
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
 <list editable="bottom">
-<field name="can_delete_refill_line" column_invisible="1"/>
-<field name="vehicle_product_ids" column_invisible="1"/>
-<field name="product_id" domain="[('id', 'in', vehicle_product_ids)]" options="{'no_create': True}"/>
+<field name="product_id"/>
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
 <field name="expiry_date" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
@@ -788,11 +781,8 @@
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="route_refill_already_approved_qty" string="Already Approved" readonly="1" optional="show"/>
-<field name="route_refill_available_to_add_qty" string="Available To Add" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
-<field name="supplied_qty" string="Approved Refill" optional="show" force_save="1"/>
-<button name="action_remove_refill_line" type="object" icon="fa-trash" title="Remove added refill line" invisible="not can_delete_refill_line"/>
+<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="unit_price" optional="hide"/>
@@ -821,13 +811,13 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Net Amount For This Visit</div>
+<div class="route_mobile_info_label">Current Visit Net</div>
 <div class="route_mobile_info_value">
 <field name="consignment_net_amount_for_visit" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_label">Total Outlet Due</div>
 <div class="route_mobile_info_value">
 <field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
 </div>
@@ -839,7 +829,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_label">Current Visit Remaining</div>
 <div class="route_mobile_info_value">
 <field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -871,13 +861,13 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Net Amount For This Visit</div>
+<div class="route_mobile_info_label">Current Visit Net</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_label">Total Due Now</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
@@ -889,7 +879,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_label">Remaining After Collection</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -999,7 +989,7 @@
 <page string="Payments">
 <div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales' or (not display_payment_ids and consignment_amount_due_now == 0 and collected_amount == 0 and consignment_immediate_remaining_amount == 0 and promise_to_pay_count == 0)">
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_label">Total Outlet Due</div>
 <div class="route_mobile_info_value">
 <field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
 </div>
@@ -1011,7 +1001,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_label">Current Visit Remaining</div>
 <div class="route_mobile_info_value">
 <field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -1025,7 +1015,7 @@
 </div>
 <div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales' or (not display_payment_ids and direct_stop_grand_due_amount == 0 and direct_stop_settlement_paid_amount == 0 and direct_stop_immediate_remaining_amount == 0 and not direct_stop_open_promise_amount)">
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Amount Due Now</div>
+<div class="route_mobile_info_label">Total Due Now</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
 </div>
@@ -1037,7 +1027,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Immediate Remaining</div>
+<div class="route_mobile_info_label">Remaining After Collection</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
