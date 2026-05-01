@@ -47,10 +47,6 @@ class RouteVisitMissingLotWizard(models.TransientModel):
         self.ensure_one()
         self._save_selected_lots()
 
-        # This button continues an approved PDA workflow. The following stock
-        # operations validate internal transfers and may internally read
-        # product.product records. Salesperson users do not need inventory-level
-        # product access, so the backend continuation must run as superuser.
         visit = (
             self.env["route.visit"]
             .with_user(SUPERUSER_ID)
