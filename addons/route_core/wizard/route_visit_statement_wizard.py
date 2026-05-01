@@ -21,9 +21,9 @@ class RouteVisitStatementWizard(models.TransientModel):
     current_visit_sale_amount = fields.Monetary(string="Current Visit Sale", currency_field="currency_id", compute="_compute_statement", readonly=True)
     current_visit_return_amount = fields.Monetary(string="Current Visit Returns", currency_field="currency_id", compute="_compute_statement", readonly=True)
     net_amount_for_visit = fields.Monetary(string="Net Amount For This Visit", currency_field="currency_id", compute="_compute_statement", readonly=True)
-    amount_due_now = fields.Monetary(string="Amount Due Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    amount_due_now = fields.Monetary(string="Total Outlet Due", currency_field="currency_id", compute="_compute_statement", readonly=True)
     suggested_collection_now = fields.Monetary(string="Suggested Cash Collection Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
-    expected_remaining_after_payment = fields.Monetary(string="Expected Immediate Remaining", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    expected_remaining_after_payment = fields.Monetary(string="Expected Remaining After Collection", currency_field="currency_id", compute="_compute_statement", readonly=True)
 
     previous_confirmed_payment_count = fields.Integer(string="Previous Confirmed Payments", compute="_compute_statement", readonly=True)
     previous_confirmed_payment_amount = fields.Monetary(string="Previous Confirmed Payments Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
