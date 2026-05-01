@@ -323,6 +323,7 @@
 <page string="Visit Lines">
 <field name="line_ids">
 <list editable="bottom">
+<field name="can_delete_refill_line" column_invisible="1"/>
 <field name="product_id"/>
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" options="{'no_create': True}"/>
@@ -333,7 +334,8 @@
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
-<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
+<field name="supplied_qty" string="Approved Refill" optional="show" force_save="1"/>
+<button name="action_remove_refill_line" type="object" icon="fa-trash" title="Remove added refill line" invisible="not can_delete_refill_line"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="last_sold_date" readonly="1" optional="hide"/>
@@ -772,6 +774,7 @@
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
 <field name="line_ids">
 <list editable="bottom">
+<field name="can_delete_refill_line" column_invisible="1"/>
 <field name="product_id"/>
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
@@ -782,7 +785,8 @@
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
-<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
+<field name="supplied_qty" string="Approved Refill" optional="show" force_save="1"/>
+<button name="action_remove_refill_line" type="object" icon="fa-trash" title="Remove added refill line" invisible="not can_delete_refill_line"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 <field name="unit_price" optional="hide"/>
