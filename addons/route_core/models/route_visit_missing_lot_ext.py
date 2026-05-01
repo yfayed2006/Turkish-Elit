@@ -51,18 +51,26 @@ class RouteVisit(models.Model):
         if not missing_lines:
             return False
 
-        wizard = self.env["route.visit.missing.lot.wizard"].create({
+        wizard_line_values = []
+        Product = self.env["product.product"].sudo()
+        for line in missing_lines.sudo():
+            product = Product.browse(line.product_id.id)
+            wizard_line_values.append((0, 0, {
+                "visit_line_id": line.id,
+                # Keep the product as safe scalar/display values in this transient wizard.
+                # Some salesperson users do not have direct product.product read access at
+                # the web-client reload point, so the PDA lot screen must not depend on
+                # rendering a product.product many2one.
+                "product_ref_id": product.id,
+                "product_display_name": product.display_name or product.name or str(product.id),
+                "required_qty": self._get_missing_lot_required_qty(line, purpose),
+                "lot_id": line.lot_id.id,
+            }))
+
+        wizard = self.env["route.visit.missing.lot.wizard"].sudo().create({
             "visit_id": self.id,
             "resume_action": resume_action,
-            "line_ids": [
-                (0, 0, {
-                    "visit_line_id": line.id,
-                    "product_id": line.product_id.id,
-                    "required_qty": self._get_missing_lot_required_qty(line, purpose),
-                    "lot_id": line.lot_id.id,
-                })
-                for line in missing_lines
-            ],
+            "line_ids": wizard_line_values,
         })
         return {
             "type": "ir.actions.act_window",
