@@ -18,6 +18,16 @@ class RouteVisitLine(models.Model):
         Quant = self.env["stock.quant"].with_user(SUPERUSER_ID).sudo()
         return "available_quantity" if "available_quantity" in Quant._fields else "quantity"
 
+    def _route_get_quant_available_qty(self, quant):
+        """Return available qty without using non-stored fields in SQL domains.
+
+        In Odoo 19, stock.quant.available_quantity is computed and not stored,
+        so it cannot be used in a search domain. We search by stored fields only
+        and read the available value in Python.
+        """
+        qty_field = self._route_get_quant_available_field()
+        return max(getattr(quant, qty_field, 0.0) or 0.0, 0.0)
+
     def _route_get_vehicle_source_location(self):
         self.ensure_one()
         visit = self.visit_id
@@ -31,7 +41,6 @@ class RouteVisitLine(models.Model):
     def _compute_vehicle_product_ids(self):
         Product = self.env["product.product"].with_user(SUPERUSER_ID).sudo()
         Quant = self.env["stock.quant"].with_user(SUPERUSER_ID).sudo()
-        qty_field = self._route_get_quant_available_field()
 
         for line in self:
             products = Product.browse()
@@ -40,9 +49,10 @@ class RouteVisitLine(models.Model):
             if source_location:
                 quants = Quant.search([
                     ("location_id", "child_of", source_location.id),
-                    (qty_field, ">", 0),
                 ])
-                products = quants.mapped("product_id")
+                products = quants.filtered(
+                    lambda quant: line._route_get_quant_available_qty(quant) > 0
+                ).mapped("product_id")
 
             line.vehicle_product_ids = products
 
@@ -58,16 +68,20 @@ class RouteVisitLine(models.Model):
             return 0.0
 
         Quant = self.env["stock.quant"].with_user(SUPERUSER_ID).sudo()
-        qty_field = self._route_get_quant_available_field()
         domain = [
             ("location_id", "child_of", source_location.id),
             ("product_id", "=", product.id),
-            (qty_field, ">", 0),
         ]
         if lot:
             domain.append(("lot_id", "=", lot.id))
 
-        return sum(max(getattr(quant, qty_field, 0.0) or 0.0, 0.0) for quant in Quant.search(domain))
+        return sum(
+            qty for qty in (
+                self._route_get_quant_available_qty(quant)
+                for quant in Quant.search(domain)
+            )
+            if qty > 0
+        )
 
     @api.onchange("visit_id", "product_id", "lot_id")
     def _onchange_vehicle_available_qty(self):
