@@ -1,4 +1,4 @@
-from odoo import _, models
+from odoo import _, models, SUPERUSER_ID
 from odoo.exceptions import UserError
 
 
@@ -7,7 +7,8 @@ class RouteVisit(models.Model):
 
     def _get_missing_lot_lines(self, purpose="any"):
         self.ensure_one()
-        lines = self.line_ids.filtered(
+        visit = self.with_user(SUPERUSER_ID).sudo()
+        lines = visit.line_ids.filtered(
             lambda line: line.product_id
             and getattr(line.product_id, "tracking", "none") in ("lot", "serial")
             and not line.lot_id
@@ -52,22 +53,17 @@ class RouteVisit(models.Model):
             return False
 
         wizard_line_values = []
-        Product = self.env["product.product"].sudo()
-        for line in missing_lines.sudo():
-            product = Product.browse(line.product_id.id)
+        for line in missing_lines.with_user(SUPERUSER_ID).sudo():
+            product = line.product_id.with_user(SUPERUSER_ID).sudo()
             wizard_line_values.append((0, 0, {
                 "visit_line_id": line.id,
-                # Keep the product as safe scalar/display values in this transient wizard.
-                # Some salesperson users do not have direct product.product read access at
-                # the web-client reload point, so the PDA lot screen must not depend on
-                # rendering a product.product many2one.
                 "product_ref_id": product.id,
                 "product_display_name": product.display_name or product.name or str(product.id),
                 "required_qty": self._get_missing_lot_required_qty(line, purpose),
                 "lot_id": line.lot_id.id,
             }))
 
-        wizard = self.env["route.visit.missing.lot.wizard"].sudo().create({
+        wizard = self.env["route.visit.missing.lot.wizard"].with_user(SUPERUSER_ID).sudo().create({
             "visit_id": self.id,
             "resume_action": resume_action,
             "line_ids": wizard_line_values,
@@ -122,19 +118,27 @@ class RouteVisit(models.Model):
 
     def _fill_move_line_qty_done(self, picking):
         self.ensure_one()
-        for move in picking.move_ids:
+
+        visit = self.with_user(SUPERUSER_ID).sudo()
+        picking = picking.with_user(SUPERUSER_ID).sudo()
+        StockMoveLine = self.env["stock.move.line"].with_user(SUPERUSER_ID).sudo()
+
+        for move in picking.move_ids.with_user(SUPERUSER_ID).sudo():
             qty = move.product_uom_qty or 0.0
             if qty <= 0:
                 continue
 
-            line = move.route_visit_line_id or self.line_ids.filtered(lambda l: l.product_id == move.product_id)[:1]
-            tracking = getattr(move.product_id, "tracking", "none") or "none"
-            lot = line.lot_id if line and tracking in ("lot", "serial") else False
+            line = move.route_visit_line_id.with_user(SUPERUSER_ID).sudo()
+            if not line:
+                line = visit.line_ids.filtered(lambda l: l.product_id.id == move.product_id.id)[:1]
+
+            tracking = getattr(move.product_id.with_user(SUPERUSER_ID).sudo(), "tracking", "none") or "none"
+            lot = line.lot_id.with_user(SUPERUSER_ID).sudo() if line and tracking in ("lot", "serial") else False
 
             if lot:
                 if move.move_line_ids:
-                    move.move_line_ids.unlink()
-                self.env["stock.move.line"].create({
+                    move.move_line_ids.with_user(SUPERUSER_ID).sudo().unlink()
+                StockMoveLine.create({
                     "move_id": move.id,
                     "picking_id": picking.id,
                     "product_id": move.product_id.id,
@@ -148,13 +152,13 @@ class RouteVisit(models.Model):
 
             if move.move_line_ids:
                 remaining = qty
-                for ml in move.move_line_ids:
+                for ml in move.move_line_ids.with_user(SUPERUSER_ID).sudo():
                     if remaining <= 0:
                         break
                     ml.quantity = remaining
                     remaining = 0.0
             else:
-                self.env["stock.move.line"].create({
+                StockMoveLine.create({
                     "move_id": move.id,
                     "picking_id": picking.id,
                     "product_id": move.product_id.id,
