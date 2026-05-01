@@ -12,9 +12,10 @@
 <div class="alert alert-warning" role="alert"> Some tracked products are missing a Lot/Serial Number. Complete them below, then continue. </div>
 <field name="line_ids" nolabel="1">
 <list editable="bottom" create="0" delete="0">
-<field name="product_id" readonly="1"/>
+<field name="product_ref_id" column_invisible="1"/>
+<field name="product_display_name" string="Product" readonly="1"/>
 <field name="required_qty" readonly="1"/>
-<field name="lot_id" options="{'no_create': True}"/>
+<field name="lot_id" domain="[('product_id', '=', product_ref_id)]" options="{'no_create': True}"/>
 </list>
 </field>
 </sheet>
