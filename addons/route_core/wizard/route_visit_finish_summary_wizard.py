@@ -82,6 +82,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     consignment_remaining_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_promise_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_payment_count = fields.Integer(compute="_compute_consignment_summary", store=False)
+    show_consignment_payments_section = fields.Boolean(compute="_compute_consignment_summary", store=False)
     consignment_payment_summary_html = fields.Html(compute="_compute_consignment_summary", sanitize=False, store=False)
     finish_message = fields.Html(compute="_compute_finish_message", sanitize=False, store=False)
 
@@ -160,6 +161,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 rec.consignment_remaining_amount = 0.0
                 rec.consignment_promise_amount = 0.0
                 rec.consignment_payment_count = 0
+                rec.show_consignment_payments_section = False
                 rec.consignment_payment_summary_html = False
                 continue
             summary = rec.visit_id._get_consignment_receipt_summary() if hasattr(rec.visit_id, "_get_consignment_receipt_summary") else {}
@@ -173,6 +175,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rec.consignment_promise_amount = summary.get("promise_amount", 0.0)
             payments = rec.visit_id._get_consignment_receipt_payments() if hasattr(rec.visit_id, "_get_consignment_receipt_payments") else self.env["route.visit.payment"]
             rec.consignment_payment_count = len(payments)
+            rec.show_consignment_payments_section = bool(payments)
             rec.consignment_payment_summary_html = rec.visit_id._build_payment_cards_html(
                 payments,
                 empty_message=_("<div class='alert alert-info mb-0'>No confirmed payments were found for this visit.</div>"),
@@ -199,7 +202,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     def _compute_finish_message(self):
         for rec in self:
             if not rec.is_direct_sales_stop:
-                extra = _("Completed documents, receipt, WhatsApp, and final review actions are available below.")
+                extra = _("This is the final visit summary. Completed documents, receipt, WhatsApp, and review actions are available below.")
                 rec.finish_message = "".join([
                     '<div class="alert alert-success mb-0 route_pda_finish_alert">',
                     f"<strong>{_('Visit completed successfully.')}</strong><br/>",
@@ -249,4 +252,5 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
             return self.visit_id._get_pda_form_action()
         return {"type": "ir.actions.act_window_close"}
+
 
