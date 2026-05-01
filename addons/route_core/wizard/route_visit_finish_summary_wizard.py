@@ -77,10 +77,15 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     consignment_refill_ref = fields.Char(compute="_compute_consignment_summary", store=False)
     consignment_return_refs = fields.Char(compute="_compute_consignment_summary", store=False)
     consignment_execution_mode_label = fields.Char(compute="_compute_consignment_summary", store=False)
+    consignment_previous_due_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
+    consignment_current_visit_sale_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
+    consignment_current_visit_return_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
+    consignment_net_amount_for_visit = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_current_due_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_collected_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_remaining_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_promise_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
+    consignment_total_outstanding_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_payment_count = fields.Integer(compute="_compute_consignment_summary", store=False)
     show_consignment_payments_section = fields.Boolean(compute="_compute_consignment_summary", store=False)
     consignment_payment_summary_html = fields.Html(compute="_compute_consignment_summary", sanitize=False, store=False)
@@ -156,10 +161,15 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 rec.consignment_refill_ref = False
                 rec.consignment_return_refs = False
                 rec.consignment_execution_mode_label = False
+                rec.consignment_previous_due_amount = 0.0
+                rec.consignment_current_visit_sale_amount = 0.0
+                rec.consignment_current_visit_return_amount = 0.0
+                rec.consignment_net_amount_for_visit = 0.0
                 rec.consignment_current_due_amount = 0.0
                 rec.consignment_collected_amount = 0.0
                 rec.consignment_remaining_amount = 0.0
                 rec.consignment_promise_amount = 0.0
+                rec.consignment_total_outstanding_amount = 0.0
                 rec.consignment_payment_count = 0
                 rec.show_consignment_payments_section = False
                 rec.consignment_payment_summary_html = False
@@ -169,10 +179,15 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rec.consignment_refill_ref = summary.get("refill_ref") or "-"
             rec.consignment_return_refs = summary.get("return_refs") or "-"
             rec.consignment_execution_mode_label = rec.visit_id.visit_execution_mode_label or "-"
-            rec.consignment_current_due_amount = summary.get("current_due", 0.0)
+            rec.consignment_previous_due_amount = summary.get("previous_due", 0.0)
+            rec.consignment_current_visit_sale_amount = summary.get("visit_sale_amount", 0.0)
+            rec.consignment_current_visit_return_amount = summary.get("returned_value", 0.0)
+            rec.consignment_net_amount_for_visit = summary.get("current_visit_net", 0.0)
+            rec.consignment_current_due_amount = summary.get("total_outlet_due", summary.get("current_due", 0.0))
             rec.consignment_collected_amount = summary.get("settled_amount", 0.0)
-            rec.consignment_remaining_amount = summary.get("remaining_amount", 0.0)
+            rec.consignment_remaining_amount = summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0))
             rec.consignment_promise_amount = summary.get("promise_amount", 0.0)
+            rec.consignment_total_outstanding_amount = summary.get("total_outstanding_after_collection", 0.0)
             payments = rec.visit_id._get_consignment_receipt_payments() if hasattr(rec.visit_id, "_get_consignment_receipt_payments") else self.env["route.visit.payment"]
             rec.consignment_payment_count = len(payments)
             rec.show_consignment_payments_section = bool(payments)
@@ -252,5 +267,6 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
             return self.visit_id._get_pda_form_action()
         return {"type": "ir.actions.act_window_close"}
+
 
 
