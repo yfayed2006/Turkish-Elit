@@ -508,7 +508,7 @@
 </div>
 </div>
 </page>
-<page string="No Sale Reason" invisible="not no_sale_reason">
+<page string="Completion Notes" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
 <page string="Internal Tools" invisible="1">
@@ -894,19 +894,19 @@
 <div class="route_mobile_detail_grid">
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_reference_value">
 <field name="summary_sale_order_ref" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_refill_transfer_ref">
 <div class="route_mobile_detail_label">Refill Transfer</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_reference_value">
 <field name="summary_refill_transfer_ref" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs or summary_return_transfer_refs == '-'">
 <div class="route_mobile_detail_label">Return Transfers</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_reference_value">
 <field name="summary_return_transfer_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
@@ -1172,7 +1172,7 @@
 </div>
 </div>
 </page>
-<page string="No Sale Reason" invisible="not no_sale_reason">
+<page string="Completion Notes" invisible="not no_sale_reason">
 <field name="no_sale_reason" readonly="1"/>
 </page>
 <page string="Internal Tools" invisible="1">
