@@ -79,17 +79,17 @@
 <tr>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Current Visit Returns</td>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.current_visit_return_amount or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Net Amount For This Visit</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Current Visit Net</td>
 <td style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.net_amount_for_visit or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Amount Due Now</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Total Outlet Due</td>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
-<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Suggested Cash Collection Now</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Suggested Cash Collection</td>
 <td style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.suggested_collection_now or 0.0, doc.currency_id.name or '')"/>
 </tr>
 <tr>
-<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Expected Immediate Remaining</td>
+<td style="padding:8px 10px; border-right:1px solid #d1d5db;">Expected Remaining After Collection</td>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.expected_remaining_after_payment or 0.0, doc.currency_id.name or '')"/>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db;">Open / Overdue Promises</td>
 <td style="padding:8px 10px;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
