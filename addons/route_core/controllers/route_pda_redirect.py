@@ -655,7 +655,8 @@ function processBadgeClass(v) {{ if (v.bucket === 'done') return 'badge-done'; i
 function locationBadgeText(v) {{ if (v.geo_status === 'outside') return 'Outside Zone'; if (v.geo_status === 'inside') return 'Inside Zone'; if (!v.has_point) return 'No Location'; if (v.geo_status === 'pending') return 'Pending Check-in'; return v.geo_status_label || 'Location'; }}
 function locationBadgeClass(v) {{ if (v.geo_status === 'outside') return 'badge-outside'; if (v.geo_status === 'inside') return 'badge-done'; if (!v.has_point) return 'badge-missing'; return 'badge-pending'; }}
 function actions(v) {{
-  let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">Open Visit</a>`;
+  const primaryLabel = v.bucket === 'done' ? 'Review Visit' : 'Open Visit';
+  let html = `<a class="map-btn primary" href="${{v.visit_url}}" target="_top">${{primaryLabel}}</a>`;
   if (v.has_point) html += `<a class="map-btn" href="${{v.navigate_url}}" target="_blank">Navigate</a>`;
   if (v.can_start) html += `<a class="map-btn green" href="${{v.start_url}}">Start Visit</a>`;
   if (v.has_point) html += `<a class="map-btn light" href="${{v.outlet_map_url}}" target="_blank">Outlet Map</a>`;
@@ -664,7 +665,7 @@ function actions(v) {{
 function card(v) {{
   const outsideNote = v.geo_status === 'outside'
     ? `<div class="hint" style="color:#991b1b">Outside outlet radius${{v.outside_reason ? ': ' + escapeHtml(v.outside_reason) : '. Reason review required.'}}</div>`
-    : `<div class="hint">${{escapeHtml(v.start_hint || '')}}</div>`;
+    : `<div class="hint">${{escapeHtml(v.bucket === 'done' ? 'Completed visit. Open for review, receipt, or sharing actions.' : (v.start_hint || ''))}}</div>`;
   return `<article class="visit-card" data-visit-id="${{v.id}}">
     <div class="visit-top">
       <div class="visit-title-row"><span class="visit-number">${{escapeHtml(v.index)}}</span><div class="visit-title-text"><div class="visit-title">${{escapeHtml(v.outlet || v.name)}}</div><div class="visit-ref">${{escapeHtml(v.name)}}</div></div></div>
@@ -792,6 +793,7 @@ window.addEventListener('load', () => {{ renderList(); bindVisitListScroll(); if
                 message = str(exc)
                 message_type = "danger"
         return redirect("/route_core/pda/today_route_map/frame/%s?message=%s&message_type=%s&ts=%s" % (route_map_id, quote_plus(message), quote_plus(message_type), int(time.time())))
+
 
 
 
