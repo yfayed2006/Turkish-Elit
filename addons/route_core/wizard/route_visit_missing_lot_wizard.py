@@ -1,30 +1,116 @@
-<odoo>
-<record id="view_route_visit_missing_lot_wizard_form" model="ir.ui.view">
-<field name="name">route.visit.missing.lot.wizard.form</field>
-<field name="model">route.visit.missing.lot.wizard</field>
-<field name="arch" type="xml">
-<form string="Complete Missing Lots" create="0" edit="1" delete="0">
-<sheet>
-<group>
-<field name="visit_id" readonly="1"/>
-<field name="resume_action" readonly="1"/>
-</group>
-<div class="alert alert-warning" role="alert"> Some tracked products are missing a Lot/Serial Number. Complete them below, then continue. </div>
-<field name="line_ids" nolabel="1">
-<list editable="bottom" create="0" delete="0">
-<field name="product_ref_id" column_invisible="1"/>
-<field name="product_display_name" string="Product" readonly="1"/>
-<field name="required_qty" readonly="1"/>
-<field name="lot_id" domain="[('product_id', '=', product_ref_id)]" options="{'no_create': True}"/>
-</list>
-</field>
-</sheet>
-<footer>
-<button name="action_save_and_continue" type="object" string="Save and Continue" class="btn-primary"/>
-<button name="action_save_only" type="object" string="Save Only" class="btn-secondary"/>
-<button string="Cancel" special="cancel" class="btn-secondary"/>
-</footer>
-</form>
-</field>
-</record>
-</odoo>
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+
+class RouteVisitMissingLotWizard(models.TransientModel):
+    _name = "route.visit.missing.lot.wizard"
+    _description = "Route Visit Missing Lot Wizard"
+
+    visit_id = fields.Many2one("route.visit", string="Visit", required=True, readonly=True)
+    resume_action = fields.Selection(
+        [
+            ("reconcile_count", "Reconcile Count"),
+            ("confirm_return_transfers", "Confirm Return Transfers"),
+            ("confirm_refill", "Confirm Refill"),
+            ("create_sale_order", "Create Sale Order"),
+        ],
+        string="Continue With",
+        required=True,
+        readonly=True,
+    )
+    line_ids = fields.One2many(
+        "route.visit.missing.lot.wizard.line",
+        "wizard_id",
+        string="Missing Lot Lines",
+    )
+
+    def _save_selected_lots(self):
+        self.ensure_one()
+        wizard = self.sudo()
+
+        if not wizard.line_ids:
+            raise UserError(_("There are no missing lot lines to complete."))
+
+        missing = wizard.line_ids.filtered(lambda line: not line.lot_id)
+        if missing:
+            raise UserError(_("Please select a Lot/Serial Number for every listed product before continuing."))
+
+        for line in wizard.line_ids:
+            line.visit_line_id.sudo().write({"lot_id": line.lot_id.id})
+
+    def action_save_only(self):
+        self.ensure_one()
+        self._save_selected_lots()
+        return self.visit_id._get_pda_form_action()
+
+    def action_save_and_continue(self):
+        self.ensure_one()
+        self._save_selected_lots()
+
+        # Continue the route workflow with elevated access because this step
+        # creates and validates route stock operations while the salesperson
+        # remains in the approved PDA visit flow.
+        visit = self.visit_id.sudo().with_context(skip_missing_lot_check=True)
+        resume_action = self.sudo().resume_action
+
+        if resume_action == "reconcile_count":
+            return visit.action_ux_reconcile_count()
+        if resume_action == "confirm_return_transfers":
+            return visit.action_ux_confirm_return_transfers()
+        if resume_action == "confirm_refill":
+            return visit.action_ux_confirm_refill()
+        if resume_action == "create_sale_order":
+            return visit.action_create_sale_order()
+        return self.visit_id._get_pda_form_action()
+
+
+class RouteVisitMissingLotWizardLine(models.TransientModel):
+    _name = "route.visit.missing.lot.wizard.line"
+    _description = "Route Visit Missing Lot Wizard Line"
+
+    wizard_id = fields.Many2one(
+        "route.visit.missing.lot.wizard",
+        string="Wizard",
+        required=True,
+        ondelete="cascade",
+    )
+    visit_line_id = fields.Many2one(
+        "route.visit.line",
+        string="Visit Line",
+        required=True,
+        readonly=True,
+    )
+    product_id = fields.Many2one(
+        "product.product",
+        string="Product",
+        required=False,
+        readonly=True,
+    )
+    product_ref_id = fields.Integer(
+        string="Product ID",
+        readonly=True,
+    )
+    product_display_name = fields.Char(
+        string="Product",
+        readonly=True,
+    )
+    required_qty = fields.Float(
+        string="Qty Requiring Lot",
+        readonly=True,
+    )
+    lot_id = fields.Many2one(
+        "stock.lot",
+        string="Lot/Serial",
+        required=False,
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        Product = self.env["product.product"].sudo()
+        for vals in vals_list:
+            product_id = vals.get("product_id") or vals.get("product_ref_id")
+            if product_id:
+                product = Product.browse(product_id)
+                vals.setdefault("product_ref_id", product.id)
+                vals.setdefault("product_display_name", product.display_name or product.name or str(product.id))
+        return super().sudo().create(vals_list)
