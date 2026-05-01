@@ -77,6 +77,7 @@ class RouteVisitLine(models.Model):
     approved_refill_qty = fields.Float(
         string="Approved Refill Qty",
         compute="_compute_refill_display_quantities",
+        inverse="_inverse_approved_refill_qty",
         store=False,
     )
 
@@ -89,6 +90,7 @@ class RouteVisitLine(models.Model):
     approved_refill_qty_display = fields.Float(
         string="Approved Refill Qty",
         compute="_compute_refill_display_quantities",
+        inverse="_inverse_approved_refill_qty_display",
         store=False,
     )
 
@@ -281,14 +283,26 @@ class RouteVisitLine(models.Model):
             line.sold_qty = max((line.previous_qty or 0.0) - (line.counted_qty or 0.0), 0.0)
             line.new_balance_qty = (line.counted_qty or 0.0) + (line.supplied_qty or 0.0) - (line.return_qty or 0.0)
 
-    @api.depends("supplied_qty")
+    @api.depends("supplied_qty", "sold_qty", "vehicle_available_qty")
     def _compute_refill_display_quantities(self):
         for line in self:
-            qty = line.supplied_qty or 0.0
-            line.refill_proposal_qty = qty
-            line.approved_refill_qty = qty
-            line.refill_proposal_qty_display = qty
-            line.approved_refill_qty_display = qty
+            sold_qty = line.sold_qty or 0.0
+            vehicle_available_qty = line.vehicle_available_qty or 0.0
+            proposal_qty = min(sold_qty, vehicle_available_qty) if sold_qty > 0 else 0.0
+            approved_qty = line.supplied_qty or 0.0
+
+            line.refill_proposal_qty = proposal_qty
+            line.approved_refill_qty = approved_qty
+            line.refill_proposal_qty_display = proposal_qty
+            line.approved_refill_qty_display = approved_qty
+
+    def _inverse_approved_refill_qty(self):
+        for line in self:
+            line.supplied_qty = max(line.approved_refill_qty or 0.0, 0.0)
+
+    def _inverse_approved_refill_qty_display(self):
+        for line in self:
+            line.supplied_qty = max(line.approved_refill_qty_display or 0.0, 0.0)
 
     @api.depends(
         "previous_qty",
@@ -505,3 +519,4 @@ class RouteVisitLine(models.Model):
             else:
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
+
