@@ -17,27 +17,41 @@ class RouteVisit(models.Model):
             if source_location and rec.source_location_id != source_location:
                 rec.source_location_id = source_location
 
-    def _get_vehicle_available_qty_for_product(self, product):
+    def _get_vehicle_available_qty_for_product(self, product, lot=False):
         self.ensure_one()
 
         source_location = self._get_default_source_location()
         if not source_location or not product:
             return 0.0
 
-        quants = self.env["stock.quant"].search([
+        quant_model = self.env["stock.quant"]
+        domain = [
             ("location_id", "child_of", source_location.id),
             ("product_id", "=", product.id),
-        ])
-        return sum(quants.mapped("quantity"))
+        ]
+        if lot:
+            domain.append(("lot_id", "=", lot.id))
+
+        quants = quant_model.search(domain)
+        qty_field = "available_quantity" if "available_quantity" in quant_model._fields else "quantity"
+        return sum(max(getattr(quant, qty_field, 0.0) or 0.0, 0.0) for quant in quants)
 
     def _update_vehicle_available_on_lines(self, lines=None):
         for rec in self:
             rec._sync_source_location_from_vehicle()
             target_lines = lines if lines is not None else rec.line_ids
             for line in target_lines.filtered(lambda l: l.product_id):
-                line.vehicle_available_qty = rec._get_vehicle_available_qty_for_product(
-                    line.product_id
-                )
+                lot = line.lot_id if line.lot_id else False
+                if hasattr(line, "_get_vehicle_available_qty"):
+                    line.vehicle_available_qty = line._get_vehicle_available_qty(
+                        line.product_id,
+                        lot=lot,
+                    )
+                else:
+                    line.vehicle_available_qty = rec._get_vehicle_available_qty_for_product(
+                        line.product_id,
+                        lot=lot,
+                    )
 
     def _get_outlet_previous_balance_from_stock_location(self):
         self.ensure_one()
@@ -213,8 +227,12 @@ class RouteVisit(models.Model):
 
             has_supplied_qty = False
             for line in rec.line_ids:
-                available_qty = line.vehicle_available_qty or 0.0
                 sold_qty = line.sold_qty or 0.0
+                if sold_qty > 0 and hasattr(line, "_get_vehicle_refill_remaining_qty"):
+                    available_qty = line._get_vehicle_refill_remaining_qty()
+                else:
+                    available_qty = line.vehicle_available_qty or 0.0
+
                 proposed_qty = min(sold_qty, available_qty) if sold_qty > 0 else 0.0
                 pending_qty = max(sold_qty - proposed_qty, 0.0)
                 line.write({
