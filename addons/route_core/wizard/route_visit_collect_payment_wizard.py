@@ -87,7 +87,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     note = fields.Text(string="Note")
 
     visit_net_due_amount = fields.Monetary(
-        string="Net Due",
+        string="Current Visit Net",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
@@ -101,7 +101,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
     visit_remaining_due = fields.Monetary(
-        string="Remaining Due",
+        string="Current Visit Remaining",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
@@ -143,7 +143,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
     direct_stop_grand_due_amount = fields.Monetary(
-        string="Grand Total Due",
+        string="Total Due Now",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
@@ -157,7 +157,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
     direct_stop_settlement_remaining_amount = fields.Monetary(
-        string="Remaining After Saved Settlements",
+        string="Remaining After Collection",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
