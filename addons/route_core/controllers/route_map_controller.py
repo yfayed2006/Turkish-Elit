@@ -322,9 +322,15 @@ body {
 .route-frame { max-width: 100%%; }
 .route-frame.route-split-layout {
     display: grid;
-    grid-template-columns: minmax(520px, 1.35fr) minmax(340px, .85fr);
+    grid-template-columns: minmax(0, 1.18fr) minmax(310px, .82fr);
     gap: 14px;
-    align-items: start;
+    align-items: stretch;
+    height: calc(100vh - 28px);
+    height: calc(100dvh - 28px);
+    max-height: calc(100vh - 28px);
+    max-height: calc(100dvh - 28px);
+    min-height: 520px;
+    overflow: hidden;
 }
 .route-map-panel,
 .route-cards-panel {
@@ -339,16 +345,34 @@ body {
 }
 .route-frame.route-split-layout .route-map-panel {
     margin-bottom: 0;
+    min-height: 0;
+    height: 100%%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
 }
-.route-map-panel.route-sticky-map {
-    position: sticky;
-    top: 0;
-    z-index: 30;
+.route-frame.route-split-layout .route-map-panel .route-map-header,
+.route-map-panel.route-fixed-map .route-map-header {
+    display: none !important;
 }
 .route-frame.route-split-layout .route-cards-panel.route-side-cards {
-    max-height: calc(100vh - 22px);
+    min-height: 0;
+    height: 100%%;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 .route-map-header,
 .route-cards-header {
@@ -374,9 +398,26 @@ body {
     width: 100%%;
     height: clamp(360px, 48vh, 460px);
     background: #eef2f7;
+    touch-action: pan-x pan-y;
 }
 .route-frame.route-split-layout #map {
-    height: clamp(520px, calc(100vh - 112px), 740px);
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%%;
+}
+.route-map-floating-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 500;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--route-title);
+    border: 1px solid rgba(130, 70, 111, 0.22);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    font-size: 12px;
+    font-weight: 900;
 }
 .route-map-empty {
     display: none;
@@ -555,27 +596,73 @@ body {
     color: #155e75;
     font-weight: 800;
 }
-@media (max-width: 1024px) {
+@media (max-width: 767px) {
+    html, body {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+    body { padding: 0; background: #fff; }
     .route-frame.route-split-layout {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .route-frame.route-split-layout .route-map-panel {
+        flex: 0 0 50vh;
+        flex-basis: 50dvh;
+        height: 50vh;
+        height: 50dvh;
+        min-height: 300px;
+        max-height: 50vh;
+        max-height: 50dvh;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        box-shadow: none;
+        position: relative;
+        z-index: 3;
+    }
+    .route-frame.route-split-layout #map {
+        height: 100%%;
+        min-height: 0;
     }
     .route-frame.route-split-layout .route-cards-panel.route-side-cards {
-        max-height: none;
-        overflow-y: visible;
+        flex: 1 1 50vh;
+        flex-basis: 50dvh;
+        min-height: 0;
+        height: 50vh;
+        height: 50dvh;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        box-shadow: none;
+        overflow: hidden;
     }
-}
-@media (max-width: 720px) {
-    body { padding: 8px; }
-    .route-map-panel.route-sticky-map {
-        position: sticky;
-        top: 0;
-        z-index: 60;
-        border-radius: 14px;
+    .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-header {
+        display: none;
     }
-    #map { height: 300px; }
-    .route-frame.route-split-layout #map { height: 50vh; min-height: 280px; max-height: 430px; }
-    .route-map-header, .route-cards-header { padding: 12px; align-items: flex-start; flex-direction: column; }
-    .route-cards-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
+    .route-map-floating-badge { top: 10px; right: 10px; }
+    .route-map-header, .route-cards-header { padding: 10px 12px; align-items: flex-start; flex-direction: column; }
+    .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-grid {
+        grid-template-columns: 1fr;
+        padding: 10px;
+        gap: 10px;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+    }
     .route-card-head { padding: 12px; }
     .route-card-title { font-size: 16px; }
     .route-card-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -643,16 +730,8 @@ body {
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits found for today.</div>'
         return self._base_head("Today's Route Map") + """
 <div class="route-frame route-split-layout">
-    <section class="route-map-panel route-sticky-map">
-        <div class="route-map-header">
-            <div>
-                <h1 class="route-map-title">Today's Route Map</h1>
-                <div class="route-map-subtitle">Outlet markers use today's filtered salesperson visits.</div>
-            </div>
-            <div class="route-badges">
-                <span class="route-badge pending">%(count)s Visits</span>
-            </div>
-        </div>
+    <section class="route-map-panel route-fixed-map">
+        <div class="route-map-floating-badge">%(count)s Visits</div>
         <div id="map"></div>
         <div id="emptyMap" class="route-map-empty">No outlet location points are available for these visits.</div>
     </section>
@@ -694,9 +773,9 @@ function markerHtml(visit, focused=false) {
     return `<div class="route-marker ${markerClass(visit)} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`;
 }
 function markerIcon(visit, focused=false) {
-    const size = focused ? 46 : 34;
+    const size = focused ? 48 : 36;
     const anchorX = Math.round(size / 2);
-    const anchorY = Math.max(size - 4, anchorX);
+    const anchorY = Math.max(size - 2, anchorX);
     return L.divIcon({
         className: '',
         html: markerHtml(visit, focused),
@@ -710,6 +789,7 @@ function setActiveVisit(visitId, panToMarker=false) {
         const marker = routeMarkers[visit.id];
         if (marker) {
             marker.setIcon(markerIcon(visit, isActive));
+            marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
             if (isActive && panToMarker && mapInstance) {
                 mapInstance.panTo([visit.lat, visit.lng], {animate: true, duration: .35});
             }
@@ -730,8 +810,9 @@ function installCardFocus() {
     });
     if ('IntersectionObserver' in window && cards.length) {
         let currentId = null;
+        const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
         const sideCards = document.querySelector('.route-side-cards');
-        const observerRoot = sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null;
+        const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
         const observer = new IntersectionObserver(entries => {
             const visible = entries
                 .filter(entry => entry.isIntersecting)
@@ -769,6 +850,9 @@ function renderMap() {
     } else {
         mapInstance.fitBounds(bounds, { padding: [34, 34] });
     }
+    window.setTimeout(() => mapInstance.invalidateSize(), 120);
+    window.setTimeout(() => mapInstance.invalidateSize(), 500);
+    window.addEventListener('resize', () => window.setTimeout(() => mapInstance.invalidateSize(), 120));
     const firstPoint = points[0];
     if (firstPoint) {
         window.setTimeout(() => setActiveVisit(firstPoint.id, false), 250);
@@ -1020,4 +1104,3 @@ renderMap();
         except Exception as error:
             return self._json_response({"ok": False, "message": self._safe_text(error)}, status=400)
         return self._json_response({"ok": True, "message": message})
-
