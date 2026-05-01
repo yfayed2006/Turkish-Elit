@@ -3361,4 +3361,35 @@
 }
 
 
+/* Completed visit final review polish */
+.route_mobile_reference_value,
+.route_mobile_reference_value .o_field_widget,
+.route_mobile_reference_value span,
+.route_pda_reference_card .o_field_widget,
+.route_pda_reference_card span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+}
+
+.route_pda_finish_summary_sheet .route_pda_reference_card .o_field_widget,
+.route_pda_finish_summary_sheet .route_pda_reference_card span {
+    display: block;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .route_mobile_reference_value,
+    .route_mobile_reference_value .o_field_widget,
+    .route_mobile_reference_value span,
+    .route_pda_reference_card .o_field_widget,
+    .route_pda_reference_card span {
+        font-size: 1rem;
+    }
+}
+
+
 
