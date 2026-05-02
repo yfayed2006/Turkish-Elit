@@ -599,6 +599,106 @@ class RouteVisit(models.Model):
             vals["expiry_date"] = resolved_expiry_date
         return vals
 
+    def _get_unassigned_previous_line_for_product(self, product):
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+        if not product or "lot_id" not in RouteVisitLine._fields:
+            return RouteVisitLine
+
+        return self.line_ids.filtered(
+            lambda l: l.product_id == product
+            and not l.lot_id
+            and (l.previous_qty or 0.0) > 0
+            and (l.counted_qty or 0.0) <= 0
+            and (l.return_qty or 0.0) <= 0
+            and (l.supplied_qty or 0.0) <= 0
+        )[:1]
+
+    def _merge_unassigned_previous_qty_into_lot_line(self, product, lot_line, resolved_expiry_date=False, preferred_previous_qty=0.0):
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+        if not product or not lot_line or "lot_id" not in RouteVisitLine._fields or not lot_line.lot_id:
+            return lot_line
+
+        # When previous outlet balance was loaded without lot details, the shelf count
+        # initially has one no-lot line with the full previous quantity. If the user
+        # scans a real lot later, keep the operational result on one useful line:
+        # Previous Qty + Counted Qty + Return Qty must belong to the selected lot.
+        # Otherwise sold_qty remains overstated on the old no-lot line.
+        if (lot_line.previous_qty or 0.0) > 0:
+            if resolved_expiry_date and not lot_line.expiry_date:
+                lot_line.write({"expiry_date": resolved_expiry_date})
+            return lot_line
+
+        unassigned_line = self._get_unassigned_previous_line_for_product(product)
+        if not unassigned_line:
+            if resolved_expiry_date and not lot_line.expiry_date:
+                lot_line.write({"expiry_date": resolved_expiry_date})
+            return lot_line
+
+        original_previous_qty = unassigned_line.previous_qty or 0.0
+        if original_previous_qty <= 0:
+            return lot_line
+
+        preferred_previous_qty = preferred_previous_qty or 0.0
+        if preferred_previous_qty > 0:
+            allocated_previous_qty = min(preferred_previous_qty, original_previous_qty)
+        else:
+            # No lot-specific outlet quant is available. This usually means the
+            # previous balance was loaded before lot split existed, so assign the
+            # whole previous balance to the scanned lot line.
+            allocated_previous_qty = original_previous_qty
+
+        remainder_previous_qty = max(original_previous_qty - allocated_previous_qty, 0.0)
+
+        vals = {
+            "previous_qty": (lot_line.previous_qty or 0.0) + allocated_previous_qty,
+            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+        }
+        if resolved_expiry_date and not lot_line.expiry_date:
+            vals["expiry_date"] = resolved_expiry_date
+        lot_line.write(vals)
+
+        if remainder_previous_qty > 0:
+            unassigned_line.write({"previous_qty": remainder_previous_qty})
+        else:
+            unassigned_line.unlink()
+
+        return lot_line
+
+    def _normalize_scanned_lot_previous_lines(self):
+        for visit in self:
+            RouteVisitLine = visit.env["route.visit.line"]
+            if "lot_id" not in RouteVisitLine._fields:
+                continue
+            products = visit.line_ids.mapped("product_id")
+            for product in products:
+                product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+                unassigned_lines = product_lines.filtered(
+                    lambda l: not l.lot_id
+                    and (l.previous_qty or 0.0) > 0
+                    and (l.counted_qty or 0.0) <= 0
+                    and (l.return_qty or 0.0) <= 0
+                    and (l.supplied_qty or 0.0) <= 0
+                )
+                lot_lines = product_lines.filtered(
+                    lambda l: l.lot_id and ((l.counted_qty or 0.0) > 0 or (l.return_qty or 0.0) > 0)
+                )
+                if len(lot_lines) != 1 or not unassigned_lines:
+                    continue
+
+                lot_line = lot_lines[:1]
+                extra_previous_qty = sum(unassigned_lines.mapped("previous_qty"))
+                if extra_previous_qty <= 0:
+                    continue
+
+                lot_line.write({
+                    "previous_qty": (lot_line.previous_qty or 0.0) + extra_previous_qty,
+                    "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
+                })
+                unassigned_lines.unlink()
+        return True
+
     def _get_or_create_visit_line_for_product_and_lot(self, product, resolved_lot=False, resolved_expiry_date=False, counted_increase=0.0):
         self.ensure_one()
         RouteVisitLine = self.env["route.visit.line"]
@@ -609,11 +709,18 @@ class RouteVisit(models.Model):
                 return line
             return RouteVisitLine.create([self._prepare_visit_line_from_scan(product, counted_increase)])
 
+        lot_previous_qty = self._get_outlet_available_qty_for_product_lot(product, resolved_lot)
+
         exact_line = self.line_ids.filtered(
             lambda l: l.product_id == product and l.lot_id == resolved_lot
         )[:1]
         if exact_line:
-            return exact_line
+            return self._merge_unassigned_previous_qty_into_lot_line(
+                product,
+                exact_line,
+                resolved_expiry_date=resolved_expiry_date,
+                preferred_previous_qty=lot_previous_qty,
+            )
 
         unassigned_line = self.line_ids.filtered(
             lambda l: l.product_id == product
@@ -623,15 +730,16 @@ class RouteVisit(models.Model):
             and (l.supplied_qty or 0.0) <= 0
         )[:1]
 
-        lot_previous_qty = self._get_outlet_available_qty_for_product_lot(product, resolved_lot)
-
         if unassigned_line:
             original_previous_qty = unassigned_line.previous_qty or 0.0
-            remainder_previous_qty = max(original_previous_qty - lot_previous_qty, 0.0)
+            allocated_previous_qty = lot_previous_qty or original_previous_qty
+            if original_previous_qty > 0 and allocated_previous_qty > original_previous_qty:
+                allocated_previous_qty = original_previous_qty
+            remainder_previous_qty = max(original_previous_qty - allocated_previous_qty, 0.0)
 
             unassigned_line.write({
                 "lot_id": resolved_lot.id,
-                "previous_qty": lot_previous_qty,
+                "previous_qty": allocated_previous_qty,
                 "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
                 "expiry_date": resolved_expiry_date or unassigned_line.expiry_date,
             })
@@ -750,6 +858,8 @@ class RouteVisit(models.Model):
         self.last_scanned_barcode = (barcode or "").strip()
         if self.visit_process_state == "checked_in":
             self.visit_process_state = "counting"
+
+        self._normalize_scanned_lot_previous_lines()
 
         return {
             "line": line,
