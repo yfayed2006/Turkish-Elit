@@ -71,14 +71,27 @@ class RouteOutlet(models.Model):
     consignment_settlement_policy = fields.Selection(
         [
             ("gross_sale", "Collect Gross Sold Value"),
-            ("net_after_commission", "Collect Net After Category Commission"),
+            ("net_after_commission", "Collect Net After Commission"),
         ],
         string="Consignment Settlement",
-        default="gross_sale",
+        default="net_after_commission",
         required=True,
         help=(
-            "Gross Sold Value keeps the current legacy behavior. "
-            "Net After Category Commission deducts the configured category commission before collection."
+            "Technical settlement switch kept for compatibility. "
+            "The user-facing setup is controlled by Consignment Commission Type."
+        ),
+    )
+    consignment_commission_mode = fields.Selection(
+        [
+            ("fixed_rate", "Fixed Commission %"),
+            ("category_rate", "Category Commission by Product Category"),
+        ],
+        string="Consignment Commission Type",
+        default="fixed_rate",
+        required=True,
+        help=(
+            "Fixed Commission uses the same percentage for all products. "
+            "Category Commission uses one percentage per product category."
         ),
     )
     commission_line_ids = fields.One2many(
@@ -101,17 +114,33 @@ class RouteOutlet(models.Model):
         for outlet in self:
             outlet.commission_line_count = len(outlet.commission_line_ids)
 
-    @api.depends("financial_policy", "outlet_operation_mode", "consignment_settlement_policy")
+    @api.depends(
+        "financial_policy",
+        "outlet_operation_mode",
+        "consignment_settlement_policy",
+        "consignment_commission_mode",
+    )
     def _compute_effective_financial_policy_label(self):
         for outlet in self:
             policy = outlet._get_effective_financial_policy()
             if policy == "direct_sale_pricelist":
                 label = _("Direct Sale Pricelist")
-            elif outlet.consignment_settlement_policy == "net_after_commission":
+            elif outlet._get_consignment_commission_mode() == "category_rate":
                 label = _("Consignment Net After Category Commission")
             else:
-                label = _("Consignment Gross Sold Value")
+                label = _("Consignment Net After Fixed Commission")
             outlet.effective_financial_policy_label = label
+
+    @api.onchange("outlet_operation_mode", "consignment_commission_mode")
+    def _onchange_route_financial_policy_setup(self):
+        for outlet in self:
+            if outlet.outlet_operation_mode == "direct_sale":
+                outlet.financial_policy = "auto"
+                continue
+            outlet.financial_policy = "auto"
+            outlet.consignment_settlement_policy = "net_after_commission"
+            if not outlet.consignment_commission_mode:
+                outlet.consignment_commission_mode = "fixed_rate"
 
     def _get_effective_financial_policy(self):
         self.ensure_one()
@@ -121,12 +150,16 @@ class RouteOutlet(models.Model):
             return "direct_sale_pricelist"
         return "consignment_commission"
 
+    def _get_consignment_commission_mode(self):
+        self.ensure_one()
+        return self.consignment_commission_mode or "fixed_rate"
+
     def _use_consignment_commission_deduction(self):
         self.ensure_one()
         return bool(
             self.outlet_operation_mode == "consignment"
             and self._get_effective_financial_policy() == "consignment_commission"
-            and self.consignment_settlement_policy == "net_after_commission"
+            and self._get_consignment_commission_mode() in ("fixed_rate", "category_rate")
         )
 
     def _get_default_commission_rate(self):
@@ -146,7 +179,7 @@ class RouteOutlet(models.Model):
     def _get_consignment_category_commission_rate(self, category):
         self.ensure_one()
         default_rate = self._get_default_commission_rate()
-        if not category:
+        if self._get_consignment_commission_mode() != "category_rate" or not category:
             return default_rate
 
         ancestor_ids = self._get_category_ancestor_ids(category)
@@ -166,35 +199,49 @@ class RouteOutlet(models.Model):
         return best_line.commission_rate if best_line else default_rate
 
     def action_generate_consignment_category_commissions(self):
-        for outlet in self:
-            if not outlet.id:
-                raise UserError(_("Please save the outlet before loading product categories."))
-            existing_category_ids = set(outlet.commission_line_ids.mapped("category_id").ids)
-            categories = self.env["product.category"].search([], order="complete_name, id")
-            default_rate = outlet._get_default_commission_rate()
-            vals_list = []
-            for category in categories:
-                if category.id in existing_category_ids:
-                    continue
-                vals_list.append(
-                    {
-                        "outlet_id": outlet.id,
-                        "category_id": category.id,
-                        "commission_rate": default_rate,
-                        "active": True,
-                    }
-                )
-            if vals_list:
-                self.env["route.outlet.category.commission"].create(vals_list)
+        self.ensure_one()
+        if not self.id:
+            raise UserError(_("Please save the outlet before loading product categories."))
+        if self.outlet_operation_mode != "consignment":
+            raise UserError(_("Category commission rules are only available for consignment outlets."))
+
+        self.write({
+            "consignment_commission_mode": "category_rate",
+            "consignment_settlement_policy": "net_after_commission",
+            "financial_policy": "auto",
+        })
+
+        existing_category_ids = set(self.commission_line_ids.mapped("category_id").ids)
+        categories = self.env["product.category"].search([], order="complete_name, id")
+        default_rate = self._get_default_commission_rate()
+        vals_list = []
+        for category in categories:
+            if category.id in existing_category_ids:
+                continue
+            vals_list.append(
+                {
+                    "outlet_id": self.id,
+                    "category_id": category.id,
+                    "commission_rate": default_rate,
+                    "active": True,
+                }
+            )
+        if vals_list:
+            self.env["route.outlet.category.commission"].create(vals_list)
+
+        form_view = self.env.ref(
+            "route_core.view_route_outlet_management_config_form",
+            raise_if_not_found=False,
+        ) or self.env.ref("route_core.view_route_outlet_form", raise_if_not_found=False)
         return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Category commission rules updated"),
-                "message": _("Missing product categories were added with the outlet default commission rate."),
-                "type": "success",
-                "sticky": False,
-            },
+            "type": "ir.actions.act_window",
+            "name": _("Outlets"),
+            "res_model": "route.outlet",
+            "res_id": self.id,
+            "view_mode": "form",
+            "views": [(form_view.id, "form")] if form_view else [(False, "form")],
+            "target": "current",
+            "context": dict(self.env.context, route_open_financial_policy=True),
         }
 
 
@@ -241,6 +288,7 @@ class RouteVisitLine(models.Model):
         "visit_id.outlet_id",
         "visit_id.outlet_id.financial_policy",
         "visit_id.outlet_id.consignment_settlement_policy",
+        "visit_id.outlet_id.consignment_commission_mode",
         "visit_id.outlet_id.default_commission_rate",
         "visit_id.outlet_id.commission_rate",
         "visit_id.outlet_id.commission_line_ids.active",
@@ -325,6 +373,7 @@ class RouteVisit(models.Model):
         "line_ids.route_net_payable_amount",
         "visit_execution_mode",
         "outlet_id.consignment_settlement_policy",
+        "outlet_id.consignment_commission_mode",
     )
     def _compute_route_consignment_policy_totals(self):
         for visit in self:
