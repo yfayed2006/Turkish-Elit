@@ -532,6 +532,8 @@ Date:
 <t t-set="total_outlet_due" t-value="summary.get('total_outlet_due', summary.get('current_due', 0.0))"/>
 <t t-set="current_sale" t-value="summary.get('visit_sale_amount', 0.0)"/>
 <t t-set="returned_value" t-value="summary.get('returned_value', 0.0)"/>
+<t t-set="commission_amount" t-value="summary.get('commission_amount', 0.0)"/>
+<t t-set="gross_after_returns_amount" t-value="summary.get('gross_after_returns_amount', current_sale - returned_value)"/>
 <t t-set="refill_value" t-value="summary.get('refill_value', 0.0)"/>
 <t t-set="confirmed_payment_total" t-value="summary.get('confirmed_payment_total', 0.0)"/>
 <t t-set="current_visit_net" t-value="summary.get('current_visit_net', current_sale - returned_value)"/>
@@ -653,6 +655,16 @@ Date:
 <span t-esc="currency_label or '-'"/>
 </td>
 </tr>
+<tr t-if="commission_amount">
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-top:1px solid #e5e7eb;">Gross After Returns</td>
+<td style="padding:6px 10px; border-top:1px solid #e5e7eb;">
+<span t-esc="'%.2f %s' % (gross_after_returns_amount, currency_label)"/>
+</td>
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-top:1px solid #e5e7eb;">Category Commission</td>
+<td style="padding:6px 10px; border-top:1px solid #e5e7eb;">
+<span t-esc="'%.2f %s' % (commission_amount, currency_label)"/>
+</td>
+</tr>
 </table>
 <table style="width:100%; border-collapse:separate; border-spacing:6px; margin:0 -6px 8px -6px;">
 <tr>
@@ -701,7 +713,7 @@ Date:
 <td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Current Visit Net</div>
 <div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (current_visit_net, currency_label)"/>
-<div style="font-size:10px; color:#64748b; margin-top:5px;">Current visit sale minus current visit returns.</div>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Current visit sale minus returns and category commission.</div>
 </td>
 <td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Total Outlet Balance After Collection</div>
