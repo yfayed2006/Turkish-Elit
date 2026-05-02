@@ -476,27 +476,57 @@ class RouteVisit(models.Model):
         def money(amount):
             return html_escape(self._format_route_policy_currency(amount))
 
+        def qty(amount):
+            return html_escape(f"{amount or 0.0:,.2f}")
+
+        def percent(amount):
+            return html_escape(f"{amount or 0.0:,.2f}%")
+
         rows = []
+        mobile_cards = []
         for line in lines:
+            category_name = html_escape(line.get("category_name") or "-")
+            sold_qty = line.get("sold_qty", 0.0)
+            sold_value = line.get("sold_value", 0.0)
+            return_value = line.get("return_value", 0.0)
+            gross_after_returns = line.get("gross_after_returns", 0.0)
+            commission_rate = line.get("commission_rate", 0.0)
+            commission_amount = line.get("commission_amount", 0.0)
+            net_payable_amount = line.get("net_payable_amount", 0.0)
             rows.append(
                 "".join([
                     "<tr>",
-                    "<td>", html_escape(line.get("category_name") or "-"), "</td>",
-                    "<td class='route_commission_num'>", f"{line.get('sold_qty', 0.0):,.2f}", "</td>",
-                    "<td class='route_commission_num'>", money(line.get("sold_value", 0.0)), "</td>",
-                    "<td class='route_commission_num'>", money(line.get("return_value", 0.0)), "</td>",
-                    "<td class='route_commission_num'>", money(line.get("gross_after_returns", 0.0)), "</td>",
-                    "<td class='route_commission_num'>", f"{line.get('commission_rate', 0.0):,.2f}%", "</td>",
-                    "<td class='route_commission_num'>", money(line.get("commission_amount", 0.0)), "</td>",
-                    "<td class='route_commission_num route_commission_net'>", money(line.get("net_payable_amount", 0.0)), "</td>",
+                    "<td>", category_name, "</td>",
+                    "<td class='route_commission_num'>", qty(sold_qty), "</td>",
+                    "<td class='route_commission_num'>", money(sold_value), "</td>",
+                    "<td class='route_commission_num'>", money(return_value), "</td>",
+                    "<td class='route_commission_num'>", money(gross_after_returns), "</td>",
+                    "<td class='route_commission_num'>", percent(commission_rate), "</td>",
+                    "<td class='route_commission_num'>", money(commission_amount), "</td>",
+                    "<td class='route_commission_num route_commission_net'>", money(net_payable_amount), "</td>",
                     "</tr>",
+                ])
+            )
+            mobile_cards.append(
+                "".join([
+                    "<div class='route_commission_mobile_card'>",
+                    "<div class='route_commission_mobile_card_title'>", category_name, "</div>",
+                    "<div class='route_commission_mobile_grid'>",
+                    "<div><span>Sold Qty</span><strong>", qty(sold_qty), "</strong></div>",
+                    "<div><span>Sold Value</span><strong>", money(sold_value), "</strong></div>",
+                    "<div><span>Returns</span><strong>", money(return_value), "</strong></div>",
+                    "<div><span>After Returns</span><strong>", money(gross_after_returns), "</strong></div>",
+                    "<div><span>Commission %</span><strong>", percent(commission_rate), "</strong></div>",
+                    "<div><span>Outlet Commission</span><strong>", money(commission_amount), "</strong></div>",
+                    "<div class='route_commission_mobile_net'><span>Net Payable</span><strong>", money(net_payable_amount), "</strong></div>",
+                    "</div></div>",
                 ])
             )
         rows.append(
             "".join([
                 "<tr class='route_commission_total'>",
                 "<td>Total</td>",
-                "<td class='route_commission_num'>", f"{breakdown.get('total_sold_qty', 0.0):,.2f}", "</td>",
+                "<td class='route_commission_num'>", qty(breakdown.get("total_sold_qty", 0.0)), "</td>",
                 "<td class='route_commission_num'>", money(breakdown.get("total_sold_value", 0.0)), "</td>",
                 "<td class='route_commission_num'>", money(breakdown.get("total_return_value", 0.0)), "</td>",
                 "<td class='route_commission_num'>", money(breakdown.get("total_gross_after_returns", 0.0)), "</td>",
@@ -506,11 +536,25 @@ class RouteVisit(models.Model):
                 "</tr>",
             ])
         )
+        mobile_cards.append(
+            "".join([
+                "<div class='route_commission_mobile_card route_commission_mobile_total'>",
+                "<div class='route_commission_mobile_card_title'>Total</div>",
+                "<div class='route_commission_mobile_grid'>",
+                "<div><span>Sold Qty</span><strong>", qty(breakdown.get("total_sold_qty", 0.0)), "</strong></div>",
+                "<div><span>Sold Value</span><strong>", money(breakdown.get("total_sold_value", 0.0)), "</strong></div>",
+                "<div><span>Returns</span><strong>", money(breakdown.get("total_return_value", 0.0)), "</strong></div>",
+                "<div><span>After Returns</span><strong>", money(breakdown.get("total_gross_after_returns", 0.0)), "</strong></div>",
+                "<div><span>Outlet Commission</span><strong>", money(breakdown.get("total_commission_amount", 0.0)), "</strong></div>",
+                "<div class='route_commission_mobile_net'><span>Net Payable</span><strong>", money(breakdown.get("total_net_payable_amount", 0.0)), "</strong></div>",
+                "</div></div>",
+            ])
+        )
         return "".join([
             "<div class='route_commission_breakdown'>",
             "<div class='route_commission_title'>Category Commission Breakdown</div>",
             "<div class='route_commission_hint'>Sold value, returns, commission percentage, outlet commission, and net payable are shown by product category.</div>",
-            "<div class='route_commission_table_wrap'>",
+            "<div class='route_commission_table_wrap route_commission_desktop_table'>",
             "<table class='route_commission_table'>",
             "<thead><tr>",
             "<th>Category</th>",
@@ -524,19 +568,33 @@ class RouteVisit(models.Model):
             "</tr></thead>",
             "<tbody>",
             "".join(rows),
-            "</tbody></table></div></div>",
+            "</tbody></table></div>",
+            "<div class='route_commission_mobile_cards'>", "".join(mobile_cards), "</div>",
+            "</div>",
             "<style>",
-            ".route_commission_breakdown{border:1px solid #dbe3ec;border-radius:14px;background:#fff;padding:12px;margin:10px 0 14px 0;}",
+            ".route_commission_breakdown{grid-column:1/-1;width:100%;max-width:100%;box-sizing:border-box;border:1px solid #dbe3ec;border-radius:14px;background:#fff;padding:12px;margin:10px 0 14px 0;}",
+            ".route_commission_form_full_width,.route_commission_form_full_width .o_field_widget,.route_commission_form_full_width .o_field_html,.route_commission_form_full_width .o_readonly_modifier{grid-column:1/-1;width:100%;max-width:100%;}",
             ".route_commission_title{font-size:17px;font-weight:800;color:#0f172a;margin-bottom:4px;}",
             ".route_commission_hint{font-size:13px;color:#475569;background:#ecfeff;border:1px solid #bae6fd;border-radius:10px;padding:8px 10px;margin-bottom:10px;}",
-            ".route_commission_table_wrap{overflow-x:auto;}",
+            ".route_commission_table_wrap{overflow-x:auto;width:100%;}",
             ".route_commission_table{width:100%;border-collapse:collapse;min-width:760px;}",
             ".route_commission_table th{background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:11px;letter-spacing:.35px;text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;}",
             ".route_commission_table td{padding:8px;border-bottom:1px solid #f1f5f9;color:#0f172a;vertical-align:top;}",
             ".route_commission_num{text-align:right;white-space:nowrap;}",
             ".route_commission_net{font-weight:800;color:#0f766e;}",
             ".route_commission_total td{font-weight:800;background:#f8fafc;border-top:1px solid #cbd5e1;}",
-            "@media(max-width:768px){.route_commission_breakdown{padding:10px;}.route_commission_table{min-width:720px;}.route_commission_title{font-size:15px;}}",
+            ".route_commission_mobile_cards{display:none;}",
+            ".route_commission_mobile_card{border:1px solid #e5e7eb;border-radius:12px;background:#fff;margin:8px 0;padding:10px;}",
+            ".route_commission_mobile_total{background:#f8fafc;border-color:#cbd5e1;}",
+            ".route_commission_mobile_card_title{font-weight:800;color:#0f172a;margin-bottom:8px;font-size:14px;}",
+            ".route_commission_mobile_grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}",
+            ".route_commission_mobile_grid div{background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:8px;min-width:0;}",
+            ".route_commission_mobile_grid span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.35px;color:#64748b;font-weight:700;margin-bottom:4px;}",
+            ".route_commission_mobile_grid strong{display:block;font-size:13px;color:#0f172a;font-weight:800;word-break:break-word;}",
+            ".route_commission_mobile_net{grid-column:1/-1;background:#ecfeff!important;border-color:#bae6fd!important;}",
+            ".route_commission_mobile_net strong{color:#0f766e!important;font-size:15px;}",
+            "@media(max-width:768px){.route_commission_breakdown{width:100%!important;max-width:100%!important;padding:10px;margin:10px 0 14px 0;}.route_commission_title{font-size:15px;}.route_commission_hint{font-size:12px;}.route_commission_desktop_table{display:none;}.route_commission_mobile_cards{display:block;}.route_commission_mobile_grid{grid-template-columns:repeat(2,minmax(0,1fr));}.route_mobile_detail_grid>.route_commission_form_full_width{grid-column:1/-1!important;width:100%!important;}}",
+            "@media(max-width:390px){.route_commission_mobile_grid{gap:7px;}.route_commission_mobile_grid strong{font-size:12px;}.route_commission_mobile_card{padding:9px;}}",
             "</style>",
         ])
 
