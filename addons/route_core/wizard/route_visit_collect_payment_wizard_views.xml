@@ -25,12 +25,20 @@
 <field name="visit_id" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
-<span class="route_pda_payment_meta_label">Current Visit Net</span>
-<field name="visit_net_due_amount" readonly="1" nolabel="1"/>
+<span class="route_pda_payment_meta_label">Gross Sold Value</span>
+<field name="visit_gross_sale_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="visit_return_amount == 0">
+<span class="route_pda_payment_meta_label">Returns Value</span>
+<field name="visit_return_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="visit_commission_amount == 0">
 <span class="route_pda_payment_meta_label">Commission</span>
 <field name="visit_commission_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Current Visit Net</span>
+<field name="visit_net_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Collected</span>
