@@ -1536,32 +1536,85 @@ class RouteVisit(models.Model):
     def _get_consignment_receipt_line_items(self):
         self.ensure_one()
         route_map = dict(self.env["route.visit.line"]._fields["return_route"].selection)
-        items = []
+        items_by_key = {}
+
+        def _line_has_activity(line):
+            return any([
+                (line.previous_qty or 0.0),
+                (line.counted_qty or 0.0),
+                (line.sold_qty or 0.0),
+                (line.return_qty or 0.0),
+                (line.supplied_qty or 0.0),
+            ])
+
+        def _display_target_lot(line):
+            # Historical visits may already contain a return-only no-lot row for a
+            # tracked product while the same product has exactly one active lot row.
+            # Group that display row with the lot row so the PDF remains readable
+            # even before the record is reopened/normalized.
+            if line.lot_id or (line.previous_qty or 0.0) or (line.counted_qty or 0.0) or (line.supplied_qty or 0.0):
+                return line.lot_id
+            if (line.return_qty or 0.0) <= 0:
+                return line.lot_id
+            product_lines = self.line_ids.filtered(lambda l: l.product_id == line.product_id and l.lot_id)
+            active_lot_lines = product_lines.filtered(
+                lambda l: (l.previous_qty or 0.0) > 0
+                or (l.counted_qty or 0.0) > 0
+                or (l.return_qty or 0.0) > 0
+                or (l.supplied_qty or 0.0) > 0
+            )
+            if len(active_lot_lines.mapped("lot_id")) == 1:
+                return active_lot_lines[:1].lot_id
+            return line.lot_id
+
         for line in self.line_ids.filtered(lambda l: l.product_id):
-            if not any([(line.previous_qty or 0.0), (line.counted_qty or 0.0), (line.sold_qty or 0.0), (line.return_qty or 0.0), (line.supplied_qty or 0.0)]):
+            if not _line_has_activity(line):
                 continue
-            display_previous_qty = line.previous_qty or 0.0
+            display_lot = _display_target_lot(line)
+            key = (line.product_id.id, display_lot.id if display_lot else 0, line.return_route or "vehicle")
+            if key not in items_by_key:
+                lot_name = display_lot.name if display_lot else ""
+                items_by_key[key] = {
+                    "barcode": line.barcode or line.product_id.default_code or "",
+                    "product_name": line.product_id.display_name or "",
+                    "lot_name": lot_name,
+                    "lot_display": (lot_name or "").replace("-", "‑") if lot_name else "",
+                    "expiry_date": line.expiry_date or False,
+                    "previous_qty": 0.0,
+                    "display_previous_qty": 0.0,
+                    "counted_qty": 0.0,
+                    "sold_qty": 0.0,
+                    "return_qty": 0.0,
+                    "return_route": line.return_route or "vehicle",
+                    "return_route_label": route_map.get(line.return_route or "vehicle", line.return_route or "vehicle"),
+                    "supplied_qty": 0.0,
+                    "unit_price": line.unit_price or 0.0,
+                    "sold_amount": 0.0,
+                    "return_amount": 0.0,
+                    "supply_value": 0.0,
+                }
+
+            item = items_by_key[key]
+            if not item.get("expiry_date") and line.expiry_date:
+                item["expiry_date"] = line.expiry_date
+            item["previous_qty"] += line.previous_qty or 0.0
+            item["counted_qty"] += line.counted_qty or 0.0
+            item["sold_qty"] += line.sold_qty or 0.0
+            item["return_qty"] += line.return_qty or 0.0
+            item["supplied_qty"] += line.supplied_qty or 0.0
+            item["sold_amount"] += line.sold_amount or 0.0
+            item["return_amount"] += line.return_amount or 0.0
+            item["supply_value"] += line.supply_value or 0.0
+            if not item["unit_price"] and line.unit_price:
+                item["unit_price"] = line.unit_price or 0.0
+
+        items = []
+        for item in items_by_key.values():
+            display_previous_qty = item.get("previous_qty", 0.0) or 0.0
             if display_previous_qty < 0:
                 display_previous_qty = 0.0
-            items.append({
-                "barcode": line.barcode or line.product_id.default_code or "",
-                "product_name": line.product_id.display_name or "",
-                "lot_name": line.lot_id.name or "",
-                "lot_display": (line.lot_id.name or "").replace("-", "‑") if line.lot_id else "",
-                "expiry_date": line.expiry_date or False,
-                "previous_qty": line.previous_qty or 0.0,
-                "display_previous_qty": display_previous_qty,
-                "counted_qty": line.counted_qty or 0.0,
-                "sold_qty": line.sold_qty or 0.0,
-                "return_qty": line.return_qty or 0.0,
-                "return_route": line.return_route or "vehicle",
-                "return_route_label": route_map.get(line.return_route or "vehicle", line.return_route or "vehicle"),
-                "supplied_qty": line.supplied_qty or 0.0,
-                "unit_price": line.unit_price or 0.0,
-                "sold_amount": line.sold_amount or 0.0,
-                "return_amount": line.return_amount or 0.0,
-                "supply_value": line.supply_value or 0.0,
-            })
+            item["display_previous_qty"] = display_previous_qty
+            items.append(item)
         return items
 
     def action_print_consignment_visit_receipt(self):
