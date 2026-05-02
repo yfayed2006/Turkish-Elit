@@ -1,4 +1,28 @@
 <odoo>
+<!--  Management-friendly action for outlet setup.
+         The original action uses PDA readonly views, so the configuration fields do not appear there.  -->
+<record id="action_route_outlet_management" model="ir.actions.act_window">
+<field name="name">Outlets</field>
+<field name="res_model">route.outlet</field>
+<field name="view_mode">list,form</field>
+<field name="search_view_id" ref="route_core.view_route_outlet_pda_search"/>
+<field name="context">{'create': 1, 'edit': 1, 'delete': 0}</field>
+</record>
+<record id="action_route_outlet_management_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_outlet_list"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_management"/>
+</record>
+<record id="action_route_outlet_management_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_outlet_form"/>
+<field name="act_window_id" ref="route_core.action_route_outlet_management"/>
+</record>
+<record id="menu_route_outlet" model="ir.ui.menu">
+<field name="action" ref="route_core.action_route_outlet_management"/>
+</record>
 <record id="view_route_outlet_form_financial_policy" model="ir.ui.view">
 <field name="name">route.outlet.form.financial.policy</field>
 <field name="model">route.outlet</field>
@@ -10,7 +34,7 @@
 <field name="effective_financial_policy_label" readonly="1"/>
 </xpath>
 <xpath expr="//sheet/notebook" position="inside">
-<page string="Financial Policy">
+<page name="route_financial_policy_page" string="Financial Policy">
 <group string="Commercial Setup" col="2">
 <group>
 <field name="outlet_operation_mode" readonly="1"/>
