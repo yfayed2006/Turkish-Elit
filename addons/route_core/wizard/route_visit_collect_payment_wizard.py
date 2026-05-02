@@ -93,6 +93,13 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+    visit_commission_amount = fields.Monetary(
+        string="Commission",
+        currency_field="currency_id",
+        compute="_compute_visit_amounts",
+        store=False,
+        readonly=True,
+    )
     visit_collected_amount = fields.Monetary(
         string="Collected",
         currency_field="currency_id",
@@ -269,6 +276,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             is_direct = bool(visit and hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop())
             rec.is_direct_sales_stop = is_direct
             rec.visit_net_due_amount = visit.net_due_amount if visit and "net_due_amount" in visit._fields else 0.0
+            rec.visit_commission_amount = getattr(visit, "consignment_commission_amount", 0.0) if visit else 0.0
             rec.visit_collected_amount = visit.collected_amount if visit and "collected_amount" in visit._fields else 0.0
             rec.visit_remaining_due = visit.remaining_due_amount if visit and "remaining_due_amount" in visit._fields else 0.0
 
