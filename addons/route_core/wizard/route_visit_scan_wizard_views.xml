@@ -3,44 +3,100 @@
 <field name="name">route.visit.scan.wizard.form</field>
 <field name="model">route.visit.scan.wizard</field>
 <field name="arch" type="xml">
-<form string="Scan Barcode / Returns">
-<group string="Active Lot" invisible="scan_mode != 'count' or route_enable_lot_serial_tracking == False">
+<form string="Scan Barcode">
+<sheet class="route_scan_mobile_sheet">
+<group invisible="1">
+<field name="focus_target"/>
+<field name="route_enable_lot_serial_tracking"/>
+<field name="route_enable_expiry_tracking"/>
+<field name="detected_product_requires_lot"/>
+<field name="add_to_near_expiry_return"/>
+<field name="auto_quantity_locked"/>
+<field name="auto_uom_locked"/>
+<field name="is_near_expiry"/>
+</group>
+<div class="route_scan_alert route_scan_alert_danger" invisible="not scan_alert_message">
+<div class="route_scan_alert_title">Action Required</div>
+<field name="scan_alert_message" readonly="1" nolabel="1" widget="text"/>
+</div>
+<div class="route_scan_step_card route_scan_lot_card" invisible="scan_mode != 'count' or route_enable_lot_serial_tracking == False">
+<div class="route_scan_card_header">
+<div>
+<div class="route_scan_step_number">Step 1</div>
+<div class="route_scan_card_title">Active Lot</div>
+</div>
+<div class="route_scan_card_hint" invisible="active_lot_id">Scan the lot first, then scan the product barcode.</div>
+<div class="route_scan_card_hint" invisible="not active_lot_id">Lot selected. Continue with product scan.</div>
+</div>
+<group class="route_scan_compact_group" col="2">
 <group>
-<field name="focus_target" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="lot_barcode" placeholder="Scan or type lot code here" invisible="active_lot_id"/>
-<field name="active_lot_id" readonly="1"/>
+<field name="active_lot_id" readonly="1" invisible="not active_lot_id"/>
 <field name="active_lot_product_id" readonly="1" invisible="not active_lot_id"/>
 </group>
+<group invisible="not active_lot_id">
+<field name="active_lot_expiry_date" readonly="1" invisible="route_enable_expiry_tracking == False"/>
+<field name="active_lot_days_left" readonly="1" invisible="route_enable_expiry_tracking == False"/>
+<field name="active_lot_status" readonly="1" widget="badge" decoration-success="active_lot_status == 'normal'" decoration-warning="active_lot_status == 'near_expiry'" decoration-danger="active_lot_status == 'expired'"/>
+</group>
+</group>
+<div class="route_scan_button_row">
+<button name="action_set_active_lot" type="object" string="Set Lot" class="btn-primary route_scan_big_button" invisible="active_lot_id"/>
+<button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary route_scan_big_button" invisible="not active_lot_id"/>
+</div>
+</div>
+<div class="route_scan_step_card route_scan_decision_card route_scan_expired_card" invisible="scan_mode != 'count' or active_lot_status != 'expired'">
+<div class="route_scan_card_header">
+<div>
+<div class="route_scan_step_number">Step 2</div>
+<div class="route_scan_card_title">Expired Lot Decision</div>
+</div>
+<div class="route_scan_status_badge route_scan_status_danger">Expired</div>
+</div>
+<div class="route_scan_card_hint">This lot must be handled from this popup. Choose the action below before Scan / Add.</div>
+<div class="route_scan_guidance_box" invisible="not scan_guidance">
+<field name="scan_guidance" readonly="1" nolabel="1" widget="text"/>
+</div>
+<group class="route_scan_compact_group" col="1">
+<field name="expired_decision" widget="radio" nolabel="1"/>
+</group>
+<div class="route_scan_decision_buttons">
+<button name="action_choose_expired_return_damaged" type="object" string="Return To Damaged Stock" class="btn-primary route_scan_decision_btn" invisible="expired_decision == 'damaged'"/>
+</div>
+</div>
+<div class="route_scan_step_card route_scan_decision_card route_scan_near_expiry_card" invisible="scan_mode != 'count' or active_lot_status != 'near_expiry'">
+<div class="route_scan_card_header">
+<div>
+<div class="route_scan_step_number">Step 2</div>
+<div class="route_scan_card_title">Near Expiry Decision</div>
+</div>
+<div class="route_scan_status_badge route_scan_status_warning">Near Expiry</div>
+</div>
+<div class="route_scan_card_hint">Choose what the salesperson should do with this lot before Scan / Add.</div>
+<div class="route_scan_guidance_box" invisible="not scan_guidance">
+<field name="scan_guidance" readonly="1" nolabel="1" widget="text"/>
+</div>
+<group class="route_scan_compact_group" col="1">
+<field name="near_expiry_decision" widget="radio" nolabel="1"/>
+</group>
+<div class="route_scan_decision_buttons">
+<button name="action_choose_near_expiry_keep" type="object" string="Keep On Shelf" class="btn-secondary route_scan_decision_btn"/>
+<button name="action_choose_near_expiry_return_vehicle" type="object" string="Return To Vehicle" class="btn-primary route_scan_decision_btn"/>
+<button name="action_choose_near_expiry_return_near_expiry" type="object" string="Return To Near Expiry Stock" class="btn-primary route_scan_decision_btn"/>
+</div>
+</div>
+<div class="route_scan_step_card route_scan_product_card" invisible="scan_mode != 'count' and scan_mode != 'return'">
+<div class="route_scan_card_header">
+<div>
+<div class="route_scan_step_number">Step 3</div>
+<div class="route_scan_card_title">Product Scan</div>
+</div>
+<div class="route_scan_card_hint">Scan the product barcode and review quantity.</div>
+</div>
+<group class="route_scan_compact_group" col="2">
 <group>
-<field name="active_lot_expiry_date" readonly="1" invisible="not active_lot_id"/>
-<field name="active_lot_days_left" readonly="1" invisible="not active_lot_id"/>
-<field name="active_lot_status" readonly="1" invisible="not active_lot_id"/>
-</group>
-<group col="4">
-<button name="action_set_active_lot" type="object" string="Set Lot" class="btn-secondary" invisible="active_lot_id"/>
-<button name="action_clear_active_lot" type="object" string="Clear Lot" class="btn-secondary" invisible="not active_lot_id"/>
-</group>
-</group>
-<group string="Lot Decision" invisible="scan_mode != 'count' or active_lot_status not in ('expired','near_expiry')">
-<group>
-<field name="scan_alert_message" readonly="1" widget="text" invisible="not scan_alert_message"/>
-<field name="scan_guidance" readonly="1" widget="text" invisible="not scan_guidance"/>
-<field name="expired_decision" widget="radio" invisible="active_lot_status != 'expired'"/>
-<field name="near_expiry_decision" widget="radio" invisible="active_lot_status != 'near_expiry'"/>
-</group>
-<group>
-<button name="action_choose_expired_return_damaged" type="object" string="Return To Damaged Stock" class="btn-primary" invisible="active_lot_status != 'expired' or expired_decision == 'damaged'"/>
-<button name="action_choose_near_expiry_keep" type="object" string="Keep On Shelf" class="btn-secondary" invisible="active_lot_status != 'near_expiry'"/>
-<button name="action_choose_near_expiry_return_vehicle" type="object" string="Return To Vehicle" class="btn-primary" invisible="active_lot_status != 'near_expiry'"/>
-<button name="action_choose_near_expiry_return_near_expiry" type="object" string="Return To Near Expiry Stock" class="btn-primary" invisible="active_lot_status != 'near_expiry'"/>
-</group>
-</group>
-<group string="Product Scan" invisible="scan_mode != 'count' and scan_mode != 'return'">
-<group>
-<field name="visit_id" readonly="1"/>
-<field name="scan_mode" readonly="1"/>
+<field name="visit_id" readonly="1" invisible="1"/>
+<field name="scan_mode" readonly="1" invisible="1"/>
 <field name="barcode" placeholder="Scan product or box barcode here"/>
 <field name="quantity" readonly="auto_quantity_locked"/>
 <field name="scanned_uom_id" readonly="auto_uom_locked"/>
@@ -48,23 +104,21 @@
 <field name="return_from_scan" invisible="scan_mode != 'count' or not detected_product_id or active_lot_status in ('expired','near_expiry')"/>
 <field name="return_qty" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)"/>
 <field name="return_route" invisible="scan_mode != 'count' or (active_lot_status == 'near_expiry' and near_expiry_decision not in ('vehicle','near_expiry')) or (active_lot_status == 'expired' and expired_decision != 'damaged') or (active_lot_status not in ('expired','near_expiry') and not return_from_scan)" readonly="active_lot_status == 'expired'"/>
-<field name="add_to_near_expiry_return" invisible="1"/>
-<field name="auto_quantity_locked" invisible="1"/>
-<field name="auto_uom_locked" invisible="1"/>
 </group>
 <group>
 <field name="detected_product_id" readonly="1" invisible="not detected_product_id"/>
 <field name="base_uom_id" readonly="1" invisible="not detected_product_id"/>
 <field name="detected_scan_type" readonly="1" invisible="not detected_scan_type"/>
 <field name="detected_packaging_name" readonly="1" invisible="not detected_packaging_name"/>
-<field name="detected_product_requires_lot" invisible="1"/>
 <field name="product_lot_guidance" readonly="1" widget="text" invisible="not product_lot_guidance"/>
 <field name="counted_increase" readonly="1" invisible="scan_mode != 'count' or not detected_product_id"/>
 <field name="expiry_days_left" readonly="1" invisible="scan_mode != 'count' or route_enable_expiry_tracking == False or not expiry_date"/>
-<field name="is_near_expiry" readonly="1" invisible="1"/>
 </group>
 </group>
-<group string="Last Scan Result" invisible="scan_mode != 'count' or not last_product_id">
+</div>
+<div class="route_scan_result_card" invisible="scan_mode != 'count' or not last_product_id">
+<div class="route_scan_card_title">Last Scan Result</div>
+<group class="route_scan_compact_group" col="2">
 <group>
 <field name="last_product_id" readonly="1"/>
 <field name="last_counted_qty" readonly="1"/>
@@ -74,16 +128,21 @@
 <field name="last_return_route" readonly="1" invisible="not last_return_route"/>
 </group>
 </group>
-<group string="Last Return Result" invisible="scan_mode != 'return' or not last_product_id">
+</div>
+<div class="route_scan_result_card" invisible="scan_mode != 'return' or not last_product_id">
+<div class="route_scan_card_title">Last Return Result</div>
+<group class="route_scan_compact_group" col="2">
 <group>
 <field name="last_product_id" readonly="1"/>
 <field name="last_return_qty" readonly="1"/>
 <field name="last_return_route" readonly="1"/>
 </group>
 </group>
-<footer>
-<button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary"/>
-<button name="action_done" type="object" string="Done" class="btn-secondary"/>
+</div>
+</sheet>
+<footer class="route_scan_mobile_footer">
+<button name="action_scan_and_add" type="object" string="Scan / Add" class="btn-primary route_scan_footer_btn"/>
+<button name="action_done" type="object" string="Done" class="btn-secondary route_scan_footer_btn"/>
 </footer>
 </form>
 </field>
