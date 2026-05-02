@@ -714,15 +714,28 @@ Date:
 <td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Current Visit Net</div>
 <div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (current_visit_net, currency_label)"/>
-<div style="font-size:10px; color:#64748b; margin-top:5px;">Current visit sale minus returns and category commission.</div>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Current visit sale minus returns and outlet category commission.</div>
 </td>
 <td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Total Outlet Balance After Collection</div>
 <div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (total_outstanding_after_collection, currency_label)"/>
-<div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed cash collection in this visit.</div>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed collection in this visit.</div>
 </td>
 </tr>
 </table>
+<div t-if="commission_amount" style="border:1px solid #bae6fd; background:#ecfeff; color:#155e75; padding:8px 10px; margin:4px 0 12px 0; font-size:12px; line-height:1.45;">
+<strong>Settlement formula:</strong>
+<span> Net Payable = Sold Value - Returns - Outlet Category Commission. Commission is calculated from sold value by the agreed category percentage.</span>
+<span> For this visit: </span>
+<strong t-esc="'%.2f %s' % (current_visit_net, currency_label)"/>
+<span> = </span>
+<span t-esc="'%.2f %s' % (current_sale, currency_label)"/>
+<span> - </span>
+<span t-esc="'%.2f %s' % (returned_value, currency_label)"/>
+<span> - </span>
+<span t-esc="'%.2f %s' % (commission_amount, currency_label)"/>
+.
+</div>
 <table t-if="category_breakdown.get('lines')" style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #cbd5e1;">
 <tr>
 <td colspan="8" style="padding:8px 10px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Category Commission Breakdown</td>
@@ -734,7 +747,7 @@ Date:
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Returns</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">After Returns</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission %</td>
-<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Outlet Commission</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Net Payable</td>
 </tr>
 <tr t-foreach="category_breakdown.get('lines')" t-as="line">
