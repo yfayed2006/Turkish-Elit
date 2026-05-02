@@ -1674,32 +1674,83 @@ class RouteVisit(models.Model):
         self.ensure_one()
         summary = self._get_consignment_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
-        remaining_amount = summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)) or 0.0
-        commission_amount = summary.get("commission_amount", 0.0) or 0.0
+        category_breakdown = self._get_consignment_category_commission_breakdown() if hasattr(self, "_get_consignment_category_commission_breakdown") else {"lines": []}
+
+        def amount(value):
+            return "%.2f %s" % (value or 0.0, currency_code)
+
+        def date_value(value):
+            return str(value) if value else "-"
+
+        gross_sale = summary.get("visit_sale_amount", 0.0)
+        returns_value = summary.get("returned_value", 0.0)
+        gross_after_returns = summary.get("gross_after_returns_amount", max((gross_sale or 0.0) - (returns_value or 0.0), 0.0))
+        commission_amount = summary.get("commission_amount", 0.0)
+        current_visit_net = summary.get("current_visit_net", 0.0)
+        collected_now = summary.get("settled_amount", 0.0)
+        remaining_amount = summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0))
+        promise_amount = summary.get("promise_amount", 0.0)
+        total_after_collection = summary.get("total_outstanding_after_collection", remaining_amount)
+
         lines = [
-            _("Settlement Receipt"),
+            _("Settlement receipt"),
+            _("Consignment visit"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
-            _("Current Visit Sale: %.2f %s") % (summary.get("visit_sale_amount", 0.0), currency_code),
-            _("Returns: %.2f %s") % (summary.get("returned_value", 0.0), currency_code),
+            _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
+            _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
+            "",
+            _("Financial calculation:"),
+            _("Gross Sold Value: %s") % amount(gross_sale),
+            _("Returns Value: %s") % amount(returns_value),
+            _("Gross After Returns: %s") % amount(gross_after_returns),
+            _("Outlet Category Commission: %s") % amount(commission_amount),
+            _("Net Payable: %s") % amount(current_visit_net),
         ]
-        if commission_amount:
-            lines.append(_("Category Commission: %.2f %s") % (commission_amount, currency_code))
+
+        if category_breakdown.get("lines"):
+            lines += ["", _("Category Commission Breakdown:")]
+            for item in category_breakdown.get("lines"):
+                lines.append(
+                    _("- %(category)s: %(sold)s sold - %(returns)s returns - %(commission)s commission (%(rate).2f%%) = %(net)s net")
+                    % {
+                        "category": item.get("category_name") or "-",
+                        "sold": amount(item.get("sold_value", 0.0)),
+                        "returns": amount(item.get("return_value", 0.0)),
+                        "rate": item.get("commission_rate", 0.0) or 0.0,
+                        "commission": amount(item.get("commission_amount", 0.0)),
+                        "net": amount(item.get("net_payable_amount", 0.0)),
+                    }
+                )
+            lines.append(
+                _("Total Commission: %(commission)s | Total Net Payable: %(net)s")
+                % {
+                    "commission": amount(category_breakdown.get("total_commission_amount", commission_amount)),
+                    "net": amount(category_breakdown.get("total_net_payable_amount", current_visit_net)),
+                }
+            )
+
         lines += [
-            _("Net Payable: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
-            _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
-            _("Remaining: %.2f %s") % (remaining_amount, currency_code),
+            "",
+            _("Collection result:"),
+            _("Total Outlet Due: %s") % amount(summary.get("total_outlet_due", summary.get("current_due", 0.0))),
+            _("Collected Now: %s") % amount(collected_now),
+            _("Current Visit Remaining: %s") % amount(remaining_amount),
+            _("Total Outlet Balance After Collection: %s") % amount(total_after_collection),
         ]
-        if summary.get("promise_amount"):
-            lines.append(_("Promise: %.2f %s") % (summary["promise_amount"], currency_code))
+
+        if promise_amount:
+            lines.append(_("Promise Amount: %s") % amount(promise_amount))
             if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
-        elif remaining_amount <= 0.0:
-            lines.append(_("Status: Paid in full"))
+                lines.append(_("Promise Date: %s") % date_value(summary["latest_promise_date"]))
+        elif (remaining_amount or 0.0) <= 0.0:
+            lines.append(_("Settlement Status: Paid in full"))
+
         if pdf_url:
-            lines += ["", _("Receipt PDF:"), pdf_url]
-        lines += ["", _("Full category details are included in the PDF.")]
+            lines += ["", _("Receipt PDF for %s:") % (self.name or "-"), pdf_url]
+
+        lines += ["", _("Generated automatically by Route Core.")]
         return "\n".join(lines)
 
     def action_print_direct_stop_settlement_receipt(self):
