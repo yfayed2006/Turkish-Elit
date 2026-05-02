@@ -4,12 +4,12 @@
 <field name="model">route.outlet</field>
 <field name="inherit_id" ref="route_core.view_route_outlet_form"/>
 <field name="arch" type="xml">
-<xpath expr="//field[@name='default_commission_rate']" position="after">
+<xpath expr="//sheet/group/group/field[@name='default_commission_rate']" position="after">
 <field name="financial_policy"/>
 <field name="consignment_settlement_policy" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="effective_financial_policy_label" readonly="1"/>
 </xpath>
-<xpath expr="//page[@string='Summary']" position="after">
+<xpath expr="//sheet/notebook" position="inside">
 <page string="Financial Policy">
 <group string="Commercial Setup" col="2">
 <group>
