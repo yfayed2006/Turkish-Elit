@@ -64,7 +64,7 @@ class RouteVisit(models.Model):
                 return fields.Date.to_date(lot[field_name])
         return False
 
-    def _find_available_lot_from_code(self, lot_code):
+    def _find_available_lot_from_code(self, lot_code, product=False):
         self.ensure_one()
         if not self._is_route_lot_workflow_enabled():
             return False
@@ -79,27 +79,69 @@ class RouteVisit(models.Model):
         Lot = self.env["stock.lot"]
         Quant = self.env["stock.quant"]
 
-        lot = Lot.search([("name", "=", lot_code)], limit=1)
-        if not lot and "barcode" in Lot._fields:
-            lot = Lot.search([("barcode", "=", lot_code)], limit=1)
+        candidates = [lot_code]
+        upper_code = lot_code.upper()
+        if upper_code.startswith("LOT-") and lot_code[4:]:
+            candidates.append(lot_code[4:])
+        elif lot_code:
+            candidates.append("LOT-%s" % lot_code)
 
-        if not lot:
+        lots = Lot.browse()
+        seen_codes = set()
+        for code in candidates:
+            code = (code or "").strip()
+            if not code or code in seen_codes:
+                continue
+            seen_codes.add(code)
+            domain = [("name", "=", code)]
+            if product:
+                domain.append(("product_id", "=", product.id))
+            lots |= Lot.search(domain)
+            if "barcode" in Lot._fields:
+                domain = [("barcode", "=", code)]
+                if product:
+                    domain.append(("product_id", "=", product.id))
+                lots |= Lot.search(domain)
+
+        if not lots and product:
+            # Fall back to locating the code on another product so the message can explain
+            # that the scanned lot is not valid for the currently scanned product.
+            for code in candidates:
+                lots |= Lot.search([("name", "=", code)], limit=5)
+                if "barcode" in Lot._fields:
+                    lots |= Lot.search([("barcode", "=", code)], limit=5)
+
+        if not lots:
             raise UserError(_("No lot/serial was found with code '%s'.") % lot_code)
 
-        quant = Quant.search(
-            [
-                ("location_id", "child_of", allowed_locations.ids),
-                ("lot_id", "=", lot.id),
-                ("quantity", ">", 0),
-            ],
-            limit=1,
-        )
-        if not quant:
+        quant_domain = [
+            ("location_id", "child_of", allowed_locations.ids),
+            ("lot_id", "in", lots.ids),
+            ("quantity", ">", 0),
+        ]
+        if product:
+            quant_domain.append(("product_id", "=", product.id))
+        quant = Quant.search(quant_domain, limit=1)
+        if quant:
+            return quant.lot_id
+
+        if product and lots.filtered(lambda lot: lot.product_id != product):
             raise UserError(
-                _("Lot '%s' is not currently available in the van stock or outlet stock.")
-                % lot.display_name
+                _(
+                    "Lot '%(lot)s' was found, but it does not belong to product '%(product)s'.\n\n"
+                    "Please scan one of the available lots shown for this product."
+                )
+                % {"lot": lot_code, "product": product.display_name}
             )
-        return lot
+
+        product_text = product.display_name if product else _("this product")
+        raise UserError(
+            _(
+                "Lot '%(lot)s' exists for %(product)s, but it has no available quantity in this visit locations.\n\n"
+                "Use a lot that exists in the outlet stock or van stock, or ask the supervisor to correct the stock balance."
+            )
+            % {"lot": lot_code, "product": product_text}
+        )
 
     def _find_available_lots_for_product(self, product):
         self.ensure_one()
