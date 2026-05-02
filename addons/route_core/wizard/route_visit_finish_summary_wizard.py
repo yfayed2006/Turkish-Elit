@@ -80,6 +80,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     consignment_previous_due_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_current_visit_sale_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_current_visit_return_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
+    consignment_commission_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_net_amount_for_visit = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_current_due_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
     consignment_collected_amount = fields.Monetary(currency_field="currency_id", compute="_compute_consignment_summary", store=False)
@@ -164,6 +165,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
                 rec.consignment_previous_due_amount = 0.0
                 rec.consignment_current_visit_sale_amount = 0.0
                 rec.consignment_current_visit_return_amount = 0.0
+                rec.consignment_commission_amount = 0.0
                 rec.consignment_net_amount_for_visit = 0.0
                 rec.consignment_current_due_amount = 0.0
                 rec.consignment_collected_amount = 0.0
@@ -182,6 +184,7 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
             rec.consignment_previous_due_amount = summary.get("previous_due", 0.0)
             rec.consignment_current_visit_sale_amount = summary.get("visit_sale_amount", 0.0)
             rec.consignment_current_visit_return_amount = summary.get("returned_value", 0.0)
+            rec.consignment_commission_amount = summary.get("commission_amount", 0.0)
             rec.consignment_net_amount_for_visit = summary.get("current_visit_net", 0.0)
             rec.consignment_current_due_amount = summary.get("total_outlet_due", summary.get("current_due", 0.0))
             rec.consignment_collected_amount = summary.get("settled_amount", 0.0)
