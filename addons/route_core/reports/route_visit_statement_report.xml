@@ -82,6 +82,10 @@
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Current Visit Net</td>
 <td style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.net_amount_for_visit or 0.0, doc.currency_id.name or '')"/>
 </tr>
+<tr t-if="doc.current_visit_commission_amount">
+<td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Category Commission</td>
+<td colspan="3" style="padding:8px 10px; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.current_visit_commission_amount or 0.0, doc.currency_id.name or '')"/>
+</tr>
 <tr>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;">Total Outlet Due</td>
 <td style="padding:8px 10px; border-right:1px solid #d1d5db; border-bottom:1px solid #d1d5db;" t-esc="'%.2f %s' % (doc.amount_due_now or 0.0, doc.currency_id.name or '')"/>
