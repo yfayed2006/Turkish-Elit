@@ -95,6 +95,25 @@ class RouteVisit(models.Model):
                 counted_increase=0.0,
             )
 
+        RouteVisitLine = self.env["route.visit.line"]
+        if "lot_id" in RouteVisitLine._fields:
+            lot_lines = self.line_ids.filtered(
+                lambda l: l.product_id == product
+                and l.lot_id
+                and (
+                    (l.previous_qty or 0.0) > 0
+                    or (l.counted_qty or 0.0) > 0
+                    or (l.return_qty or 0.0) > 0
+                    or (l.supplied_qty or 0.0) > 0
+                )
+            )
+            # If the product already has exactly one operational lot line on this
+            # visit, put additional returns on that same row instead of creating a
+            # separate no-lot return row.  Multiple lot rows remain explicit and
+            # should be selected from the scan wizard.
+            if len(lot_lines.mapped("lot_id")) == 1:
+                return lot_lines[:1]
+
         line = self.line_ids.filtered(lambda l: l.product_id == product and not l.lot_id)[:1]
         if line:
             return line
@@ -123,7 +142,11 @@ class RouteVisit(models.Model):
         line.write({
             "return_qty": (line.return_qty or 0.0) + qty,
             "return_route": return_route or "vehicle",
+            "expiry_date": expiry_date or line.expiry_date,
         })
+
+        if hasattr(self, "_normalize_scanned_lot_activity_lines"):
+            self._normalize_scanned_lot_activity_lines()
 
         self.write({
             "has_returns_declared": True,
@@ -339,3 +362,4 @@ class RouteVisit(models.Model):
             action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
 
         return action
+
