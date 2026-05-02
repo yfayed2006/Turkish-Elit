@@ -90,6 +90,17 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     consignment_payment_count = fields.Integer(compute="_compute_consignment_summary", store=False)
     show_consignment_payments_section = fields.Boolean(compute="_compute_consignment_summary", store=False)
     consignment_payment_summary_html = fields.Html(compute="_compute_consignment_summary", sanitize=False, store=False)
+    show_category_commission_breakdown = fields.Boolean(
+        string="Show Category Commission Breakdown",
+        related="visit_id.show_consignment_category_commission_breakdown",
+        readonly=True,
+    )
+    category_commission_breakdown_html = fields.Html(
+        string="Category Commission Breakdown",
+        related="visit_id.consignment_category_commission_html",
+        sanitize=False,
+        readonly=True,
+    )
     finish_message = fields.Html(compute="_compute_finish_message", sanitize=False, store=False)
 
     @api.depends("visit_id")
