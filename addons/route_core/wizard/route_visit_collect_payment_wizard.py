@@ -93,20 +93,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
-    visit_gross_sale_amount = fields.Monetary(
-        string="Gross Sold Value",
-        currency_field="currency_id",
-        compute="_compute_visit_amounts",
-        store=False,
-        readonly=True,
-    )
-    visit_return_amount = fields.Monetary(
-        string="Returns Value",
-        currency_field="currency_id",
-        compute="_compute_visit_amounts",
-        store=False,
-        readonly=True,
-    )
     visit_commission_amount = fields.Monetary(
         string="Commission",
         currency_field="currency_id",
@@ -126,6 +112,18 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         currency_field="currency_id",
         compute="_compute_visit_amounts",
         store=False,
+        readonly=True,
+    )
+
+    show_category_commission_breakdown = fields.Boolean(
+        string="Show Category Commission Breakdown",
+        related="visit_id.show_consignment_category_commission_breakdown",
+        readonly=True,
+    )
+    category_commission_breakdown_html = fields.Html(
+        string="Category Commission Breakdown",
+        related="visit_id.consignment_category_commission_html",
+        sanitize=False,
         readonly=True,
     )
 
@@ -290,18 +288,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             is_direct = bool(visit and hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop())
             rec.is_direct_sales_stop = is_direct
             rec.visit_net_due_amount = visit.net_due_amount if visit and "net_due_amount" in visit._fields else 0.0
-            rec.visit_gross_sale_amount = 0.0
-            rec.visit_return_amount = 0.0
             rec.visit_commission_amount = getattr(visit, "consignment_commission_amount", 0.0) if visit else 0.0
-            if visit and not is_direct and hasattr(visit, "_get_route_consignment_financial_amounts"):
-                consignment_amounts = visit._get_route_consignment_financial_amounts()
-                rec.visit_gross_sale_amount = consignment_amounts.get("gross_sale_amount", 0.0)
-                rec.visit_return_amount = consignment_amounts.get("return_amount", 0.0)
-                rec.visit_commission_amount = consignment_amounts.get("commission_amount", 0.0)
-                rec.visit_net_due_amount = consignment_amounts.get("net_payable_amount", rec.visit_net_due_amount)
-            elif visit and not is_direct:
-                rec.visit_gross_sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
-                rec.visit_return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
             rec.visit_collected_amount = visit.collected_amount if visit and "collected_amount" in visit._fields else 0.0
             rec.visit_remaining_due = visit.remaining_due_amount if visit and "remaining_due_amount" in visit._fields else 0.0
 
