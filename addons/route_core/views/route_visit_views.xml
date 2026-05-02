@@ -843,7 +843,9 @@
 </div>
 </div>
 <div class="route_mobile_detail_grid" invisible="visit_execution_mode == 'direct_sales' or not show_consignment_category_commission_breakdown">
+<div class="route_mobile_detail_box_full route_commission_form_full_width">
 <field name="consignment_category_commission_html" readonly="1" nolabel="1" widget="html"/>
+</div>
 </div>
 <div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales'">
 <div class="route_mobile_info_card">
