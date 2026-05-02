@@ -1674,28 +1674,32 @@ class RouteVisit(models.Model):
         self.ensure_one()
         summary = self._get_consignment_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
+        remaining_amount = summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)) or 0.0
+        commission_amount = summary.get("commission_amount", 0.0) or 0.0
         lines = [
-            _("Settlement receipt"),
-            _("Consignment visit"),
+            _("Settlement Receipt"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
-            _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
-            _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
-            _("Total Outlet Due: %.2f %s") % (summary.get("total_outlet_due", summary.get("current_due", 0.0)), currency_code),
-            _("Current Visit Net: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
-            _("Collected Now: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
-            _("Current Visit Remaining: %.2f %s") % (summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)), currency_code),
-            _("Total Outlet Balance After Collection: %.2f %s") % (summary.get("total_outstanding_after_collection", 0.0), currency_code),
+            _("Current Visit Sale: %.2f %s") % (summary.get("visit_sale_amount", 0.0), currency_code),
+            _("Returns: %.2f %s") % (summary.get("returned_value", 0.0), currency_code),
+        ]
+        if commission_amount:
+            lines.append(_("Category Commission: %.2f %s") % (commission_amount, currency_code))
+        lines += [
+            _("Net Payable: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
+            _("Collected: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
+            _("Remaining: %.2f %s") % (remaining_amount, currency_code),
         ]
         if summary.get("promise_amount"):
-            lines.append(_("Promise Amount: %.2f %s") % (summary["promise_amount"], currency_code))
+            lines.append(_("Promise: %.2f %s") % (summary["promise_amount"], currency_code))
             if summary.get("latest_promise_date"):
                 lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
-        elif (summary.get("remaining_amount") or 0.0) <= 0.0:
-            lines.append(_("Settlement Status: Paid in full"))
+        elif remaining_amount <= 0.0:
+            lines.append(_("Status: Paid in full"))
         if pdf_url:
             lines += ["", _("Receipt PDF:"), pdf_url]
+        lines += ["", _("Full category details are included in the PDF.")]
         return "\n".join(lines)
 
     def action_print_direct_stop_settlement_receipt(self):
