@@ -38,6 +38,17 @@ class RouteVisitStatementWizard(models.TransientModel):
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     can_continue_to_collection = fields.Boolean(string="Can Continue To Collection", compute="_compute_statement", readonly=True)
+    show_category_commission_breakdown = fields.Boolean(
+        string="Show Category Commission Breakdown",
+        related="visit_id.show_consignment_category_commission_breakdown",
+        readonly=True,
+    )
+    category_commission_breakdown_html = fields.Html(
+        string="Category Commission Breakdown",
+        related="visit_id.consignment_category_commission_html",
+        sanitize=False,
+        readonly=True,
+    )
 
     def _get_statement_reference_date(self, visit):
         self.ensure_one()
