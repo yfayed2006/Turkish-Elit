@@ -699,6 +699,70 @@ class RouteVisit(models.Model):
                 unassigned_lines.unlink()
         return True
 
+    def _normalize_scanned_lot_return_lines(self):
+        """Move no-lot return-only rows into the matching lot row when safe.
+
+        This keeps the salesperson count table and the receipt readable: a return
+        for a tracked product should normally live on the same product/lot line
+        that already carries the previous and counted quantities.  The merge is
+        intentionally conservative; when more than one lot line exists, or when
+        return routes conflict, the method leaves the rows untouched so the
+        supervisor can see the ambiguity instead of losing stock-routing detail.
+        """
+        for visit in self:
+            RouteVisitLine = visit.env["route.visit.line"]
+            if "lot_id" not in RouteVisitLine._fields:
+                continue
+            for product in visit.line_ids.mapped("product_id"):
+                product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+                unassigned_return_lines = product_lines.filtered(
+                    lambda l: not l.lot_id
+                    and (l.return_qty or 0.0) > 0
+                    and (l.previous_qty or 0.0) <= 0
+                    and (l.counted_qty or 0.0) <= 0
+                    and (l.supplied_qty or 0.0) <= 0
+                )
+                if not unassigned_return_lines:
+                    continue
+
+                lot_lines = product_lines.filtered(
+                    lambda l: l.lot_id
+                    and (
+                        (l.previous_qty or 0.0) > 0
+                        or (l.counted_qty or 0.0) > 0
+                        or (l.return_qty or 0.0) > 0
+                        or (l.supplied_qty or 0.0) > 0
+                    )
+                )
+                if len(lot_lines.mapped("lot_id")) != 1:
+                    continue
+
+                lot_line = lot_lines[:1]
+                for return_line in unassigned_return_lines:
+                    return_qty = return_line.return_qty or 0.0
+                    if return_qty <= 0:
+                        continue
+                    return_route = return_line.return_route or "vehicle"
+                    lot_return_route = lot_line.return_route or "vehicle"
+                    if (lot_line.return_qty or 0.0) > 0 and lot_return_route != return_route:
+                        continue
+
+                    vals = {
+                        "return_qty": (lot_line.return_qty or 0.0) + return_qty,
+                        "return_route": return_route,
+                        "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
+                    }
+                    if return_line.expiry_date and not lot_line.expiry_date:
+                        vals["expiry_date"] = return_line.expiry_date
+                    lot_line.write(vals)
+                    return_line.unlink()
+        return True
+
+    def _normalize_scanned_lot_activity_lines(self):
+        self._normalize_scanned_lot_previous_lines()
+        self._normalize_scanned_lot_return_lines()
+        return True
+
     def _get_or_create_visit_line_for_product_and_lot(self, product, resolved_lot=False, resolved_expiry_date=False, counted_increase=0.0):
         self.ensure_one()
         RouteVisitLine = self.env["route.visit.line"]
@@ -859,7 +923,7 @@ class RouteVisit(models.Model):
         if self.visit_process_state == "checked_in":
             self.visit_process_state = "counting"
 
-        self._normalize_scanned_lot_previous_lines()
+        self._normalize_scanned_lot_activity_lines()
 
         return {
             "line": line,
