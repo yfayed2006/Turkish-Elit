@@ -760,6 +760,7 @@
 <field name="date" readonly="1"/>
 <field name="sale_order_id" readonly="1" invisible="1"/>
 <field name="end_datetime" readonly="1" invisible="1"/>
+<field name="show_consignment_category_commission_breakdown" invisible="1"/>
 </group>
 </group>
 <div class="route_pda_visit_section_header">
@@ -840,6 +841,9 @@
 <field name="consignment_promise_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
+</div>
+<div class="route_mobile_detail_grid" invisible="visit_execution_mode == 'direct_sales' or not show_consignment_category_commission_breakdown">
+<field name="consignment_category_commission_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales'">
 <div class="route_mobile_info_card">
