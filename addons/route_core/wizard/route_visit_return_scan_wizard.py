@@ -434,6 +434,60 @@ class RouteVisitReturnScanWizard(models.TransientModel):
         except Exception:
             return self.counted_increase or self.quantity or 0.0
 
+    def _get_visit_lot_line_for_return(self, product):
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+        if not product or "lot_id" not in RouteVisitLine._fields:
+            return RouteVisitLine
+        lot_lines = self.visit_id.line_ids.filtered(
+            lambda l: l.product_id == product
+            and l.lot_id
+            and (
+                (l.previous_qty or 0.0) > 0
+                or (l.counted_qty or 0.0) > 0
+                or (l.return_qty or 0.0) > 0
+                or (l.supplied_qty or 0.0) > 0
+            )
+        )
+        if len(lot_lines.mapped("lot_id")) == 1:
+            return lot_lines[:1]
+        return RouteVisitLine
+
+    def _resolve_return_lot_for_product(self, product):
+        self.ensure_one()
+        if not self.route_enable_lot_serial_tracking:
+            return False
+        if not hasattr(self.visit_id, "_is_product_tracked_by_lot") or not self.visit_id._is_product_tracked_by_lot(product):
+            return False
+
+        if self.active_lot_id:
+            return self.visit_id._resolve_product_active_lot(product, active_lot=self.active_lot_id)
+
+        visit_lot_line = self._get_visit_lot_line_for_return(product)
+        if visit_lot_line:
+            return visit_lot_line.lot_id
+
+        available_lots = self.visit_id._find_available_lots_for_product(product) if hasattr(self.visit_id, "_find_available_lots_for_product") else self.env["stock.lot"]
+        if len(available_lots) == 1:
+            return available_lots[:1]
+
+        if not available_lots:
+            raise UserError(
+                _("Product '%s' requires a Lot/Serial Number, but no available lot was found in the vehicle stock or outlet stock for this visit.")
+                % product.display_name
+            )
+
+        lot_names = ", ".join(available_lots[:5].mapped("display_name"))
+        more_text = _(" and more") if len(available_lots) > 5 else ""
+        raise UserError(
+            _(
+                "Product '%(product)s' requires a Lot/Serial Number before recording a return.\n\n"
+                "Available lots for this product in the outlet or van: %(lots)s%(more)s\n\n"
+                "Use the Active Lot section first, then press Scan / Add again."
+            )
+            % {"product": product.display_name, "lots": lot_names, "more": more_text}
+        )
+
     def action_scan_and_add(self):
         self.ensure_one()
         if not self.visit_id:
@@ -548,14 +602,8 @@ class RouteVisitReturnScanWizard(models.TransientModel):
             if effective_return_qty <= 0:
                 raise UserError(_("Return quantity must be greater than zero."))
 
-            resolved_lot = False
-            effective_expiry_date = False
-            try:
-                resolved_lot = self.visit_id._resolve_product_active_lot(product, active_lot=self.active_lot_id if self.route_enable_lot_serial_tracking else False)
-                effective_expiry_date = self.visit_id._get_lot_expiry_date(resolved_lot) if (resolved_lot and self.route_enable_expiry_tracking) else False
-            except UserError:
-                resolved_lot = False
-                effective_expiry_date = False
+            resolved_lot = self._resolve_return_lot_for_product(product)
+            effective_expiry_date = self.visit_id._get_lot_expiry_date(resolved_lot) if (resolved_lot and self.route_enable_expiry_tracking) else False
 
             self.visit_id._add_return_qty(
                 product,
@@ -590,6 +638,8 @@ class RouteVisitReturnScanWizard(models.TransientModel):
     def action_done(self):
         self.ensure_one()
         if self.visit_id:
+            if hasattr(self.visit_id, "_normalize_scanned_lot_activity_lines"):
+                self.visit_id._normalize_scanned_lot_activity_lines()
             vals = {
                 "returns_step_done": True,
             }
