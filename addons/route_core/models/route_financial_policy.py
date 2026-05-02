@@ -1,3 +1,5 @@
+from html import escape as html_escape
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -52,12 +54,6 @@ class RouteOutletCategoryCommission(models.Model):
             "Each product category can only have one commission rule per outlet.",
         )
     ]
-
-    @api.constrains("commission_rate")
-    def _check_commission_rate(self):
-        for line in self:
-            if line.commission_rate < 0.0 or line.commission_rate > 100.0:
-                raise UserError(_("Category commission percentage must be between 0 and 100."))
 
 
 class RouteOutlet(models.Model):
@@ -170,11 +166,9 @@ class RouteOutlet(models.Model):
 
     def _get_default_commission_rate(self):
         self.ensure_one()
-        if "default_commission_rate" in self._fields:
+        if "default_commission_rate" in self._fields and self.default_commission_rate:
             return self.default_commission_rate or 0.0
-        if "commission_rate" in self._fields:
-            return self.commission_rate or 0.0
-        return 0.0
+        return self.commission_rate or 0.0
 
     def _get_category_ancestor_ids(self, category):
         ids = []
@@ -319,11 +313,9 @@ class RouteVisitLine(models.Model):
             if outlet and not is_direct:
                 rate = outlet._get_consignment_category_commission_rate(line.product_id.categ_id)
                 if outlet._use_consignment_commission_deduction():
-                    # Commission is calculated on the net sold value after returns,
-                    # so returned/damaged/expired stock does not create commission.
-                    commission_base = base_net
-                    commission_amount = min(commission_base * (rate / 100.0), commission_base)
-                    net_payable = max(base_net - commission_amount, 0.0)
+                    commission_base = gross_sold
+                    commission_amount = min(commission_base * (rate / 100.0), max(gross_sold, 0.0))
+                    net_payable = max(gross_sold - returns - commission_amount, 0.0)
 
             line.route_commission_rate = rate
             line.route_commission_base_amount = commission_base
@@ -336,12 +328,6 @@ class RouteVisit(models.Model):
 
     consignment_commission_amount = fields.Monetary(
         string="Commission Amount",
-        currency_field="currency_id",
-        compute="_compute_route_consignment_policy_totals",
-        store=False,
-    )
-    consignment_commission_base_amount = fields.Monetary(
-        string="Commission Base",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
         store=False,
@@ -364,12 +350,23 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    show_consignment_category_commission_breakdown = fields.Boolean(
+        string="Show Category Commission Breakdown",
+        compute="_compute_consignment_category_commission_html",
+        store=False,
+    )
+    consignment_category_commission_html = fields.Html(
+        string="Category Commission Breakdown",
+        compute="_compute_consignment_category_commission_html",
+        sanitize=False,
+        store=False,
+    )
+
     def _get_route_consignment_financial_amounts(self):
         self.ensure_one()
         lines = self.line_ids.filtered(lambda line: line.product_id)
         gross_sale = sum((line.sold_amount or 0.0) for line in lines)
         returns = sum((line.return_amount or 0.0) for line in lines)
-        commission_base = sum((line.route_commission_base_amount or 0.0) for line in lines)
         commission = sum((line.route_commission_amount or 0.0) for line in lines)
         gross_after_returns = max(gross_sale - returns, 0.0)
         net_payable = sum((line.route_net_payable_amount or 0.0) for line in lines)
@@ -379,44 +376,196 @@ class RouteVisit(models.Model):
             "gross_sale_amount": gross_sale,
             "return_amount": returns,
             "gross_after_returns_amount": gross_after_returns,
-            "commission_base_amount": commission_base,
             "commission_amount": commission,
             "net_payable_amount": net_payable,
         }
 
-    def _get_route_consignment_category_breakdown(self):
+
+    def _format_route_policy_currency(self, amount):
         self.ensure_one()
-        grouped = {}
-        for line in self.line_ids.filtered(lambda visit_line: visit_line.product_id):
+        amount = amount or 0.0
+        currency = self.currency_id or self.env.company.currency_id
+        precision = currency.decimal_places or 2 if currency else 2
+        formatted = f"{amount:,.{precision}f}"
+        symbol = (currency.symbol or currency.name or "") if currency else ""
+        if not symbol:
+            return formatted
+        if currency.position == "before":
+            return f"{symbol} {formatted}"
+        return f"{formatted} {symbol}"
+
+    def _get_consignment_category_commission_breakdown(self):
+        self.ensure_one()
+        empty = {
+            "lines": [],
+            "total_sold_qty": 0.0,
+            "total_return_qty": 0.0,
+            "total_sold_value": 0.0,
+            "total_return_value": 0.0,
+            "total_gross_after_returns": 0.0,
+            "total_commission_amount": 0.0,
+            "total_net_payable_amount": 0.0,
+        }
+        if hasattr(self, "_is_direct_sales_stop") and self._is_direct_sales_stop():
+            return empty
+
+        buckets = {}
+        lines = self.line_ids.filtered(lambda line: line.product_id)
+        for line in lines:
+            sold_value = line.sold_amount or 0.0
+            return_value = line.return_amount or 0.0
+            commission_amount = line.route_commission_amount or 0.0
+            net_payable = line.route_net_payable_amount or max(sold_value - return_value - commission_amount, 0.0)
+            if not any((sold_value, return_value, commission_amount, net_payable, line.sold_qty or 0.0, line.return_qty or 0.0)):
+                continue
+
             category = line.product_id.categ_id
             key = category.id if category else 0
-            if key not in grouped:
-                grouped[key] = {
+            if key not in buckets:
+                rate = line.route_commission_rate or 0.0
+                buckets[key] = {
                     "category_id": category.id if category else False,
-                    "category_name": category.display_name if category else _("Uncategorized"),
+                    "category_name": category.complete_name if category else _("Uncategorized"),
                     "sold_qty": 0.0,
-                    "gross_sale_amount": 0.0,
-                    "return_amount": 0.0,
-                    "commission_base_amount": 0.0,
-                    "commission_rate": line.route_commission_rate or 0.0,
+                    "return_qty": 0.0,
+                    "sold_value": 0.0,
+                    "return_value": 0.0,
+                    "gross_after_returns": 0.0,
+                    "commission_rate": rate,
                     "commission_amount": 0.0,
                     "net_payable_amount": 0.0,
+                    "product_ids": set(),
                 }
-            bucket = grouped[key]
+            bucket = buckets[key]
             bucket["sold_qty"] += line.sold_qty or 0.0
-            bucket["gross_sale_amount"] += line.sold_amount or 0.0
-            bucket["return_amount"] += line.return_amount or 0.0
-            bucket["commission_base_amount"] += line.route_commission_base_amount or 0.0
-            bucket["commission_amount"] += line.route_commission_amount or 0.0
-            bucket["net_payable_amount"] += line.route_net_payable_amount or 0.0
-            if line.route_commission_rate:
+            bucket["return_qty"] += line.return_qty or 0.0
+            bucket["sold_value"] += sold_value
+            bucket["return_value"] += return_value
+            bucket["commission_amount"] += commission_amount
+            bucket["net_payable_amount"] += net_payable
+            if line.product_id:
+                bucket["product_ids"].add(line.product_id.id)
+            # Keep the displayed rate meaningful if products in the same category are using the same rule.
+            # If data was edited manually and rates differ, the weighted result is still clear through amounts.
+            if not bucket["commission_rate"] and line.route_commission_rate:
                 bucket["commission_rate"] = line.route_commission_rate
-        return list(grouped.values())
+
+        result_lines = []
+        totals = empty.copy()
+        totals["lines"] = result_lines
+        for bucket in sorted(buckets.values(), key=lambda val: val["category_name"] or ""):
+            bucket["gross_after_returns"] = max((bucket["sold_value"] or 0.0) - (bucket["return_value"] or 0.0), 0.0)
+            bucket["product_count"] = len(bucket.pop("product_ids", set()))
+            result_lines.append(bucket)
+            totals["total_sold_qty"] += bucket["sold_qty"]
+            totals["total_return_qty"] += bucket["return_qty"]
+            totals["total_sold_value"] += bucket["sold_value"]
+            totals["total_return_value"] += bucket["return_value"]
+            totals["total_gross_after_returns"] += bucket["gross_after_returns"]
+            totals["total_commission_amount"] += bucket["commission_amount"]
+            totals["total_net_payable_amount"] += bucket["net_payable_amount"]
+        return totals
+
+    def _build_consignment_category_commission_html(self):
+        self.ensure_one()
+        breakdown = self._get_consignment_category_commission_breakdown()
+        lines = breakdown.get("lines") or []
+        if not lines:
+            return ""
+
+        def money(amount):
+            return html_escape(self._format_route_policy_currency(amount))
+
+        rows = []
+        for line in lines:
+            rows.append(
+                "".join([
+                    "<tr>",
+                    "<td>", html_escape(line.get("category_name") or "-"), "</td>",
+                    "<td class='route_commission_num'>", f"{line.get('sold_qty', 0.0):,.2f}", "</td>",
+                    "<td class='route_commission_num'>", money(line.get("sold_value", 0.0)), "</td>",
+                    "<td class='route_commission_num'>", money(line.get("return_value", 0.0)), "</td>",
+                    "<td class='route_commission_num'>", money(line.get("gross_after_returns", 0.0)), "</td>",
+                    "<td class='route_commission_num'>", f"{line.get('commission_rate', 0.0):,.2f}%", "</td>",
+                    "<td class='route_commission_num'>", money(line.get("commission_amount", 0.0)), "</td>",
+                    "<td class='route_commission_num route_commission_net'>", money(line.get("net_payable_amount", 0.0)), "</td>",
+                    "</tr>",
+                ])
+            )
+        rows.append(
+            "".join([
+                "<tr class='route_commission_total'>",
+                "<td>Total</td>",
+                "<td class='route_commission_num'>", f"{breakdown.get('total_sold_qty', 0.0):,.2f}", "</td>",
+                "<td class='route_commission_num'>", money(breakdown.get("total_sold_value", 0.0)), "</td>",
+                "<td class='route_commission_num'>", money(breakdown.get("total_return_value", 0.0)), "</td>",
+                "<td class='route_commission_num'>", money(breakdown.get("total_gross_after_returns", 0.0)), "</td>",
+                "<td class='route_commission_num'>-</td>",
+                "<td class='route_commission_num'>", money(breakdown.get("total_commission_amount", 0.0)), "</td>",
+                "<td class='route_commission_num route_commission_net'>", money(breakdown.get("total_net_payable_amount", 0.0)), "</td>",
+                "</tr>",
+            ])
+        )
+        return "".join([
+            "<div class='route_commission_breakdown'>",
+            "<div class='route_commission_title'>Category Commission Breakdown</div>",
+            "<div class='route_commission_hint'>Sold value, returns, commission percentage, outlet commission, and net payable are shown by product category.</div>",
+            "<div class='route_commission_table_wrap'>",
+            "<table class='route_commission_table'>",
+            "<thead><tr>",
+            "<th>Category</th>",
+            "<th>Sold Qty</th>",
+            "<th>Sold Value</th>",
+            "<th>Returns</th>",
+            "<th>After Returns</th>",
+            "<th>Commission %</th>",
+            "<th>Outlet Commission</th>",
+            "<th>Net Payable</th>",
+            "</tr></thead>",
+            "<tbody>",
+            "".join(rows),
+            "</tbody></table></div></div>",
+            "<style>",
+            ".route_commission_breakdown{border:1px solid #dbe3ec;border-radius:14px;background:#fff;padding:12px;margin:10px 0 14px 0;}",
+            ".route_commission_title{font-size:17px;font-weight:800;color:#0f172a;margin-bottom:4px;}",
+            ".route_commission_hint{font-size:13px;color:#475569;background:#ecfeff;border:1px solid #bae6fd;border-radius:10px;padding:8px 10px;margin-bottom:10px;}",
+            ".route_commission_table_wrap{overflow-x:auto;}",
+            ".route_commission_table{width:100%;border-collapse:collapse;min-width:760px;}",
+            ".route_commission_table th{background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:11px;letter-spacing:.35px;text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;}",
+            ".route_commission_table td{padding:8px;border-bottom:1px solid #f1f5f9;color:#0f172a;vertical-align:top;}",
+            ".route_commission_num{text-align:right;white-space:nowrap;}",
+            ".route_commission_net{font-weight:800;color:#0f766e;}",
+            ".route_commission_total td{font-weight:800;background:#f8fafc;border-top:1px solid #cbd5e1;}",
+            "@media(max-width:768px){.route_commission_breakdown{padding:10px;}.route_commission_table{min-width:720px;}.route_commission_title{font-size:15px;}}",
+            "</style>",
+        ])
+
+    @api.depends(
+        "visit_execution_mode",
+        "line_ids.product_id",
+        "line_ids.product_id.categ_id",
+        "line_ids.sold_qty",
+        "line_ids.return_qty",
+        "line_ids.sold_amount",
+        "line_ids.return_amount",
+        "line_ids.route_commission_rate",
+        "line_ids.route_commission_amount",
+        "line_ids.route_net_payable_amount",
+    )
+    def _compute_consignment_category_commission_html(self):
+        for visit in self:
+            visit.show_consignment_category_commission_breakdown = False
+            visit.consignment_category_commission_html = False
+            if hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop():
+                continue
+            breakdown = visit._get_consignment_category_commission_breakdown()
+            has_breakdown = bool(breakdown.get("lines"))
+            visit.show_consignment_category_commission_breakdown = has_breakdown
+            visit.consignment_category_commission_html = visit._build_consignment_category_commission_html() if has_breakdown else False
 
     @api.depends(
         "line_ids.sold_amount",
         "line_ids.return_amount",
-        "line_ids.route_commission_base_amount",
         "line_ids.route_commission_amount",
         "line_ids.route_net_payable_amount",
         "visit_execution_mode",
@@ -426,14 +575,12 @@ class RouteVisit(models.Model):
     def _compute_route_consignment_policy_totals(self):
         for visit in self:
             visit.consignment_commission_amount = 0.0
-            visit.consignment_commission_base_amount = 0.0
             visit.consignment_gross_after_returns_amount = 0.0
             visit.consignment_net_payable_amount = 0.0
             if hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop():
                 continue
             amounts = visit._get_route_consignment_financial_amounts()
             visit.consignment_commission_amount = amounts["commission_amount"]
-            visit.consignment_commission_base_amount = amounts["commission_base_amount"]
             visit.consignment_gross_after_returns_amount = amounts["gross_after_returns_amount"]
             visit.consignment_net_payable_amount = amounts["net_payable_amount"]
 
@@ -479,7 +626,6 @@ class RouteVisit(models.Model):
         "payment_ids.promise_amount",
         "line_ids.sold_amount",
         "line_ids.return_amount",
-        "line_ids.route_commission_base_amount",
         "line_ids.route_commission_amount",
         "line_ids.route_net_payable_amount",
     )
@@ -539,11 +685,7 @@ class RouteVisit(models.Model):
                 "visit_sale_amount": amounts["gross_sale_amount"],
                 "returned_value": amounts["return_amount"],
                 "gross_after_returns_amount": amounts["gross_after_returns_amount"],
-                "commission_base_amount": amounts["commission_base_amount"],
                 "commission_amount": amounts["commission_amount"],
-                "commission_mode": self.outlet_id._get_consignment_commission_mode() if self.outlet_id else "fixed_rate",
-                "commission_mode_label": self.outlet_id.effective_financial_policy_label if self.outlet_id else "",
-                "category_commission_lines": self._get_route_consignment_category_breakdown(),
                 "current_visit_net": current_visit_net,
                 "current_due": total_outlet_due,
                 "total_outlet_due": total_outlet_due,
@@ -614,14 +756,6 @@ class SaleOrder(models.Model):
             return partner.property_product_pricelist
         return self.env["product.pricelist"]
 
-    def _route_apply_direct_sale_pricelist(self):
-        for order in self:
-            if order.route_order_mode != "direct_sale" or not order.route_outlet_id:
-                continue
-            pricelist = order._route_get_outlet_pricelist(order.route_outlet_id)
-            if pricelist and order.pricelist_id != pricelist:
-                order.pricelist_id = pricelist
-
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
         result = super()._onchange_route_outlet_id()
@@ -651,9 +785,7 @@ class SaleOrder(models.Model):
                 pricelist = self._route_get_outlet_pricelist(outlet)
                 if pricelist:
                     vals["pricelist_id"] = pricelist.id
-        orders = super().create(vals_list)
-        orders._route_apply_direct_sale_pricelist()
-        return orders
+        return super().create(vals_list)
 
     def write(self, vals):
         if vals.get("route_outlet_id") and not vals.get("pricelist_id"):
@@ -664,7 +796,4 @@ class SaleOrder(models.Model):
                 if pricelist:
                     vals = dict(vals)
                     vals["pricelist_id"] = pricelist.id
-        result = super().write(vals)
-        if vals.get("route_order_mode") == "direct_sale" or vals.get("route_outlet_id"):
-            self._route_apply_direct_sale_pricelist()
-        return result
+        return super().write(vals)
