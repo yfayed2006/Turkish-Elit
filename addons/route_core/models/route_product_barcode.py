@@ -89,12 +89,21 @@ class ProductProduct(models.Model):
 
     @api.model
     def _route_apply_source_available_domain(self, domain=None):
-        source_domain = self._route_source_available_domain()
         domain = list(domain or [])
+        if self.env.context.get("route_skip_source_available_domain"):
+            return domain
+        source_domain = self._route_source_available_domain()
         return expression.AND([domain, source_domain]) if source_domain else domain
 
     @api.model
     def _route_source_available_domain(self):
+        # Guard internal stock/product searches against recursive availability filtering.
+        # This method itself searches stock.quant. During SQL/domain conversion, Odoo may
+        # search product.product again for relational conditions such as
+        # product_id.sale_ok. Without this guard, direct-sale product lookup can loop
+        # between product.product._search() and stock.quant.search().
+        if self.env.context.get("route_skip_source_available_domain"):
+            return []
         if not self.env.context.get("route_only_source_available_products"):
             return []
         location_id = self.env.context.get("route_source_location_id")
@@ -110,7 +119,10 @@ class ProductProduct(models.Model):
         if "detailed_type" in self._fields:
             quant_domain.append(("product_id.detailed_type", "in", ["product", "consu"]))
 
-        quants = self.env["stock.quant"].search(quant_domain)
+        quants = self.env["stock.quant"].with_context(
+            route_skip_source_available_domain=True,
+            route_only_source_available_products=False,
+        ).search(quant_domain)
         available_by_product = {}
         for quant in quants:
             product = quant.product_id
@@ -314,6 +326,8 @@ class ProductTemplate(models.Model):
 
     @api.model
     def _route_source_available_template_domain(self):
+        if self.env.context.get("route_skip_source_available_domain"):
+            return []
         product_domain = self.env["product.product"]._route_source_available_domain()
         if not product_domain:
             return []
@@ -332,6 +346,8 @@ class ProductTemplate(models.Model):
     @api.model
     def name_search(self, name="", domain=None, operator="ilike", limit=100):
         domain = list(domain or [])
+        if self.env.context.get("route_skip_source_available_domain"):
+            return super().name_search(name, domain, operator, limit)
         product_domain = self.env["product.product"]._route_source_available_domain()
         source_template_domain = self._route_source_available_template_domain()
         term = (name or "").strip()
