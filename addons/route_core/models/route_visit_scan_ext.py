@@ -599,6 +599,21 @@ class RouteVisit(models.Model):
             vals["expiry_date"] = resolved_expiry_date
         return vals
 
+    def _unlink_merged_visit_lines(self, lines):
+        """Delete technical rows only after their quantities were merged safely.
+
+        Salespeople can create and update visit lines during route execution but
+        they cannot manually delete them.  The scan flow may need to remove an
+        empty no-lot technical row after moving its previous/return quantities
+        into the selected lot row, so this internal cleanup uses sudo and remains
+        limited to lines belonging to the current visit.
+        """
+        self.ensure_one()
+        lines = lines.filtered(lambda line: line.visit_id == self)
+        if lines:
+            lines.sudo().unlink()
+        return True
+
     def _get_unassigned_previous_line_for_product(self, product):
         self.ensure_one()
         RouteVisitLine = self.env["route.visit.line"]
@@ -662,7 +677,7 @@ class RouteVisit(models.Model):
         if remainder_previous_qty > 0:
             unassigned_line.write({"previous_qty": remainder_previous_qty})
         else:
-            unassigned_line.unlink()
+            self._unlink_merged_visit_lines(unassigned_line)
 
         return lot_line
 
@@ -696,7 +711,7 @@ class RouteVisit(models.Model):
                     "previous_qty": (lot_line.previous_qty or 0.0) + extra_previous_qty,
                     "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
                 })
-                unassigned_lines.unlink()
+                visit._unlink_merged_visit_lines(unassigned_lines)
         return True
 
     def _normalize_scanned_lot_return_lines(self):
@@ -755,7 +770,7 @@ class RouteVisit(models.Model):
                     if return_line.expiry_date and not lot_line.expiry_date:
                         vals["expiry_date"] = return_line.expiry_date
                     lot_line.write(vals)
-                    return_line.unlink()
+                    visit._unlink_merged_visit_lines(return_line)
         return True
 
     def _normalize_scanned_lot_activity_lines(self):
@@ -963,6 +978,7 @@ class RouteVisit(models.Model):
                 "default_focus_target": "lot" if self._is_route_lot_workflow_enabled() else "product",
             },
         }
+
 
 
 
