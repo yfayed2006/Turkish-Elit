@@ -50,6 +50,10 @@
 <span class="route_pda_payment_meta_label">Visit Returns</span>
 <field name="current_visit_return_amount" readonly="1" nolabel="1"/>
 </div>
+<div class="route_pda_payment_meta_item" invisible="current_visit_commission_amount == 0">
+<span class="route_pda_payment_meta_label">Commission</span>
+<field name="current_visit_commission_amount" readonly="1" nolabel="1"/>
+</div>
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Current Visit Net</span>
 <field name="net_amount_for_visit" readonly="1" nolabel="1"/>
