@@ -1,6 +1,39 @@
 <odoo>
-<!--  Dedicated management setup views for outlets.
-         The PDA outlet views stay useful for field users, while this action is kept clean for configuration.  -->
+<!--   Dedicated management setup views for outlets.
+      This action is the unified setup screen for creating and maintaining outlets:
+      identity, customer, operation mode, pricing/commission, consignment stock, and location.  -->
+<record id="view_route_outlet_management_config_search" model="ir.ui.view">
+<field name="name">route.outlet.management.config.search</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<search string="Outlet Configuration">
+<field name="name" string="Outlet"/>
+<field name="code" string="Outlet Code"/>
+<field name="barcode" string="Outlet Barcode"/>
+<field name="partner_id" string="Customer"/>
+<field name="route_country_id" string="Country"/>
+<field name="route_city_id" string="City"/>
+<field name="area_id" string="Area"/>
+<field name="outlet_operation_mode" string="Operation Mode"/>
+<field name="geo_status" string="Location Status"/>
+<separator/>
+<filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+<filter name="filter_direct_sale" string="Direct Sale" domain="[('outlet_operation_mode', '=', 'direct_sale')]"/>
+<filter name="filter_consignment" string="Consignment" domain="[('outlet_operation_mode', '=', 'consignment')]"/>
+<filter name="filter_category_commission" string="Category Commission" domain="[('outlet_operation_mode', '=', 'consignment'), ('consignment_commission_mode', '=', 'category_rate')]"/>
+<filter name="filter_fixed_commission" string="Fixed Commission" domain="[('outlet_operation_mode', '=', 'consignment'), ('consignment_commission_mode', '=', 'fixed_rate')]"/>
+<filter name="filter_missing_location" string="Missing Location" domain="[('geo_status', '=', 'missing')]"/>
+<filter name="filter_unverified_location" string="Unverified Location" domain="[('geo_status', '=', 'unverified')]"/>
+<separator/>
+<filter name="group_by_operation_mode" string="Operation Mode" context="{'group_by': 'outlet_operation_mode'}"/>
+<filter name="group_by_commission_type" string="Commission Type" context="{'group_by': 'consignment_commission_mode'}"/>
+<filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
+<filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_location_status" string="Location Status" context="{'group_by': 'geo_status'}"/>
+</search>
+</field>
+</record>
 <record id="view_route_outlet_management_config_list" model="ir.ui.view">
 <field name="name">route.outlet.management.config.list</field>
 <field name="model">route.outlet</field>
@@ -18,6 +51,8 @@
 <field name="consignment_commission_mode" string="Consignment Commission Type" optional="show"/>
 <field name="default_commission_rate" string="Fixed Commission %" optional="show"/>
 <field name="commission_line_count" string="Category Rules" optional="show"/>
+<field name="geo_status" string="Location Status" widget="badge" optional="show" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
+<field name="geo_verified" string="Verified" optional="hide"/>
 <field name="active" optional="show"/>
 </list>
 </field>
@@ -27,6 +62,13 @@
 <field name="model">route.outlet</field>
 <field name="arch" type="xml">
 <form string="Outlet Configuration" create="1" edit="1" delete="0">
+<header>
+<button name="action_search_outlet_address_on_map" type="object" string="Search Address on Map" class="btn-secondary" invisible="not id"/>
+<button name="action_open_outlet_map" type="object" string="Open Map" class="btn-primary" invisible="not id or geo_status == 'missing'"/>
+<button name="action_open_outlet_navigation" type="object" string="Navigate" class="btn-secondary" invisible="not id or geo_status == 'missing'"/>
+<button name="action_verify_outlet_location" type="object" string="Verify Location" class="btn-secondary" invisible="not id or geo_status == 'verified'"/>
+<button name="action_mark_outlet_location_unverified" type="object" string="Mark Location Unverified" class="btn-secondary" invisible="not id or geo_status != 'verified'"/>
+</header>
 <sheet>
 <div class="oe_title">
 <h1>
@@ -65,14 +107,14 @@
 </group>
 <group string="Commission Policy">
 <field name="consignment_commission_mode" widget="radio"/>
-<field name="default_commission_rate" string="Default Commission %"/>
+<field name="default_commission_rate" string="Commission % / Default %"/>
 <field name="commission_line_count" readonly="1" invisible="consignment_commission_mode != 'category_rate'"/>
 </group>
 </group>
 <group string="Category Commission Rules" invisible="outlet_operation_mode != 'consignment' or consignment_commission_mode != 'category_rate'">
-<div class="alert alert-info" role="alert"> Use one commission percentage per product category. Press Load Product Categories after saving the outlet, then edit each category percentage as needed. </div>
+<div class="alert alert-info" role="alert">Use one commission percentage per product category. Press Load Product Categories after saving the outlet, then edit each category percentage as needed.</div>
 <button name="action_generate_consignment_category_commissions" type="object" string="Load Product Categories" class="btn-primary" invisible="not id"/>
-<div class="alert alert-warning" role="alert" invisible="id"> Save the outlet first, then use Load Product Categories to create the category commission lines. </div>
+<div class="alert alert-warning" role="alert" invisible="id">Save the outlet first, then use Load Product Categories to create the category commission lines.</div>
 <field name="commission_line_ids" nolabel="1">
 <list editable="bottom">
 <field name="active"/>
@@ -82,6 +124,23 @@
 </list>
 </field>
 </group>
+<group string="Location Setup" col="2">
+<group string="Map Coordinates">
+<field name="geo_status" widget="badge" readonly="1" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
+<field name="geo_latitude"/>
+<field name="geo_longitude"/>
+<field name="geo_display_coordinates" readonly="1"/>
+<field name="geo_accuracy_m"/>
+</group>
+<group string="Map Address and Verification">
+<field name="geo_address" placeholder="Optional map/search address..."/>
+<field name="geo_source"/>
+<field name="geo_verified"/>
+<field name="geo_last_update" readonly="1"/>
+<field name="geo_place_id"/>
+</group>
+<div class="alert alert-info" colspan="2" role="alert">Use the location fields here when creating or editing the outlet. Search Address on Map helps find the outlet, then enter Latitude and Longitude and press Verify Location after saving. The separate Outlet Location Review menu remains available for bulk review of missing or unverified outlet locations.</div>
+</group>
 </sheet>
 </form>
 </field>
@@ -90,7 +149,7 @@
 <field name="name">Outlets</field>
 <field name="res_model">route.outlet</field>
 <field name="view_mode">list,form</field>
-<field name="search_view_id" ref="route_core.view_route_outlet_pda_search"/>
+<field name="search_view_id" ref="route_core.view_route_outlet_management_config_search"/>
 <field name="context">{'create': 1, 'edit': 1, 'delete': 0}</field>
 </record>
 <record id="action_route_outlet_management_list_view" model="ir.actions.act_window.view">
@@ -125,12 +184,12 @@
 <group>
 <field name="direct_sale_pricelist_id" string="Direct Sale Pricelist" invisible="outlet_operation_mode != 'direct_sale'" required="outlet_operation_mode == 'direct_sale'" options="{'no_open': False}"/>
 <field name="consignment_commission_mode" widget="radio" invisible="outlet_operation_mode != 'consignment'"/>
-<field name="default_commission_rate" string="Default Commission %" invisible="outlet_operation_mode != 'consignment'"/>
+<field name="default_commission_rate" string="Commission % / Default %" invisible="outlet_operation_mode != 'consignment'"/>
 <field name="commission_line_count" readonly="1" invisible="outlet_operation_mode != 'consignment' or consignment_commission_mode != 'category_rate'"/>
 </group>
 </group>
 <group string="Consignment Category Commission" invisible="outlet_operation_mode != 'consignment' or consignment_commission_mode != 'category_rate'">
-<div class="alert alert-info" role="alert"> Use one commission percentage per product category. Press Load Product Categories after saving the outlet, then edit each category percentage as needed. </div>
+<div class="alert alert-info" role="alert">Use one commission percentage per product category. Press Load Product Categories after saving the outlet, then edit each category percentage as needed.</div>
 <button name="action_generate_consignment_category_commissions" type="object" string="Load Product Categories" class="btn-primary" invisible="not id"/>
 <field name="commission_line_ids" nolabel="1">
 <list editable="bottom">
@@ -140,6 +199,32 @@
 <field name="note"/>
 </list>
 </field>
+</group>
+</page>
+<page name="route_location_setup_page" string="Location Setup">
+<group string="Map Actions" invisible="not id">
+<button name="action_search_outlet_address_on_map" type="object" string="Search Address on Map" class="btn-secondary"/>
+<button name="action_open_outlet_map" type="object" string="Open Map" class="btn-primary" invisible="geo_status == 'missing'"/>
+<button name="action_open_outlet_navigation" type="object" string="Navigate" class="btn-secondary" invisible="geo_status == 'missing'"/>
+<button name="action_verify_outlet_location" type="object" string="Verify Location" class="btn-secondary" invisible="geo_status == 'verified'"/>
+<button name="action_mark_outlet_location_unverified" type="object" string="Mark Location Unverified" class="btn-secondary" invisible="geo_status != 'verified'"/>
+</group>
+<group string="Outlet Location" col="2">
+<group>
+<field name="geo_status" widget="badge" readonly="1" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
+<field name="geo_latitude"/>
+<field name="geo_longitude"/>
+<field name="geo_display_coordinates" readonly="1"/>
+<field name="geo_accuracy_m"/>
+</group>
+<group>
+<field name="geo_address" placeholder="Optional map/search address..."/>
+<field name="geo_source"/>
+<field name="geo_verified"/>
+<field name="geo_last_update" readonly="1"/>
+<field name="geo_place_id"/>
+</group>
+<div class="alert alert-info" colspan="2" role="alert">Use Search Address on Map to open the outlet in the selected map provider. After confirming the exact outlet position, enter Latitude and Longitude, save, then verify the location.</div>
 </group>
 </page>
 </xpath>
