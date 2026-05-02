@@ -20,6 +20,9 @@ function focusField(root, fieldName) {
         const el = root.querySelector(selector);
         if (el && !el.disabled && el.offsetParent !== null) {
             try {
+                if (typeof el.scrollIntoView === "function") {
+                    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+                }
                 el.focus();
                 if (typeof el.select === "function") {
                     el.select();
@@ -158,3 +161,4 @@ patch(FormRenderer.prototype, {
         });
     },
 });
+
