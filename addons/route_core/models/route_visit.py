@@ -1462,6 +1462,14 @@ class RouteVisit(models.Model):
                     f"<span class='route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_{escape(payment.promise_status or 'none')}'>{escape(promise_status_label)}</span>"
                 )
 
+            open_due_amount = payment.remaining_due_amount or 0.0
+            if payment.state == "draft" and hasattr(payment, "_get_target_remaining_due"):
+                try:
+                    due_before_payment = payment._get_target_remaining_due()
+                    open_due_amount = max((due_before_payment or 0.0) - (payment.amount or 0.0), 0.0)
+                except Exception:
+                    open_due_amount = payment.remaining_due_amount or 0.0
+
             metrics = [
                 "<div class='route_pda_payment_metric'>"
                 "<span class='route_pda_payment_metric_label'>Collected</span>"
@@ -1469,7 +1477,7 @@ class RouteVisit(models.Model):
                 "</div>",
                 "<div class='route_pda_payment_metric'>"
                 "<span class='route_pda_payment_metric_label'>Open Due</span>"
-                f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(payment.remaining_due_amount))}</span>"
+                f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(open_due_amount))}</span>"
                 "</div>",
             ]
             if promise_amount:
