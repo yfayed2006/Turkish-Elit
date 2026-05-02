@@ -538,6 +538,7 @@ Date:
 <t t-set="confirmed_payment_total" t-value="summary.get('confirmed_payment_total', 0.0)"/>
 <t t-set="current_visit_net" t-value="summary.get('current_visit_net', current_sale - returned_value)"/>
 <t t-set="total_outstanding_after_collection" t-value="summary.get('total_outstanding_after_collection', (total_outlet_due - confirmed_payment_total) if (total_outlet_due - confirmed_payment_total) > 0.0 else 0.0)"/>
+<t t-set="category_breakdown" t-value="doc._get_consignment_category_commission_breakdown()"/>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:10px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
 <tr>
@@ -720,6 +721,43 @@ Date:
 <div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (total_outstanding_after_collection, currency_label)"/>
 <div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed cash collection in this visit.</div>
 </td>
+</tr>
+</table>
+<table t-if="category_breakdown.get('lines')" style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #cbd5e1;">
+<tr>
+<td colspan="8" style="padding:8px 10px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Category Commission Breakdown</td>
+</tr>
+<tr style="background:#f8fafc; color:#475569; font-size:10px; font-weight:700;">
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb;">Category</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Sold Qty</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Sold Value</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Returns</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">After Returns</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission %</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Net Payable</td>
+</tr>
+<tr t-foreach="category_breakdown.get('lines')" t-as="line">
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9;">
+<span t-esc="line.get('category_name') or '-'"/>
+</td>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f' % (line.get('sold_qty') or 0.0)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f %s' % (line.get('sold_value') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f %s' % (line.get('return_value') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f %s' % (line.get('gross_after_returns') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f%%' % (line.get('commission_rate') or 0.0)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right;" t-esc="'%.2f %s' % (line.get('commission_amount') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-bottom:1px solid #f1f5f9; text-align:right; font-weight:700; color:#0f766e;" t-esc="'%.2f %s' % (line.get('net_payable_amount') or 0.0, currency_label)"/>
+</tr>
+<tr style="background:#f8fafc; font-weight:700;">
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1;">Total</td>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;" t-esc="'%.2f' % (category_breakdown.get('total_sold_qty') or 0.0)"/>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;" t-esc="'%.2f %s' % (category_breakdown.get('total_sold_value') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;" t-esc="'%.2f %s' % (category_breakdown.get('total_return_value') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;" t-esc="'%.2f %s' % (category_breakdown.get('total_gross_after_returns') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;">-</td>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right;" t-esc="'%.2f %s' % (category_breakdown.get('total_commission_amount') or 0.0, currency_label)"/>
+<td style="padding:6px 7px; border-top:1px solid #cbd5e1; text-align:right; color:#0f766e;" t-esc="'%.2f %s' % (category_breakdown.get('total_net_payable_amount') or 0.0, currency_label)"/>
 </tr>
 </table>
 <div style="margin-top:8px; border:1px solid #dbe3ec; margin-bottom:16px;">
