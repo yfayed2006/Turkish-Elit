@@ -148,13 +148,26 @@ class RouteVisitStatementWizard(models.TransientModel):
                     0.0,
                 )
             else:
-                sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else (visit.net_due_amount or 0.0)
-                return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
-                net_amount = sale_amount - return_amount
+                if hasattr(visit, "_get_consignment_receipt_summary"):
+                    summary = visit._get_consignment_receipt_summary()
+                    sale_amount = summary.get("visit_sale_amount", 0.0)
+                    return_amount = summary.get("returned_value", 0.0)
+                    net_amount = summary.get("current_visit_net", max((sale_amount or 0.0) - (return_amount or 0.0), 0.0))
+                    amount_due_now = summary.get("total_outlet_due", summary.get("current_due", 0.0))
+                    balance_after_collection = summary.get("total_outstanding_after_collection", getattr(visit, "remaining_due_amount", 0.0) or 0.0)
+                    previous_due = summary.get("previous_due", max((amount_due_now or 0.0) - max(net_amount, 0.0), 0.0))
+                else:
+                    sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else (visit.net_due_amount or 0.0)
+                    return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
+                    net_amount = max((sale_amount or 0.0) - (return_amount or 0.0), 0.0)
+                    amount_due_now = visit.outlet_current_due_amount or 0.0
+                    balance_after_collection = max(getattr(visit, "remaining_due_amount", 0.0) or 0.0, amount_due_now)
+                    previous_due = max((amount_due_now or 0.0) - max(net_amount, 0.0), 0.0)
+
                 rec.current_visit_sale_amount = sale_amount
                 rec.current_visit_return_amount = return_amount
                 rec.net_amount_for_visit = net_amount
-                rec.amount_due_now = visit.outlet_current_due_amount or 0.0
+                rec.amount_due_now = amount_due_now
                 current_immediate_remaining = max(
                     rec._first_defined_amount(
                         getattr(visit, "remaining_due_amount", False),
@@ -162,11 +175,12 @@ class RouteVisitStatementWizard(models.TransientModel):
                     ),
                     0.0,
                 )
-                rec.suggested_collection_now = current_immediate_remaining
-                rec.previous_due_amount = max((rec.amount_due_now or 0.0) - max(net_amount, 0.0), 0.0)
-                rec.expected_remaining_after_payment = max(
-                    current_immediate_remaining - rec.suggested_collection_now,
-                    0.0,
+                rec.suggested_collection_now = current_immediate_remaining if getattr(visit, "ux_can_collect_payment", False) else 0.0
+                rec.previous_due_amount = previous_due
+                rec.expected_remaining_after_payment = (
+                    max((rec.amount_due_now or 0.0) - (rec.suggested_collection_now or 0.0), 0.0)
+                    if getattr(visit, "ux_can_collect_payment", False)
+                    else max(balance_after_collection or 0.0, 0.0)
                 )
 
             previous_confirmed = rec._get_previous_confirmed_payments(visit)
