@@ -3452,3 +3452,205 @@
 
 
 
+
+/* Scan Barcode / Scan Shelf popup mobile polish */
+.route_scan_mobile_sheet {
+    padding: 0.75rem 0.85rem 0.25rem;
+}
+
+.route_scan_mobile_sheet .route_scan_step_card,
+.route_scan_mobile_sheet .route_scan_result_card {
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    background: #ffffff;
+    padding: 0.95rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.route_scan_mobile_sheet .route_scan_lot_card {
+    border-left: 5px solid #00a3c7;
+}
+
+.route_scan_mobile_sheet .route_scan_product_card {
+    border-left: 5px solid #875a7b;
+}
+
+.route_scan_mobile_sheet .route_scan_expired_card {
+    border-left: 5px solid #dc2626;
+    background: #fff7f7;
+}
+
+.route_scan_mobile_sheet .route_scan_near_expiry_card {
+    border-left: 5px solid #f59e0b;
+    background: #fffbeb;
+}
+
+.route_scan_mobile_sheet .route_scan_result_card {
+    border-left: 5px solid #16a34a;
+    background: #f8fff9;
+}
+
+.route_scan_mobile_sheet .route_scan_card_header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+}
+
+.route_scan_mobile_sheet .route_scan_step_number {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.route_scan_mobile_sheet .route_scan_card_title {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.route_scan_mobile_sheet .route_scan_card_hint {
+    color: #475569;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.route_scan_mobile_sheet .route_scan_status_badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.85rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.route_scan_mobile_sheet .route_scan_status_danger {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.route_scan_mobile_sheet .route_scan_status_warning {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.route_scan_mobile_sheet .route_scan_alert,
+.route_scan_mobile_sheet .route_scan_guidance_box {
+    border-radius: 0.9rem;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.8rem;
+    line-height: 1.35;
+}
+
+.route_scan_mobile_sheet .route_scan_alert_danger {
+    color: #7f1d1d;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+}
+
+.route_scan_mobile_sheet .route_scan_alert_title {
+    font-size: 0.86rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.route_scan_mobile_sheet .route_scan_guidance_box {
+    color: #164e63;
+    background: #cffafe;
+    border: 1px solid #a5f3fc;
+}
+
+.route_scan_mobile_sheet .route_scan_button_row,
+.route_scan_mobile_sheet .route_scan_decision_buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+}
+
+.route_scan_mobile_sheet .route_scan_big_button,
+.route_scan_mobile_sheet .route_scan_decision_btn,
+.route_scan_mobile_footer .route_scan_footer_btn {
+    min-height: 2.9rem;
+    border-radius: 0.8rem;
+    font-weight: 900;
+    white-space: normal;
+    line-height: 1.15;
+}
+
+.route_scan_mobile_sheet .route_scan_decision_btn {
+    min-height: 3.25rem;
+}
+
+.route_scan_mobile_sheet .route_scan_compact_group .o_inner_group {
+    margin-bottom: 0;
+}
+
+.route_scan_mobile_sheet .o_field_widget textarea,
+.route_scan_mobile_sheet .o_field_widget .o_input {
+    font-size: 1rem;
+}
+
+.route_scan_mobile_footer {
+    gap: 0.65rem;
+}
+
+@media (max-width: 768px) {
+    .route_scan_mobile_sheet {
+        padding: 0.65rem 0.65rem 0;
+    }
+
+    .route_scan_mobile_sheet .route_scan_step_card,
+    .route_scan_mobile_sheet .route_scan_result_card {
+        padding: 0.85rem;
+        margin-bottom: 0.7rem;
+        border-radius: 0.95rem;
+    }
+
+    .route_scan_mobile_sheet .route_scan_card_header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+    }
+
+    .route_scan_mobile_sheet .route_scan_card_title {
+        font-size: 1rem;
+    }
+
+    .route_scan_mobile_sheet .route_scan_button_row,
+    .route_scan_mobile_sheet .route_scan_decision_buttons,
+    .route_scan_mobile_footer {
+        grid-template-columns: 1fr;
+    }
+
+    .route_scan_mobile_sheet .route_scan_big_button,
+    .route_scan_mobile_sheet .route_scan_decision_btn,
+    .route_scan_mobile_footer .route_scan_footer_btn {
+        width: 100%;
+        min-height: 3.25rem;
+        font-size: 1rem;
+    }
+
+    .route_scan_mobile_footer {
+        display: grid !important;
+        padding: 0.75rem !important;
+    }
+
+    .route_scan_mobile_sheet .o_group {
+        margin-bottom: 0.35rem;
+    }
+}
+
+
+
+
