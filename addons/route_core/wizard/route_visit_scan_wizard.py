@@ -73,6 +73,7 @@ class RouteVisitScanWizard(models.TransientModel):
     )
     scan_guidance = fields.Text(string="Scan Guidance", compute="_compute_scan_guidance", store=False)
     scan_alert_message = fields.Text(string="Scan Alert", readonly=True)
+    scan_success_message = fields.Text(string="Scan Saved", readonly=True)
     product_lot_guidance = fields.Text(string="Lot/Serial Guidance", readonly=True)
     detected_product_requires_lot = fields.Boolean(string="Requires Lot/Serial", readonly=True, default=False)
 
@@ -208,6 +209,7 @@ class RouteVisitScanWizard(models.TransientModel):
             rec.return_qty = 0.0
             rec.return_route = "vehicle"
             rec.scan_alert_message = False
+            rec.scan_success_message = False
 
     @api.onchange("near_expiry_decision", "counted_increase")
     def _onchange_near_expiry_decision(self):
@@ -399,7 +401,7 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def _reopen_with_scan_alert(self, message):
         self.ensure_one()
-        self.write({"scan_alert_message": message})
+        self.write({"scan_alert_message": message, "scan_success_message": False})
         return self._action_reopen_scan_wizard()
 
     def action_choose_expired_return_damaged(self):
@@ -413,6 +415,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "return_route": "damaged",
             "return_qty": self._get_lot_decision_default_qty(),
             "scan_alert_message": False,
+            "scan_success_message": False,
             "focus_target": "product",
         })
         return self._action_reopen_scan_wizard()
@@ -428,6 +431,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "return_route": "vehicle",
             "return_qty": 0.0,
             "scan_alert_message": False,
+            "scan_success_message": False,
             "focus_target": "product",
         })
         return self._action_reopen_scan_wizard()
@@ -443,6 +447,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "return_route": "vehicle",
             "return_qty": self._get_lot_decision_default_qty(),
             "scan_alert_message": False,
+            "scan_success_message": False,
             "focus_target": "product",
         })
         return self._action_reopen_scan_wizard()
@@ -458,6 +463,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "return_route": "near_expiry",
             "return_qty": self._get_lot_decision_default_qty(),
             "scan_alert_message": False,
+            "scan_success_message": False,
             "focus_target": "product",
         })
         return self._action_reopen_scan_wizard()
@@ -478,9 +484,29 @@ class RouteVisitScanWizard(models.TransientModel):
             },
         }
 
+    def _format_scan_qty(self, value):
+        return "%(qty).2f" % {"qty": value or 0.0}
+
     def _reset_after_successful_scan(self, product=False, counted_qty=0.0, return_qty=0.0, return_route=False):
         self.ensure_one()
-        keep_lot = self.active_lot_id if self.route_enable_lot_serial_tracking else False
+        # A successful scan has already written the visit line. Clear the active lot so
+        # the next scan starts cleanly and the salesperson does not accidentally reuse
+        # an expired/near-expiry lot decision. The parent visit table is refreshed when
+        # the user taps Done.
+        route_label = dict(self._fields["return_route"].selection).get(return_route, False) if return_route else False
+        if return_qty:
+            success_message = _(
+                "Scan saved. Counted %(counted)s and returned %(returned)s to %(route)s. Tap Done to refresh the visit table, or continue with the next lot/product."
+            ) % {
+                "counted": self._format_scan_qty(counted_qty),
+                "returned": self._format_scan_qty(return_qty),
+                "route": route_label or _("the selected return route"),
+            }
+        else:
+            success_message = _(
+                "Scan saved. Counted %(counted)s. Tap Done to refresh the visit table, or continue with the next lot/product."
+            ) % {"counted": self._format_scan_qty(counted_qty)}
+
         self.write({
             "barcode": False,
             "quantity": 1.0,
@@ -493,6 +519,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "product_lot_guidance": False,
             "detected_product_requires_lot": False,
             "scan_alert_message": False,
+            "scan_success_message": success_message,
             "expiry_date": False,
             "add_to_near_expiry_return": False,
             "return_from_scan": False,
@@ -500,9 +527,9 @@ class RouteVisitScanWizard(models.TransientModel):
             "return_route": "vehicle",
             "near_expiry_decision": False,
             "expired_decision": False,
-            "active_lot_id": keep_lot.id if keep_lot else False,
+            "active_lot_id": False,
             "lot_barcode": False,
-            "focus_target": "product" if keep_lot else self._default_focus_target(),
+            "focus_target": self._default_focus_target(),
             "last_product_id": product.id if product else False,
             "last_counted_qty": counted_qty or 0.0,
             "last_return_qty": return_qty or 0.0,
@@ -535,6 +562,7 @@ class RouteVisitScanWizard(models.TransientModel):
             self.write({
                 "scan_alert_message": error.args[0] if error.args else str(error),
                 "focus_target": "lot",
+                "scan_success_message": False,
             })
             return self._action_reopen_scan_wizard()
 
@@ -543,6 +571,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "lot_barcode": False,
             "focus_target": "product",
             "scan_alert_message": False,
+            "scan_success_message": False,
         })
         return self._action_reopen_scan_wizard()
 
@@ -561,6 +590,7 @@ class RouteVisitScanWizard(models.TransientModel):
             "product_lot_guidance": False,
             "detected_product_requires_lot": False,
             "scan_alert_message": False,
+            "scan_success_message": False,
             "expiry_date": False,
             "add_to_near_expiry_return": False,
             "return_from_scan": False,
@@ -607,9 +637,9 @@ class RouteVisitScanWizard(models.TransientModel):
         if not self.visit_id:
             raise UserError(_("Visit is required."))
         if not self.barcode or not self.barcode.strip():
-            raise UserError(_("Please enter or scan a barcode first."))
+            return self._reopen_with_scan_alert(_("Please scan or enter the product barcode first."))
         if self.quantity <= 0:
-            raise UserError(_("Quantity must be greater than zero."))
+            return self._reopen_with_scan_alert(_("Quantity must be greater than zero."))
 
         if self.scan_mode == "count":
             try:
@@ -738,6 +768,6 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def action_done(self):
         self.ensure_one()
-        return {"type": "ir.actions.act_window_close"}
+        return {"type": "ir.actions.client", "tag": "reload"}
 
 
