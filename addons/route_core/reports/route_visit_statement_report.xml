@@ -101,6 +101,11 @@
 <td style="padding:8px 10px;" t-esc="'%s / %s' % (doc.open_promise_count or 0, doc.overdue_promise_count or 0)"/>
 </tr>
 </table>
+<div t-if="category_breakdown.get('lines')" style="border:1px solid #bae6fd; background:#ecfeff; color:#155e75; padding:8px 10px; margin:0 0 14px 0; border-radius:8px; font-size:12px; line-height:1.45;">
+<strong>Settlement formula:</strong>
+<span> Net Payable = Sold Value - Returns - Outlet Category Commission. Commission is calculated from sold value by the agreed category percentage.</span>
+<span> The table below explains the agreed commission by product category before collection confirmation.</span>
+</div>
 <table t-if="category_breakdown.get('lines')" style="width:100%; border-collapse:separate; border-spacing:0; margin-bottom:14px; border:1px solid #6b7280; border-radius:10px; overflow:hidden;">
 <tr>
 <td colspan="8" style="padding:8px 10px; background:#ecfeff; border-bottom:1px solid #d1d5db; font-weight:700; color:#155e75;">Category Commission Breakdown</td>
@@ -112,7 +117,7 @@
 <td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:11%;">Returns</td>
 <td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:13%;">After Returns</td>
 <td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:10%;">Commission %</td>
-<td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:12%;">Commission</td>
+<td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:12%;">Outlet Commission</td>
 <td style="padding:7px 8px; border-bottom:1px solid #e5e7eb; text-align:right; width:12%;">Net Payable</td>
 </tr>
 <tr t-foreach="category_breakdown.get('lines')" t-as="line">
