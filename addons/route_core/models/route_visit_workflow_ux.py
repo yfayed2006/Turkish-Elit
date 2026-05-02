@@ -800,19 +800,22 @@ class RouteVisit(models.Model):
 
             sale_amount = sum((line.sold_amount or 0.0) for line in rec.line_ids) if rec.line_ids else (rec.net_due_amount or 0.0)
             return_amount = sum((line.return_amount or 0.0) for line in rec.line_ids) if rec.line_ids else 0.0
-            net_amount_for_visit = sale_amount - return_amount
-            amount_due_now = rec.outlet_current_due_amount or 0.0
+            net_amount_for_visit = max((sale_amount or 0.0) - (return_amount or 0.0), 0.0)
             confirmed_payments = rec.payment_ids.filtered(lambda p: p.state == "confirmed") if rec.payment_ids else rec.payment_ids
+            confirmed_amount = sum(confirmed_payments.mapped("amount")) if confirmed_payments else 0.0
             promise_amount = sum((getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0) for payment in confirmed_payments) if confirmed_payments else 0.0
 
             effective_remaining = rec.remaining_due_amount or 0.0
+            outlet_balance_after_collection = max(rec.outlet_current_due_amount or 0.0, effective_remaining)
+            amount_due_before_collection = max(outlet_balance_after_collection + confirmed_amount, net_amount_for_visit)
+
             rec.consignment_current_visit_sale_amount = sale_amount
             rec.consignment_current_visit_return_amount = return_amount
             rec.consignment_net_amount_for_visit = net_amount_for_visit
-            rec.consignment_amount_due_now = amount_due_now
-            rec.consignment_previous_due_amount = max(amount_due_now - max(net_amount_for_visit, 0.0), 0.0)
+            rec.consignment_amount_due_now = amount_due_before_collection
+            rec.consignment_previous_due_amount = max(amount_due_before_collection - max(net_amount_for_visit, 0.0), 0.0)
             rec.consignment_immediate_remaining_amount = effective_remaining
-            rec.consignment_promise_amount = min(promise_amount, effective_remaining) if promise_amount else 0.0
+            rec.consignment_promise_amount = min(promise_amount, outlet_balance_after_collection) if promise_amount else 0.0
 
     def _get_route_receipt_sale_order(self):
         self.ensure_one()
@@ -1500,10 +1503,15 @@ class RouteVisit(models.Model):
         visit_sale_amount = sum(item.get("sold_amount", 0.0) for item in line_items)
         returned_value = sum(item.get("return_amount", 0.0) for item in line_items)
         refill_value = sum(item.get("supply_value", 0.0) for item in line_items)
-        current_visit_net = visit_sale_amount - returned_value
-        total_outlet_due = self.outlet_current_due_amount or 0.0
+        current_visit_net = max((visit_sale_amount or 0.0) - (returned_value or 0.0), 0.0)
+
+        # `outlet_current_due_amount` is already the balance that remains on the outlet
+        # after any confirmed collection on this visit. Do not subtract the current
+        # visit collection from it again, otherwise partial-payment visits with an
+        # open promise show an incorrect zero balance after collection.
+        total_outstanding_after_collection = max(self.outlet_current_due_amount or 0.0, remaining_amount)
+        total_outlet_due = max(total_outstanding_after_collection + settled_amount, current_visit_net)
         previous_due = max(total_outlet_due - max(current_visit_net, 0.0), 0.0)
-        total_outstanding_after_collection = max(total_outlet_due - settled_amount, 0.0)
         raw_promise_amount = sum((getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0) for payment in promise_payments) if promise_payments else 0.0
         return {
             "sale_order_ref": sale_order_ref,
