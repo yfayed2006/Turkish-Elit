@@ -768,6 +768,8 @@ class RouteVisitScanWizard(models.TransientModel):
 
     def action_done(self):
         self.ensure_one()
+        if self.visit_id and hasattr(self.visit_id, "_normalize_scanned_lot_previous_lines"):
+            self.visit_id._normalize_scanned_lot_previous_lines()
         return {"type": "ir.actions.client", "tag": "reload"}
 
 
