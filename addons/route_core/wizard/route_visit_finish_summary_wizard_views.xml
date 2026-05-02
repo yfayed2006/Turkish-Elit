@@ -12,6 +12,7 @@
 <field name="show_previous_due" invisible="1"/>
 <field name="show_consignment_section" invisible="1"/>
 <field name="show_consignment_payments_section" invisible="1"/>
+<field name="show_category_commission_breakdown" invisible="1"/>
 <div class="route_pda_payment_section">
 <field name="finish_message" readonly="1" nolabel="1" widget="html"/>
 </div>
@@ -153,6 +154,9 @@
 <field name="consignment_total_outstanding_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
+</div>
+<div class="route_pda_payment_section" invisible="is_direct_sales_stop or not show_category_commission_breakdown">
+<field name="category_commission_breakdown_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Completed Documents</div>
