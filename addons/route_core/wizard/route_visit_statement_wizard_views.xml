@@ -117,7 +117,7 @@
 </div>
 </div>
 </div>
-<div class="route_pda_statement_info" role="alert"> This statement is for review. Total Outlet Due is the outlet balance before the new collection. Current Visit Net is this visit sale minus returns. Suggested Cash Collection is the cash amount recommended to collect now. Expected Remaining After Collection is the amount that will stay open after the collection decision. The full settlement receipt remains available after the visit is finished. </div>
+<div class="route_pda_statement_info" role="alert"> This statement is for review. Total Outlet Due is the outlet balance before the new collection. Current Visit Net is this visit sale minus returns and applicable consignment commission. Suggested Cash Collection is the cash amount recommended to collect now. Expected Remaining After Collection is the amount that will stay open after the collection decision. The full settlement receipt remains available after the visit is finished. </div>
 </sheet>
 <footer class="route_pda_statement_footer">
 <button name="action_print_statement_pdf" string="Print Statement" type="object" class="btn-primary"/>
