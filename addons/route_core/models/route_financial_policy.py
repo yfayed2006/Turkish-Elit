@@ -53,6 +53,12 @@ class RouteOutletCategoryCommission(models.Model):
         )
     ]
 
+    @api.constrains("commission_rate")
+    def _check_commission_rate(self):
+        for line in self:
+            if line.commission_rate < 0.0 or line.commission_rate > 100.0:
+                raise UserError(_("Category commission percentage must be between 0 and 100."))
+
 
 class RouteOutlet(models.Model):
     _inherit = "route.outlet"
@@ -164,9 +170,11 @@ class RouteOutlet(models.Model):
 
     def _get_default_commission_rate(self):
         self.ensure_one()
-        if "default_commission_rate" in self._fields and self.default_commission_rate:
+        if "default_commission_rate" in self._fields:
             return self.default_commission_rate or 0.0
-        return self.commission_rate or 0.0
+        if "commission_rate" in self._fields:
+            return self.commission_rate or 0.0
+        return 0.0
 
     def _get_category_ancestor_ids(self, category):
         ids = []
@@ -311,9 +319,11 @@ class RouteVisitLine(models.Model):
             if outlet and not is_direct:
                 rate = outlet._get_consignment_category_commission_rate(line.product_id.categ_id)
                 if outlet._use_consignment_commission_deduction():
-                    commission_base = gross_sold
-                    commission_amount = min(commission_base * (rate / 100.0), max(gross_sold, 0.0))
-                    net_payable = max(gross_sold - returns - commission_amount, 0.0)
+                    # Commission is calculated on the net sold value after returns,
+                    # so returned/damaged/expired stock does not create commission.
+                    commission_base = base_net
+                    commission_amount = min(commission_base * (rate / 100.0), commission_base)
+                    net_payable = max(base_net - commission_amount, 0.0)
 
             line.route_commission_rate = rate
             line.route_commission_base_amount = commission_base
@@ -326,6 +336,12 @@ class RouteVisit(models.Model):
 
     consignment_commission_amount = fields.Monetary(
         string="Commission Amount",
+        currency_field="currency_id",
+        compute="_compute_route_consignment_policy_totals",
+        store=False,
+    )
+    consignment_commission_base_amount = fields.Monetary(
+        string="Commission Base",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
         store=False,
@@ -353,6 +369,7 @@ class RouteVisit(models.Model):
         lines = self.line_ids.filtered(lambda line: line.product_id)
         gross_sale = sum((line.sold_amount or 0.0) for line in lines)
         returns = sum((line.return_amount or 0.0) for line in lines)
+        commission_base = sum((line.route_commission_base_amount or 0.0) for line in lines)
         commission = sum((line.route_commission_amount or 0.0) for line in lines)
         gross_after_returns = max(gross_sale - returns, 0.0)
         net_payable = sum((line.route_net_payable_amount or 0.0) for line in lines)
@@ -362,13 +379,44 @@ class RouteVisit(models.Model):
             "gross_sale_amount": gross_sale,
             "return_amount": returns,
             "gross_after_returns_amount": gross_after_returns,
+            "commission_base_amount": commission_base,
             "commission_amount": commission,
             "net_payable_amount": net_payable,
         }
 
+    def _get_route_consignment_category_breakdown(self):
+        self.ensure_one()
+        grouped = {}
+        for line in self.line_ids.filtered(lambda visit_line: visit_line.product_id):
+            category = line.product_id.categ_id
+            key = category.id if category else 0
+            if key not in grouped:
+                grouped[key] = {
+                    "category_id": category.id if category else False,
+                    "category_name": category.display_name if category else _("Uncategorized"),
+                    "sold_qty": 0.0,
+                    "gross_sale_amount": 0.0,
+                    "return_amount": 0.0,
+                    "commission_base_amount": 0.0,
+                    "commission_rate": line.route_commission_rate or 0.0,
+                    "commission_amount": 0.0,
+                    "net_payable_amount": 0.0,
+                }
+            bucket = grouped[key]
+            bucket["sold_qty"] += line.sold_qty or 0.0
+            bucket["gross_sale_amount"] += line.sold_amount or 0.0
+            bucket["return_amount"] += line.return_amount or 0.0
+            bucket["commission_base_amount"] += line.route_commission_base_amount or 0.0
+            bucket["commission_amount"] += line.route_commission_amount or 0.0
+            bucket["net_payable_amount"] += line.route_net_payable_amount or 0.0
+            if line.route_commission_rate:
+                bucket["commission_rate"] = line.route_commission_rate
+        return list(grouped.values())
+
     @api.depends(
         "line_ids.sold_amount",
         "line_ids.return_amount",
+        "line_ids.route_commission_base_amount",
         "line_ids.route_commission_amount",
         "line_ids.route_net_payable_amount",
         "visit_execution_mode",
@@ -378,12 +426,14 @@ class RouteVisit(models.Model):
     def _compute_route_consignment_policy_totals(self):
         for visit in self:
             visit.consignment_commission_amount = 0.0
+            visit.consignment_commission_base_amount = 0.0
             visit.consignment_gross_after_returns_amount = 0.0
             visit.consignment_net_payable_amount = 0.0
             if hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop():
                 continue
             amounts = visit._get_route_consignment_financial_amounts()
             visit.consignment_commission_amount = amounts["commission_amount"]
+            visit.consignment_commission_base_amount = amounts["commission_base_amount"]
             visit.consignment_gross_after_returns_amount = amounts["gross_after_returns_amount"]
             visit.consignment_net_payable_amount = amounts["net_payable_amount"]
 
@@ -429,6 +479,7 @@ class RouteVisit(models.Model):
         "payment_ids.promise_amount",
         "line_ids.sold_amount",
         "line_ids.return_amount",
+        "line_ids.route_commission_base_amount",
         "line_ids.route_commission_amount",
         "line_ids.route_net_payable_amount",
     )
@@ -488,7 +539,11 @@ class RouteVisit(models.Model):
                 "visit_sale_amount": amounts["gross_sale_amount"],
                 "returned_value": amounts["return_amount"],
                 "gross_after_returns_amount": amounts["gross_after_returns_amount"],
+                "commission_base_amount": amounts["commission_base_amount"],
                 "commission_amount": amounts["commission_amount"],
+                "commission_mode": self.outlet_id._get_consignment_commission_mode() if self.outlet_id else "fixed_rate",
+                "commission_mode_label": self.outlet_id.effective_financial_policy_label if self.outlet_id else "",
+                "category_commission_lines": self._get_route_consignment_category_breakdown(),
                 "current_visit_net": current_visit_net,
                 "current_due": total_outlet_due,
                 "total_outlet_due": total_outlet_due,
@@ -559,6 +614,14 @@ class SaleOrder(models.Model):
             return partner.property_product_pricelist
         return self.env["product.pricelist"]
 
+    def _route_apply_direct_sale_pricelist(self):
+        for order in self:
+            if order.route_order_mode != "direct_sale" or not order.route_outlet_id:
+                continue
+            pricelist = order._route_get_outlet_pricelist(order.route_outlet_id)
+            if pricelist and order.pricelist_id != pricelist:
+                order.pricelist_id = pricelist
+
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
         result = super()._onchange_route_outlet_id()
@@ -588,7 +651,9 @@ class SaleOrder(models.Model):
                 pricelist = self._route_get_outlet_pricelist(outlet)
                 if pricelist:
                     vals["pricelist_id"] = pricelist.id
-        return super().create(vals_list)
+        orders = super().create(vals_list)
+        orders._route_apply_direct_sale_pricelist()
+        return orders
 
     def write(self, vals):
         if vals.get("route_outlet_id") and not vals.get("pricelist_id"):
@@ -599,4 +664,7 @@ class SaleOrder(models.Model):
                 if pricelist:
                     vals = dict(vals)
                     vals["pricelist_id"] = pricelist.id
-        return super().write(vals)
+        result = super().write(vals)
+        if vals.get("route_order_mode") == "direct_sale" or vals.get("route_outlet_id"):
+            self._route_apply_direct_sale_pricelist()
+        return result
