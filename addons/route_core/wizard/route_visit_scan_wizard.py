@@ -314,11 +314,11 @@ class RouteVisitScanWizard(models.TransientModel):
                     lot_names = ", ".join(available_lots[:5].mapped("display_name"))
                     more_text = _(" and more") if len(available_lots) > 5 else ""
                     rec.product_lot_guidance = _(
-                        "This product is tracked by Lot/Serial. Use the lot field at the top of this popup first, then press Scan / Add. Available lots: %(lots)s%(more)s."
+                        "This product is tracked by Lot/Serial. Use the Active Lot section first, then press Scan / Add. Available lots for this product in the outlet or van: %(lots)s%(more)s."
                     ) % {"lots": lot_names, "more": more_text}
                 elif not available_lots:
                     rec.product_lot_guidance = _(
-                        "This product is tracked by Lot/Serial, but no available lot was found in the vehicle stock or outlet stock for this visit."
+                        "This product is tracked by Lot/Serial, but no usable lot was found for this product in the outlet stock or van stock for this visit."
                     )
                 else:
                     rec.product_lot_guidance = False
@@ -397,12 +397,9 @@ class RouteVisitScanWizard(models.TransientModel):
             qty = self._get_current_scan_counted_increase()
         return qty or self.counted_increase or self.quantity or 1.0
 
-    def _reopen_with_scan_alert(self, message, focus_target=False):
+    def _reopen_with_scan_alert(self, message):
         self.ensure_one()
-        vals = {"scan_alert_message": message}
-        if focus_target:
-            vals["focus_target"] = focus_target
-        self.write(vals)
+        self.write({"scan_alert_message": message})
         return self._action_reopen_scan_wizard()
 
     def action_choose_expired_return_damaged(self):
@@ -521,8 +518,32 @@ class RouteVisitScanWizard(models.TransientModel):
         if not self.route_enable_lot_serial_tracking:
             self.write({"active_lot_id": False, "lot_barcode": False, "focus_target": "product"})
             return self._action_reopen_scan_wizard()
-        lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
-        self.write({"active_lot_id": lot.id, "lot_barcode": False, "focus_target": "product"})
+
+        product = self.detected_product_id
+        if not product and self.barcode:
+            try:
+                scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+                product = scan_info.get("product")
+            except Exception:
+                product = False
+
+        try:
+            lot = self.visit_id._find_available_lot_from_code(self.lot_barcode, product=product)
+        except TypeError:
+            lot = self.visit_id._find_available_lot_from_code(self.lot_barcode)
+        except UserError as error:
+            self.write({
+                "scan_alert_message": error.args[0] if error.args else str(error),
+                "focus_target": "lot",
+            })
+            return self._action_reopen_scan_wizard()
+
+        self.write({
+            "active_lot_id": lot.id,
+            "lot_barcode": False,
+            "focus_target": "product",
+            "scan_alert_message": False,
+        })
         return self._action_reopen_scan_wizard()
 
     def action_clear_active_lot(self):
@@ -586,22 +607,16 @@ class RouteVisitScanWizard(models.TransientModel):
         if not self.visit_id:
             raise UserError(_("Visit is required."))
         if not self.barcode or not self.barcode.strip():
-            return self._reopen_with_scan_alert(
-                _("Scan the product barcode first, then press Scan / Add."),
-                focus_target="product",
-            )
+            raise UserError(_("Please enter or scan a barcode first."))
         if self.quantity <= 0:
-            return self._reopen_with_scan_alert(
-                _("Quantity must be greater than zero. Review the quantity, then press Scan / Add again."),
-                focus_target="product",
-            )
+            raise UserError(_("Quantity must be greater than zero."))
 
         if self.scan_mode == "count":
             try:
                 scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
                 product = scan_info["product"]
-            except UserError as error:
-                return self._reopen_with_scan_alert(str(error), focus_target="product")
+            except UserError:
+                raise
             except Exception as error:
                 raise UserError(_("Could not read this barcode. Please try again or contact your supervisor.\n\nTechnical detail: %s") % str(error))
 
@@ -613,22 +628,21 @@ class RouteVisitScanWizard(models.TransientModel):
             ):
                 available_lots = self.visit_id._find_available_lots_for_product(product) if hasattr(self.visit_id, "_find_available_lots_for_product") else self.env["stock.lot"]
                 if not available_lots:
-                    return self._reopen_with_scan_alert(
+                    raise UserError(
                         _("Product '%s' requires a Lot/Serial Number, but no available lot was found in the vehicle stock or outlet stock for this visit.")
-                        % product.display_name,
-                        focus_target="product",
+                        % product.display_name
                     )
-                lot_names = ", ".join(available_lots[:5].mapped("display_name"))
-                more_text = _(" and more") if len(available_lots) > 5 else ""
-                return self._reopen_with_scan_alert(
-                    _(
-                        "Product '%(product)s' requires a Lot/Serial Number before scanning.\n\n"
-                        "Available lots: %(lots)s%(more)s\n\n"
-                        "Scan or type the lot code in the Active Lot section first, tap Set Lot, then press Scan / Add again."
+                if len(available_lots) > 1:
+                    lot_names = ", ".join(available_lots[:5].mapped("display_name"))
+                    more_text = _(" and more") if len(available_lots) > 5 else ""
+                    raise UserError(
+                        _(
+                            "Product '%(product)s' requires a Lot/Serial Number before scanning.\n\n"
+                            "Available lots for this product in the outlet or van: %(lots)s%(more)s\n\n"
+                            "Use the Active Lot section first, then press Scan / Add again."
+                        )
+                        % {"product": product.display_name, "lots": lot_names, "more": more_text}
                     )
-                    % {"product": product.display_name, "lots": lot_names, "more": more_text},
-                    focus_target="lot",
-                )
 
         preview_counted_increase = 0.0
         if self.scan_mode == "count":
@@ -638,13 +652,13 @@ class RouteVisitScanWizard(models.TransientModel):
 
         if self.scan_mode == "count" and self.active_lot_status == "expired" and self.expired_decision != "damaged":
             return self._reopen_with_scan_alert(
-                _("Expired lot action is required. Tap 'Return To Damaged Stock' inside this popup, review Return Qty, then press Scan / Add again.")
+                _("Expired lot action is required. Tap 'Return To Damaged Stock' in this popup, then scan/add the product.")
             )
 
         if self.scan_mode == "count" and self.active_lot_status == "near_expiry":
             if not self.near_expiry_decision:
                 return self._reopen_with_scan_alert(
-                    _("Near expiry action is required. Choose Keep On Shelf, Return To Vehicle, or Return To Near Expiry Stock inside this popup, then press Scan / Add again.")
+                    _("Near expiry action is required. Choose Keep On Shelf, Return To Vehicle, or Return To Near Expiry Stock in this popup.")
                 )
             if self.near_expiry_decision in ("vehicle", "near_expiry"):
                 if self.return_qty <= 0:
