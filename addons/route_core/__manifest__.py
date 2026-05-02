@@ -55,7 +55,6 @@
         "views/route_pda_home_views.xml",
         "views/route_salesperson_route_map_views.xml",
         "views/sale_order_direct_sale_views.xml",
-        "views/route_financial_policy_views.xml",
         "views/route_role_actions_menus.xml",
         "views/route_geo_review_views.xml",
         "views/route_geo_control_center_views.xml",
