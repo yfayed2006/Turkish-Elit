@@ -1,5 +1,3 @@
-import math
-
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -600,12 +598,11 @@ class RouteVisit(models.Model):
         )
         return {"type": "ir.actions.act_url", "url": url, "target": "new"}
 
-    def action_capture_current_geo_checkin(self):
+    def action_capture_current_geo_checkin(self, auto_start_after_capture=False):
         """Ask the browser/mobile device to capture the salesperson's current GPS location.
 
-        The actual location prompt runs in a small client action because Python cannot access
-        the browser geolocation API directly. This remains foundation mode: it records
-        the location and calculates inside/outside zone, but it does not block Start Visit.
+        When called from Start Visit, the same capture action can continue the start
+        workflow automatically after the browser saves the GPS coordinates.
         """
         self._geo_checkin_edit_allowed()
         self.ensure_one()
@@ -624,6 +621,10 @@ class RouteVisit(models.Model):
                 "view_id": pda_view.id if pda_view else False,
                 "action_id": pda_action.id if pda_action else False,
                 "return_action_name": _("Today's Visits"),
+                "auto_start_after_capture": bool(
+                    auto_start_after_capture
+                    or self.env.context.get("route_geo_auto_start_after_capture")
+                ),
             },
         }
 
@@ -698,6 +699,17 @@ class RouteVisit(models.Model):
 
     def action_start_visit(self):
         for visit in self:
+            if (
+                visit._is_geo_start_policy_active()
+                and visit.geo_checkin_status == "pending"
+                and not self.env.context.get("route_geo_skip_auto_capture")
+            ):
+                return visit.with_context(
+                    route_geo_auto_start_after_capture=True,
+                    pda_mode=True,
+                    route_pda_salesperson_mode=True,
+                ).action_capture_current_geo_checkin(auto_start_after_capture=True)
+
             missing_message = visit._geo_start_missing_checkin_message()
             if missing_message:
                 raise ValidationError(missing_message)
@@ -708,6 +720,25 @@ class RouteVisit(models.Model):
             if visit._should_require_geo_reason_before_start():
                 return visit._action_open_geo_reason_wizard()
         return super().action_start_visit()
+
+    def action_start_visit_after_geo_capture(self):
+        """Continue Start Visit immediately after browser GPS capture.
+
+        The browser action calls this after saving coordinates. Inside-zone visits
+        start immediately. Outside-zone visits under Require Reason open the reason
+        wizard. Block Start policies still raise the normal blocking message.
+        """
+        self.ensure_one()
+        result = self.with_context(
+            pda_mode=True,
+            route_pda_salesperson_mode=True,
+            route_geo_skip_auto_capture=True,
+        ).action_start_visit()
+        if isinstance(result, dict):
+            return result
+        if hasattr(self, "_get_pda_form_action"):
+            return self._get_pda_form_action()
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_ux_start_visit(self):
         self.ensure_one()
@@ -771,5 +802,6 @@ class RouteVisit(models.Model):
             "status": first.geo_checkin_status if first else False,
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
             "distance_display": first.geo_checkin_distance_display if first else False,
+            "requires_reason": first._should_require_geo_reason_before_start() if first else False,
         }
 
