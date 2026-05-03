@@ -775,6 +775,40 @@ class SaleOrder(models.Model):
             }
         return self.action_back_to_outlet_form()
 
+    def _action_route_direct_sale_line_popup(self, scan_mode=False):
+        """Open a compact product line popup for the Route PDA direct-sale view."""
+        self.ensure_one()
+        if self.route_order_mode != "direct_sale":
+            raise UserError(_("This action is available only for Direct Sale orders."))
+        if not self.route_source_location_id:
+            raise UserError(_("Source Location is required before adding products."))
+
+        view = self.env.ref("route_core.view_sale_order_line_form_route_direct_sale", raise_if_not_found=False)
+        context = {
+            "default_order_id": self.id,
+            "default_display_type": False,
+            "default_product_uom_qty": 1.0,
+            "route_only_source_available_products": True,
+            "route_source_location_id": self.route_source_location_id.id,
+            "route_direct_sale_mobile_line": True,
+            "route_direct_sale_scan_mode": bool(scan_mode),
+        }
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Scan Barcode") if scan_mode else _("Add Product"),
+            "res_model": "sale.order.line",
+            "view_mode": "form",
+            "target": "new",
+            "context": context,
+            "views": [(view.id, "form")] if view else [(False, "form")],
+        }
+
+    def action_route_direct_sale_add_product(self):
+        return self._action_route_direct_sale_line_popup(scan_mode=False)
+
+    def action_route_direct_sale_scan_product(self):
+        return self._action_route_direct_sale_line_popup(scan_mode=True)
+
     def action_no_direct_return(self):
         self.ensure_one()
         self._ensure_route_direct_return_enabled()
