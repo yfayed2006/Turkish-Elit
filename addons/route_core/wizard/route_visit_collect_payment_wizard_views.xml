@@ -17,7 +17,6 @@
 <field name="show_no_payment_due_help" invisible="1"/>
 <field name="show_close_settlement_button" invisible="1"/>
 <field name="show_save_draft_button" invisible="1"/>
-<field name="show_category_commission_breakdown" invisible="1"/>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Visit Financial Summary</div>
 <div class="route_pda_statement_grid route_pda_statement_grid_summary">
@@ -26,12 +25,20 @@
 <field name="visit_id" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
-<span class="route_pda_payment_meta_label">Current Visit Net</span>
-<field name="visit_net_due_amount" readonly="1" nolabel="1"/>
+<span class="route_pda_payment_meta_label">Gross Sold Value</span>
+<field name="visit_gross_sale_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="visit_return_amount == 0">
+<span class="route_pda_payment_meta_label">Returns Value</span>
+<field name="visit_return_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="visit_commission_amount == 0">
 <span class="route_pda_payment_meta_label">Commission</span>
 <field name="visit_commission_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Current Visit Net</span>
+<field name="visit_net_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Collected</span>
@@ -42,9 +49,6 @@
 <field name="visit_remaining_due" readonly="1" nolabel="1"/>
 </div>
 </div>
-</div>
-<div class="route_pda_payment_section" invisible="is_direct_sales_stop or not show_category_commission_breakdown">
-<field name="category_commission_breakdown_html" readonly="1" nolabel="1" widget="html"/>
 </div>
 <div class="route_pda_payment_section" invisible="not is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Direct Sales Settlement Summary</div>
