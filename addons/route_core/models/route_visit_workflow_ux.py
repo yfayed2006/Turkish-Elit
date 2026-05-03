@@ -980,9 +980,19 @@ class RouteVisit(models.Model):
                 "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
                 "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
                 "default_origin": self.name,
+                "default_route_visit_id": self.id,
+                "route_visit_id": self.id,
+                "route_return_to_visit_after_confirm": True,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+                "create": True,
+                "edit": True,
+                "delete": False,
             },
         }
-        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale_mobile", raise_if_not_found=False)
+        if not view:
+            view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
         if view:
             action["views"] = [(view.id, "form")]
         return action
@@ -992,14 +1002,28 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_sale:
             raise UserError(_("Direct Sale is disabled in Route Settings."))
+        form_view = self.env.ref("route_core.view_sale_order_form_route_direct_sale_mobile", raise_if_not_found=False)
+        views = [(False, "list")]
+        if form_view:
+            views.append((form_view.id, "form"))
+        else:
+            views.append((False, "form"))
         return {
             "type": "ir.actions.act_window",
             "name": _("Direct Sale Orders"),
             "res_model": "sale.order",
             "view_mode": "list,form",
+            "views": views,
             "target": "current",
             "domain": [("id", "in", self._get_direct_stop_sale_orders().ids)],
-            "context": {"search_default_route_order_mode": "direct_sale"},
+            "context": {
+                "search_default_route_order_mode": "direct_sale",
+                "route_visit_id": self.id,
+                "default_route_visit_id": self.id,
+                "route_return_to_visit_after_confirm": True,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+            },
         }
 
     def action_ux_open_direct_sale_payments(self):
