@@ -785,57 +785,40 @@ body {
     cursor: pointer;
     appearance: none;
 }
-.route-journey-step::before {
-    display: none;
-}
-.route-journey-path-layer {
+.route-journey-step::before,
+.route-journey-step::after {
+    content: "";
     position: absolute;
-    inset: 0;
-    width: 100%%;
-    height: 100%%;
-    pointer-events: none;
     z-index: 0;
-    overflow: visible;
-}
-.route-journey-path-layer svg {
-    width: 100%%;
-    height: 100%%;
-    overflow: visible;
-}
-.route-journey-segment {
-    fill: none;
-    stroke-width: 6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.98;
-}
-.route-journey-segment.done { stroke: #16a34a; }
-.route-journey-segment.active { stroke: #f97316; }
-.route-journey-segment.pending { stroke: #cbd5e1; }
-.route-journey-segment.cancelled { stroke: #94a3b8; }
-.route-journey-node {
-    position: relative;
-    z-index: 1;
-    width: var(--journey-node-size);
-    height: var(--journey-node-size);
-    margin: 0 auto 5px;
+    top: calc(2px + (var(--journey-node-size) / 2));
+    height: 5px;
+    transform: translateY(-50%);
     border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 950;
-    background: var(--route-pending);
-    border: 4px solid #fff;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
-    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    background: var(--journey-connector-color, #d1d5db);
 }
-.route-journey-step.done .route-journey-node { background: var(--route-green); }
-.route-journey-step.ready .route-journey-node { background: #22c55e; }
-.route-journey-step.active .route-journey-node { background: var(--route-active); }
-.route-journey-step.cancelled .route-journey-node { background: var(--route-cancelled); }
-.route-journey-step.outside-zone .route-journey-node { border-color: var(--route-outside); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
+.route-journey-step::before {
+    left: 0;
+    width: calc(50%% - (var(--journey-node-size) / 2) + 5px);
+}
+.route-journey-step::after {
+    right: 0;
+    width: calc(50%% - (var(--journey-node-size) / 2) + 5px);
+}
+.route-journey-step.done,
+.route-journey-step.ready {
+    --journey-connector-color: #111827;
+}
+.route-journey-step.pending,
+.route-journey-step.active,
+.route-journey-step.cancelled,
+.route-journey-step.current {
+    --journey-connector-color: #d1d5db;
+}
+.route-journey-path-layer,
+.route-journey-segment,
+.route-journey-truck {
+    display: none !important;
+}
 .route-journey-step.current .route-journey-node {
     transform: scale(1.12);
     border-color: #fef08a;
@@ -910,8 +893,10 @@ body {
     .route-journey-path-layer {
         inset: 0 0 10px;
     }
-    .route-journey-segment {
-        stroke-width: 5;
+    .route-journey-step::before,
+    .route-journey-step::after {
+        top: calc(2px + (var(--journey-node-size) / 2));
+        height: 4px;
     }
 
     html, body {
@@ -1269,61 +1254,7 @@ function setRouteCardsActive(visitId, highlightCard=true) {
 function renderJourneyLoop() {
     const track = document.querySelector('.route-journey-track');
     if (!track) return;
-    const steps = Array.from(track.querySelectorAll('.route-journey-step[data-visit-id]'));
-    if (!steps.length) return;
-    track.querySelectorAll('.route-journey-path-layer').forEach(node => node.remove());
-
-    const ordered = steps.map(step => {
-        const node = step.querySelector('.route-journey-node') || step;
-        const rect = node.getBoundingClientRect();
-        const indexValue = parseInt((node.textContent || step.dataset.visitIndex || '0').trim(), 10) || 0;
-        return {
-            step: step,
-            index: indexValue,
-            x: rect.left + (rect.width / 2),
-            y: rect.top + (rect.height / 2),
-        };
-    }).sort((a, b) => a.index - b.index);
-    if (ordered.length < 2) return;
-
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const trackRect = track.getBoundingClientRect();
-    const layer = document.createElement('div');
-    layer.className = 'route-journey-path-layer';
-    const svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${Math.max(track.scrollWidth, trackRect.width)} ${Math.max(track.scrollHeight, trackRect.height)}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-
-    function segmentClass(step) {
-        if (step.classList.contains('done') || step.classList.contains('ready')) return 'done';
-        if (step.classList.contains('active')) return 'active';
-        if (step.classList.contains('cancelled')) return 'cancelled';
-        return 'pending';
-    }
-
-    ordered.slice(1).forEach((current, index) => {
-        const previous = ordered[index];
-        const prevX = previous.x - trackRect.left;
-        const prevY = previous.y - trackRect.top;
-        const currX = current.x - trackRect.left;
-        const currY = current.y - trackRect.top;
-        const points = [[prevX, prevY]];
-        if (Math.abs(prevY - currY) < 8 || Math.abs(prevX - currX) < 8) {
-            points.push([currX, currY]);
-        } else {
-            const bridgeY = prevY + ((currY - prevY) / 2);
-            points.push([prevX, bridgeY]);
-            points.push([currX, bridgeY]);
-            points.push([currX, currY]);
-        }
-        const polyline = document.createElementNS(svgNs, 'polyline');
-        polyline.setAttribute('class', `route-journey-segment ${segmentClass(current.step)}`);
-        polyline.setAttribute('points', points.map(point => `${point[0]},${point[1]}`).join(' '));
-        svg.appendChild(polyline);
-    });
-
-    layer.appendChild(svg);
-    track.prepend(layer);
+    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
 }
 function initMobileStickyMap() {
     const query = window.matchMedia('(max-width: 767px)');
@@ -1383,15 +1314,18 @@ function initMobileStickyMap() {
 function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
-        const markers = visitMarkers[visit.id] || [];
-        markers.forEach(marker => {
-            marker.setIcon(markerIcon(visit, marker._routePointType || 'outlet', isActive));
+        const marker = routeMarkers[visit.id];
+        if (marker) {
+            marker.setIcon(markerIcon(visit, isActive));
             marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
-            if (isActive && openPopup) marker.openPopup();
-        });
-        if (isActive && panToMarker && mapInstance) {
-            const point = preferredPoint(visit);
-            if (point) mapInstance.panTo(point, {animate: true, duration: .35});
+            if (isActive && panToMarker && mapInstance && visit.hasPoint) {
+                mapInstance.invalidateSize();
+                const targetZoom = Math.max(mapInstance.getZoom() || 15, 15);
+                mapInstance.setView([visit.lat, visit.lng], targetZoom, {animate: true});
+            }
+            if (isActive && openPopup) {
+                window.setTimeout(() => marker.openPopup(), panToMarker ? 320 : 40);
+            }
         }
     });
     setRouteCardsActive(visitId, highlightCard);
@@ -1512,11 +1446,9 @@ function renderMap() {
     }
 }
 renderMap();
-renderJourneyLoop();
 installCardFocus();
 installJourneyFocus();
 initMobileStickyMap();
-window.addEventListener('resize', () => window.setTimeout(renderJourneyLoop, 120));
 </script>
 </body>
 </html>
@@ -1708,61 +1640,7 @@ function setRouteCardsActive(visitId, highlightCard=true) {
 function renderJourneyLoop() {
     const track = document.querySelector('.route-journey-track');
     if (!track) return;
-    const steps = Array.from(track.querySelectorAll('.route-journey-step[data-visit-id]'));
-    if (!steps.length) return;
-    track.querySelectorAll('.route-journey-path-layer').forEach(node => node.remove());
-
-    const ordered = steps.map(step => {
-        const node = step.querySelector('.route-journey-node') || step;
-        const rect = node.getBoundingClientRect();
-        const indexValue = parseInt((node.textContent || step.dataset.visitIndex || '0').trim(), 10) || 0;
-        return {
-            step: step,
-            index: indexValue,
-            x: rect.left + (rect.width / 2),
-            y: rect.top + (rect.height / 2),
-        };
-    }).sort((a, b) => a.index - b.index);
-    if (ordered.length < 2) return;
-
-    const svgNs = 'http://www.w3.org/2000/svg';
-    const trackRect = track.getBoundingClientRect();
-    const layer = document.createElement('div');
-    layer.className = 'route-journey-path-layer';
-    const svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${Math.max(track.scrollWidth, trackRect.width)} ${Math.max(track.scrollHeight, trackRect.height)}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-
-    function segmentClass(step) {
-        if (step.classList.contains('done') || step.classList.contains('ready')) return 'done';
-        if (step.classList.contains('active')) return 'active';
-        if (step.classList.contains('cancelled')) return 'cancelled';
-        return 'pending';
-    }
-
-    ordered.slice(1).forEach((current, index) => {
-        const previous = ordered[index];
-        const prevX = previous.x - trackRect.left;
-        const prevY = previous.y - trackRect.top;
-        const currX = current.x - trackRect.left;
-        const currY = current.y - trackRect.top;
-        const points = [[prevX, prevY]];
-        if (Math.abs(prevY - currY) < 8 || Math.abs(prevX - currX) < 8) {
-            points.push([currX, currY]);
-        } else {
-            const bridgeY = prevY + ((currY - prevY) / 2);
-            points.push([prevX, bridgeY]);
-            points.push([currX, bridgeY]);
-            points.push([currX, currY]);
-        }
-        const polyline = document.createElementNS(svgNs, 'polyline');
-        polyline.setAttribute('class', `route-journey-segment ${segmentClass(current.step)}`);
-        polyline.setAttribute('points', points.map(point => `${point[0]},${point[1]}`).join(' '));
-        svg.appendChild(polyline);
-    });
-
-    layer.appendChild(svg);
-    track.prepend(layer);
+    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
 }
 function initMobileStickyMap() {
     const query = window.matchMedia('(max-width: 767px)');
@@ -1982,11 +1860,9 @@ document.querySelectorAll('.review-action').forEach(button => {
     });
 });
 renderMap();
-renderJourneyLoop();
 installCardFocus();
 installJourneyFocus();
 initMobileStickyMap();
-window.addEventListener('resize', () => window.setTimeout(renderJourneyLoop, 120));
 </script>
 </body>
 </html>
