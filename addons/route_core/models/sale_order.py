@@ -905,3 +905,4 @@ class SaleOrderLine(models.Model):
         readonly=True,
         store=False,
     )
+
