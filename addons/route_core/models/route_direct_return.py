@@ -498,58 +498,152 @@ class RouteDirectReturnLine(models.Model):
         for line in self:
             line.return_reason_label = mapping.get(line.return_reason, False)
 
+    def _route_direct_return_line_matches_lot(self, sale_line):
+        self.ensure_one()
+        lot_name = (self.lot_name or "").strip()
+        if not lot_name:
+            return True
+        sale_lot = getattr(sale_line, "route_lot_id", False)
+        if sale_lot and (sale_lot.name or "").strip() == lot_name:
+            return True
+        return False
+
+    def _route_get_discounted_sale_line_unit_price(self, sale_line):
+        self.ensure_one()
+        if not sale_line:
+            return 0.0
+
+        qty = sale_line.product_uom_qty or 0.0
+        if qty and "price_total" in sale_line._fields:
+            unit_price = (sale_line.price_total or 0.0) / qty
+        elif qty and "price_subtotal" in sale_line._fields:
+            unit_price = (sale_line.price_subtotal or 0.0) / qty
+        elif "price_reduce_taxinc" in sale_line._fields:
+            unit_price = sale_line.price_reduce_taxinc or 0.0
+        elif "price_reduce" in sale_line._fields:
+            unit_price = sale_line.price_reduce or 0.0
+        else:
+            discount = sale_line.discount if "discount" in sale_line._fields else 0.0
+            unit_price = (sale_line.price_unit or 0.0) * (1.0 - ((discount or 0.0) / 100.0))
+
+        sale_uom = sale_line.product_uom if "product_uom" in sale_line._fields else False
+        return_uom = self.uom_id or self.product_id.uom_id
+        if sale_uom and return_uom and sale_uom != return_uom and hasattr(sale_uom, "_compute_price"):
+            unit_price = sale_uom._compute_price(unit_price, return_uom)
+        return unit_price or 0.0
+
+    def _route_get_outlet_pricelist_return_unit_price(self):
+        self.ensure_one()
+        product = self.product_id
+        direct_return = self.return_id
+        if not product:
+            return 0.0
+
+        pricelist = False
+        if direct_return and direct_return.sale_order_id and direct_return.sale_order_id.pricelist_id:
+            pricelist = direct_return.sale_order_id.pricelist_id
+        elif direct_return and direct_return.outlet_id:
+            if getattr(direct_return.outlet_id, "direct_sale_pricelist_id", False):
+                pricelist = direct_return.outlet_id.direct_sale_pricelist_id
+            elif direct_return.outlet_id.partner_id and getattr(direct_return.outlet_id.partner_id, "property_product_pricelist", False):
+                pricelist = direct_return.outlet_id.partner_id.property_product_pricelist
+
+        quantity = self.quantity or 1.0
+        uom = self.uom_id or product.uom_id
+        partner = direct_return.partner_id if direct_return else False
+        return_date = direct_return.return_date if direct_return else fields.Date.context_today(self)
+
+        if pricelist and hasattr(pricelist, "_get_product_price"):
+            try:
+                return pricelist._get_product_price(
+                    product,
+                    quantity,
+                    partner=partner,
+                    date=return_date,
+                    uom_id=uom,
+                ) or 0.0
+            except TypeError:
+                try:
+                    return pricelist._get_product_price(product, quantity, partner) or 0.0
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        return product.lst_price or 0.0
+
+    def _route_find_reference_sale_line(self):
+        self.ensure_one()
+        SaleOrder = self.env["sale.order"]
+        product = self.product_id
+        direct_return = self.return_id
+        if not product or not direct_return:
+            return self.env["sale.order.line"]
+
+        orders = SaleOrder.browse()
+        if direct_return.sale_order_id:
+            orders |= direct_return.sale_order_id
+
+        if direct_return.reference_picking_id:
+            reference_picking = direct_return.reference_picking_id
+            reference_order = getattr(reference_picking, "sale_id", False)
+            if not reference_order and reference_picking.origin:
+                reference_order = SaleOrder.search([
+                    ("name", "=", reference_picking.origin),
+                    ("route_order_mode", "=", "direct_sale"),
+                ], limit=1)
+            if reference_order:
+                orders |= reference_order
+
+        if not orders and direct_return.outlet_id:
+            orders |= SaleOrder.search([
+                ("route_order_mode", "=", "direct_sale"),
+                ("route_outlet_id", "=", direct_return.outlet_id.id),
+                ("state", "not in", ["cancel"]),
+                ("order_line.product_id", "=", product.id),
+            ], order="date_order desc, id desc", limit=1)
+
+        sale_lines = orders.mapped("order_line").filtered(
+            lambda l: not l.display_type and l.product_id == product
+        )
+        if not sale_lines:
+            return self.env["sale.order.line"]
+
+        matching_lot_lines = sale_lines.filtered(lambda l: self._route_direct_return_line_matches_lot(l))
+        sale_lines = matching_lot_lines or sale_lines
+        return sale_lines.sorted(key=lambda l: (l.order_id.date_order or fields.Datetime.now(), l.id or 0), reverse=True)[:1]
+
     @api.depends(
         "product_id",
         "quantity",
+        "uom_id",
+        "lot_name",
         "return_id.sale_order_id",
+        "return_id.sale_order_id.pricelist_id",
         "return_id.sale_order_id.order_line.price_unit",
+        "return_id.sale_order_id.order_line.discount",
+        "return_id.sale_order_id.order_line.price_subtotal",
+        "return_id.sale_order_id.order_line.price_total",
+        "return_id.sale_order_id.order_line.route_lot_id",
         "return_id.reference_picking_id",
         "return_id.outlet_id",
+        "return_id.outlet_id.direct_sale_pricelist_id",
     )
     def _compute_estimated_amount(self):
-        SaleOrder = self.env["sale.order"]
         for line in self:
-            unit_price = 0.0
             product = line.product_id
-            direct_return = line.return_id
-
             if not product:
                 line.estimated_unit_price = 0.0
                 line.estimated_amount = 0.0
                 continue
 
-            sale_line = False
-            if direct_return and direct_return.sale_order_id:
-                sale_line = direct_return.sale_order_id.order_line.filtered(lambda l: l.product_id == product)[:1]
-
-            if not sale_line and direct_return and direct_return.reference_picking_id:
-                reference_picking = direct_return.reference_picking_id
-                reference_order = getattr(reference_picking, "sale_id", False)
-                if not reference_order and reference_picking.origin:
-                    reference_order = SaleOrder.search([
-                        ("name", "=", reference_picking.origin),
-                        ("route_order_mode", "=", "direct_sale"),
-                    ], limit=1)
-                if reference_order:
-                    sale_line = reference_order.order_line.filtered(lambda l: l.product_id == product)[:1]
-
-            if not sale_line and direct_return and direct_return.outlet_id:
-                latest_order = SaleOrder.search([
-                    ("route_order_mode", "=", "direct_sale"),
-                    ("route_outlet_id", "=", direct_return.outlet_id.id),
-                    ("state", "not in", ["cancel"]),
-                    ("order_line.product_id", "=", product.id),
-                ], order="date_order desc, id desc", limit=1)
-                if latest_order:
-                    sale_line = latest_order.order_line.filtered(lambda l: l.product_id == product)[:1]
-
+            sale_line = line._route_find_reference_sale_line()
             if sale_line:
-                unit_price = sale_line.price_unit or 0.0
+                unit_price = line._route_get_discounted_sale_line_unit_price(sale_line)
             else:
-                unit_price = product.lst_price or 0.0
+                unit_price = line._route_get_outlet_pricelist_return_unit_price()
 
             line.estimated_unit_price = unit_price
-            line.estimated_amount = (line.quantity or 0.0) * unit_price
+            line.estimated_amount = (line.quantity or 0.0) * (unit_price or 0.0)
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
