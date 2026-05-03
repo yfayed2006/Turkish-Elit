@@ -237,7 +237,7 @@
 <field name="order_line" class="route_mobile_direct_products_field" context="{'default_display_type': False, 'route_only_source_available_products': route_order_mode == 'direct_sale', 'route_source_location_id': route_source_location_id}">
 <list string="Products" editable="bottom" create="1" delete="1" class="route_mobile_sale_line_list">
 <field name="display_type" column_invisible="1"/>
-<field name="route_product_barcode" string="Barcode" optional="hide"/>
+<field name="route_product_barcode" string="Barcode" optional="show" readonly="1"/>
 <field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
 <field name="product_id" string="Product" domain="parent.route_order_mode != 'direct_sale' and [] or [('id', 'in', parent.route_available_product_ids)]" context="{'route_only_source_available_products': parent.route_order_mode == 'direct_sale', 'route_source_location_id': parent.route_source_location_id}" options="{'no_create': True, 'no_open': False}" required="not display_type"/>
 <field name="product_uom_qty" string="Qty"/>
