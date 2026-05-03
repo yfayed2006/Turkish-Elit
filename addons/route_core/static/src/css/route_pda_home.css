@@ -3654,3 +3654,125 @@
 
 
 
+
+
+/* Route Direct Sale mobile order form */
+.route_mobile_sale_order_form .o_form_sheet,
+.route_mobile_sale_order_sheet {
+    max-width: 980px;
+}
+
+.route_mobile_section_title {
+    margin: 14px 0 10px;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.route_mobile_sale_order_top_grid .route_mobile_info_card,
+.route_mobile_sale_totals_grid .route_mobile_info_card {
+    min-height: 92px;
+}
+
+.route_mobile_sale_total_card {
+    background: #f8fafc;
+    border-color: #dbeafe;
+}
+
+.route_mobile_sale_line_kanban {
+    margin-bottom: 14px;
+}
+
+.route_mobile_sale_line_kanban .o_kanban_record {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.route_mobile_sale_line_card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 12px 14px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.route_mobile_sale_line_head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.route_mobile_sale_line_product {
+    color: #111827;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.route_mobile_sale_line_subtotal {
+    color: #82466f;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.route_mobile_sale_line_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.route_mobile_sale_line_grid > div {
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 8px 10px;
+}
+
+.route_mobile_sale_line_label {
+    display: block;
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.route_mobile_sale_line_value {
+    display: block;
+    color: #111827;
+    font-size: 0.95rem;
+    font-weight: 850;
+    margin-top: 2px;
+}
+
+@media (max-width: 767px) {
+    .route_mobile_sale_order_sheet .route_mobile_summary_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .route_mobile_sale_order_top_grid .route_mobile_info_card,
+    .route_mobile_sale_totals_grid .route_mobile_info_card {
+        min-height: 82px;
+        padding: 10px 12px;
+    }
+
+    .route_mobile_sale_line_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .route_mobile_sale_line_card {
+        padding: 11px 12px;
+        border-radius: 14px;
+    }
+}
+
+
+
+
