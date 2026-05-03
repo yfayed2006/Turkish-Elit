@@ -795,7 +795,7 @@ class SaleOrder(models.Model):
         }
         return {
             "type": "ir.actions.act_window",
-            "name": _("Scan Barcode") if scan_mode else _("Add Product"),
+            "name": _("Scan Barcode") if scan_mode else _("Add / Scan Product"),
             "res_model": "sale.order.line",
             "view_mode": "form",
             "target": "new",
@@ -894,3 +894,14 @@ class SaleOrder(models.Model):
                 action_result = delivery_result
 
         return direct_sale_return_action or action_result
+
+
+class SaleOrderLine(models.Model):
+    _inherit = "sale.order.line"
+
+    route_product_image_128 = fields.Image(
+        string="Product Image",
+        related="product_id.image_128",
+        readonly=True,
+        store=False,
+    )
