@@ -802,37 +802,17 @@ body {
     height: 100%%;
     overflow: visible;
 }
-.route-journey-loop-shadow {
+.route-journey-segment {
     fill: none;
-    stroke: rgba(203, 213, 225, 0.85);
-    stroke-width: 14;
+    stroke-width: 6;
     stroke-linecap: round;
     stroke-linejoin: round;
+    opacity: 0.98;
 }
-.route-journey-loop-line {
-    fill: none;
-    stroke: #ef4444;
-    stroke-width: 7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-.route-journey-truck {
-    position: absolute;
-    z-index: 1;
-    width: 30px;
-    height: 30px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    background: #fff7ed;
-    color: #c2410c;
-    border: 2px solid #fed7aa;
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
-    font-size: 16px;
-    line-height: 1;
-    pointer-events: none;
-}
+.route-journey-segment.done { stroke: #16a34a; }
+.route-journey-segment.active { stroke: #f97316; }
+.route-journey-segment.pending { stroke: #cbd5e1; }
+.route-journey-segment.cancelled { stroke: #94a3b8; }
 .route-journey-node {
     position: relative;
     z-index: 1;
@@ -930,16 +910,8 @@ body {
     .route-journey-path-layer {
         inset: 0 0 10px;
     }
-    .route-journey-loop-shadow {
-        stroke-width: 10;
-    }
-    .route-journey-loop-line {
+    .route-journey-segment {
         stroke-width: 5;
-    }
-    .route-journey-truck {
-        width: 24px;
-        height: 24px;
-        font-size: 13px;
     }
 
     html, body {
@@ -1299,76 +1271,59 @@ function renderJourneyLoop() {
     if (!track) return;
     const steps = Array.from(track.querySelectorAll('.route-journey-step[data-visit-id]'));
     if (!steps.length) return;
-    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
-    const nodeData = steps.map(step => {
+    track.querySelectorAll('.route-journey-path-layer').forEach(node => node.remove());
+
+    const ordered = steps.map(step => {
         const node = step.querySelector('.route-journey-node') || step;
         const rect = node.getBoundingClientRect();
+        const indexValue = parseInt((node.textContent || step.dataset.visitIndex || '0').trim(), 10) || 0;
         return {
             step: step,
-            left: rect.left,
-            top: rect.top,
+            index: indexValue,
             x: rect.left + (rect.width / 2),
             y: rect.top + (rect.height / 2),
         };
-    }).sort((a, b) => (a.top - b.top) || (a.left - b.left));
-    const rows = [];
-    nodeData.forEach(item => {
-        const row = rows.find(group => Math.abs(group.top - item.top) < 20);
-        if (row) {
-            row.items.push(item);
-        } else {
-            rows.push({top: item.top, items: [item]});
-        }
-    });
-    rows.forEach(row => row.items.sort((a, b) => a.left - b.left));
-    const ordered = [];
-    rows.forEach((row, index) => {
-        const items = row.items.slice();
-        if (index %% 2 === 1) items.reverse();
-        ordered.push(...items);
-    });
-    if (!ordered.length) return;
-    const trackRect = track.getBoundingClientRect();
-    const points = [];
-    ordered.forEach((item, index) => {
-        const x = item.x - trackRect.left;
-        const y = item.y - trackRect.top;
-        if (!points.length) {
-            points.push([x, y]);
-            return;
-        }
-        const prev = ordered[index - 1];
-        const px = prev.x - trackRect.left;
-        const py = prev.y - trackRect.top;
-        if (Math.abs(py - y) >= 10) {
-            points.push([px, y]);
-        }
-        points.push([x, y]);
-    });
+    }).sort((a, b) => a.index - b.index);
+    if (ordered.length < 2) return;
+
     const svgNs = 'http://www.w3.org/2000/svg';
+    const trackRect = track.getBoundingClientRect();
     const layer = document.createElement('div');
     layer.className = 'route-journey-path-layer';
     const svg = document.createElementNS(svgNs, 'svg');
     svg.setAttribute('viewBox', `0 0 ${Math.max(track.scrollWidth, trackRect.width)} ${Math.max(track.scrollHeight, trackRect.height)}`);
     svg.setAttribute('preserveAspectRatio', 'none');
-    const polyPoints = points.map(point => `${point[0]},${point[1]}`).join(' ');
-    const shadow = document.createElementNS(svgNs, 'polyline');
-    shadow.setAttribute('class', 'route-journey-loop-shadow');
-    shadow.setAttribute('points', polyPoints);
-    const line = document.createElementNS(svgNs, 'polyline');
-    line.setAttribute('class', 'route-journey-loop-line');
-    line.setAttribute('points', polyPoints);
-    svg.appendChild(shadow);
-    svg.appendChild(line);
+
+    function segmentClass(step) {
+        if (step.classList.contains('done') || step.classList.contains('ready')) return 'done';
+        if (step.classList.contains('active')) return 'active';
+        if (step.classList.contains('cancelled')) return 'cancelled';
+        return 'pending';
+    }
+
+    ordered.slice(1).forEach((current, index) => {
+        const previous = ordered[index];
+        const prevX = previous.x - trackRect.left;
+        const prevY = previous.y - trackRect.top;
+        const currX = current.x - trackRect.left;
+        const currY = current.y - trackRect.top;
+        const points = [[prevX, prevY]];
+        if (Math.abs(prevY - currY) < 8 || Math.abs(prevX - currX) < 8) {
+            points.push([currX, currY]);
+        } else {
+            const bridgeY = prevY + ((currY - prevY) / 2);
+            points.push([prevX, bridgeY]);
+            points.push([currX, bridgeY]);
+            points.push([currX, currY]);
+        }
+        const polyline = document.createElementNS(svgNs, 'polyline');
+        polyline.setAttribute('class', `route-journey-segment ${segmentClass(current.step)}`);
+        polyline.setAttribute('points', points.map(point => `${point[0]},${point[1]}`).join(' '));
+        svg.appendChild(polyline);
+    });
+
     layer.appendChild(svg);
     track.prepend(layer);
-    const truck = document.createElement('div');
-    truck.className = 'route-journey-truck';
-    truck.innerHTML = '🚚';
-    const first = points[0];
-    truck.style.left = `${Math.max(4, first[0] - 36)}px`;
-    truck.style.top = `${Math.max(2, first[1] - 15)}px`;
-    track.appendChild(truck);
 }
 function initMobileStickyMap() {
     const query = window.matchMedia('(max-width: 767px)');
@@ -1755,76 +1710,59 @@ function renderJourneyLoop() {
     if (!track) return;
     const steps = Array.from(track.querySelectorAll('.route-journey-step[data-visit-id]'));
     if (!steps.length) return;
-    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
-    const nodeData = steps.map(step => {
+    track.querySelectorAll('.route-journey-path-layer').forEach(node => node.remove());
+
+    const ordered = steps.map(step => {
         const node = step.querySelector('.route-journey-node') || step;
         const rect = node.getBoundingClientRect();
+        const indexValue = parseInt((node.textContent || step.dataset.visitIndex || '0').trim(), 10) || 0;
         return {
             step: step,
-            left: rect.left,
-            top: rect.top,
+            index: indexValue,
             x: rect.left + (rect.width / 2),
             y: rect.top + (rect.height / 2),
         };
-    }).sort((a, b) => (a.top - b.top) || (a.left - b.left));
-    const rows = [];
-    nodeData.forEach(item => {
-        const row = rows.find(group => Math.abs(group.top - item.top) < 20);
-        if (row) {
-            row.items.push(item);
-        } else {
-            rows.push({top: item.top, items: [item]});
-        }
-    });
-    rows.forEach(row => row.items.sort((a, b) => a.left - b.left));
-    const ordered = [];
-    rows.forEach((row, index) => {
-        const items = row.items.slice();
-        if (index %% 2 === 1) items.reverse();
-        ordered.push(...items);
-    });
-    if (!ordered.length) return;
-    const trackRect = track.getBoundingClientRect();
-    const points = [];
-    ordered.forEach((item, index) => {
-        const x = item.x - trackRect.left;
-        const y = item.y - trackRect.top;
-        if (!points.length) {
-            points.push([x, y]);
-            return;
-        }
-        const prev = ordered[index - 1];
-        const px = prev.x - trackRect.left;
-        const py = prev.y - trackRect.top;
-        if (Math.abs(py - y) >= 10) {
-            points.push([px, y]);
-        }
-        points.push([x, y]);
-    });
+    }).sort((a, b) => a.index - b.index);
+    if (ordered.length < 2) return;
+
     const svgNs = 'http://www.w3.org/2000/svg';
+    const trackRect = track.getBoundingClientRect();
     const layer = document.createElement('div');
     layer.className = 'route-journey-path-layer';
     const svg = document.createElementNS(svgNs, 'svg');
     svg.setAttribute('viewBox', `0 0 ${Math.max(track.scrollWidth, trackRect.width)} ${Math.max(track.scrollHeight, trackRect.height)}`);
     svg.setAttribute('preserveAspectRatio', 'none');
-    const polyPoints = points.map(point => `${point[0]},${point[1]}`).join(' ');
-    const shadow = document.createElementNS(svgNs, 'polyline');
-    shadow.setAttribute('class', 'route-journey-loop-shadow');
-    shadow.setAttribute('points', polyPoints);
-    const line = document.createElementNS(svgNs, 'polyline');
-    line.setAttribute('class', 'route-journey-loop-line');
-    line.setAttribute('points', polyPoints);
-    svg.appendChild(shadow);
-    svg.appendChild(line);
+
+    function segmentClass(step) {
+        if (step.classList.contains('done') || step.classList.contains('ready')) return 'done';
+        if (step.classList.contains('active')) return 'active';
+        if (step.classList.contains('cancelled')) return 'cancelled';
+        return 'pending';
+    }
+
+    ordered.slice(1).forEach((current, index) => {
+        const previous = ordered[index];
+        const prevX = previous.x - trackRect.left;
+        const prevY = previous.y - trackRect.top;
+        const currX = current.x - trackRect.left;
+        const currY = current.y - trackRect.top;
+        const points = [[prevX, prevY]];
+        if (Math.abs(prevY - currY) < 8 || Math.abs(prevX - currX) < 8) {
+            points.push([currX, currY]);
+        } else {
+            const bridgeY = prevY + ((currY - prevY) / 2);
+            points.push([prevX, bridgeY]);
+            points.push([currX, bridgeY]);
+            points.push([currX, currY]);
+        }
+        const polyline = document.createElementNS(svgNs, 'polyline');
+        polyline.setAttribute('class', `route-journey-segment ${segmentClass(current.step)}`);
+        polyline.setAttribute('points', points.map(point => `${point[0]},${point[1]}`).join(' '));
+        svg.appendChild(polyline);
+    });
+
     layer.appendChild(svg);
     track.prepend(layer);
-    const truck = document.createElement('div');
-    truck.className = 'route-journey-truck';
-    truck.innerHTML = '🚚';
-    const first = points[0];
-    truck.style.left = `${Math.max(4, first[0] - 36)}px`;
-    truck.style.top = `${Math.max(2, first[1] - 15)}px`;
-    track.appendChild(truck);
 }
 function initMobileStickyMap() {
     const query = window.matchMedia('(max-width: 767px)');
