@@ -808,17 +808,42 @@ class RouteVisit(models.Model):
         }
 
         if auto_start_after_capture and first:
-            start_result = first.with_context(
-                pda_mode=True,
-                route_pda_salesperson_mode=True,
-                route_geo_skip_auto_capture=True,
-            ).action_start_visit()
-            if isinstance(start_result, dict):
-                payload["next_action"] = start_result
-            elif hasattr(first, "_get_pda_form_action"):
-                payload["next_action"] = first._get_pda_form_action()
+            if first._should_block_geo_before_start():
+                payload.update({
+                    "start_blocked": True,
+                    "warning_message": _(
+                        "You are outside the allowed outlet radius. This visit cannot start under the current Location Check-in policy."
+                    ),
+                })
+                if hasattr(first, "_get_pda_form_action"):
+                    payload["next_action"] = first._get_pda_form_action()
+                else:
+                    payload["next_action"] = {"type": "ir.actions.client", "tag": "reload"}
             else:
-                payload["next_action"] = {"type": "ir.actions.client", "tag": "reload"}
+                try:
+                    start_result = first.with_context(
+                        pda_mode=True,
+                        route_pda_salesperson_mode=True,
+                        route_geo_skip_auto_capture=True,
+                    ).action_start_visit()
+                except ValidationError as error:
+                    payload.update({
+                        "start_blocked": True,
+                        "warning_message": error.args[0] if error.args else _(
+                            "The visit could not be started after location capture."
+                        ),
+                    })
+                    if hasattr(first, "_get_pda_form_action"):
+                        payload["next_action"] = first._get_pda_form_action()
+                    else:
+                        payload["next_action"] = {"type": "ir.actions.client", "tag": "reload"}
+                else:
+                    if isinstance(start_result, dict):
+                        payload["next_action"] = start_result
+                    elif hasattr(first, "_get_pda_form_action"):
+                        payload["next_action"] = first._get_pda_form_action()
+                    else:
+                        payload["next_action"] = {"type": "ir.actions.client", "tag": "reload"}
 
         return payload
 
