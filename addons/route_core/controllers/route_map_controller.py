@@ -792,7 +792,7 @@ body {
     z-index: 0;
     top: calc(2px + (var(--journey-node-size) / 2));
     height: 5px;
-    transform: translateY(-50%);
+    transform: translateY(-50%%);
     border-radius: 999px;
     background: var(--journey-connector-color, #d1d5db);
 }
