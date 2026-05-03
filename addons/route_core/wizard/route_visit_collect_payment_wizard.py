@@ -93,6 +93,20 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+    visit_gross_sale_amount = fields.Monetary(
+        string="Gross Sold Value",
+        currency_field="currency_id",
+        compute="_compute_visit_amounts",
+        store=False,
+        readonly=True,
+    )
+    visit_return_amount = fields.Monetary(
+        string="Returns Value",
+        currency_field="currency_id",
+        compute="_compute_visit_amounts",
+        store=False,
+        readonly=True,
+    )
     visit_commission_amount = fields.Monetary(
         string="Commission",
         currency_field="currency_id",
@@ -111,20 +125,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         string="Current Visit Remaining",
         currency_field="currency_id",
         compute="_compute_visit_amounts",
-        store=False,
-        readonly=True,
-    )
-
-    show_category_commission_breakdown = fields.Boolean(
-        string="Show Category Commission Breakdown",
-        compute="_compute_category_commission_breakdown_fields",
-        store=False,
-        readonly=True,
-    )
-    category_commission_breakdown_html = fields.Html(
-        string="Category Commission Breakdown",
-        compute="_compute_category_commission_breakdown_fields",
-        sanitize=False,
         store=False,
         readonly=True,
     )
@@ -259,26 +259,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     )
 
 
-    @api.depends("visit_id")
-    def _compute_category_commission_breakdown_fields(self):
-        for rec in self:
-            visit = rec.visit_id
-            rec.show_category_commission_breakdown = False
-            rec.category_commission_breakdown_html = False
-            if not visit:
-                continue
-            is_direct = bool(
-                hasattr(visit, "_is_direct_sales_stop")
-                and visit._is_direct_sales_stop()
-            )
-            if is_direct:
-                continue
-            show_breakdown = bool(getattr(visit, "show_consignment_category_commission_breakdown", False))
-            breakdown_html = getattr(visit, "consignment_category_commission_html", False)
-            rec.show_category_commission_breakdown = show_breakdown
-            rec.category_commission_breakdown_html = breakdown_html if show_breakdown else False
-
-
     @api.depends(
         "is_direct_sales_stop",
         "collection_type",
@@ -310,7 +290,18 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             is_direct = bool(visit and hasattr(visit, "_is_direct_sales_stop") and visit._is_direct_sales_stop())
             rec.is_direct_sales_stop = is_direct
             rec.visit_net_due_amount = visit.net_due_amount if visit and "net_due_amount" in visit._fields else 0.0
+            rec.visit_gross_sale_amount = 0.0
+            rec.visit_return_amount = 0.0
             rec.visit_commission_amount = getattr(visit, "consignment_commission_amount", 0.0) if visit else 0.0
+            if visit and not is_direct and hasattr(visit, "_get_route_consignment_financial_amounts"):
+                consignment_amounts = visit._get_route_consignment_financial_amounts()
+                rec.visit_gross_sale_amount = consignment_amounts.get("gross_sale_amount", 0.0)
+                rec.visit_return_amount = consignment_amounts.get("return_amount", 0.0)
+                rec.visit_commission_amount = consignment_amounts.get("commission_amount", 0.0)
+                rec.visit_net_due_amount = consignment_amounts.get("net_payable_amount", rec.visit_net_due_amount)
+            elif visit and not is_direct:
+                rec.visit_gross_sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
+                rec.visit_return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
             rec.visit_collected_amount = visit.collected_amount if visit and "collected_amount" in visit._fields else 0.0
             rec.visit_remaining_due = visit.remaining_due_amount if visit and "remaining_due_amount" in visit._fields else 0.0
 
