@@ -1173,9 +1173,16 @@ class RoutePdaHome(models.TransientModel):
                 "default_route_payment_mode": "cash",
                 "default_route_outlet_id": default_outlet.id if default_outlet else False,
                 "default_partner_id": default_outlet.partner_id.id if default_outlet and default_outlet.partner_id else False,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+                "create": True,
+                "edit": True,
+                "delete": False,
             },
         }
-        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_sale_order_form_route_direct_sale_mobile", raise_if_not_found=False)
+        if not view:
+            view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
         if view:
             action["views"] = [(view.id, "form")]
         return action
