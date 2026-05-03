@@ -761,7 +761,7 @@ body {
 .route-journey-stat.outside { background: #fee2e2; color: #b91c1c; }
 .route-journey-track {
     --journey-node-size: 40px;
-    --journey-line-top: 20px;
+    --journey-line-top: 22px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     gap: 12px 8px;
@@ -790,7 +790,7 @@ body {
     content: "";
     position: absolute;
     z-index: 0;
-    top: calc(2px + (var(--journey-node-size) / 2));
+    top: var(--journey-line-top);
     height: 5px;
     transform: translateY(-50%%);
     border-radius: 999px;
@@ -803,6 +803,9 @@ body {
 .route-journey-step::after {
     right: 0;
     width: calc(50%% - (var(--journey-node-size) / 2) + 5px);
+}
+.route-journey-step:first-child::before {
+    display: none;
 }
 .route-journey-step.done,
 .route-journey-step.ready {
@@ -819,6 +822,33 @@ body {
 .route-journey-truck {
     display: none !important;
 }
+.route-journey-node {
+    position: relative;
+    z-index: 2;
+    width: var(--journey-node-size);
+    height: var(--journey-node-size);
+    margin: 0 auto 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 950;
+    background: var(--route-pending);
+    border: 4px solid #fff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.route-journey-step.done .route-journey-node { background: var(--route-green); }
+.route-journey-step.ready .route-journey-node { background: var(--route-ready); }
+.route-journey-step.active .route-journey-node { background: var(--route-active); }
+.route-journey-step.pending .route-journey-node { background: var(--route-pending); }
+.route-journey-step.cancelled .route-journey-node { background: var(--route-cancelled); }
+.route-journey-step.outside-zone .route-journey-node {
+    border-color: var(--route-outside);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20);
+}
 .route-journey-step.current .route-journey-node {
     transform: scale(1.12);
     border-color: #fef08a;
@@ -830,14 +860,15 @@ body {
     border-color: #fef08a;
     box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.18), 0 12px 24px rgba(15, 23, 42, 0.24);
 }
-.route-journey-step.current::after {
+.route-journey-step.current .route-journey-node::after {
     content: "➜";
     position: absolute;
-    z-index: 2;
-    top: calc(var(--journey-line-top) - 12px);
-    left: calc(50%% - (var(--journey-node-size) / 2) - 22px);
+    z-index: 3;
+    top: 50%%;
+    left: -27px;
     width: 22px;
     height: 22px;
+    transform: translateY(-50%%);
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
@@ -876,29 +907,7 @@ body {
 .route-marker.cancelled { background: var(--route-cancelled); }
 .route-marker.outside-zone { border-color: var(--route-outside); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 8px 18px rgba(15, 23, 42, 0.30); }
 .route-marker.no-checkin { border-color: #cbd5e1; }
-.route-mobile-map-placeholder {
-    display: none;
-    width: 100%%;
-    height: 0;
-}
 @media (max-width: 767px) {
-    .route-frame.route-split-layout .route-map-panel.route-mobile-map-stuck {
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 40;
-        margin: 0;
-    }
-    .route-journey-path-layer {
-        inset: 0 0 10px;
-    }
-    .route-journey-step::before,
-    .route-journey-step::after {
-        top: calc(2px + (var(--journey-node-size) / 2));
-        height: 4px;
-    }
-
     html, body {
         width: 100%%;
         min-height: 100vh;
@@ -1030,14 +1039,7 @@ body {
         padding: 5px 2px 1px;
     }
     .route-journey-node { font-size: 11px; border-width: 3px; }
-    .route-journey-step.current::after {
-        top: calc(var(--journey-line-top) - 10px);
-        left: calc(50%% - (var(--journey-node-size) / 2) - 18px);
-        width: 19px;
-        height: 19px;
-        font-size: 11px;
-        border-width: 2px;
-    }
+    .route-journey-step::before { height: 4px; }
     .route-journey-label { font-size: 10px; min-height: 12px; }
     .route-journey-status { font-size: 9px; }
 }
@@ -1242,93 +1244,22 @@ function setActiveJourneyStep(visitId) {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
     });
 }
-function setRouteCardsActive(visitId, highlightCard=true) {
-    document.querySelectorAll('.route-card').forEach(card => {
-        if (!highlightCard) {
-            card.classList.remove('route-card-active');
-            return;
-        }
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
-    });
-}
-function renderJourneyLoop() {
-    const track = document.querySelector('.route-journey-track');
-    if (!track) return;
-    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
-}
-function initMobileStickyMap() {
-    const query = window.matchMedia('(max-width: 767px)');
-    const frame = document.querySelector('.route-frame.route-split-layout');
-    const mapPanel = document.querySelector('.route-map-panel.route-fixed-map');
-    const cardsPanel = document.querySelector('.route-cards-panel.route-side-cards');
-    if (!frame || !mapPanel || !cardsPanel) return;
-    let placeholder = document.querySelector('.route-mobile-map-placeholder');
-    if (!placeholder) {
-        placeholder = document.createElement('div');
-        placeholder.className = 'route-mobile-map-placeholder';
-        mapPanel.parentNode.insertBefore(placeholder, mapPanel);
-    }
-    let ticking = false;
-    function sync() {
-        ticking = false;
-        if (!query.matches) {
-            placeholder.style.display = 'none';
-            placeholder.style.height = '0px';
-            mapPanel.classList.remove('route-mobile-map-stuck');
-            mapPanel.style.left = '';
-            mapPanel.style.width = '';
-            if (mapInstance) mapInstance.invalidateSize();
-            return;
-        }
-        const referenceRect = placeholder.style.display === 'block' ? placeholder.getBoundingClientRect() : mapPanel.getBoundingClientRect();
-        const cardsRect = cardsPanel.getBoundingClientRect();
-        const mapHeight = mapPanel.offsetHeight || Math.round(window.innerHeight * 0.56);
-        const shouldStick = referenceRect.top <= 0 && cardsRect.bottom > Math.max(mapHeight * 0.55, 220);
-        if (shouldStick) {
-            const frameRect = frame.getBoundingClientRect();
-            placeholder.style.display = 'block';
-            placeholder.style.height = `${mapHeight}px`;
-            mapPanel.classList.add('route-mobile-map-stuck');
-            mapPanel.style.left = `${Math.max(frameRect.left, 0)}px`;
-            mapPanel.style.width = `${frameRect.width}px`;
-        } else {
-            placeholder.style.display = 'none';
-            placeholder.style.height = '0px';
-            mapPanel.classList.remove('route-mobile-map-stuck');
-            mapPanel.style.left = '';
-            mapPanel.style.width = '';
-        }
-        if (mapInstance) mapInstance.invalidateSize();
-    }
-    function requestSync() {
-        if (!ticking) {
-            ticking = true;
-            window.requestAnimationFrame(sync);
-        }
-    }
-    window.addEventListener('scroll', requestSync, {passive: true});
-    window.addEventListener('resize', requestSync, {passive: true});
-    window.setTimeout(requestSync, 150);
-    window.setTimeout(requestSync, 500);
-}
-function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const marker = routeMarkers[visit.id];
         if (marker) {
             marker.setIcon(markerIcon(visit, isActive));
             marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
-            if (isActive && panToMarker && mapInstance && visit.hasPoint) {
-                mapInstance.invalidateSize();
-                const targetZoom = Math.max(mapInstance.getZoom() || 15, 15);
-                mapInstance.setView([visit.lat, visit.lng], targetZoom, {animate: true});
+            if (isActive && panToMarker && mapInstance) {
+                mapInstance.panTo([visit.lat, visit.lng], {animate: true, duration: .35});
             }
-            if (isActive && openPopup) {
-                window.setTimeout(() => marker.openPopup(), panToMarker ? 320 : 40);
-            }
+            if (isActive && openPopup) marker.openPopup();
         }
     });
-    setRouteCardsActive(visitId, highlightCard);
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1337,7 +1268,7 @@ function installJourneyFocus() {
         step.addEventListener('click', event => {
             event.preventDefault();
             const visitId = step.dataset.visitId;
-            if (visitId) setActiveVisit(visitId, true, true, false, false);
+            if (visitId) setActiveVisit(visitId, true, true, true);
         });
     });
 }
@@ -1448,7 +1379,6 @@ function renderMap() {
 renderMap();
 installCardFocus();
 installJourneyFocus();
-initMobileStickyMap();
 </script>
 </body>
 </html>
@@ -1628,76 +1558,7 @@ function setActiveJourneyStep(visitId) {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
     });
 }
-function setRouteCardsActive(visitId, highlightCard=true) {
-    document.querySelectorAll('.route-card').forEach(card => {
-        if (!highlightCard) {
-            card.classList.remove('route-card-active');
-            return;
-        }
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
-    });
-}
-function renderJourneyLoop() {
-    const track = document.querySelector('.route-journey-track');
-    if (!track) return;
-    track.querySelectorAll('.route-journey-path-layer, .route-journey-truck').forEach(node => node.remove());
-}
-function initMobileStickyMap() {
-    const query = window.matchMedia('(max-width: 767px)');
-    const frame = document.querySelector('.route-frame.route-split-layout');
-    const mapPanel = document.querySelector('.route-map-panel.route-fixed-map');
-    const cardsPanel = document.querySelector('.route-cards-panel.route-side-cards');
-    if (!frame || !mapPanel || !cardsPanel) return;
-    let placeholder = document.querySelector('.route-mobile-map-placeholder');
-    if (!placeholder) {
-        placeholder = document.createElement('div');
-        placeholder.className = 'route-mobile-map-placeholder';
-        mapPanel.parentNode.insertBefore(placeholder, mapPanel);
-    }
-    let ticking = false;
-    function sync() {
-        ticking = false;
-        if (!query.matches) {
-            placeholder.style.display = 'none';
-            placeholder.style.height = '0px';
-            mapPanel.classList.remove('route-mobile-map-stuck');
-            mapPanel.style.left = '';
-            mapPanel.style.width = '';
-            if (mapInstance) mapInstance.invalidateSize();
-            return;
-        }
-        const referenceRect = placeholder.style.display === 'block' ? placeholder.getBoundingClientRect() : mapPanel.getBoundingClientRect();
-        const cardsRect = cardsPanel.getBoundingClientRect();
-        const mapHeight = mapPanel.offsetHeight || Math.round(window.innerHeight * 0.56);
-        const shouldStick = referenceRect.top <= 0 && cardsRect.bottom > Math.max(mapHeight * 0.55, 220);
-        if (shouldStick) {
-            const frameRect = frame.getBoundingClientRect();
-            placeholder.style.display = 'block';
-            placeholder.style.height = `${mapHeight}px`;
-            mapPanel.classList.add('route-mobile-map-stuck');
-            mapPanel.style.left = `${Math.max(frameRect.left, 0)}px`;
-            mapPanel.style.width = `${frameRect.width}px`;
-        } else {
-            placeholder.style.display = 'none';
-            placeholder.style.height = '0px';
-            mapPanel.classList.remove('route-mobile-map-stuck');
-            mapPanel.style.left = '';
-            mapPanel.style.width = '';
-        }
-        if (mapInstance) mapInstance.invalidateSize();
-    }
-    function requestSync() {
-        if (!ticking) {
-            ticking = true;
-            window.requestAnimationFrame(sync);
-        }
-    }
-    window.addEventListener('scroll', requestSync, {passive: true});
-    window.addEventListener('resize', requestSync, {passive: true});
-    window.setTimeout(requestSync, 150);
-    window.setTimeout(requestSync, 500);
-}
-function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const markers = visitMarkers[visit.id] || [];
@@ -1711,7 +1572,9 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
             if (point) mapInstance.panTo(point, {animate: true, duration: .35});
         }
     });
-    setRouteCardsActive(visitId, highlightCard);
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1720,7 +1583,7 @@ function installJourneyFocus() {
         step.addEventListener('click', event => {
             event.preventDefault();
             const visitId = step.dataset.visitId;
-            if (visitId) setActiveVisit(visitId, true, true, false, false);
+            if (visitId) setActiveVisit(visitId, true, true, true);
         });
     });
 }
@@ -1862,7 +1725,6 @@ document.querySelectorAll('.review-action').forEach(button => {
 renderMap();
 installCardFocus();
 installJourneyFocus();
-initMobileStickyMap();
 </script>
 </body>
 </html>
