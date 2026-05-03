@@ -1,3 +1,5 @@
+import math
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -749,7 +751,7 @@ class RouteVisit(models.Model):
             return self._get_pda_form_action()
         return action
 
-    def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0):
+    def action_save_browser_geo_checkin(self, latitude, longitude, accuracy=0.0, auto_start_after_capture=False):
         """Save location coordinates captured by the browser/mobile device.
 
         This method is called from a browser client action. In salesperson/PDA mode,
@@ -798,10 +800,25 @@ class RouteVisit(models.Model):
                 "geo_review_required",
                 "geo_review_missing_reason",
             ])
-        return {
+        payload = {
             "status": first.geo_checkin_status if first else False,
             "distance_m": first.geo_checkin_distance_m if first else 0.0,
             "distance_display": first.geo_checkin_distance_display if first else False,
             "requires_reason": first._should_require_geo_reason_before_start() if first else False,
         }
+
+        if auto_start_after_capture and first:
+            start_result = first.with_context(
+                pda_mode=True,
+                route_pda_salesperson_mode=True,
+                route_geo_skip_auto_capture=True,
+            ).action_start_visit()
+            if isinstance(start_result, dict):
+                payload["next_action"] = start_result
+            elif hasattr(first, "_get_pda_form_action"):
+                payload["next_action"] = first._get_pda_form_action()
+            else:
+                payload["next_action"] = {"type": "ir.actions.client", "tag": "reload"}
+
+        return payload
 
