@@ -65,6 +65,12 @@
 <field name="display_type" invisible="1"/>
 <div class="route_mobile_summary_grid" invisible="display_type">
 <div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Barcode / Scan</div>
+<div class="route_mobile_info_value">
+<field name="route_product_barcode" placeholder="Scan or type barcode"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value">
 <field name="product_id" domain="order_id.route_order_mode != 'direct_sale' and [] or [('id', 'in', route_available_product_ids)]" context="{'route_only_source_available_products': order_id.route_order_mode == 'direct_sale', 'route_source_location_id': order_id.route_source_location_id}" options="{'no_create': True, 'no_open': False}" required="not display_type"/>
@@ -218,67 +224,25 @@
 </div>
 </div>
 </div>
+<div class="route_mobile_section_header route_mobile_product_header">
 <div class="route_mobile_section_title">Products</div>
-<field name="order_line" mode="kanban,form" context="{'default_display_type': False, 'route_only_source_available_products': route_order_mode == 'direct_sale', 'route_source_location_id': route_source_location_id}">
-<kanban class="route_mobile_sale_line_kanban" create="1" edit="1" delete="1">
-<field name="display_type"/>
-<field name="product_id"/>
-<field name="name"/>
-<field name="product_uom_qty"/>
-<field name="price_unit"/>
-<field name="price_subtotal"/>
-<field name="currency_id"/>
-<field name="route_product_barcode"/>
-<field name="route_source_available_qty"/>
-<field name="route_lot_id"/>
-<field name="route_expiry_date"/>
-<templates>
-<t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_mobile_sale_line_card">
-<div class="route_mobile_sale_line_head">
-<strong class="route_mobile_sale_line_product">
-<field name="product_id"/>
-</strong>
-<span class="route_mobile_sale_line_subtotal">
-<field name="price_subtotal"/>
-</span>
-</div>
-<div class="route_mobile_sale_line_grid">
-<div>
-<span class="route_mobile_sale_line_label">Qty</span>
-<span class="route_mobile_sale_line_value">
-<field name="product_uom_qty"/>
-</span>
-</div>
-<div>
-<span class="route_mobile_sale_line_label">Unit Price</span>
-<span class="route_mobile_sale_line_value">
-<field name="price_unit"/>
-</span>
-</div>
-<div>
-<span class="route_mobile_sale_line_label">Vehicle</span>
-<span class="route_mobile_sale_line_value">
-<field name="route_source_available_qty"/>
-</span>
-</div>
-<div t-if="record.route_lot_id.raw_value">
-<span class="route_mobile_sale_line_label">Lot</span>
-<span class="route_mobile_sale_line_value">
-<field name="route_lot_id"/>
-</span>
-</div>
-<div t-if="record.route_expiry_date.raw_value">
-<span class="route_mobile_sale_line_label">Expiry</span>
-<span class="route_mobile_sale_line_value">
-<field name="route_expiry_date"/>
-</span>
+<div class="route_mobile_product_toolbar">
+<button name="action_route_direct_sale_add_product" type="object" string="Add Product" class="btn-primary route_mobile_product_action" invisible="state not in ('draft', 'sent')"/>
+<button name="action_route_direct_sale_scan_product" type="object" string="Scan Barcode" class="btn-secondary route_mobile_product_action" invisible="state not in ('draft', 'sent')"/>
 </div>
 </div>
-</div>
-</t>
-</templates>
-</kanban>
+<field name="order_line" class="route_mobile_direct_products_field" context="{'default_display_type': False, 'route_only_source_available_products': route_order_mode == 'direct_sale', 'route_source_location_id': route_source_location_id}">
+<list string="Products" editable="bottom" create="1" delete="1" class="route_mobile_sale_line_list">
+<field name="display_type" column_invisible="1"/>
+<field name="route_product_barcode" string="Barcode" optional="hide"/>
+<field name="product_id" string="Product" domain="parent.route_order_mode != 'direct_sale' and [] or [('id', 'in', parent.route_available_product_ids)]" context="{'route_only_source_available_products': parent.route_order_mode == 'direct_sale', 'route_source_location_id': parent.route_source_location_id}" options="{'no_create': True, 'no_open': False}" required="not display_type"/>
+<field name="product_uom_qty" string="Qty"/>
+<field name="route_source_available_qty" string="Vehicle" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale'"/>
+<field name="route_lot_id" string="Lot/Serial" column_invisible="parent.route_order_mode != 'direct_sale' or parent.route_enable_lot_serial_tracking == False" optional="show"/>
+<field name="route_expiry_date" string="Expiry" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale' or parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
+<field name="price_unit" string="Unit"/>
+<field name="price_subtotal" string="Subtotal" readonly="1"/>
+</list>
 <form string="Product">
 <sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
 <field name="order_id" invisible="1"/>
@@ -287,6 +251,12 @@
 <field name="route_source_available_qty" invisible="1"/>
 <field name="display_type" invisible="1"/>
 <div class="route_mobile_summary_grid">
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Barcode / Scan</div>
+<div class="route_mobile_info_value">
+<field name="route_product_barcode" placeholder="Scan or type barcode"/>
+</div>
+</div>
 <div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value">
