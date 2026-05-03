@@ -1188,7 +1188,13 @@ class RouteVisit(models.Model):
     def action_ux_collect_payment(self):
         self.ensure_one()
 
-        if (not self._is_direct_sales_stop()) and self.remaining_due_amount <= 0 and not self.collection_skip_reason:
+        if self._is_direct_sales_stop():
+            draft_payments = self._get_direct_stop_settlement_payments(states=["draft"])
+            if draft_payments:
+                return self._get_pda_form_action()
+            if self.visit_process_state in ("collection_done", "ready_to_close", "done") or self.state == "done":
+                return self._get_pda_form_action()
+        elif self.remaining_due_amount <= 0 and not self.collection_skip_reason:
             self._action_mark_post_collection_stage()
             return self._get_pda_form_action()
 
