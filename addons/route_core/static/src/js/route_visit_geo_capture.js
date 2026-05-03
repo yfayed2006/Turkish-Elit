@@ -70,6 +70,13 @@ class RouteGeoCaptureCheckinAction extends Component {
                 : _t("Current location captured.");
             this.notification.add(message, { title: _t("Location Check-in"), type: "success" });
 
+            if (result && result.warning_message) {
+                this.notification.add(result.warning_message, {
+                    title: _t("Location Check-in"),
+                    type: result.start_blocked ? "warning" : "info",
+                });
+            }
+
             if (this.autoStartAfterCapture && result && result.next_action) {
                 await this.action.doAction(result.next_action);
                 return;
