@@ -20,7 +20,6 @@ class RouteVisitStatementWizard(models.TransientModel):
     previous_due_amount = fields.Monetary(string="Previous Due", currency_field="currency_id", compute="_compute_statement", readonly=True)
     current_visit_sale_amount = fields.Monetary(string="Current Visit Sale", currency_field="currency_id", compute="_compute_statement", readonly=True)
     current_visit_return_amount = fields.Monetary(string="Current Visit Returns", currency_field="currency_id", compute="_compute_statement", readonly=True)
-    current_visit_commission_amount = fields.Monetary(string="Commission", currency_field="currency_id", compute="_compute_statement", readonly=True)
     net_amount_for_visit = fields.Monetary(string="Net Amount For This Visit", currency_field="currency_id", compute="_compute_statement", readonly=True)
     amount_due_now = fields.Monetary(string="Total Outlet Due", currency_field="currency_id", compute="_compute_statement", readonly=True)
     suggested_collection_now = fields.Monetary(string="Suggested Cash Collection Now", currency_field="currency_id", compute="_compute_statement", readonly=True)
@@ -38,11 +37,6 @@ class RouteVisitStatementWizard(models.TransientModel):
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     can_continue_to_collection = fields.Boolean(string="Can Continue To Collection", compute="_compute_statement", readonly=True)
-    opened_from_payment_wizard = fields.Boolean(
-        string="Opened From Payment Wizard",
-        default=lambda self: bool(self.env.context.get("route_statement_opened_from_payment_wizard")),
-        readonly=True,
-    )
 
     def _get_statement_reference_date(self, visit):
         self.ensure_one()
@@ -117,7 +111,6 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.previous_due_amount = 0.0
             rec.current_visit_sale_amount = 0.0
             rec.current_visit_return_amount = 0.0
-            rec.current_visit_commission_amount = 0.0
             rec.net_amount_for_visit = 0.0
             rec.amount_due_now = 0.0
             rec.suggested_collection_now = 0.0
@@ -159,23 +152,20 @@ class RouteVisitStatementWizard(models.TransientModel):
                     summary = visit._get_consignment_receipt_summary()
                     sale_amount = summary.get("visit_sale_amount", 0.0)
                     return_amount = summary.get("returned_value", 0.0)
-                    commission_amount = summary.get("commission_amount", 0.0)
-                    net_amount = summary.get("current_visit_net", max((sale_amount or 0.0) - (return_amount or 0.0) - (commission_amount or 0.0), 0.0))
+                    net_amount = summary.get("current_visit_net", max((sale_amount or 0.0) - (return_amount or 0.0), 0.0))
                     amount_due_now = summary.get("total_outlet_due", summary.get("current_due", 0.0))
                     balance_after_collection = summary.get("total_outstanding_after_collection", getattr(visit, "remaining_due_amount", 0.0) or 0.0)
                     previous_due = summary.get("previous_due", max((amount_due_now or 0.0) - max(net_amount, 0.0), 0.0))
                 else:
                     sale_amount = sum((line.sold_amount or 0.0) for line in visit.line_ids) if visit.line_ids else (visit.net_due_amount or 0.0)
                     return_amount = sum((line.return_amount or 0.0) for line in visit.line_ids) if visit.line_ids else 0.0
-                    commission_amount = getattr(visit, "consignment_commission_amount", 0.0) or 0.0
-                    net_amount = max((sale_amount or 0.0) - (return_amount or 0.0) - (commission_amount or 0.0), 0.0)
+                    net_amount = max((sale_amount or 0.0) - (return_amount or 0.0), 0.0)
                     amount_due_now = visit.outlet_current_due_amount or 0.0
                     balance_after_collection = max(getattr(visit, "remaining_due_amount", 0.0) or 0.0, amount_due_now)
                     previous_due = max((amount_due_now or 0.0) - max(net_amount, 0.0), 0.0)
 
                 rec.current_visit_sale_amount = sale_amount
                 rec.current_visit_return_amount = return_amount
-                rec.current_visit_commission_amount = commission_amount
                 rec.net_amount_for_visit = net_amount
                 rec.amount_due_now = amount_due_now
                 current_immediate_remaining = max(
@@ -224,8 +214,6 @@ class RouteVisitStatementWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise UserError(_("Visit is required."))
-        if self.opened_from_payment_wizard or self.env.context.get("route_statement_opened_from_payment_wizard"):
-            return {"type": "ir.actions.act_window_close"}
         if not self.can_continue_to_collection:
             raise UserError(_("Collection is already closed for this visit. This statement is now review-only."))
         if hasattr(visit, "action_ux_collect_payment"):
