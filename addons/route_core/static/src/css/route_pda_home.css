@@ -3898,5 +3898,83 @@
 }
 
 
+/* Route Mobile Direct Return / Direct Sale Product UX */
+.route_mobile_direct_return_form .o_form_sheet,
+.route_mobile_direct_return_sheet {
+    max-width: 980px;
+}
+.route_mobile_direct_return_lines_field .o_field_x2many_list_row_add,
+.route_mobile_direct_return_lines_field .o_field_x2many_list_row_add a,
+.route_mobile_direct_products_field .o_field_x2many_list_row_add,
+.route_mobile_direct_products_field .o_field_x2many_list_row_add a {
+    display: none !important;
+}
+.route_mobile_direct_return_lines_field img,
+.route_mobile_direct_products_field img {
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+}
+.route_mobile_return_total_card,
+.route_mobile_sale_total_card {
+    border-color: #bfdbfe !important;
+    background: #f8fbff !important;
+}
+@media (max-width: 767px) {
+    .route_mobile_direct_return_lines_field .o_list_table,
+    .route_mobile_direct_products_field .o_list_table {
+        min-width: 0 !important;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row,
+    .route_mobile_direct_products_field .o_data_row {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 10px;
+        padding: 10px !important;
+        border: 1px solid #e5e7eb;
+        border-left: 3px solid #0ea5b7;
+        border-radius: 16px;
+        margin: 8px 0;
+        background: #fff;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row td,
+    .route_mobile_direct_products_field .o_data_row td {
+        border: 0 !important;
+        padding: 2px 4px !important;
+        min-height: 28px;
+    }
+    .route_mobile_direct_return_lines_field thead,
+    .route_mobile_direct_products_field thead {
+        display: none !important;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row td:nth-child(1),
+    .route_mobile_direct_products_field .o_data_row td:nth-child(2) {
+        min-width: 56px;
+        width: 56px;
+        align-self: flex-start;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row td:nth-child(2),
+    .route_mobile_direct_products_field .o_data_row td:nth-child(3) {
+        min-width: calc(100% - 78px);
+        flex: 1 1 calc(100% - 78px);
+        font-size: 1rem;
+        font-weight: 900;
+        color: #111827;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row td,
+    .route_mobile_direct_products_field .o_data_row td {
+        font-weight: 700;
+        color: #334155;
+    }
+    .route_mobile_direct_return_lines_field .o_data_row td:last-child,
+    .route_mobile_direct_products_field .o_data_row td:last-child {
+        margin-left: auto;
+    }
+}
+
+
+
 
 
