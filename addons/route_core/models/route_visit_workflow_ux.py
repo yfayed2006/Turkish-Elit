@@ -1536,85 +1536,32 @@ class RouteVisit(models.Model):
     def _get_consignment_receipt_line_items(self):
         self.ensure_one()
         route_map = dict(self.env["route.visit.line"]._fields["return_route"].selection)
-        items_by_key = {}
-
-        def _line_has_activity(line):
-            return any([
-                (line.previous_qty or 0.0),
-                (line.counted_qty or 0.0),
-                (line.sold_qty or 0.0),
-                (line.return_qty or 0.0),
-                (line.supplied_qty or 0.0),
-            ])
-
-        def _display_target_lot(line):
-            # Historical visits may already contain a return-only no-lot row for a
-            # tracked product while the same product has exactly one active lot row.
-            # Group that display row with the lot row so the PDF remains readable
-            # even before the record is reopened/normalized.
-            if line.lot_id or (line.previous_qty or 0.0) or (line.counted_qty or 0.0) or (line.supplied_qty or 0.0):
-                return line.lot_id
-            if (line.return_qty or 0.0) <= 0:
-                return line.lot_id
-            product_lines = self.line_ids.filtered(lambda l: l.product_id == line.product_id and l.lot_id)
-            active_lot_lines = product_lines.filtered(
-                lambda l: (l.previous_qty or 0.0) > 0
-                or (l.counted_qty or 0.0) > 0
-                or (l.return_qty or 0.0) > 0
-                or (l.supplied_qty or 0.0) > 0
-            )
-            if len(active_lot_lines.mapped("lot_id")) == 1:
-                return active_lot_lines[:1].lot_id
-            return line.lot_id
-
-        for line in self.line_ids.filtered(lambda l: l.product_id):
-            if not _line_has_activity(line):
-                continue
-            display_lot = _display_target_lot(line)
-            key = (line.product_id.id, display_lot.id if display_lot else 0, line.return_route or "vehicle")
-            if key not in items_by_key:
-                lot_name = display_lot.name if display_lot else ""
-                items_by_key[key] = {
-                    "barcode": line.barcode or line.product_id.default_code or "",
-                    "product_name": line.product_id.display_name or "",
-                    "lot_name": lot_name,
-                    "lot_display": (lot_name or "").replace("-", "‑") if lot_name else "",
-                    "expiry_date": line.expiry_date or False,
-                    "previous_qty": 0.0,
-                    "display_previous_qty": 0.0,
-                    "counted_qty": 0.0,
-                    "sold_qty": 0.0,
-                    "return_qty": 0.0,
-                    "return_route": line.return_route or "vehicle",
-                    "return_route_label": route_map.get(line.return_route or "vehicle", line.return_route or "vehicle"),
-                    "supplied_qty": 0.0,
-                    "unit_price": line.unit_price or 0.0,
-                    "sold_amount": 0.0,
-                    "return_amount": 0.0,
-                    "supply_value": 0.0,
-                }
-
-            item = items_by_key[key]
-            if not item.get("expiry_date") and line.expiry_date:
-                item["expiry_date"] = line.expiry_date
-            item["previous_qty"] += line.previous_qty or 0.0
-            item["counted_qty"] += line.counted_qty or 0.0
-            item["sold_qty"] += line.sold_qty or 0.0
-            item["return_qty"] += line.return_qty or 0.0
-            item["supplied_qty"] += line.supplied_qty or 0.0
-            item["sold_amount"] += line.sold_amount or 0.0
-            item["return_amount"] += line.return_amount or 0.0
-            item["supply_value"] += line.supply_value or 0.0
-            if not item["unit_price"] and line.unit_price:
-                item["unit_price"] = line.unit_price or 0.0
-
         items = []
-        for item in items_by_key.values():
-            display_previous_qty = item.get("previous_qty", 0.0) or 0.0
+        for line in self.line_ids.filtered(lambda l: l.product_id):
+            if not any([(line.previous_qty or 0.0), (line.counted_qty or 0.0), (line.sold_qty or 0.0), (line.return_qty or 0.0), (line.supplied_qty or 0.0)]):
+                continue
+            display_previous_qty = line.previous_qty or 0.0
             if display_previous_qty < 0:
                 display_previous_qty = 0.0
-            item["display_previous_qty"] = display_previous_qty
-            items.append(item)
+            items.append({
+                "barcode": line.barcode or line.product_id.default_code or "",
+                "product_name": line.product_id.display_name or "",
+                "lot_name": line.lot_id.name or "",
+                "lot_display": (line.lot_id.name or "").replace("-", "‑") if line.lot_id else "",
+                "expiry_date": line.expiry_date or False,
+                "previous_qty": line.previous_qty or 0.0,
+                "display_previous_qty": display_previous_qty,
+                "counted_qty": line.counted_qty or 0.0,
+                "sold_qty": line.sold_qty or 0.0,
+                "return_qty": line.return_qty or 0.0,
+                "return_route": line.return_route or "vehicle",
+                "return_route_label": route_map.get(line.return_route or "vehicle", line.return_route or "vehicle"),
+                "supplied_qty": line.supplied_qty or 0.0,
+                "unit_price": line.unit_price or 0.0,
+                "sold_amount": line.sold_amount or 0.0,
+                "return_amount": line.return_amount or 0.0,
+                "supply_value": line.supply_value or 0.0,
+            })
         return items
 
     def action_print_consignment_visit_receipt(self):
@@ -1674,24 +1621,6 @@ class RouteVisit(models.Model):
         self.ensure_one()
         summary = self._get_consignment_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
-        category_breakdown = self._get_consignment_category_commission_breakdown() if hasattr(self, "_get_consignment_category_commission_breakdown") else {"lines": []}
-
-        def amount(value):
-            return "%.2f %s" % (value or 0.0, currency_code)
-
-        def date_value(value):
-            return str(value) if value else "-"
-
-        gross_sale = summary.get("visit_sale_amount", 0.0)
-        returns_value = summary.get("returned_value", 0.0)
-        gross_after_returns = summary.get("gross_after_returns_amount", max((gross_sale or 0.0) - (returns_value or 0.0), 0.0))
-        commission_amount = summary.get("commission_amount", 0.0)
-        current_visit_net = summary.get("current_visit_net", 0.0)
-        collected_now = summary.get("settled_amount", 0.0)
-        remaining_amount = summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0))
-        promise_amount = summary.get("promise_amount", 0.0)
-        total_after_collection = summary.get("total_outstanding_after_collection", remaining_amount)
-
         lines = [
             _("Settlement receipt"),
             _("Consignment visit"),
@@ -1700,57 +1629,20 @@ class RouteVisit(models.Model):
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
             _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
-            "",
-            _("Financial calculation:"),
-            _("Gross Sold Value: %s") % amount(gross_sale),
-            _("Returns Value: %s") % amount(returns_value),
-            _("Gross After Returns: %s") % amount(gross_after_returns),
-            _("Outlet Category Commission: %s") % amount(commission_amount),
-            _("Net Payable: %s") % amount(current_visit_net),
+            _("Total Outlet Due: %.2f %s") % (summary.get("total_outlet_due", summary.get("current_due", 0.0)), currency_code),
+            _("Current Visit Net: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
+            _("Collected Now: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
+            _("Current Visit Remaining: %.2f %s") % (summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)), currency_code),
+            _("Total Outlet Balance After Collection: %.2f %s") % (summary.get("total_outstanding_after_collection", 0.0), currency_code),
         ]
-
-        if category_breakdown.get("lines"):
-            lines += ["", _("Category Commission Breakdown:")]
-            for item in category_breakdown.get("lines"):
-                lines.append(
-                    _("- %(category)s: %(sold)s sold - %(returns)s returns - %(commission)s commission (%(rate).2f%%) = %(net)s net")
-                    % {
-                        "category": item.get("category_name") or "-",
-                        "sold": amount(item.get("sold_value", 0.0)),
-                        "returns": amount(item.get("return_value", 0.0)),
-                        "rate": item.get("commission_rate", 0.0) or 0.0,
-                        "commission": amount(item.get("commission_amount", 0.0)),
-                        "net": amount(item.get("net_payable_amount", 0.0)),
-                    }
-                )
-            lines.append(
-                _("Total Commission: %(commission)s | Total Net Payable: %(net)s")
-                % {
-                    "commission": amount(category_breakdown.get("total_commission_amount", commission_amount)),
-                    "net": amount(category_breakdown.get("total_net_payable_amount", current_visit_net)),
-                }
-            )
-
-        lines += [
-            "",
-            _("Collection result:"),
-            _("Total Outlet Due: %s") % amount(summary.get("total_outlet_due", summary.get("current_due", 0.0))),
-            _("Collected Now: %s") % amount(collected_now),
-            _("Current Visit Remaining: %s") % amount(remaining_amount),
-            _("Total Outlet Balance After Collection: %s") % amount(total_after_collection),
-        ]
-
-        if promise_amount:
-            lines.append(_("Promise Amount: %s") % amount(promise_amount))
+        if summary.get("promise_amount"):
+            lines.append(_("Promise Amount: %.2f %s") % (summary["promise_amount"], currency_code))
             if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % date_value(summary["latest_promise_date"]))
-        elif (remaining_amount or 0.0) <= 0.0:
+                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
+        elif (summary.get("remaining_amount") or 0.0) <= 0.0:
             lines.append(_("Settlement Status: Paid in full"))
-
         if pdf_url:
-            lines += ["", _("Receipt PDF for %s:") % (self.name or "-"), pdf_url]
-
-        lines += ["", _("Generated automatically by Route Core.")]
+            lines += ["", _("Receipt PDF:"), pdf_url]
         return "\n".join(lines)
 
     def action_print_direct_stop_settlement_receipt(self):
