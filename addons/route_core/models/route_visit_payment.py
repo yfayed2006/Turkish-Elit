@@ -438,6 +438,60 @@ class RouteVisitPayment(models.Model):
             return "open"
         return self.promise_status
 
+    def _check_direct_stop_settlement_payment_rules(self):
+        self.ensure_one()
+        if self.amount < 0:
+            raise ValidationError(_("Payment amount cannot be negative."))
+
+        if self.collection_type in ("defer_date", "next_visit") and self.payment_mode != "deferred":
+            raise ValidationError(_("Deferred scenarios must use payment mode Deferred."))
+
+        if self.collection_type in ("full", "partial") and self.payment_mode == "deferred":
+            raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
+
+        # Direct-stop settlements can be split across older unpaid visits plus the current stop.
+        # The settlement wizard already validates the total collection against the direct-stop
+        # balance before creating the draft lines. During batch confirmation, earlier lines in the
+        # same settlement can reduce the target visits' remaining due, so comparing each draft
+        # line again against the live target balance would incorrectly block valid allocations.
+        if self.collection_type == "full":
+            if self.amount <= 0:
+                raise ValidationError(_("Full payment amount must be greater than zero."))
+
+        elif self.collection_type == "partial":
+            if self.amount <= 0:
+                raise ValidationError(_("Partial payment amount must be greater than zero."))
+            if (self.promise_amount or 0.0) <= 0:
+                raise ValidationError(_("Please set the promised unpaid amount."))
+            if not self.promise_date:
+                raise ValidationError(_("Please set the promise to pay date for the carried-forward balance."))
+            if not self.note:
+                raise ValidationError(_("Please add a note for the carried-forward balance."))
+
+        elif self.collection_type == "defer_date":
+            if self.amount != 0:
+                raise ValidationError(_("Deferred payment to a specific date must have amount = 0."))
+            if not self.due_date:
+                raise ValidationError(_("Please set the deferred due date."))
+            if (self.promise_amount or 0.0) <= 0:
+                raise ValidationError(_("Please set the promise to pay amount."))
+            if not (self.promise_date or self.due_date):
+                raise ValidationError(_("Please set the promise to pay date."))
+            if not self.note:
+                raise ValidationError(_("Please add a note explaining the deferment."))
+
+        elif self.collection_type == "next_visit":
+            if self.amount != 0:
+                raise ValidationError(_("Carry to next visit must have amount = 0."))
+            if self.due_date:
+                raise ValidationError(_("Do not set a due date when carrying payment to the next visit."))
+            if (self.promise_amount or 0.0) <= 0:
+                raise ValidationError(_("Please set the promise to pay amount."))
+            if not self.promise_date:
+                raise ValidationError(_("Please set the promise to pay date for the next visit."))
+            if not self.note:
+                raise ValidationError(_("Please add a note explaining why payment is carried to next visit."))
+
     @api.depends(
         "source_type",
         "visit_id.remaining_due_amount",
@@ -659,6 +713,10 @@ class RouteVisitPayment(models.Model):
             if not rec._get_target_model():
                 continue
 
+            if rec._is_direct_stop_settlement_payment():
+                rec._check_direct_stop_settlement_payment_rules()
+                continue
+
             due = rec._get_target_remaining_due(exclude_self=(rec.state == "confirmed"))
             target_label = rec._get_target_label()
 
@@ -742,3 +800,4 @@ class RouteVisitPayment(models.Model):
             if rec.state == "confirmed":
                 raise ValidationError(_("You cannot delete a confirmed payment."))
         return super().unlink()
+
