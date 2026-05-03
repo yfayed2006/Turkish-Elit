@@ -751,6 +751,30 @@ class SaleOrder(models.Model):
             "target": "current",
         }
 
+    def action_route_direct_sale_back_to_visit(self):
+        """Return to the direct-sale visit from the Route PDA sale order form."""
+        self.ensure_one()
+        visit = self.env["route.visit"].browse(
+            self.env.context.get("route_visit_id") or self.env.context.get("default_route_visit_id") or False
+        ).exists()
+        if not visit:
+            visit = self.route_visit_id or self._get_linked_route_visit()
+        if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales":
+            if hasattr(visit, "_get_pda_form_action"):
+                return visit.with_context(
+                    pda_mode=True,
+                    route_pda_salesperson_mode=True,
+                )._get_pda_form_action()
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("PDA Visit"),
+                "res_model": "route.visit",
+                "res_id": visit.id,
+                "view_mode": "form",
+                "target": "current",
+            }
+        return self.action_back_to_outlet_form()
+
     def action_no_direct_return(self):
         self.ensure_one()
         self._ensure_route_direct_return_enabled()
