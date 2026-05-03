@@ -978,7 +978,7 @@ body {
                     "classes": class_text,
                     "url": escape(visit.get("openUrl") or "#", quote=True),
                     "title": escape("%s - %s" % (visit.get("outlet") or "", visit.get("statusLabel") or visit.get("status") or ""), quote=True),
-                    "index": escape(visit.get("index") or ""),
+                    "index": escape(self._safe_text(visit.get("index") or "")),
                     "outlet": escape(visit.get("outlet") or "No outlet"),
                     "status": escape(visit.get("statusLabel") or visit.get("status") or "Pending"),
                 }
