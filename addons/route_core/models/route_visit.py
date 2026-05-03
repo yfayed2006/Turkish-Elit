@@ -2430,3 +2430,52 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
+            self.with_context(route_visit_force_write=True).write({
+                "state": "done",
+                "visit_process_state": "done",
+                "end_datetime": fields.Datetime.now(),
+            })
+            return True
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("End Visit"),
+            "res_model": "route.visit.end.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
+
+    def action_cancel(self):
+        for rec in self:
+            if rec.state == "done":
+                raise UserError(_("You cannot cancel a completed visit."))
+            rec.with_context(route_visit_force_write=True).write({
+                "state": "cancel",
+                "visit_process_state": "cancel",
+            })
+
+    def action_reset_to_draft(self):
+        for rec in self:
+            rec.with_context(route_visit_force_write=True, route_visit_force_pending_line=True).write({
+                "state": "draft",
+                "visit_process_state": "draft",
+                "start_datetime": False,
+                "end_datetime": False,
+                "sale_order_id": False,
+                "no_sale_reason": False,
+                "collection_skip_reason": False,
+                "has_returns": False,
+                "returns_step_done": False,
+                "has_refill": False,
+                "has_pending_refill": False,
+                "no_refill": False,
+                "refill_datetime": False,
+                "refill_backorder_id": False,
+                "refill_picking_id": False,
+                "source_location_id": False,
+                "destination_location_id": False,
+            })
