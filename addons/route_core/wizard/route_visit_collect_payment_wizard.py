@@ -115,6 +115,20 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
 
+    show_category_commission_breakdown = fields.Boolean(
+        string="Show Category Commission Breakdown",
+        compute="_compute_category_commission_breakdown_fields",
+        store=False,
+        readonly=True,
+    )
+    category_commission_breakdown_html = fields.Html(
+        string="Category Commission Breakdown",
+        compute="_compute_category_commission_breakdown_fields",
+        sanitize=False,
+        store=False,
+        readonly=True,
+    )
+
     direct_stop_previous_due_amount = fields.Monetary(
         string="Previous Due",
         currency_field="currency_id",
@@ -243,6 +257,26 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+
+
+    @api.depends("visit_id")
+    def _compute_category_commission_breakdown_fields(self):
+        for rec in self:
+            visit = rec.visit_id
+            rec.show_category_commission_breakdown = False
+            rec.category_commission_breakdown_html = False
+            if not visit:
+                continue
+            is_direct = bool(
+                hasattr(visit, "_is_direct_sales_stop")
+                and visit._is_direct_sales_stop()
+            )
+            if is_direct:
+                continue
+            show_breakdown = bool(getattr(visit, "show_consignment_category_commission_breakdown", False))
+            breakdown_html = getattr(visit, "consignment_category_commission_html", False)
+            rec.show_category_commission_breakdown = show_breakdown
+            rec.category_commission_breakdown_html = breakdown_html if show_breakdown else False
 
 
     @api.depends(
@@ -564,9 +598,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise ValidationError(_("Visit is required."))
-        if hasattr(visit, "action_open_statement_of_account"):
-            return visit.with_context(route_statement_opened_from_payment_wizard=True).action_open_statement_of_account()
-        return {"type": "ir.actions.act_window_close"}
+        return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
 
     def _ensure_collection_is_open(self):
         self.ensure_one()
