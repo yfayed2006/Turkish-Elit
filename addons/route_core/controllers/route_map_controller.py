@@ -690,15 +690,15 @@ body {
     border: 1px solid rgba(130, 70, 111, 0.16);
     border-radius: 18px;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
-    padding: 10px 14px 10px;
-    overflow: hidden;
+    padding: 10px 14px 12px;
+    overflow: visible;
 }
 .route-journey-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 .route-journey-title {
     margin: 0;
@@ -712,16 +712,11 @@ body {
 }
 .route-journey-stats {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 5px;
     justify-content: flex-end;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
 }
 .route-journey-stat {
-    flex: 0 0 auto;
     border: 1px solid #e2e8f0;
     border-radius: 999px;
     padding: 4px 8px;
@@ -737,29 +732,22 @@ body {
 .route-journey-stat.pending { background: #cffafe; color: #0e7490; }
 .route-journey-track {
     --journey-node-size: 40px;
-    --journey-line-top: 22px;
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0;
-    align-items: flex-start;
-    padding: 7px 10px 4px;
-    min-height: 76px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scroll-snap-type: x proximity;
+    --journey-line-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 12px 8px;
+    align-items: start;
+    padding: 6px 8px 2px;
+    overflow: visible;
 }
 .route-journey-step {
     position: relative;
-    flex: 0 0 112px;
-    min-width: 112px;
+    min-width: 0;
     text-align: center;
     text-decoration: none;
     color: inherit;
     display: block;
     padding-top: 2px;
-    scroll-snap-align: center;
 }
 .route-journey-step::before {
     content: "";
@@ -775,11 +763,6 @@ body {
 .route-journey-step.done::before,
 .route-journey-step.ready::before,
 .route-journey-step.active::before { background: linear-gradient(90deg, #16a34a, #22c55e); }
-.route-journey-step.current::before {
-    background: linear-gradient(90deg, #16a34a 0%%, #16a34a 48%%, #e5e7eb 52%%, #e5e7eb 100%%);
-}
-.route-journey-step:first-child::before { left: 50%%; }
-.route-journey-step:last-child::before { right: 50%%; }
 .route-journey-node {
     position: relative;
     z-index: 1;
@@ -804,16 +787,26 @@ body {
 .route-journey-step.cancelled .route-journey-node { background: #64748b; }
 .route-journey-step.outside-zone .route-journey-node { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
 .route-journey-step.current .route-journey-node { transform: scale(1.08); border-color: #fef08a; box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.16), 0 12px 24px rgba(15, 23, 42, 0.24); }
-.route-journey-step.current .route-journey-node::after {
+.route-journey-step.current::after {
     content: "➜";
     position: absolute;
-    left: 50%%;
-    bottom: -20px;
-    transform: translateX(-50%%);
-    color: var(--route-primary);
-    font-size: 15px;
+    z-index: 2;
+    top: calc(var(--journey-line-top) - 12px);
+    left: calc(50%% - (var(--journey-node-size) / 2) - 22px);
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff7ed;
+    color: #c2410c;
+    border: 2px solid #fed7aa;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+    font-size: 13px;
     font-weight: 950;
     line-height: 1;
+    pointer-events: none;
 }
 .route-journey-label {
     font-size: 11px;
@@ -825,7 +818,6 @@ body {
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     min-height: 13px;
-    padding: 0 3px;
 }
 .route-journey-status {
     margin-top: 3px;
@@ -836,7 +828,6 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 0 3px;
 }
 .route-marker.ready { background: #22c55e; }
 .route-marker.cancelled { background: #64748b; }
@@ -845,9 +836,10 @@ body {
 @media (max-width: 767px) {
     html, body {
         width: 100%%;
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
     body { padding: 0; background: #fff; }
     .route-frame.route-split-layout {
@@ -855,26 +847,24 @@ body {
         flex-direction: column;
         gap: 0;
         width: 100%%;
-        height: 100vh;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
+        height: auto;
+        max-height: none;
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;
     }
     .route-frame.route-split-layout .route-map-panel {
-        flex: 0 0 50vh;
-        flex-basis: 50dvh;
-        height: 50vh;
-        height: 50dvh;
-        min-height: 300px;
-        max-height: 50vh;
-        max-height: 50dvh;
+        flex: 0 0 auto;
+        height: 56vh;
+        height: 56dvh;
+        min-height: 320px;
+        max-height: 62vh;
+        max-height: 62dvh;
         border-radius: 0;
         border-left: 0;
         border-right: 0;
         box-shadow: none;
-        position: relative;
+        position: sticky;
+        top: 0;
         z-index: 3;
     }
     .route-frame.route-split-layout #map {
@@ -882,16 +872,14 @@ body {
         min-height: 0;
     }
     .route-frame.route-split-layout .route-cards-panel.route-side-cards {
-        flex: 1 1 50vh;
-        flex-basis: 50dvh;
+        flex: 0 0 auto;
         min-height: 0;
-        height: 50vh;
-        height: 50dvh;
+        height: auto;
         border-radius: 0;
         border-left: 0;
         border-right: 0;
         box-shadow: none;
-        overflow: hidden;
+        overflow: visible;
     }
     .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-header {
         display: none;
@@ -901,11 +889,10 @@ body {
     .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-cards-grid {
         display: block;
         padding: 10px;
-        height: 100%%;
-        overflow-y: auto;
-        overflow-x: hidden;
+        height: auto;
+        overflow: visible;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
+        overscroll-behavior: auto;
         touch-action: pan-y;
     }
     .route-frame.route-split-layout .route-cards-panel.route-side-cards .route-card {
@@ -918,13 +905,11 @@ body {
     .route-actions .route-btn { flex: 1 1 46%%; }
     .route-map-shell {
         width: 100%%;
-        height: 100vh;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
+        height: auto;
+        max-height: none;
         min-height: 0;
         gap: 0;
-        overflow: hidden;
+        overflow: visible;
     }
     .route-map-shell > .route-frame.route-split-layout {
         flex: 1 1 auto;
@@ -933,10 +918,12 @@ body {
         max-height: none;
     }
     .route-map-shell > .route-frame.route-split-layout .route-map-panel {
-        flex: 0 0 43%%;
-        height: auto;
-        min-height: 220px;
-        max-height: none;
+        flex: 0 0 auto;
+        height: 56vh;
+        height: 56dvh;
+        min-height: 320px;
+        max-height: 62vh;
+        max-height: 62dvh;
     }
     .route-map-shell > .route-frame.route-split-layout .route-cards-panel.route-side-cards {
         flex: 1 1 auto;
@@ -946,13 +933,13 @@ body {
         border-radius: 0;
         border-left: 0;
         border-right: 0;
-        padding: 7px 8px 8px;
+        padding: 8px 8px 9px;
         box-shadow: none;
         max-height: none;
-        overflow: hidden;
+        overflow: visible;
     }
     .route-journey-head {
-        margin-bottom: 3px;
+        margin-bottom: 4px;
         gap: 6px;
     }
     .route-journey-title {
@@ -971,27 +958,21 @@ body {
         padding: 3px 7px;
     }
     .route-journey-track {
-        --journey-node-size: 36px;
-        --journey-line-top: 20px;
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 0;
-        min-height: 72px;
-        padding: 6px 8px 4px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x proximity;
-    }
-    .route-journey-step {
-        flex: 0 0 86px;
-        min-width: 86px;
+        --journey-node-size: 34px;
+        --journey-line-top: 18px;
+        grid-template-columns: repeat(4, minmax(64px, 1fr));
+        gap: 10px 5px;
+        padding: 5px 2px 1px;
     }
     .route-journey-node { font-size: 11px; border-width: 3px; }
     .route-journey-step::before { height: 4px; }
-    .route-journey-step.current .route-journey-node::after {
-        bottom: -18px;
-        font-size: 13px;
+    .route-journey-step.current::after {
+        top: calc(var(--journey-line-top) - 10px);
+        left: calc(50%% - (var(--journey-node-size) / 2) - 18px);
+        width: 19px;
+        height: 19px;
+        font-size: 11px;
+        border-width: 2px;
     }
     .route-journey-label { font-size: 10px; min-height: 12px; }
     .route-journey-status { font-size: 9px; }
@@ -1043,7 +1024,7 @@ body {
                     "classes": class_text,
                     "url": escape(visit.get("openUrl") or "#", quote=True),
                     "title": escape("%s - %s" % (visit.get("outlet") or "", visit.get("statusLabel") or visit.get("status") or ""), quote=True),
-                    "index": escape(self._safe_text(visit.get("index") or "")),
+                    "index": escape(visit.get("index") or ""),
                     "outlet": escape(visit.get("outlet") or "No outlet"),
                     "status": escape(visit.get("statusLabel") or visit.get("status") or "Pending"),
                 }
