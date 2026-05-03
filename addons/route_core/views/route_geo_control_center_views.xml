@@ -382,7 +382,7 @@ m
 <field name="name" invisible="1"/>
 <div class="oe_title">
 <h2>Visit Location Map</h2>
-<p class="text-muted">Filtered visit locations and supervisor review.</p>
+<p class="text-muted">Live supervisor map for filtered visit locations. Outside-zone visits show both the salesperson check-in and outlet point with a connecting line.</p>
 </div>
 <div class="oe_button_box" name="button_box">
 <button name="action_open_total_visits" type="object" class="oe_stat_button" icon="fa-calendar-check-o">
