@@ -86,6 +86,12 @@
 <field name="product_uom_qty" string="Quantity" invisible="display_type"/>
 </div>
 </div>
+<div class="route_mobile_info_card" invisible="display_type">
+<div class="route_mobile_info_label">UoM</div>
+<div class="route_mobile_info_value">
+<field name="product_uom" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
 <div class="route_mobile_info_card" invisible="order_id.route_order_mode != 'direct_sale' or display_type">
 <div class="route_mobile_info_label">Available in Vehicle</div>
 <div class="route_mobile_info_value">
@@ -241,6 +247,7 @@
 <field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
 <field name="product_id" string="Product" domain="parent.route_order_mode != 'direct_sale' and [] or [('id', 'in', parent.route_available_product_ids)]" context="{'route_only_source_available_products': parent.route_order_mode == 'direct_sale', 'route_source_location_id': parent.route_source_location_id}" options="{'no_create': True, 'no_open': False}" required="not display_type"/>
 <field name="product_uom_qty" string="Qty"/>
+<field name="product_uom" string="UoM" options="{'no_create': True, 'no_open': True}"/>
 <field name="route_source_available_qty" string="Vehicle" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale'"/>
 <field name="route_lot_id" string="Lot/Serial" column_invisible="parent.route_order_mode != 'direct_sale' or parent.route_enable_lot_serial_tracking == False" optional="show"/>
 <field name="route_expiry_date" string="Expiry" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale' or parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
