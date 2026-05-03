@@ -895,14 +895,15 @@ body {
         max-height: none;
         min-height: 0;
         overflow: visible;
+        align-items: stretch;
     }
     .route-frame.route-split-layout .route-map-panel {
         flex: 0 0 auto;
-        height: 56vh;
-        height: 56dvh;
-        min-height: 320px;
-        max-height: 62vh;
-        max-height: 62dvh;
+        height: 52vh;
+        height: 52dvh;
+        min-height: 300px;
+        max-height: 58vh;
+        max-height: 58dvh;
         border-radius: 0;
         border-left: 0;
         border-right: 0;
@@ -910,8 +911,11 @@ body {
         position: -webkit-sticky;
         position: sticky;
         top: 0;
-        z-index: 12;
+        z-index: 30;
         align-self: stretch;
+        overflow: hidden;
+        transform: translateZ(0);
+        will-change: transform;
     }
     .route-frame.route-split-layout #map {
         height: 100%%;
@@ -965,11 +969,11 @@ body {
     }
     .route-map-shell > .route-frame.route-split-layout .route-map-panel {
         flex: 0 0 auto;
-        height: 56vh;
-        height: 56dvh;
-        min-height: 320px;
-        max-height: 62vh;
-        max-height: 62dvh;
+        height: 52vh;
+        height: 52dvh;
+        min-height: 300px;
+        max-height: 58vh;
+        max-height: 58dvh;
     }
     .route-map-shell > .route-frame.route-split-layout .route-cards-panel.route-side-cards {
         flex: 1 1 auto;
@@ -1198,7 +1202,6 @@ function popupHtml(visit) {
 }
 let mapInstance = null;
 const routeMarkers = {};
-let suppressCardAutoFocus = false;
 function markerHtml(visit, focused=false) {
     return `<div class="route-marker ${markerClass(visit)} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`;
 }
@@ -1220,27 +1223,9 @@ function scrollVisitCardIntoView(visitId) {
     const card = document.querySelector(`.route-card[data-visit-id="${String(visitId)}"]`);
     if (card) card.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'});
 }
-function scrollMapToStickyStart() {
-    const panel = document.querySelector('.route-map-panel.route-fixed-map');
-    if (!panel) return;
-    const targetTop = Math.max(0, panel.getBoundingClientRect().top + window.pageYOffset);
-    window.scrollTo({top: targetTop, behavior: 'smooth'});
-    window.setTimeout(() => {
-        if (mapInstance) mapInstance.invalidateSize();
-    }, 360);
-}
 function setActiveJourneyStep(visitId) {
     document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
-    });
-}
-function setRouteCardsActive(visitId, highlightCard=true) {
-    document.querySelectorAll('.route-card').forEach(card => {
-        if (!highlightCard) {
-            card.classList.remove('route-card-active');
-            return;
-        }
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
     });
 }
 function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
@@ -1256,7 +1241,9 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
             if (isActive && openPopup) marker.openPopup();
         }
     });
-    setRouteCardsActive(visitId, highlightCard);
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', highlightCard && String(card.dataset.visitId) === String(visitId));
+    });
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1266,9 +1253,9 @@ function installJourneyFocus() {
             event.preventDefault();
             const visitId = step.dataset.visitId;
             if (visitId) {
-                suppressCardAutoFocus = true;
-                scrollMapToStickyStart();
-                window.setTimeout(() => setActiveVisit(visitId, true, true, false, false), 180);
+                // Do not scroll the page when the strip is clicked.
+                // Only pan the map to the selected outlet and open its popup.
+                setActiveVisit(visitId, true, true, false, false);
             }
         });
     });
@@ -1279,8 +1266,7 @@ function installCardFocus() {
     const sideCards = document.querySelector('.route-side-cards');
     const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
     let currentId = null;
-    function activateCard(visitId, panToMarker=false, force=false) {
-        if (!force && suppressCardAutoFocus) return;
+    function activateCard(visitId, panToMarker=false) {
         if (!visitId || String(visitId) === String(currentId)) return;
         currentId = visitId;
         setActiveVisit(visitId, panToMarker);
@@ -1309,19 +1295,10 @@ function installCardFocus() {
         window.requestAnimationFrame(activateNearestVisibleCard);
     }
     cards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            suppressCardAutoFocus = false;
-            activateCard(card.dataset.visitId, true, true);
-        });
-        card.addEventListener('focusin', () => {
-            suppressCardAutoFocus = false;
-            activateCard(card.dataset.visitId, true, true);
-        });
+        card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
+        card.addEventListener('focusin', () => activateCard(card.dataset.visitId, true));
         card.addEventListener('click', event => {
-            if (!event.target.closest('a')) {
-                suppressCardAutoFocus = false;
-                activateCard(card.dataset.visitId, true, true);
-            }
+            if (!event.target.closest('a')) activateCard(card.dataset.visitId, true);
         });
     });
     if (observerRoot) {
@@ -1478,7 +1455,7 @@ installJourneyFocus();
             journey_block = self._route_journey_html(
                 visits_payload,
                 _("Filtered Route Progress"),
-                _("Filtered visits and location status."),
+                _("Supervisor route journey for the current filtered visits with location status highlights."),
             )
         except Exception:
             journey_block = ""
@@ -1529,7 +1506,6 @@ function popupHtml(visit, pointType) {
 }
 let mapInstance = null;
 const visitMarkers = {};
-let suppressCardAutoFocus = false;
 function markerIcon(visit, pointType, focused=false) {
     const size = focused ? 48 : 36;
     const anchorX = Math.round(size / 2);
@@ -1565,27 +1541,9 @@ function scrollVisitCardIntoView(visitId) {
     const card = document.querySelector(`.route-card[data-visit-id="${String(visitId)}"]`);
     if (card) card.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'});
 }
-function scrollMapToStickyStart() {
-    const panel = document.querySelector('.route-map-panel.route-fixed-map');
-    if (!panel) return;
-    const targetTop = Math.max(0, panel.getBoundingClientRect().top + window.pageYOffset);
-    window.scrollTo({top: targetTop, behavior: 'smooth'});
-    window.setTimeout(() => {
-        if (mapInstance) mapInstance.invalidateSize();
-    }, 360);
-}
 function setActiveJourneyStep(visitId) {
     document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
-    });
-}
-function setRouteCardsActive(visitId, highlightCard=true) {
-    document.querySelectorAll('.route-card').forEach(card => {
-        if (!highlightCard) {
-            card.classList.remove('route-card-active');
-            return;
-        }
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
     });
 }
 function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
@@ -1602,7 +1560,9 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
             if (point) mapInstance.panTo(point, {animate: true, duration: .35});
         }
     });
-    setRouteCardsActive(visitId, highlightCard);
+    document.querySelectorAll('.route-card').forEach(card => {
+        card.classList.toggle('route-card-active', highlightCard && String(card.dataset.visitId) === String(visitId));
+    });
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1612,9 +1572,9 @@ function installJourneyFocus() {
             event.preventDefault();
             const visitId = step.dataset.visitId;
             if (visitId) {
-                suppressCardAutoFocus = true;
-                scrollMapToStickyStart();
-                window.setTimeout(() => setActiveVisit(visitId, true, true, false, false), 180);
+                // Do not scroll the page when the strip is clicked.
+                // Only pan the map to the selected outlet and open its popup.
+                setActiveVisit(visitId, true, true, false, false);
             }
         });
     });
@@ -1625,8 +1585,7 @@ function installCardFocus() {
     const sideCards = document.querySelector('.route-side-cards');
     const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
     let currentId = null;
-    function activateCard(visitId, panToMarker=false, force=false) {
-        if (!force && suppressCardAutoFocus) return;
+    function activateCard(visitId, panToMarker=false) {
         if (!visitId || String(visitId) === String(currentId)) return;
         currentId = visitId;
         setActiveVisit(visitId, panToMarker);
@@ -1655,19 +1614,10 @@ function installCardFocus() {
         window.requestAnimationFrame(activateNearestVisibleCard);
     }
     cards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            suppressCardAutoFocus = false;
-            activateCard(card.dataset.visitId, true, true);
-        });
-        card.addEventListener('focusin', () => {
-            suppressCardAutoFocus = false;
-            activateCard(card.dataset.visitId, true, true);
-        });
+        card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
+        card.addEventListener('focusin', () => activateCard(card.dataset.visitId, true));
         card.addEventListener('click', event => {
-            if (!event.target.closest('a, button')) {
-                suppressCardAutoFocus = false;
-                activateCard(card.dataset.visitId, true, true);
-            }
+            if (!event.target.closest('a, button')) activateCard(card.dataset.visitId, true);
         });
     });
     if (observerRoot) {
