@@ -14,6 +14,7 @@ class RouteGeoCaptureCheckinAction extends Component {
         this.viewId = this.props.action.params.view_id || false;
         this.actionId = this.props.action.params.action_id || false;
         this.returnActionName = this.props.action.params.return_action_name || _t("Today's Visits");
+        this.autoStartAfterCapture = Boolean(this.props.action.params.auto_start_after_capture);
         onMounted(() => this.captureCurrentLocation());
     }
 
@@ -67,6 +68,16 @@ class RouteGeoCaptureCheckinAction extends Component {
                 ? _t("Current location captured. Distance from outlet:") + " " + distanceLabel
                 : _t("Current location captured.");
             this.notification.add(message, { title: _t("Location Check-in"), type: "success" });
+
+            if (this.autoStartAfterCapture) {
+                const nextAction = await this.orm.call("route.visit", "action_start_visit_after_geo_capture", [
+                    [this.visitId],
+                ]);
+                if (nextAction) {
+                    await this.action.doAction(nextAction);
+                    return;
+                }
+            }
         } catch (error) {
             let message = _t("Could not capture current location.");
             if (error && error.code === 1) {
@@ -120,5 +131,3 @@ RouteGeoCaptureCheckinAction.template = xml`
 `;
 
 registry.category("actions").add("route_core_capture_geo_checkin", RouteGeoCaptureCheckinAction);
-
-
