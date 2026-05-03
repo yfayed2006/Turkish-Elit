@@ -6,7 +6,7 @@
 <form string="Statement of Account" create="0" edit="0" delete="0" class="route_pda_statement_form">
 <sheet class="route_pda_statement_sheet route_pda_payment_sheet">
 <field name="can_continue_to_collection" invisible="1"/>
-<field name="show_category_commission_breakdown" invisible="1"/>
+<field name="opened_from_payment_wizard" invisible="1"/>
 <div class="route_pda_statement_section">
 <div class="route_pda_group_title route_pda_payment_section_title">Visit Context</div>
 <div class="route_pda_statement_grid">
@@ -73,9 +73,6 @@
 </div>
 </div>
 </div>
-<div class="route_pda_statement_section" invisible="not show_category_commission_breakdown">
-<field name="category_commission_breakdown_html" readonly="1" nolabel="1" widget="html"/>
-</div>
 <div class="route_pda_statement_section">
 <div class="route_pda_group_title route_pda_payment_section_title">Payment and Promise Snapshot</div>
 <div class="route_pda_statement_grid route_pda_statement_grid_snapshot">
@@ -125,7 +122,8 @@
 </sheet>
 <footer class="route_pda_statement_footer">
 <button name="action_print_statement_pdf" string="Print Statement" type="object" class="btn-primary"/>
-<button name="action_continue_to_collection" string="Continue to Collection" type="object" class="btn-secondary" invisible="not can_continue_to_collection"/>
+<button name="action_continue_to_collection" string="Back to Collection" type="object" class="btn-secondary" invisible="not opened_from_payment_wizard"/>
+<button name="action_continue_to_collection" string="Continue to Collection" type="object" class="btn-secondary" invisible="opened_from_payment_wizard or not can_continue_to_collection"/>
 <button string="Close" special="cancel" class="btn-secondary"/>
 </footer>
 </form>
