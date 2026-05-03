@@ -42,6 +42,9 @@ class RouteMapFrameController(http.Controller):
             return default
         return str(value)
 
+    def _html_escape(self, value, default="", quote=True):
+        return escape(self._safe_text(value, default), quote=quote)
+
     def _safe_float(self, value):
         try:
             return float(value or 0.0)
@@ -983,6 +986,7 @@ body {
 """ % {"title": escape(title or "Route Map")}
 
     def _route_journey_html(self, visits_payload, title, subtitle):
+        visits_payload = visits_payload or []
         total = len(visits_payload)
         done_count = sum(1 for visit in visits_payload if visit.get("statusClass") == "done")
         active_count = sum(1 for visit in visits_payload if visit.get("statusClass") in ("active", "ready"))
@@ -995,17 +999,17 @@ body {
         current_id = current_visit.get("id") if current_visit else False
         stat_html = "".join(
             [
-                '<span class="route-journey-stat">%s Stops</span>' % total,
-                '<span class="route-journey-stat done">%s Done</span>' % done_count,
-                '<span class="route-journey-stat active">%s Active</span>' % active_count,
-                '<span class="route-journey-stat pending">%s Pending</span>' % pending_count,
-                '<span class="route-journey-stat">%s Outside</span>' % outside_count if outside_count else "",
+                '<span class="route-journey-stat">%s Stops</span>' % self._html_escape(total),
+                '<span class="route-journey-stat done">%s Done</span>' % self._html_escape(done_count),
+                '<span class="route-journey-stat active">%s Active</span>' % self._html_escape(active_count),
+                '<span class="route-journey-stat pending">%s Pending</span>' % self._html_escape(pending_count),
+                '<span class="route-journey-stat">%s Outside</span>' % self._html_escape(outside_count) if outside_count else "",
             ]
         )
         steps = []
         for visit in visits_payload:
-            state_class = escape(visit.get("statusClass") or visit.get("bucket") or "pending")
-            geo_status = visit.get("geoStatus") or ""
+            state_class = self._html_escape(visit.get("statusClass") or visit.get("bucket") or "pending")
+            geo_status = self._safe_text(visit.get("geoStatus") or "")
             extra_classes = []
             if visit.get("id") == current_id:
                 extra_classes.append("current")
@@ -1014,6 +1018,8 @@ body {
             if geo_status in ("pending", "pending_checkin"):
                 extra_classes.append("no-checkin")
             class_text = " ".join([state_class] + extra_classes)
+            outlet_name = self._safe_text(visit.get("outlet") or "No outlet")
+            status_label = self._safe_text(visit.get("statusLabel") or visit.get("status") or "Pending")
             steps.append(
                 '<a class="route-journey-step %(classes)s" href="%(url)s" target="_top" title="%(title)s">'
                 '<span class="route-journey-node">%(index)s</span>'
@@ -1022,11 +1028,11 @@ body {
                 '</a>'
                 % {
                     "classes": class_text,
-                    "url": escape(visit.get("openUrl") or "#", quote=True),
-                    "title": escape("%s - %s" % (visit.get("outlet") or "", visit.get("statusLabel") or visit.get("status") or ""), quote=True),
-                    "index": escape(visit.get("index") or ""),
-                    "outlet": escape(visit.get("outlet") or "No outlet"),
-                    "status": escape(visit.get("statusLabel") or visit.get("status") or "Pending"),
+                    "url": self._html_escape(visit.get("openUrl") or "#", quote=True),
+                    "title": self._html_escape("%s - %s" % (outlet_name, status_label), quote=True),
+                    "index": self._html_escape(visit.get("index") or ""),
+                    "outlet": self._html_escape(outlet_name),
+                    "status": self._html_escape(status_label),
                 }
             )
         track = "".join(steps) or '<div class="route-map-empty" style="display:block; padding:10px;">No visits found for today.</div>'
@@ -1038,7 +1044,7 @@ body {
             '</div>'
             '<div class="route-journey-track">%s</div>'
             '</section>'
-        ) % (escape(title), escape(subtitle), stat_html, track)
+        ) % (self._html_escape(title), self._html_escape(subtitle), stat_html, track)
 
     def _render_salesperson_map_html(self, route_map, visits_payload):
         data_json = json.dumps(visits_payload, ensure_ascii=False)
@@ -1094,11 +1100,14 @@ body {
                 }
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits found for today.</div>'
-        journey_block = self._route_journey_html(
-            visits_payload,
-            _("Daily Visit Progress"),
-            _("Quick route journey: completed stops, active stop, pending stops, and location exceptions."),
-        )
+        try:
+            journey_block = self._route_journey_html(
+                visits_payload,
+                _("Daily Visit Progress"),
+                _("Quick route journey: completed stops, active stop, pending stops, and location exceptions."),
+            )
+        except Exception:
+            journey_block = ""
         return self._base_head("Today's Route Map") + """
 <div class="route-map-shell">
 %(journey)s
@@ -1358,11 +1367,14 @@ installCardFocus();
                 }
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits match the current filters.</div>'
-        journey_block = self._route_journey_html(
-            visits_payload,
-            _("Filtered Route Progress"),
-            _("Supervisor route journey for the current filtered visits with location status highlights."),
-        )
+        try:
+            journey_block = self._route_journey_html(
+                visits_payload,
+                _("Filtered Route Progress"),
+                _("Supervisor route journey for the current filtered visits with location status highlights."),
+            )
+        except Exception:
+            journey_block = ""
         return self._base_head("Visit Location Map") + """
 <div class="route-map-shell">
 %(journey)s
