@@ -61,6 +61,7 @@ class RouteGeoCaptureCheckinAction extends Component {
                 coords.latitude,
                 coords.longitude,
                 coords.accuracy || 0,
+                this.autoStartAfterCapture,
             ]);
 
             const distanceLabel = result && result.distance_display ? result.distance_display : false;
@@ -69,14 +70,9 @@ class RouteGeoCaptureCheckinAction extends Component {
                 : _t("Current location captured.");
             this.notification.add(message, { title: _t("Location Check-in"), type: "success" });
 
-            if (this.autoStartAfterCapture) {
-                const nextAction = await this.orm.call("route.visit", "action_start_visit_after_geo_capture", [
-                    [this.visitId],
-                ]);
-                if (nextAction) {
-                    await this.action.doAction(nextAction);
-                    return;
-                }
+            if (this.autoStartAfterCapture && result && result.next_action) {
+                await this.action.doAction(result.next_action);
+                return;
             }
         } catch (error) {
             let message = _t("Could not capture current location.");
