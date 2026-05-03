@@ -138,6 +138,33 @@ class RouteMapFrameController(http.Controller):
             return "active"
         return "pending"
 
+    def _visit_visual_state(self, visit):
+        process = getattr(visit, "visit_process_state", False) or False
+        state = getattr(visit, "state", False) or False
+        if state in ("cancel", "cancelled") or process == "cancel":
+            return "cancelled"
+        if state == "done" or process == "done":
+            return "done"
+        if process == "ready_to_close":
+            return "ready"
+        if state == "in_progress" or process in ("checked_in", "counting", "reconciled", "collection_done"):
+            return "active"
+        return "pending"
+
+    def _visit_visual_label(self, visit):
+        visual_state = self._visit_visual_state(visit)
+        labels = {
+            "pending": _("Pending"),
+            "active": _("In Progress"),
+            "ready": _("Ready To Close"),
+            "done": _("Done"),
+            "cancelled": _("Cancelled"),
+        }
+        return labels.get(visual_state, self._visit_process_label(visit) or _("Pending"))
+
+    def _visit_geo_status(self, visit):
+        return getattr(visit, "geo_checkin_status", False) or getattr(visit, "geo_review_state", False) or ""
+
     def _visit_mode_label(self, visit):
         for field_name in ("visit_mode", "operation_mode", "outlet_operation_mode"):
             if field_name in visit._fields and visit[field_name]:
@@ -230,6 +257,9 @@ class RouteMapFrameController(http.Controller):
             "mode": self._visit_mode_label(visit),
             "status": self._visit_process_label(visit),
             "bucket": self._visit_bucket(visit),
+            "statusClass": self._visit_visual_state(visit),
+            "statusLabel": self._visit_visual_label(visit),
+            "geoStatus": self._visit_geo_status(visit),
             "current_step": self._visit_process_label(visit) or self._field_label(visit, "state", getattr(visit, "state", False)),
             "due_now": self._format_money(due_now, currency),
             "remaining": self._format_money(remaining, currency),
@@ -265,6 +295,9 @@ class RouteMapFrameController(http.Controller):
             "mode": self._visit_mode_label(visit),
             "status": self._visit_process_label(visit),
             "bucket": self._visit_bucket(visit),
+            "statusClass": self._visit_visual_state(visit),
+            "statusLabel": self._visit_visual_label(visit),
+            "geoStatus": self._visit_geo_status(visit),
             "reviewState": self._field_label(visit, "geo_review_state", getattr(visit, "geo_review_state", False)),
             "decision": decision,
             "decisionLabel": self._field_label(visit, "geo_review_supervisor_decision", decision),
@@ -633,6 +666,145 @@ body {
     color: #155e75;
     font-weight: 800;
 }
+.route-map-shell {
+    max-width: 100%%;
+    height: calc(100vh - 28px);
+    height: calc(100dvh - 28px);
+    max-height: calc(100vh - 28px);
+    max-height: calc(100dvh - 28px);
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+}
+.route-map-shell > .route-frame.route-split-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+}
+.route-journey-panel {
+    background: #fff;
+    border: 1px solid rgba(130, 70, 111, 0.14);
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+    padding: 14px;
+    overflow: hidden;
+}
+.route-journey-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.route-journey-title {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.15;
+    font-weight: 950;
+    color: var(--route-title);
+}
+.route-journey-subtitle {
+    margin-top: 4px;
+    color: var(--route-muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+.route-journey-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.route-journey-stat {
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 6px 9px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 950;
+    white-space: nowrap;
+}
+.route-journey-stat.done { background: #dcfce7; color: #15803d; }
+.route-journey-stat.active { background: #ffedd5; color: #c2410c; }
+.route-journey-stat.pending { background: #cffafe; color: #0e7490; }
+.route-journey-track {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 16px 10px;
+    align-items: start;
+}
+.route-journey-step {
+    position: relative;
+    min-width: 0;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.route-journey-step::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 22px;
+    left: 0;
+    right: 0;
+    height: 5px;
+    border-radius: 999px;
+    background: #e5e7eb;
+}
+.route-journey-step.done::before,
+.route-journey-step.ready::before,
+.route-journey-step.active::before { background: linear-gradient(90deg, #16a34a, #22c55e); }
+.route-journey-node {
+    position: relative;
+    z-index: 1;
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 7px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 950;
+    background: #06b6d4;
+    border: 4px solid #fff;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.20);
+}
+.route-journey-step.done .route-journey-node { background: var(--route-green); }
+.route-journey-step.ready .route-journey-node { background: #22c55e; }
+.route-journey-step.active .route-journey-node { background: #f97316; }
+.route-journey-step.cancelled .route-journey-node { background: #64748b; }
+.route-journey-step.outside-zone .route-journey-node { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
+.route-journey-step.current .route-journey-node { transform: scale(1.08); border-color: #fef08a; box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.16), 0 12px 24px rgba(15, 23, 42, 0.24); }
+.route-journey-label {
+    font-size: 12px;
+    font-weight: 950;
+    line-height: 1.2;
+    color: var(--route-title);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.route-journey-status {
+    margin-top: 4px;
+    color: var(--route-muted);
+    font-size: 11px;
+    font-weight: 850;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.route-marker.ready { background: #22c55e; }
+.route-marker.cancelled { background: #64748b; }
+.route-marker.outside-zone { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 8px 18px rgba(15, 23, 42, 0.30); }
+.route-marker.no-checkin { border-color: #cbd5e1; }
 @media (max-width: 767px) {
     html, body {
         width: 100%%;
@@ -707,11 +879,120 @@ body {
     .route-card-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
     .route-metric { padding: 8px; min-height: 54px; }
     .route-actions .route-btn { flex: 1 1 46%%; }
+    .route-map-shell {
+        width: 100%%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        min-height: 0;
+        gap: 0;
+        overflow: hidden;
+    }
+    .route-map-shell > .route-frame.route-split-layout {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto;
+        max-height: none;
+    }
+    .route-map-shell > .route-frame.route-split-layout .route-map-panel {
+        flex: 0 0 44%%;
+        height: auto;
+        min-height: 230px;
+        max-height: none;
+    }
+    .route-map-shell > .route-frame.route-split-layout .route-cards-panel.route-side-cards {
+        flex: 1 1 auto;
+        height: auto;
+    }
+    .route-journey-panel {
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        padding: 10px 10px 12px;
+        box-shadow: none;
+        max-height: 42vh;
+        max-height: 42dvh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .route-journey-head {
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .route-journey-stats { justify-content: flex-start; }
+    .route-journey-track {
+        grid-template-columns: repeat(4, minmax(70px, 1fr));
+        gap: 14px 6px;
+    }
+    .route-journey-node { width: 38px; height: 38px; font-size: 12px; }
+    .route-journey-step::before { top: 18px; height: 4px; }
+    .route-journey-label { font-size: 11px; }
+    .route-journey-status { font-size: 10px; }
 }
 </style>
 </head>
 <body>
 """ % {"title": escape(title or "Route Map")}
+
+    def _route_journey_html(self, visits_payload, title, subtitle):
+        total = len(visits_payload)
+        done_count = sum(1 for visit in visits_payload if visit.get("statusClass") == "done")
+        active_count = sum(1 for visit in visits_payload if visit.get("statusClass") in ("active", "ready"))
+        pending_count = sum(1 for visit in visits_payload if visit.get("statusClass") == "pending")
+        outside_count = sum(1 for visit in visits_payload if visit.get("geoStatus") in ("outside", "outside_no_reason", "outside_with_reason"))
+        current_visit = next(
+            (visit for visit in visits_payload if visit.get("statusClass") not in ("done", "cancelled")),
+            False,
+        )
+        current_id = current_visit.get("id") if current_visit else False
+        stat_html = "".join(
+            [
+                '<span class="route-journey-stat">%s Stops</span>' % total,
+                '<span class="route-journey-stat done">%s Done</span>' % done_count,
+                '<span class="route-journey-stat active">%s Active</span>' % active_count,
+                '<span class="route-journey-stat pending">%s Pending</span>' % pending_count,
+                '<span class="route-journey-stat">%s Outside</span>' % outside_count if outside_count else "",
+            ]
+        )
+        steps = []
+        for visit in visits_payload:
+            state_class = escape(visit.get("statusClass") or visit.get("bucket") or "pending")
+            geo_status = visit.get("geoStatus") or ""
+            extra_classes = []
+            if visit.get("id") == current_id:
+                extra_classes.append("current")
+            if geo_status in ("outside", "outside_no_reason", "outside_with_reason"):
+                extra_classes.append("outside-zone")
+            if geo_status in ("pending", "pending_checkin"):
+                extra_classes.append("no-checkin")
+            class_text = " ".join([state_class] + extra_classes)
+            steps.append(
+                '<a class="route-journey-step %(classes)s" href="%(url)s" target="_top" title="%(title)s">'
+                '<span class="route-journey-node">%(index)s</span>'
+                '<span class="route-journey-label">%(outlet)s</span>'
+                '<span class="route-journey-status">%(status)s</span>'
+                '</a>'
+                % {
+                    "classes": class_text,
+                    "url": escape(visit.get("openUrl") or "#", quote=True),
+                    "title": escape("%s - %s" % (visit.get("outlet") or "", visit.get("statusLabel") or visit.get("status") or ""), quote=True),
+                    "index": escape(visit.get("index") or ""),
+                    "outlet": escape(visit.get("outlet") or "No outlet"),
+                    "status": escape(visit.get("statusLabel") or visit.get("status") or "Pending"),
+                }
+            )
+        track = "".join(steps) or '<div class="route-map-empty" style="display:block; padding:10px;">No visits found for today.</div>'
+        return (
+            '<section class="route-journey-panel">'
+            '<div class="route-journey-head">'
+            '<div><h2 class="route-journey-title">%s</h2><div class="route-journey-subtitle">%s</div></div>'
+            '<div class="route-journey-stats">%s</div>'
+            '</div>'
+            '<div class="route-journey-track">%s</div>'
+            '</section>'
+        ) % (escape(title), escape(subtitle), stat_html, track)
 
     def _render_salesperson_map_html(self, route_map, visits_payload):
         data_json = json.dumps(visits_payload, ensure_ascii=False)
@@ -767,7 +1048,14 @@ body {
                 }
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits found for today.</div>'
+        journey_block = self._route_journey_html(
+            visits_payload,
+            _("Daily Visit Progress"),
+            _("Quick route journey: completed stops, active stop, pending stops, and location exceptions."),
+        )
         return self._base_head("Today's Route Map") + """
+<div class="route-map-shell">
+%(journey)s
 <div class="route-frame route-split-layout">
     <section class="route-map-panel route-fixed-map">
         <div class="route-map-floating-badge">%(count)s Visits</div>
@@ -782,6 +1070,7 @@ body {
         <div class="route-cards-grid">%(cards)s</div>
     </section>
 </div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const visits = %(data_json)s;
@@ -791,9 +1080,10 @@ function esc(value) {
     });
 }
 function markerClass(visit) {
-    if (visit.bucket === 'done') return 'done';
-    if (visit.bucket === 'active') return 'active';
-    return 'pending';
+    const classes = [visit.statusClass || visit.bucket || 'pending'];
+    if (['outside', 'outside_no_reason', 'outside_with_reason'].includes(visit.geoStatus || '')) classes.push('outside-zone');
+    if (['pending', 'pending_checkin'].includes(visit.geoStatus || '')) classes.push('no-checkin');
+    return classes.join(' ');
 }
 function popupHtml(visit) {
     const mapLink = visit.navigationUrl || visit.outletMapUrl || '#';
@@ -946,6 +1236,7 @@ installCardFocus();
 """ % {
             "count": len(visits_payload),
             "cards": cards_block,
+            "journey": journey_block,
             "data_json": data_json,
         }
 
@@ -1021,7 +1312,14 @@ installCardFocus();
                 }
             )
         cards_block = "".join(cards_html) or '<div class="route-map-empty" style="display:block;">No visits match the current filters.</div>'
+        journey_block = self._route_journey_html(
+            visits_payload,
+            _("Filtered Route Progress"),
+            _("Supervisor route journey for the current filtered visits with location status highlights."),
+        )
         return self._base_head("Visit Location Map") + """
+<div class="route-map-shell">
+%(journey)s
 <div class="route-frame route-split-layout">
     <section class="route-map-panel route-fixed-map">
         <div class="route-map-floating-badge">%(count)s Visits</div>
@@ -1036,6 +1334,7 @@ installCardFocus();
         <div id="statusMessage" class="route-status-message"></div>
         <div class="route-cards-grid">%(cards)s</div>
     </section>
+</div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -1072,7 +1371,7 @@ function markerIcon(visit, pointType, focused=false) {
     const anchorY = Math.max(size - 2, anchorX);
     return L.divIcon({
         className: '',
-        html: `<div class="route-marker ${pointType} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`,
+        html: `<div class="route-marker ${pointType} ${visit.statusClass || visit.bucket || 'pending'} ${['outside', 'outside_no_reason', 'outside_with_reason'].includes(visit.geoStatus || '') ? 'outside-zone' : ''} ${focused ? 'route-marker-focus' : ''}"><span>${visit.index}</span></div>`,
         iconSize: [size, size],
         iconAnchor: [anchorX, anchorY]
     });
@@ -1250,6 +1549,7 @@ installCardFocus();
 """ % {
             "count": len(visits_payload),
             "cards": cards_block,
+            "journey": journey_block,
             "data_json": data_json,
         }
 
