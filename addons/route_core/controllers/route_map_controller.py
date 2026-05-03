@@ -907,6 +907,24 @@ body {
 .route-marker.cancelled { background: var(--route-cancelled); }
 .route-marker.outside-zone { border-color: var(--route-outside); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 8px 18px rgba(15, 23, 42, 0.30); }
 .route-marker.no-checkin { border-color: #cbd5e1; }
+.route-mobile-map-placeholder {
+    display: none;
+    width: 100%%;
+    height: 0;
+}
+@media (max-width: 767px) {
+    .route-frame.route-split-layout .route-map-panel.route-mobile-map-stuck {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        margin: 0;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+}
 @media (max-width: 767px) {
     html, body {
         width: 100%%;
@@ -937,8 +955,8 @@ body {
         border-left: 0;
         border-right: 0;
         box-shadow: none;
-        position: sticky;
-        top: 0;
+        position: relative;
+        top: auto;
         z-index: 3;
     }
     .route-frame.route-split-layout #map {
@@ -1278,6 +1296,83 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
+function initMobileStickyMap() {
+    const query = window.matchMedia('(max-width: 767px)');
+    const frame = document.querySelector('.route-frame.route-split-layout');
+    const mapPanel = document.querySelector('.route-map-panel.route-fixed-map');
+    const cardsPanel = document.querySelector('.route-cards-panel.route-side-cards');
+    if (!frame || !mapPanel || !cardsPanel) return;
+
+    let placeholder = document.querySelector('.route-mobile-map-placeholder');
+    if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'route-mobile-map-placeholder';
+        mapPanel.parentNode.insertBefore(placeholder, mapPanel);
+    }
+
+    let ticking = false;
+    let stuck = false;
+
+    function releaseMap() {
+        stuck = false;
+        placeholder.style.display = 'none';
+        placeholder.style.height = '0px';
+        mapPanel.classList.remove('route-mobile-map-stuck');
+        mapPanel.style.left = '';
+        mapPanel.style.width = '';
+        mapPanel.style.height = '';
+        if (mapInstance) mapInstance.invalidateSize();
+    }
+
+    function stickMap(mapHeight) {
+        const frameRect = frame.getBoundingClientRect();
+        stuck = true;
+        placeholder.style.display = 'block';
+        placeholder.style.height = `${mapHeight}px`;
+        mapPanel.classList.add('route-mobile-map-stuck');
+        mapPanel.style.left = `${Math.max(frameRect.left, 0)}px`;
+        mapPanel.style.width = `${Math.max(frameRect.width, 1)}px`;
+        mapPanel.style.height = `${mapHeight}px`;
+        if (mapInstance) mapInstance.invalidateSize();
+    }
+
+    function sync() {
+        ticking = false;
+        if (!query.matches) {
+            releaseMap();
+            return;
+        }
+
+        const mapHeight = mapPanel.offsetHeight || Math.round(window.innerHeight * 0.56);
+        const referenceRect = stuck ? placeholder.getBoundingClientRect() : mapPanel.getBoundingClientRect();
+        const cardsRect = cardsPanel.getBoundingClientRect();
+
+        // Stick only after the top of the map reaches the top of the mobile viewport.
+        // Release again when the user scrolls back up to the progress strip or after cards end.
+        const shouldStick = referenceRect.top <= 0 && cardsRect.bottom > Math.max(mapHeight * 0.60, 240);
+
+        if (shouldStick) {
+            stickMap(mapHeight);
+        } else {
+            releaseMap();
+        }
+    }
+
+    function requestSync() {
+        if (!ticking) {
+            ticking = true;
+            window.requestAnimationFrame(sync);
+        }
+    }
+
+    window.addEventListener('scroll', requestSync, {passive: true});
+    window.addEventListener('resize', requestSync, {passive: true});
+    document.addEventListener('scroll', requestSync, {passive: true});
+    window.setTimeout(requestSync, 120);
+    window.setTimeout(requestSync, 500);
+    window.setTimeout(requestSync, 1000);
+}
+
 function installJourneyFocus() {
     document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
         step.addEventListener('click', event => {
@@ -1356,6 +1451,7 @@ function renderMap() {
 renderMap();
 installCardFocus();
 installJourneyFocus();
+initMobileStickyMap();
 </script>
 </body>
 </html>
@@ -1565,6 +1661,83 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
+function initMobileStickyMap() {
+    const query = window.matchMedia('(max-width: 767px)');
+    const frame = document.querySelector('.route-frame.route-split-layout');
+    const mapPanel = document.querySelector('.route-map-panel.route-fixed-map');
+    const cardsPanel = document.querySelector('.route-cards-panel.route-side-cards');
+    if (!frame || !mapPanel || !cardsPanel) return;
+
+    let placeholder = document.querySelector('.route-mobile-map-placeholder');
+    if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'route-mobile-map-placeholder';
+        mapPanel.parentNode.insertBefore(placeholder, mapPanel);
+    }
+
+    let ticking = false;
+    let stuck = false;
+
+    function releaseMap() {
+        stuck = false;
+        placeholder.style.display = 'none';
+        placeholder.style.height = '0px';
+        mapPanel.classList.remove('route-mobile-map-stuck');
+        mapPanel.style.left = '';
+        mapPanel.style.width = '';
+        mapPanel.style.height = '';
+        if (mapInstance) mapInstance.invalidateSize();
+    }
+
+    function stickMap(mapHeight) {
+        const frameRect = frame.getBoundingClientRect();
+        stuck = true;
+        placeholder.style.display = 'block';
+        placeholder.style.height = `${mapHeight}px`;
+        mapPanel.classList.add('route-mobile-map-stuck');
+        mapPanel.style.left = `${Math.max(frameRect.left, 0)}px`;
+        mapPanel.style.width = `${Math.max(frameRect.width, 1)}px`;
+        mapPanel.style.height = `${mapHeight}px`;
+        if (mapInstance) mapInstance.invalidateSize();
+    }
+
+    function sync() {
+        ticking = false;
+        if (!query.matches) {
+            releaseMap();
+            return;
+        }
+
+        const mapHeight = mapPanel.offsetHeight || Math.round(window.innerHeight * 0.56);
+        const referenceRect = stuck ? placeholder.getBoundingClientRect() : mapPanel.getBoundingClientRect();
+        const cardsRect = cardsPanel.getBoundingClientRect();
+
+        // Stick only after the top of the map reaches the top of the mobile viewport.
+        // Release again when the user scrolls back up to the progress strip or after cards end.
+        const shouldStick = referenceRect.top <= 0 && cardsRect.bottom > Math.max(mapHeight * 0.60, 240);
+
+        if (shouldStick) {
+            stickMap(mapHeight);
+        } else {
+            releaseMap();
+        }
+    }
+
+    function requestSync() {
+        if (!ticking) {
+            ticking = true;
+            window.requestAnimationFrame(sync);
+        }
+    }
+
+    window.addEventListener('scroll', requestSync, {passive: true});
+    window.addEventListener('resize', requestSync, {passive: true});
+    document.addEventListener('scroll', requestSync, {passive: true});
+    window.setTimeout(requestSync, 120);
+    window.setTimeout(requestSync, 500);
+    window.setTimeout(requestSync, 1000);
+}
+
 function installJourneyFocus() {
     document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
         step.addEventListener('click', event => {
@@ -1675,6 +1848,7 @@ document.querySelectorAll('.review-action').forEach(button => {
 renderMap();
 installCardFocus();
 installJourneyFocus();
+initMobileStickyMap();
 </script>
 </body>
 </html>
@@ -1726,4 +1900,5 @@ installJourneyFocus();
         except Exception as error:
             return self._json_response({"ok": False, "message": self._safe_text(error)}, status=400)
         return self._json_response({"ok": True, "message": message})
+
 
