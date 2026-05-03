@@ -115,18 +115,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         readonly=True,
     )
 
-    show_category_commission_breakdown = fields.Boolean(
-        string="Show Category Commission Breakdown",
-        related="visit_id.show_consignment_category_commission_breakdown",
-        readonly=True,
-    )
-    category_commission_breakdown_html = fields.Html(
-        string="Category Commission Breakdown",
-        related="visit_id.consignment_category_commission_html",
-        sanitize=False,
-        readonly=True,
-    )
-
     direct_stop_previous_due_amount = fields.Monetary(
         string="Previous Due",
         currency_field="currency_id",
@@ -576,7 +564,9 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise ValidationError(_("Visit is required."))
-        return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
+        if hasattr(visit, "action_open_statement_of_account"):
+            return visit.with_context(route_statement_opened_from_payment_wizard=True).action_open_statement_of_account()
+        return {"type": "ir.actions.act_window_close"}
 
     def _ensure_collection_is_open(self):
         self.ensure_one()
@@ -690,5 +680,6 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "view_mode": "form",
             "target": "current",
         }
+
 
 
