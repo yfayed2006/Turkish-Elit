@@ -38,15 +38,9 @@ class RouteVisitStatementWizard(models.TransientModel):
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     can_continue_to_collection = fields.Boolean(string="Can Continue To Collection", compute="_compute_statement", readonly=True)
-    show_category_commission_breakdown = fields.Boolean(
-        string="Show Category Commission Breakdown",
-        related="visit_id.show_consignment_category_commission_breakdown",
-        readonly=True,
-    )
-    category_commission_breakdown_html = fields.Html(
-        string="Category Commission Breakdown",
-        related="visit_id.consignment_category_commission_html",
-        sanitize=False,
+    opened_from_payment_wizard = fields.Boolean(
+        string="Opened From Payment Wizard",
+        default=lambda self: bool(self.env.context.get("route_statement_opened_from_payment_wizard")),
         readonly=True,
     )
 
@@ -230,6 +224,8 @@ class RouteVisitStatementWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise UserError(_("Visit is required."))
+        if self.opened_from_payment_wizard or self.env.context.get("route_statement_opened_from_payment_wizard"):
+            return {"type": "ir.actions.act_window_close"}
         if not self.can_continue_to_collection:
             raise UserError(_("Collection is already closed for this visit. This statement is now review-only."))
         if hasattr(visit, "action_ux_collect_payment"):
