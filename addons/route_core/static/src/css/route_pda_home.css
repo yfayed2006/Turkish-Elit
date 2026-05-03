@@ -3848,12 +3848,53 @@
         font-weight: 900;
         color: #111827;
     }
+    .route_mobile_direct_products_field .o_data_row td:nth-child(4) {
+        font-size: .86rem;
+        color: #64748b;
+    }
     .route_mobile_direct_products_field .route_mobile_product_image_cell {
         align-items: center;
         justify-content: center;
     }
     .route_mobile_direct_products_field .o_data_row td:nth-last-child(1) { font-weight: 900; color: #82466f; }
     .route_mobile_direct_products_field .o_field_x2many_list_row_add a { display: block; width: 100%; text-align: center; font-weight: 900; color: #82466f; }
+}
+
+
+/* Route Direct Sale Mobile Products */
+.route_mobile_direct_products_field .o_field_x2many_list_row_add,
+.route_mobile_direct_products_field .o_field_x2many_list_row_add a {
+    display: none !important;
+}
+.route_mobile_direct_products_field th[data-name="route_product_barcode"],
+.route_mobile_direct_products_field td[name="route_product_barcode"],
+.route_mobile_direct_products_field td.o_data_cell[name="route_product_barcode"] {
+    min-width: 92px;
+    max-width: 110px;
+    white-space: nowrap;
+    font-weight: 800;
+    color: #475569;
+}
+.route_mobile_direct_products_field .o_data_row td {
+    vertical-align: middle;
+}
+@media (max-width: 767px) {
+    .route_mobile_direct_products_field .o_list_table {
+        min-width: 0 !important;
+    }
+    .route_mobile_direct_products_field .o_data_row {
+        border-left: 3px solid #0ea5b7;
+        border-radius: 16px;
+    }
+    .route_mobile_direct_products_field th[data-name="route_product_barcode"],
+    .route_mobile_direct_products_field td[name="route_product_barcode"],
+    .route_mobile_direct_products_field td.o_data_cell[name="route_product_barcode"] {
+        min-width: 100%;
+        max-width: 100%;
+        order: 3;
+        font-size: .86rem;
+        color: #64748b;
+    }
 }
 
 
