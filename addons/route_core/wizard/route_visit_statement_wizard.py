@@ -97,6 +97,40 @@ class RouteVisitStatementWizard(models.TransientModel):
                 return value
         return 0.0
 
+    def _get_statement_draft_payments(self, visit):
+        Payment = self.env["route.visit.payment"]
+        if not visit:
+            return Payment
+        if (
+            hasattr(visit, "_is_direct_sales_stop")
+            and visit._is_direct_sales_stop()
+            and hasattr(visit, "_get_direct_stop_settlement_payments")
+        ):
+            return visit._get_direct_stop_settlement_payments(states=["draft"])
+        return visit.payment_ids.filtered(lambda payment: payment.state == "draft") if visit.payment_ids else Payment
+
+    def _is_statement_collection_closed(self, visit):
+        if not visit:
+            return True
+        return bool(
+            visit.state == "done"
+            or getattr(visit, "visit_process_state", False) in ("collection_done", "ready_to_close", "done")
+        )
+
+    def _get_statement_visit_action(self, visit):
+        if visit and hasattr(visit, "_get_pda_form_action"):
+            return visit._get_pda_form_action()
+        if visit:
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("Visit"),
+                "res_model": "route.visit",
+                "res_id": visit.id,
+                "view_mode": "form",
+                "target": "current",
+            }
+        return {"type": "ir.actions.act_window_close"}
+
     @api.depends("visit_id")
     def _compute_statement(self):
         Payment = self.env["route.visit.payment"]
@@ -209,7 +243,12 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.last_payment_amount = last_payment.amount if last_payment else 0.0
             rec.next_promise_date = next_promise.promise_date if next_promise else False
             rec.next_promise_amount = next_promise.promise_amount if next_promise else 0.0
-            rec.can_continue_to_collection = bool(getattr(visit, "ux_can_collect_payment", False))
+            draft_payments = rec._get_statement_draft_payments(visit)
+            rec.can_continue_to_collection = bool(
+                getattr(visit, "ux_can_collect_payment", False)
+                and not draft_payments
+                and not rec._is_statement_collection_closed(visit)
+            )
 
     def action_print_statement_pdf(self):
         self.ensure_one()
@@ -220,8 +259,23 @@ class RouteVisitStatementWizard(models.TransientModel):
         visit = self.visit_id
         if not visit:
             raise UserError(_("Visit is required."))
-        if not self.can_continue_to_collection:
-            raise UserError(_("Collection is already closed for this visit. This statement is now review-only."))
+
+        # Do not open a new Collect Payment wizard when the visit already has
+        # draft settlement entries, or when collection is already closed.
+        # In those cases we return to the visit so the salesperson can confirm
+        # payments, finish the visit, or just review the closed settlement.
+        if self._get_statement_draft_payments(visit):
+            return self._get_statement_visit_action(visit)
+
+        if self._is_statement_collection_closed(visit):
+            return self._get_statement_visit_action(visit)
+
+        if getattr(visit, "ux_can_confirm_payments", False):
+            return self._get_statement_visit_action(visit)
+
+        if not getattr(visit, "ux_can_collect_payment", False):
+            return self._get_statement_visit_action(visit)
+
         if hasattr(visit, "action_ux_collect_payment"):
             return visit.action_ux_collect_payment()
         return {"type": "ir.actions.act_window_close"}
