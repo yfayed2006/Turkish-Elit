@@ -1034,9 +1034,16 @@ body {
     .route-journey-track {
         --journey-node-size: 34px;
         --journey-line-top: 18px;
-        grid-template-columns: repeat(4, minmax(64px, 1fr));
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(78px, 88px);
+        grid-template-columns: none;
         gap: 10px 5px;
         padding: 5px 2px 1px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
     }
     .route-journey-node { font-size: 11px; border-width: 3px; }
     .route-journey-step::before { height: 4px; }
@@ -1244,7 +1251,16 @@ function setActiveJourneyStep(visitId) {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
     });
 }
-function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
+function setRouteCardsActive(visitId, highlightCard=true) {
+    document.querySelectorAll('.route-card').forEach(card => {
+        if (!highlightCard) {
+            card.classList.remove('route-card-active');
+            return;
+        }
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+}
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const marker = routeMarkers[visit.id];
@@ -1252,14 +1268,13 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
             marker.setIcon(markerIcon(visit, isActive));
             marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
             if (isActive && panToMarker && mapInstance) {
+                mapInstance.invalidateSize();
                 mapInstance.panTo([visit.lat, visit.lng], {animate: true, duration: .35});
             }
             if (isActive && openPopup) marker.openPopup();
         }
     });
-    document.querySelectorAll('.route-card').forEach(card => {
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
-    });
+    setRouteCardsActive(visitId, highlightCard);
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1268,43 +1283,20 @@ function installJourneyFocus() {
         step.addEventListener('click', event => {
             event.preventDefault();
             const visitId = step.dataset.visitId;
-            if (visitId) setActiveVisit(visitId, true, true, true);
+            if (visitId) {
+                setActiveVisit(visitId, true, true, false, false);
+                window.setTimeout(() => setActiveVisit(visitId, true, true, false, false), 260);
+            }
         });
     });
 }
 function installCardFocus() {
     const cards = Array.from(document.querySelectorAll('.route-card[data-visit-id]'));
-    const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
-    const sideCards = document.querySelector('.route-side-cards');
-    const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
     let currentId = null;
     function activateCard(visitId, panToMarker=false) {
         if (!visitId || String(visitId) === String(currentId)) return;
         currentId = visitId;
-        setActiveVisit(visitId, panToMarker);
-    }
-    function activateNearestVisibleCard() {
-        if (!cards.length) return;
-        const rootRect = observerRoot ? observerRoot.getBoundingClientRect() : {top: 0, bottom: window.innerHeight};
-        const rootCenter = rootRect.top + ((rootRect.bottom - rootRect.top) / 2);
-        let bestCard = null;
-        let bestDistance = Infinity;
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const visibleTop = Math.max(rect.top, rootRect.top);
-            const visibleBottom = Math.min(rect.bottom, rootRect.bottom);
-            if (visibleBottom <= visibleTop) return;
-            const cardCenter = rect.top + (rect.height / 2);
-            const distance = Math.abs(cardCenter - rootCenter);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestCard = card;
-            }
-        });
-        if (bestCard) activateCard(bestCard.dataset.visitId, false);
-    }
-    function scheduleNearestCheck() {
-        window.requestAnimationFrame(activateNearestVisibleCard);
+        setActiveVisit(visitId, panToMarker, false, false, true);
     }
     cards.forEach(card => {
         card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
@@ -1313,24 +1305,9 @@ function installCardFocus() {
             if (!event.target.closest('a')) activateCard(card.dataset.visitId, true);
         });
     });
-    if (observerRoot) {
-        observerRoot.addEventListener('scroll', scheduleNearestCheck, {passive: true});
-    } else {
-        window.addEventListener('scroll', scheduleNearestCheck, {passive: true});
-    }
-    if ('IntersectionObserver' in window && cards.length) {
-        const observer = new IntersectionObserver(entries => {
-            const visible = entries
-                .filter(entry => entry.isIntersecting)
-                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-            if (visible) activateCard(visible.target.dataset.visitId, false);
-        }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
-        cards.forEach(card => observer.observe(card));
-    }
     window.setTimeout(() => {
         const initialVisit = currentRouteVisit();
-        if (initialVisit) activateCard(initialVisit.id, false);
-        else activateNearestVisibleCard();
+        if (initialVisit) setActiveVisit(initialVisit.id, false, false, false, false);
     }, 300);
 }
 function renderMap() {
@@ -1558,7 +1535,16 @@ function setActiveJourneyStep(visitId) {
         step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
     });
 }
-function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
+function setRouteCardsActive(visitId, highlightCard=true) {
+    document.querySelectorAll('.route-card').forEach(card => {
+        if (!highlightCard) {
+            card.classList.remove('route-card-active');
+            return;
+        }
+        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+}
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false, highlightCard=true) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const markers = visitMarkers[visit.id] || [];
@@ -1569,12 +1555,13 @@ function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=
         });
         if (isActive && panToMarker && mapInstance) {
             const point = preferredPoint(visit);
-            if (point) mapInstance.panTo(point, {animate: true, duration: .35});
+            if (point) {
+                mapInstance.invalidateSize();
+                mapInstance.panTo(point, {animate: true, duration: .35});
+            }
         }
     });
-    document.querySelectorAll('.route-card').forEach(card => {
-        card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
-    });
+    setRouteCardsActive(visitId, highlightCard);
     setActiveJourneyStep(visitId);
     if (scrollCard) scrollVisitCardIntoView(visitId);
 }
@@ -1583,71 +1570,34 @@ function installJourneyFocus() {
         step.addEventListener('click', event => {
             event.preventDefault();
             const visitId = step.dataset.visitId;
-            if (visitId) setActiveVisit(visitId, true, true, true);
+            if (visitId) {
+                setActiveVisit(visitId, true, true, false, false);
+                window.setTimeout(() => setActiveVisit(visitId, true, true, false, false), 260);
+            }
         });
     });
 }
 function installCardFocus() {
     const cards = Array.from(document.querySelectorAll('.route-card[data-visit-id]'));
-    const cardsScroll = document.querySelector('.route-side-cards .route-cards-grid');
-    const sideCards = document.querySelector('.route-side-cards');
-    const observerRoot = cardsScroll || (sideCards && window.getComputedStyle(sideCards).overflowY !== 'visible' ? sideCards : null);
     let currentId = null;
     function activateCard(visitId, panToMarker=false) {
         if (!visitId || String(visitId) === String(currentId)) return;
         currentId = visitId;
-        setActiveVisit(visitId, panToMarker);
-    }
-    function activateNearestVisibleCard() {
-        if (!cards.length) return;
-        const rootRect = observerRoot ? observerRoot.getBoundingClientRect() : {top: 0, bottom: window.innerHeight};
-        const rootCenter = rootRect.top + ((rootRect.bottom - rootRect.top) / 2);
-        let bestCard = null;
-        let bestDistance = Infinity;
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const visibleTop = Math.max(rect.top, rootRect.top);
-            const visibleBottom = Math.min(rect.bottom, rootRect.bottom);
-            if (visibleBottom <= visibleTop) return;
-            const cardCenter = rect.top + (rect.height / 2);
-            const distance = Math.abs(cardCenter - rootCenter);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestCard = card;
-            }
-        });
-        if (bestCard) activateCard(bestCard.dataset.visitId, false);
-    }
-    function scheduleNearestCheck() {
-        window.requestAnimationFrame(activateNearestVisibleCard);
+        setActiveVisit(visitId, panToMarker, false, false, true);
     }
     cards.forEach(card => {
         card.addEventListener('mouseenter', () => activateCard(card.dataset.visitId, true));
         card.addEventListener('focusin', () => activateCard(card.dataset.visitId, true));
         card.addEventListener('click', event => {
-            if (!event.target.closest('a, button')) activateCard(card.dataset.visitId, true);
+            if (!event.target.closest('a')) activateCard(card.dataset.visitId, true);
         });
     });
-    if (observerRoot) {
-        observerRoot.addEventListener('scroll', scheduleNearestCheck, {passive: true});
-    } else {
-        window.addEventListener('scroll', scheduleNearestCheck, {passive: true});
-    }
-    if ('IntersectionObserver' in window && cards.length) {
-        const observer = new IntersectionObserver(entries => {
-            const visible = entries
-                .filter(entry => entry.isIntersecting)
-                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-            if (visible) activateCard(visible.target.dataset.visitId, false);
-        }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
-        cards.forEach(card => observer.observe(card));
-    }
     window.setTimeout(() => {
         const initialVisit = currentRouteVisit();
-        if (initialVisit) activateCard(initialVisit.id, false);
-        else activateNearestVisibleCard();
+        if (initialVisit) setActiveVisit(initialVisit.id, false, false, false, false);
     }, 300);
 }
+
 function renderMap() {
     const hasAnyPoint = visits.some(v => v.hasOutletPoint || v.hasCheckinPoint);
     if (!hasAnyPoint || typeof L === 'undefined') {
