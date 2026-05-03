@@ -672,10 +672,10 @@ body {
     height: calc(100dvh - 28px);
     max-height: calc(100vh - 28px);
     max-height: calc(100dvh - 28px);
-    min-height: 520px;
+    min-height: 560px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
     overflow: hidden;
 }
 .route-map-shell > .route-frame.route-split-layout {
@@ -685,46 +685,50 @@ body {
     max-height: none;
 }
 .route-journey-panel {
-    background: #fff;
-    border: 1px solid rgba(130, 70, 111, 0.14);
+    flex: 0 0 auto;
+    background: linear-gradient(180deg, #fff, #fbf8fc);
+    border: 1px solid rgba(130, 70, 111, 0.16);
     border-radius: 18px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
-    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+    padding: 10px 14px 10px;
     overflow: hidden;
 }
 .route-journey-head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
 }
 .route-journey-title {
     margin: 0;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.15;
     font-weight: 950;
     color: var(--route-title);
 }
 .route-journey-subtitle {
-    margin-top: 4px;
-    color: var(--route-muted);
-    font-size: 13px;
-    font-weight: 700;
+    display: none;
 }
 .route-journey-stats {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-wrap: nowrap;
+    gap: 5px;
     justify-content: flex-end;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 .route-journey-stat {
+    flex: 0 0 auto;
     border: 1px solid #e2e8f0;
     border-radius: 999px;
-    padding: 6px 9px;
+    padding: 4px 8px;
     background: #f8fafc;
     color: #334155;
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.1;
     font-weight: 950;
     white-space: nowrap;
 }
@@ -732,24 +736,36 @@ body {
 .route-journey-stat.active { background: #ffedd5; color: #c2410c; }
 .route-journey-stat.pending { background: #cffafe; color: #0e7490; }
 .route-journey-track {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-    gap: 16px 10px;
-    align-items: start;
+    --journey-node-size: 40px;
+    --journey-line-top: 22px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: flex-start;
+    padding: 7px 10px 4px;
+    min-height: 76px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
 }
 .route-journey-step {
     position: relative;
-    min-width: 0;
+    flex: 0 0 112px;
+    min-width: 112px;
     text-align: center;
     text-decoration: none;
     color: inherit;
     display: block;
+    padding-top: 2px;
+    scroll-snap-align: center;
 }
 .route-journey-step::before {
     content: "";
     position: absolute;
     z-index: 0;
-    top: 22px;
+    top: var(--journey-line-top);
     left: 0;
     right: 0;
     height: 5px;
@@ -759,22 +775,28 @@ body {
 .route-journey-step.done::before,
 .route-journey-step.ready::before,
 .route-journey-step.active::before { background: linear-gradient(90deg, #16a34a, #22c55e); }
+.route-journey-step.current::before {
+    background: linear-gradient(90deg, #16a34a 0%%, #16a34a 48%%, #e5e7eb 52%%, #e5e7eb 100%%);
+}
+.route-journey-step:first-child::before { left: 50%%; }
+.route-journey-step:last-child::before { right: 50%%; }
 .route-journey-node {
     position: relative;
     z-index: 1;
-    width: 46px;
-    height: 46px;
-    margin: 0 auto 7px;
+    width: var(--journey-node-size);
+    height: var(--journey-node-size);
+    margin: 0 auto 5px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 950;
     background: #06b6d4;
     border: 4px solid #fff;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.20);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 .route-journey-step.done .route-journey-node { background: var(--route-green); }
 .route-journey-step.ready .route-journey-node { background: #22c55e; }
@@ -782,24 +804,39 @@ body {
 .route-journey-step.cancelled .route-journey-node { background: #64748b; }
 .route-journey-step.outside-zone .route-journey-node { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
 .route-journey-step.current .route-journey-node { transform: scale(1.08); border-color: #fef08a; box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.16), 0 12px 24px rgba(15, 23, 42, 0.24); }
-.route-journey-label {
-    font-size: 12px;
+.route-journey-step.current .route-journey-node::after {
+    content: "➜";
+    position: absolute;
+    left: 50%%;
+    bottom: -20px;
+    transform: translateX(-50%%);
+    color: var(--route-primary);
+    font-size: 15px;
     font-weight: 950;
-    line-height: 1.2;
+    line-height: 1;
+}
+.route-journey-label {
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1.15;
     color: var(--route-title);
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
+    min-height: 13px;
+    padding: 0 3px;
 }
 .route-journey-status {
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--route-muted);
-    font-size: 11px;
+    font-size: 10px;
+    line-height: 1.1;
     font-weight: 850;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding: 0 3px;
 }
 .route-marker.ready { background: #22c55e; }
 .route-marker.cancelled { background: #64748b; }
@@ -896,9 +933,9 @@ body {
         max-height: none;
     }
     .route-map-shell > .route-frame.route-split-layout .route-map-panel {
-        flex: 0 0 44%%;
+        flex: 0 0 43%%;
         height: auto;
-        min-height: 230px;
+        min-height: 220px;
         max-height: none;
     }
     .route-map-shell > .route-frame.route-split-layout .route-cards-panel.route-side-cards {
@@ -909,27 +946,55 @@ body {
         border-radius: 0;
         border-left: 0;
         border-right: 0;
-        padding: 10px 10px 12px;
+        padding: 7px 8px 8px;
         box-shadow: none;
-        max-height: 42vh;
-        max-height: 42dvh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        max-height: none;
+        overflow: hidden;
     }
     .route-journey-head {
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 10px;
+        margin-bottom: 3px;
+        gap: 6px;
     }
-    .route-journey-stats { justify-content: flex-start; }
+    .route-journey-title {
+        display: none;
+    }
+    .route-journey-stats {
+        justify-content: flex-start;
+        gap: 4px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .route-journey-stat {
+        font-size: 10px;
+        padding: 3px 7px;
+    }
     .route-journey-track {
-        grid-template-columns: repeat(4, minmax(70px, 1fr));
-        gap: 14px 6px;
+        --journey-node-size: 36px;
+        --journey-line-top: 20px;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0;
+        min-height: 72px;
+        padding: 6px 8px 4px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
     }
-    .route-journey-node { width: 38px; height: 38px; font-size: 12px; }
-    .route-journey-step::before { top: 18px; height: 4px; }
-    .route-journey-label { font-size: 11px; }
-    .route-journey-status { font-size: 10px; }
+    .route-journey-step {
+        flex: 0 0 86px;
+        min-width: 86px;
+    }
+    .route-journey-node { font-size: 11px; border-width: 3px; }
+    .route-journey-step::before { height: 4px; }
+    .route-journey-step.current .route-journey-node::after {
+        bottom: -18px;
+        font-size: 13px;
+    }
+    .route-journey-label { font-size: 10px; min-height: 12px; }
+    .route-journey-status { font-size: 9px; }
 }
 </style>
 </head>
@@ -978,7 +1043,7 @@ body {
                     "classes": class_text,
                     "url": escape(visit.get("openUrl") or "#", quote=True),
                     "title": escape("%s - %s" % (visit.get("outlet") or "", visit.get("statusLabel") or visit.get("status") or ""), quote=True),
-                    "index": escape(self._safe_text(visit.get("index") or "")),
+                    "index": escape(visit.get("index") or ""),
                     "outlet": escape(visit.get("outlet") or "No outlet"),
                     "status": escape(visit.get("statusLabel") or visit.get("status") or "Pending"),
                 }
@@ -1594,3 +1659,4 @@ installCardFocus();
         except Exception as error:
             return self._json_response({"ok": False, "message": self._safe_text(error)}, status=400)
         return self._json_response({"ok": True, "message": message})
+
