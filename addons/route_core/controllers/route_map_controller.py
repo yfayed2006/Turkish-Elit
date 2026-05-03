@@ -186,13 +186,11 @@ class RouteMapFrameController(http.Controller):
 
     def _route_state_badges(self, visit):
         badges = []
-        bucket = self._visit_bucket(visit)
-        if bucket == "done":
-            badges.append({"label": "Done", "style": "done"})
-        elif bucket == "active":
-            badges.append({"label": "In Progress", "style": "active"})
-        else:
-            badges.append({"label": "Pending", "style": "pending"})
+        visual_state = self._visit_visual_state(visit)
+        badges.append({
+            "label": self._visit_visual_label(visit),
+            "style": visual_state,
+        })
 
         geo_status = getattr(visit, "geo_checkin_status", False)
         if geo_status == "outside":
@@ -346,6 +344,16 @@ class RouteMapFrameController(http.Controller):
     --route-orange: #f59e0b;
     --route-red: #dc2626;
     --route-blue: #0284c7;
+    --route-pending: #06b6d4;
+    --route-active: #f97316;
+    --route-ready: #22c55e;
+    --route-cancelled: #64748b;
+    --route-outside: #ef4444;
+}
+@keyframes routeCurrentPulse {
+    0%% { box-shadow: 0 0 0 0 rgba(130, 70, 111, 0.26), 0 12px 24px rgba(15, 23, 42, 0.24); }
+    70%% { box-shadow: 0 0 0 10px rgba(130, 70, 111, 0.00), 0 12px 24px rgba(15, 23, 42, 0.24); }
+    100%% { box-shadow: 0 0 0 0 rgba(130, 70, 111, 0.00), 0 12px 24px rgba(15, 23, 42, 0.24); }
 }
 * { box-sizing: border-box; }
 body {
@@ -518,14 +526,29 @@ body {
     height: 32px;
     min-width: 32px;
     border-radius: 999px;
-    background: var(--route-primary);
+    background: var(--route-pending);
     color: #fff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 900;
-    box-shadow: 0 6px 14px rgba(130, 70, 111, 0.25);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
 }
+.route-card-index.pending { background: var(--route-pending); }
+.route-card-index.active { background: var(--route-active); }
+.route-card-index.ready { background: var(--route-ready); }
+.route-card-index.done { background: var(--route-green); }
+.route-card-index.cancelled { background: var(--route-cancelled); }
+.route-card-index.outside-zone {
+    outline: 3px solid rgba(239, 68, 68, 0.28);
+    outline-offset: 2px;
+}
+.route-card.pending { border-left: 4px solid var(--route-pending); }
+.route-card.active { border-left: 4px solid var(--route-active); }
+.route-card.ready,
+.route-card.done { border-left: 4px solid var(--route-green); }
+.route-card.cancelled { border-left: 4px solid var(--route-cancelled); }
+.route-card.outside-zone { box-shadow: 0 8px 18px rgba(239, 68, 68, 0.08); }
 .route-card-title { font-size: 18px; font-weight: 900; line-height: 1.15; }
 .route-card-ref { font-size: 13px; font-weight: 800; color: var(--route-muted); margin-top: 4px; }
 .route-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
@@ -542,7 +565,9 @@ body {
 }
 .route-badge.pending { background: #cffafe; color: #0e7490; }
 .route-badge.active { background: #fed7aa; color: #c2410c; }
+.route-badge.ready { background: #dcfce7; color: #15803d; }
 .route-badge.done { background: #dcfce7; color: #15803d; }
+.route-badge.cancelled { background: #e2e8f0; color: #475569; }
 .route-badge.outside,
 .route-badge.danger { background: #fee2e2; color: #b91c1c; }
 .route-badge.inside,
@@ -656,8 +681,8 @@ body {
     z-index: 1000;
 }
 .route-marker.done { background: var(--route-green); }
-.route-marker.active { background: #f97316; }
-.route-marker.pending { background: #06b6d4; }
+.route-marker.active { background: var(--route-active); }
+.route-marker.pending { background: var(--route-pending); }
 .route-marker.outlet { background: var(--route-blue); }
 .route-marker.checkin { background: var(--route-primary); }
 .route-status-message {
@@ -733,6 +758,7 @@ body {
 .route-journey-stat.done { background: #dcfce7; color: #15803d; }
 .route-journey-stat.active { background: #ffedd5; color: #c2410c; }
 .route-journey-stat.pending { background: #cffafe; color: #0e7490; }
+.route-journey-stat.outside { background: #fee2e2; color: #b91c1c; }
 .route-journey-track {
     --journey-node-size: 40px;
     --journey-line-top: 20px;
@@ -746,11 +772,17 @@ body {
 .route-journey-step {
     position: relative;
     min-width: 0;
+    width: 100%%;
     text-align: center;
     text-decoration: none;
     color: inherit;
     display: block;
-    padding-top: 2px;
+    padding: 2px 0 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
 }
 .route-journey-step::before {
     content: "";
@@ -764,8 +796,8 @@ body {
     background: #e5e7eb;
 }
 .route-journey-step.done::before,
-.route-journey-step.ready::before,
-.route-journey-step.active::before { background: linear-gradient(90deg, #16a34a, #22c55e); }
+.route-journey-step.ready::before { background: linear-gradient(90deg, var(--route-green), var(--route-ready)); }
+.route-journey-step.active::before { background: linear-gradient(90deg, var(--route-active), var(--route-orange)); }
 .route-journey-node {
     position: relative;
     z-index: 1;
@@ -779,17 +811,27 @@ body {
     color: #fff;
     font-size: 13px;
     font-weight: 950;
-    background: #06b6d4;
+    background: var(--route-pending);
     border: 4px solid #fff;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.20);
     transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 .route-journey-step.done .route-journey-node { background: var(--route-green); }
 .route-journey-step.ready .route-journey-node { background: #22c55e; }
-.route-journey-step.active .route-journey-node { background: #f97316; }
-.route-journey-step.cancelled .route-journey-node { background: #64748b; }
-.route-journey-step.outside-zone .route-journey-node { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
-.route-journey-step.current .route-journey-node { transform: scale(1.08); border-color: #fef08a; box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.16), 0 12px 24px rgba(15, 23, 42, 0.24); }
+.route-journey-step.active .route-journey-node { background: var(--route-active); }
+.route-journey-step.cancelled .route-journey-node { background: var(--route-cancelled); }
+.route-journey-step.outside-zone .route-journey-node { border-color: var(--route-outside); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 10px 22px rgba(15, 23, 42, 0.20); }
+.route-journey-step.current .route-journey-node {
+    transform: scale(1.12);
+    border-color: #fef08a;
+    animation: routeCurrentPulse 1.8s ease-out infinite;
+}
+.route-journey-step:focus-visible .route-journey-node,
+.route-journey-step.route-journey-focused .route-journey-node {
+    transform: scale(1.12);
+    border-color: #fef08a;
+    box-shadow: 0 0 0 7px rgba(130, 70, 111, 0.18), 0 12px 24px rgba(15, 23, 42, 0.24);
+}
 .route-journey-step.current::after {
     content: "➜";
     position: absolute;
@@ -832,9 +874,9 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.route-marker.ready { background: #22c55e; }
-.route-marker.cancelled { background: #64748b; }
-.route-marker.outside-zone { border-color: #ef4444; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 8px 18px rgba(15, 23, 42, 0.30); }
+.route-marker.ready { background: var(--route-ready); }
+.route-marker.cancelled { background: var(--route-cancelled); }
+.route-marker.outside-zone { border-color: var(--route-outside); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18), 0 8px 18px rgba(15, 23, 42, 0.30); }
 .route-marker.no-checkin { border-color: #cbd5e1; }
 @media (max-width: 767px) {
     html, body {
@@ -1003,7 +1045,7 @@ body {
                 '<span class="route-journey-stat done">%s Done</span>' % self._html_escape(done_count),
                 '<span class="route-journey-stat active">%s Active</span>' % self._html_escape(active_count),
                 '<span class="route-journey-stat pending">%s Pending</span>' % self._html_escape(pending_count),
-                '<span class="route-journey-stat">%s Outside</span>' % self._html_escape(outside_count) if outside_count else "",
+                '<span class="route-journey-stat outside">%s Outside</span>' % self._html_escape(outside_count) if outside_count else "",
             ]
         )
         steps = []
@@ -1021,14 +1063,14 @@ body {
             outlet_name = self._safe_text(visit.get("outlet") or "No outlet")
             status_label = self._safe_text(visit.get("statusLabel") or visit.get("status") or "Pending")
             steps.append(
-                '<a class="route-journey-step %(classes)s" href="%(url)s" target="_top" title="%(title)s">'
+                '<button type="button" class="route-journey-step %(classes)s" data-visit-id="%(id)s" title="%(title)s">'
                 '<span class="route-journey-node">%(index)s</span>'
                 '<span class="route-journey-label">%(outlet)s</span>'
                 '<span class="route-journey-status">%(status)s</span>'
-                '</a>'
+                '</button>'
                 % {
                     "classes": class_text,
-                    "url": self._html_escape(visit.get("openUrl") or "#", quote=True),
+                    "id": self._html_escape(visit.get("id") or "", quote=True),
                     "title": self._html_escape("%s - %s" % (outlet_name, status_label), quote=True),
                     "index": self._html_escape(visit.get("index") or ""),
                     "outlet": self._html_escape(outlet_name),
@@ -1057,10 +1099,10 @@ body {
             map_link = visit.get("navigationUrl") or visit.get("outletMapUrl") or "#"
             cards_html.append(
                 """
-<div class="route-card" data-visit-id="%(id)s">
+<div class="route-card %(status_class)s %(geo_class)s" data-visit-id="%(id)s">
     <div class="route-card-head">
         <div style="display:flex; gap:10px; align-items:flex-start; min-width:0;">
-            <span class="route-card-index">%(index)s</span>
+            <span class="route-card-index %(status_class)s %(geo_class)s">%(index)s</span>
             <div style="min-width:0;">
                 <div class="route-card-title">%(outlet)s</div>
                 <div class="route-card-ref">%(name)s · %(date)s</div>
@@ -1084,6 +1126,8 @@ body {
 </div>
 """ % {
                     "id": visit["id"],
+                    "status_class": escape(visit.get("statusClass") or visit.get("bucket") or "pending"),
+                    "geo_class": "outside-zone" if visit.get("geoStatus") in ("outside", "outside_no_reason", "outside_with_reason") else "",
                     "index": visit["index"],
                     "outlet": escape(visit.get("outlet") or "No outlet"),
                     "name": escape(visit.get("name") or ""),
@@ -1167,7 +1211,19 @@ function markerIcon(visit, focused=false) {
         iconAnchor: [anchorX, anchorY]
     });
 }
-function setActiveVisit(visitId, panToMarker=false) {
+function currentRouteVisit() {
+    return visits.find(visit => !['done', 'cancelled'].includes(visit.statusClass || visit.bucket || 'pending')) || visits[0] || null;
+}
+function scrollVisitCardIntoView(visitId) {
+    const card = document.querySelector(`.route-card[data-visit-id="${String(visitId)}"]`);
+    if (card) card.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'});
+}
+function setActiveJourneyStep(visitId) {
+    document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
+        step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
+    });
+}
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const marker = routeMarkers[visit.id];
@@ -1177,10 +1233,22 @@ function setActiveVisit(visitId, panToMarker=false) {
             if (isActive && panToMarker && mapInstance) {
                 mapInstance.panTo([visit.lat, visit.lng], {animate: true, duration: .35});
             }
+            if (isActive && openPopup) marker.openPopup();
         }
     });
     document.querySelectorAll('.route-card').forEach(card => {
         card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+    setActiveJourneyStep(visitId);
+    if (scrollCard) scrollVisitCardIntoView(visitId);
+}
+function installJourneyFocus() {
+    document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
+        step.addEventListener('click', event => {
+            event.preventDefault();
+            const visitId = step.dataset.visitId;
+            if (visitId) setActiveVisit(visitId, true, true, true);
+        });
     });
 }
 function installCardFocus() {
@@ -1238,7 +1306,11 @@ function installCardFocus() {
         }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
         cards.forEach(card => observer.observe(card));
     }
-    window.setTimeout(activateNearestVisibleCard, 300);
+    window.setTimeout(() => {
+        const initialVisit = currentRouteVisit();
+        if (initialVisit) activateCard(initialVisit.id, false);
+        else activateNearestVisibleCard();
+    }, 300);
 }
 function renderMap() {
     const points = visits.filter(v => v.hasPoint);
@@ -1278,13 +1350,14 @@ function renderMap() {
     window.setTimeout(() => mapInstance.invalidateSize(), 120);
     window.setTimeout(() => mapInstance.invalidateSize(), 500);
     window.addEventListener('resize', () => window.setTimeout(() => mapInstance.invalidateSize(), 120));
-    const firstPoint = points[0];
-    if (firstPoint) {
-        window.setTimeout(() => setActiveVisit(firstPoint.id, false), 250);
+    const initialVisit = currentRouteVisit();
+    if (initialVisit && initialVisit.hasPoint) {
+        window.setTimeout(() => setActiveVisit(initialVisit.id, false, false, false), 250);
     }
 }
 renderMap();
 installCardFocus();
+installJourneyFocus();
 </script>
 </body>
 </html>
@@ -1317,10 +1390,10 @@ installCardFocus();
             outlet_link = visit.get("outletMapUrl") or "#"
             cards_html.append(
                 """
-<div class="route-card" data-visit-id="%(id)s">
+<div class="route-card %(status_class)s %(geo_class)s" data-visit-id="%(id)s">
     <div class="route-card-head">
         <div style="display:flex; gap:10px; align-items:flex-start; min-width:0;">
-            <span class="route-card-index">%(index)s</span>
+            <span class="route-card-index %(status_class)s %(geo_class)s">%(index)s</span>
             <div style="min-width:0;">
                 <div class="route-card-title">%(outlet)s</div>
                 <div class="route-card-ref">%(name)s · %(date)s</div>
@@ -1348,6 +1421,8 @@ installCardFocus();
 </div>
 """ % {
                     "id": visit["id"],
+                    "status_class": escape(visit.get("statusClass") or visit.get("bucket") or "pending"),
+                    "geo_class": "outside-zone" if visit.get("geoStatus") in ("outside", "outside_no_reason", "outside_with_reason") else "",
                     "index": visit["index"],
                     "outlet": escape(visit.get("outlet") or "No outlet"),
                     "name": escape(visit.get("name") or ""),
@@ -1387,7 +1462,6 @@ installCardFocus();
     <section class="route-cards-panel route-side-cards">
         <div class="route-cards-header">
             <h2 class="route-cards-title">Visit Location Cards</h2>
-            <div class="route-map-subtitle">Review location status and open visit documents directly.</div>
         </div>
         <div id="statusMessage" class="route-status-message"></div>
         <div class="route-cards-grid">%(cards)s</div>
@@ -1451,13 +1525,26 @@ function preferredPoint(visit) {
     if (visit.hasOutletPoint) return [visit.outletLat, visit.outletLng];
     return null;
 }
-function setActiveVisit(visitId, panToMarker=false) {
+function currentRouteVisit() {
+    return visits.find(visit => !['done', 'cancelled'].includes(visit.statusClass || visit.bucket || 'pending')) || visits[0] || null;
+}
+function scrollVisitCardIntoView(visitId) {
+    const card = document.querySelector(`.route-card[data-visit-id="${String(visitId)}"]`);
+    if (card) card.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'nearest'});
+}
+function setActiveJourneyStep(visitId) {
+    document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
+        step.classList.toggle('route-journey-focused', String(step.dataset.visitId) === String(visitId));
+    });
+}
+function setActiveVisit(visitId, panToMarker=false, openPopup=false, scrollCard=false) {
     visits.forEach(visit => {
         const isActive = String(visit.id) === String(visitId);
         const markers = visitMarkers[visit.id] || [];
         markers.forEach(marker => {
             marker.setIcon(markerIcon(visit, marker._routePointType || 'outlet', isActive));
             marker.setZIndexOffset(isActive ? 10000 : (visit.index || 1));
+            if (isActive && openPopup) marker.openPopup();
         });
         if (isActive && panToMarker && mapInstance) {
             const point = preferredPoint(visit);
@@ -1466,6 +1553,17 @@ function setActiveVisit(visitId, panToMarker=false) {
     });
     document.querySelectorAll('.route-card').forEach(card => {
         card.classList.toggle('route-card-active', String(card.dataset.visitId) === String(visitId));
+    });
+    setActiveJourneyStep(visitId);
+    if (scrollCard) scrollVisitCardIntoView(visitId);
+}
+function installJourneyFocus() {
+    document.querySelectorAll('.route-journey-step[data-visit-id]').forEach(step => {
+        step.addEventListener('click', event => {
+            event.preventDefault();
+            const visitId = step.dataset.visitId;
+            if (visitId) setActiveVisit(visitId, true, true, true);
+        });
     });
 }
 function installCardFocus() {
@@ -1523,7 +1621,11 @@ function installCardFocus() {
         }, {root: observerRoot, threshold: [0.25, 0.45, 0.65]});
         cards.forEach(card => observer.observe(card));
     }
-    window.setTimeout(activateNearestVisibleCard, 300);
+    window.setTimeout(() => {
+        const initialVisit = currentRouteVisit();
+        if (initialVisit) activateCard(initialVisit.id, false);
+        else activateNearestVisibleCard();
+    }, 300);
 }
 function renderMap() {
     const hasAnyPoint = visits.some(v => v.hasOutletPoint || v.hasCheckinPoint);
@@ -1573,9 +1675,9 @@ function renderMap() {
     window.setTimeout(() => mapInstance.invalidateSize(), 120);
     window.setTimeout(() => mapInstance.invalidateSize(), 500);
     window.addEventListener('resize', () => window.setTimeout(() => mapInstance.invalidateSize(), 120));
-    const firstPointVisit = visits.find(v => v.hasCheckinPoint || v.hasOutletPoint);
-    if (firstPointVisit) {
-        window.setTimeout(() => setActiveVisit(firstPointVisit.id, false), 250);
+    const initialVisit = currentRouteVisit();
+    if (initialVisit && (initialVisit.hasCheckinPoint || initialVisit.hasOutletPoint)) {
+        window.setTimeout(() => setActiveVisit(initialVisit.id, false, false, false), 250);
     }
 }
 async function sendReviewAction(url) {
@@ -1601,6 +1703,7 @@ document.querySelectorAll('.review-action').forEach(button => {
 });
 renderMap();
 installCardFocus();
+installJourneyFocus();
 </script>
 </body>
 </html>
@@ -1652,4 +1755,3 @@ installCardFocus();
         except Exception as error:
             return self._json_response({"ok": False, "message": self._safe_text(error)}, status=400)
         return self._json_response({"ok": True, "message": message})
-
