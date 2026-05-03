@@ -329,7 +329,7 @@ class RouteDirectReturn(models.Model):
             if line.quantity <= 0:
                 raise UserError(_("Return quantity must be greater than zero for product %s.") % line.product_id.display_name)
             if self.route_enable_lot_serial_tracking:
-                if line.product_id.tracking != "none" and not line.lot_name:
+                if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
                     raise UserError(_("Lot/Serial is required for tracked product %s.") % line.product_id.display_name)
             else:
                 if line.product_id.tracking != "none":
@@ -337,6 +337,8 @@ class RouteDirectReturn(models.Model):
                         _("Product %s is tracked in Inventory. Enable Route Lot/Serial Workflow or use a non-tracked product for this direct return.")
                         % line.product_id.display_name
                     )
+                if line.lot_id:
+                    line.lot_id = False
                 if line.lot_name:
                     line.lot_name = False
                 if line.expiry_date:
@@ -398,7 +400,7 @@ class RouteDirectReturn(models.Model):
                     "location_dest_id": destination.id,
                 }
                 if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none":
-                    lot = self._get_or_create_lot(move.product_id, line.lot_name)
+                    lot = line.lot_id or self._get_or_create_lot(move.product_id, line.lot_name)
                     if lot:
                         ml_vals["lot_id"] = lot.id
                 self.env["stock.move.line"].create(ml_vals)
@@ -450,7 +452,19 @@ class RouteDirectReturnLine(models.Model):
     )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
-    lot_name = fields.Char(string="Lot/Serial")
+    available_lot_ids = fields.Many2many(
+        "stock.lot",
+        string="Available Return Lots",
+        compute="_compute_available_lot_ids",
+        store=False,
+    )
+    lot_id = fields.Many2one(
+        "stock.lot",
+        string="Lot/Serial",
+        domain="[('id', 'in', available_lot_ids)]",
+        ondelete="restrict",
+    )
+    lot_name = fields.Char(string="Manual Lot/Serial")
     expiry_date = fields.Date(string="Expiry")
     currency_id = fields.Many2one(related="return_id.company_id.currency_id", store=False, readonly=True)
     estimated_unit_price = fields.Monetary(
@@ -492,6 +506,76 @@ class RouteDirectReturnLine(models.Model):
     picking_id = fields.Many2one("stock.picking", string="Generated Picking", readonly=True)
     return_reason_label = fields.Char(string="Reason Label", compute="_compute_return_reason_label")
 
+    def _route_get_reference_lots(self):
+        self.ensure_one()
+        Lot = self.env["stock.lot"]
+        product = self.product_id
+        direct_return = self.return_id
+        if not product or not direct_return:
+            return Lot
+
+        lots = Lot
+        sale_order = direct_return.sale_order_id
+        reference_picking = direct_return.reference_picking_id
+
+        if sale_order and "route_lot_id" in self.env["sale.order.line"]._fields:
+            lots |= sale_order.order_line.filtered(
+                lambda line: not line.display_type and line.product_id == product and line.route_lot_id
+            ).mapped("route_lot_id")
+
+        if reference_picking:
+            lots |= reference_picking.move_line_ids.filtered(
+                lambda move_line: move_line.product_id == product and move_line.lot_id
+            ).mapped("lot_id")
+
+        if sale_order:
+            pickings = self.env["stock.picking"].search([
+                ("origin", "=", sale_order.name),
+                ("state", "=", "done"),
+            ])
+            lots |= pickings.mapped("move_line_ids").filtered(
+                lambda move_line: move_line.product_id == product and move_line.lot_id
+            ).mapped("lot_id")
+
+        return lots
+
+    def _route_get_available_return_lots(self):
+        self.ensure_one()
+        Lot = self.env["stock.lot"]
+        product = self.product_id
+        if (
+            not self.route_enable_lot_serial_tracking
+            or not product
+            or product.tracking == "none"
+        ):
+            return Lot
+
+        reference_lots = self._route_get_reference_lots()
+        if reference_lots:
+            return reference_lots.sorted(
+                key=lambda lot: (
+                    lot.expiration_date or fields.Datetime.to_datetime("2099-12-31 00:00:00"),
+                    lot.name or "",
+                    lot.id or 0,
+                )
+            )
+
+        domain = [
+            ("product_id", "=", product.id),
+            ("company_id", "in", [False, self.company_id.id if self.company_id else self.env.company.id]),
+        ]
+        return Lot.search(domain, order="expiration_date, name, id")
+
+    @api.depends(
+        "product_id",
+        "return_id.sale_order_id",
+        "return_id.reference_picking_id",
+        "return_id.route_enable_lot_serial_tracking",
+    )
+    def _compute_available_lot_ids(self):
+        for line in self:
+            line.available_lot_ids = line._route_get_available_return_lots()
+
     @api.depends("return_reason")
     def _compute_return_reason_label(self):
         mapping = dict(self._fields["return_reason"].selection)
@@ -500,11 +584,14 @@ class RouteDirectReturnLine(models.Model):
 
     def _route_direct_return_line_matches_lot(self, sale_line):
         self.ensure_one()
+        selected_lot = self.lot_id
         lot_name = (self.lot_name or "").strip()
-        if not lot_name:
+        if not selected_lot and not lot_name:
             return True
         sale_lot = getattr(sale_line, "route_lot_id", False)
-        if sale_lot and (sale_lot.name or "").strip() == lot_name:
+        if selected_lot and sale_lot and sale_lot == selected_lot:
+            return True
+        if lot_name and sale_lot and (sale_lot.name or "").strip() == lot_name:
             return True
         return False
 
@@ -616,6 +703,7 @@ class RouteDirectReturnLine(models.Model):
         "product_id",
         "quantity",
         "uom_id",
+        "lot_id",
         "lot_name",
         "return_id.sale_order_id",
         "return_id.sale_order_id.pricelist_id",
@@ -651,6 +739,48 @@ class RouteDirectReturnLine(models.Model):
             line.route_product_barcode = line.product_id.barcode if line.product_id else False
             if line.product_id and not line.uom_id:
                 line.uom_id = line.product_id.uom_id
+            if not line.product_id or line.product_id.tracking == "none" or not line.route_enable_lot_serial_tracking:
+                line.lot_id = False
+                line.lot_name = False
+                line.expiry_date = False
+                continue
+            available_lots = line._route_get_available_return_lots()
+            if line.lot_id and line.lot_id not in available_lots:
+                line.lot_id = False
+            if not line.lot_id and len(available_lots) == 1:
+                line.lot_id = available_lots[:1]
+                line._onchange_lot_id()
+
+    @api.onchange("lot_id")
+    def _onchange_lot_id(self):
+        for line in self:
+            if not line.lot_id:
+                continue
+            line.lot_name = line.lot_id.name or False
+            if line.route_enable_expiry_tracking and "expiration_date" in line.lot_id._fields:
+                line.expiry_date = fields.Date.to_date(line.lot_id.expiration_date) if line.lot_id.expiration_date else False
+            elif not line.route_enable_expiry_tracking:
+                line.expiry_date = False
+
+    @api.onchange("lot_name", "product_id")
+    def _onchange_lot_name(self):
+        Lot = self.env["stock.lot"]
+        for line in self:
+            lot_name = (line.lot_name or "").strip()
+            if not lot_name or not line.product_id:
+                continue
+            if line.lot_id and (line.lot_id.name or "").strip() == lot_name:
+                continue
+            lot = Lot.search([
+                ("name", "=", lot_name),
+                ("product_id", "=", line.product_id.id),
+                ("company_id", "in", [False, line.company_id.id if line.company_id else line.env.company.id]),
+            ], limit=1)
+            if lot:
+                line.lot_id = lot
+                line._onchange_lot_id()
+            elif line.lot_id:
+                line.lot_id = False
 
     @api.onchange("route_product_barcode")
     def _onchange_route_product_barcode_lookup(self):
@@ -665,6 +795,7 @@ class RouteDirectReturnLine(models.Model):
                 line.route_product_barcode = product.barcode or barcode
                 if not line.uom_id:
                     line.uom_id = product.uom_id
+                line._onchange_product_id()
 
     @api.onchange("return_reason")
     def _onchange_return_reason(self):
@@ -679,10 +810,41 @@ class RouteDirectReturnLine(models.Model):
     def _onchange_route_feature_flags(self):
         for line in self:
             if not line.route_enable_lot_serial_tracking:
+                line.lot_id = False
                 line.lot_name = False
                 line.expiry_date = False
             elif not line.route_enable_expiry_tracking:
                 line.expiry_date = False
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        Lot = self.env["stock.lot"]
+        for vals in vals_list:
+            lot = Lot.browse(vals.get("lot_id")).exists() if vals.get("lot_id") else Lot
+            if lot:
+                vals.setdefault("lot_name", lot.name)
+                if not vals.get("expiry_date") and "expiration_date" in lot._fields and lot.expiration_date:
+                    vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("lot_id"):
+            lot = self.env["stock.lot"].browse(vals["lot_id"]).exists()
+            if lot:
+                vals = dict(vals)
+                vals.setdefault("lot_name", lot.name)
+                if not vals.get("expiry_date") and "expiration_date" in lot._fields and lot.expiration_date:
+                    vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
+        return super().write(vals)
+
+    @api.constrains("lot_id", "product_id")
+    def _check_lot_product(self):
+        for line in self:
+            if line.lot_id and line.product_id and line.lot_id.product_id != line.product_id:
+                raise ValidationError(
+                    _("Selected Lot/Serial does not belong to product %s.")
+                    % line.product_id.display_name
+                )
 
     @api.constrains("quantity")
     def _check_quantity(self):
