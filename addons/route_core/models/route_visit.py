@@ -1639,14 +1639,16 @@ class RouteVisit(models.Model):
 
         badges = []
         if mode_labels:
+            mode_badge_label = _("Mixed Modes") if len(mode_labels) > 1 else mode_labels[0]
             badges.append(
                 "<span class='route_pda_payment_badge route_pda_payment_badge_mode'>%s</span>"
-                % escape(" / ".join(mode_labels))
+                % escape(mode_badge_label)
             )
         if collection_labels:
+            collection_badge_label = _("Mixed Settlement") if len(collection_labels) > 1 else collection_labels[0]
             badges.append(
                 "<span class='route_pda_payment_badge route_pda_payment_badge_collection'>%s</span>"
-                % escape(" / ".join(collection_labels))
+                % escape(collection_badge_label)
             )
         badges.append(
             "<span class='route_pda_payment_badge route_pda_payment_badge_state route_pda_payment_state_%s'>%s</span>"
@@ -1665,10 +1667,13 @@ class RouteVisit(models.Model):
             ("Total Due Now", total_due),
             ("Collected Now", collected_now),
             ("Remaining", remaining_now),
-            ("Promise Amount", promise_amount),
-            ("Previous Due Paid", previous_paid),
-            ("Current Stop Paid", current_paid),
         ]
+        if promise_amount:
+            metrics.append(("Promise Amount", promise_amount))
+        if previous_paid:
+            metrics.append(("Paid Previous Due", previous_paid))
+        if current_paid:
+            metrics.append(("Paid Current Stop", current_paid))
         if draft_amount:
             metrics.append(("Draft To Confirm", draft_amount))
 
@@ -1713,7 +1718,7 @@ class RouteVisit(models.Model):
                 "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
                 "%s"
                 "</div>"
-                % escape(_("Detailed allocation across previous due visits is kept in the system and receipt report. The PDA screen shows the settlement summary only."))
+                % escape(_("Detailed allocation across previous due visits is kept in the system and receipt report. The salesperson screen shows only the settlement summary."))
             )
 
         return (
