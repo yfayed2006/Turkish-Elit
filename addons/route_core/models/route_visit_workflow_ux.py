@@ -1429,18 +1429,7 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             return self.env["route.direct.return"]
-
-        # The receipt must mirror the same return set used by the direct-stop
-        # financial summary.  Some Direct Return records may still be in draft
-        # while their value is already part of the visit settlement snapshot,
-        # especially in PDA/open-return flows.  Requiring state == done here
-        # made the PDF show Direct Returns Total correctly in the KPI cards,
-        # but Return No. and Returned Products as empty.
-        if hasattr(self, "_get_direct_stop_active_returns"):
-            returns = self._get_direct_stop_active_returns()
-        else:
-            returns = self._get_direct_stop_returns()
-        return returns.filtered(lambda r: r.state != "cancel")
+        return self._get_direct_stop_returns().filtered(lambda r: r.state == "done")
 
     def _get_direct_stop_receipt_previous_due_lines(self):
         self.ensure_one()
@@ -1839,6 +1828,9 @@ class RouteVisit(models.Model):
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
+            _("Direct Sales Total: %.2f %s") % (summary.get("current_sale", 0.0), currency_code),
+            _("Direct Returns Total: %.2f %s") % (summary.get("current_return", 0.0), currency_code),
+            _("Current Stop Net: %.2f %s") % (summary.get("net_current_stop", 0.0), currency_code),
             _("Total Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
             _("Remaining After Collection: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
