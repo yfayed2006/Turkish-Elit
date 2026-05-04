@@ -927,6 +927,35 @@ class RouteVisit(models.Model):
             domain.append(("user_id", "=", self.user_id.id))
         return self.env["sale.order"].search(domain, order="id desc")
 
+    def _get_unconfirmed_direct_stop_sale_orders(self, sale_orders=None, fix_if_delivered=False):
+        """Return direct-stop sale orders that are still quotation/sent.
+
+        Older route orders may already have a done vehicle delivery while the sale
+        document was left in Quotation state.  When ``fix_if_delivered`` is enabled,
+        safely repair only those delivered route orders by marking them as Sale Order
+        before doing the final finish validation.
+        """
+        self.ensure_one()
+        sale_orders = sale_orders or self._get_direct_stop_sale_orders()
+        unconfirmed = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
+        if fix_if_delivered:
+            for order in unconfirmed.sudo():
+                if order.route_order_mode != "direct_sale":
+                    continue
+                deliveries_done = order._get_direct_sale_deliveries().filtered(lambda picking: picking.state == "done") if hasattr(order, "_get_direct_sale_deliveries") else self.env["stock.picking"]
+                if deliveries_done and hasattr(order, "_route_confirm_without_procurement"):
+                    order._route_confirm_without_procurement()
+            unconfirmed = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
+        return unconfirmed
+
+    def _ensure_direct_stop_sales_confirmed_before_return(self, sale_orders=None):
+        self.ensure_one()
+        sale_orders = sale_orders or self._get_direct_stop_sale_orders()
+        unconfirmed = self._get_unconfirmed_direct_stop_sale_orders(sale_orders=sale_orders)
+        if unconfirmed:
+            names = ", ".join(unconfirmed.mapped("name"))
+            raise UserError(_("Please confirm the Direct Sale Order from Route Sales before creating a return: %s") % names)
+
     def _get_direct_stop_returns(self):
         self.ensure_one()
         returns = self.env["route.direct.return"]
@@ -947,33 +976,6 @@ class RouteVisit(models.Model):
             or (r.sale_order_id and r.sale_order_id in sale_orders)
             or (self.name and self.name in (r.note or ""))
         )
-
-    def _ensure_direct_stop_sale_orders_confirmed(self, sale_orders):
-        """Confirm draft direct-sale orders safely before closing a PDA stop.
-
-        The salesperson should not have to leave the visit and open the Sales
-        app just to press Confirm. Also, if a delivery was already validated by
-        the PDA route flow, the confirmation must not recreate, rewrite, or
-        delete done stock moves. The sale.order action_confirm method is made
-        idempotent for this case, so we can call it here safely.
-        """
-        self.ensure_one()
-        draft_orders = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
-        for order in draft_orders:
-            order.with_context(
-                route_visit_id=self.id,
-                default_route_visit_id=self.id,
-                route_return_to_visit_after_confirm=False,
-                pda_mode=True,
-                route_pda_salesperson_mode=True,
-            ).action_confirm()
-
-        still_draft = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
-        if still_draft:
-            raise UserError(
-                _("Please confirm the Direct Sale Order before finishing the stop: %s")
-                % ", ".join(still_draft.mapped("name"))
-            )
 
     def action_ux_no_sale(self):
         self.ensure_one()
@@ -1077,6 +1079,7 @@ class RouteVisit(models.Model):
             raise UserError(_("Direct Return is disabled in Route Settings."))
         self.write({"direct_stop_skip_return": False})
         sale_orders = self._get_direct_stop_sale_orders()
+        self._ensure_direct_stop_sales_confirmed_before_return(sale_orders=sale_orders)
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Return"),
@@ -1317,7 +1320,13 @@ class RouteVisit(models.Model):
             if not sale_orders and not self.direct_stop_skip_sale:
                 raise UserError(_("Please choose Create Direct Sale or No Sale first."))
 
-            self._ensure_direct_stop_sale_orders_confirmed(sale_orders)
+            unconfirmed_sale_orders = self._get_unconfirmed_direct_stop_sale_orders(
+                sale_orders=sale_orders,
+                fix_if_delivered=True,
+            )
+            if unconfirmed_sale_orders:
+                names = ", ".join(unconfirmed_sale_orders.mapped("name"))
+                raise UserError(_("Please confirm the Direct Sale Order from Route Sales before finishing the stop: %s") % names)
 
             if self.route_enable_direct_return and not direct_returns and not self.direct_stop_skip_return:
                 raise UserError(_("Please choose Create Direct Return or No Return first."))
