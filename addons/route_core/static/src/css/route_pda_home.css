@@ -3978,3 +3978,199 @@
 
 
 
+
+
+/* Route Direct Sale / Direct Return product cards - labeled mobile layout */
+@media (max-width: 767px) {
+    .route_mobile_direct_products_field .o_list_renderer,
+    .route_mobile_direct_return_lines_field .o_list_renderer {
+        border: 0 !important;
+        background: transparent !important;
+        overflow: visible !important;
+    }
+
+    .route_mobile_direct_products_field .o_list_table,
+    .route_mobile_direct_return_lines_field .o_list_table,
+    .route_mobile_direct_products_field .o_list_table tbody,
+    .route_mobile_direct_return_lines_field .o_list_table tbody {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .route_mobile_direct_products_field .o_list_table thead,
+    .route_mobile_direct_return_lines_field .o_list_table thead {
+        display: none !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row,
+    .route_mobile_direct_return_lines_field .o_data_row {
+        display: grid !important;
+        grid-template-columns: 68px minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px 10px;
+        width: 100% !important;
+        margin: 10px 0 !important;
+        padding: 12px !important;
+        border: 1px solid #e5e7eb !important;
+        border-left: 4px solid #0ea5b7 !important;
+        border-radius: 18px !important;
+        background: #ffffff !important;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    .route_mobile_direct_products_field .o_data_row td,
+    .route_mobile_direct_return_lines_field .o_data_row td {
+        display: block !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        color: #111827;
+        font-weight: 800;
+        white-space: normal !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td.o_list_record_selector,
+    .route_mobile_direct_products_field .o_data_row td.o_handle_cell,
+    .route_mobile_direct_products_field .o_data_row td.o_optional_columns_dropdown_toggle,
+    .route_mobile_direct_return_lines_field .o_data_row td.o_list_record_selector,
+    .route_mobile_direct_return_lines_field .o_data_row td.o_handle_cell,
+    .route_mobile_direct_return_lines_field .o_data_row td.o_optional_columns_dropdown_toggle {
+        display: none !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_image_128"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_image_128"],
+    .route_mobile_direct_products_field .o_data_row td.o_data_cell[name="route_product_image_128"],
+    .route_mobile_direct_return_lines_field .o_data_row td.o_data_cell[name="route_product_image_128"] {
+        grid-column: 1;
+        grid-row: 1 / 4;
+        display: flex !important;
+        align-items: flex-start;
+        justify-content: center;
+        overflow: visible;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_image_128"] img,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_image_128"] img {
+        width: 56px !important;
+        height: 56px !important;
+        object-fit: contain;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="product_id"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="product_id"] {
+        grid-column: 2 / 4;
+        font-size: 1rem;
+        font-weight: 950;
+        line-height: 1.25;
+        color: #111827;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_barcode"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_barcode"] {
+        grid-column: 1 / 4;
+        color: #475569;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_qty"],
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_id"],
+    .route_mobile_direct_products_field .o_data_row td[name="route_source_available_qty"],
+    .route_mobile_direct_products_field .o_data_row td[name="route_lot_id"],
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_date"],
+    .route_mobile_direct_products_field .o_data_row td[name="price_unit"],
+    .route_mobile_direct_products_field .o_data_row td[name="discount"],
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="quantity"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="uom_id"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="lot_id"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_date"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="return_reason"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_unit_price"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="reference_discount"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"] {
+        min-height: 52px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px;
+        background: #f8fafc !important;
+        color: #111827;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_qty"]::before { content: "Qty"; }
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_id"]::before { content: "UoM"; }
+    .route_mobile_direct_products_field .o_data_row td[name="route_source_available_qty"]::before { content: "Vehicle"; }
+    .route_mobile_direct_products_field .o_data_row td[name="route_lot_id"]::before { content: "Lot"; }
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_date"]::before { content: "Expiry"; }
+    .route_mobile_direct_products_field .o_data_row td[name="price_unit"]::before { content: "Unit"; }
+    .route_mobile_direct_products_field .o_data_row td[name="discount"]::before { content: "Disc. %"; }
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"]::before { content: "Subtotal"; }
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_barcode"]::before { content: "Barcode"; }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="quantity"]::before { content: "Qty"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="uom_id"]::before { content: "UoM"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="lot_id"]::before { content: "Lot"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_date"]::before { content: "Expiry"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="return_reason"]::before { content: "Reason"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_unit_price"]::before { content: "Unit"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="reference_discount"]::before { content: "Disc. %"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"]::before { content: "Amount"; }
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_barcode"]::before { content: "Barcode"; }
+
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_qty"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="product_uom_id"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="route_source_available_qty"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="route_lot_id"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_date"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="price_unit"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="discount"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"]::before,
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_barcode"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="quantity"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="uom_id"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="lot_id"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_date"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="return_reason"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_unit_price"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="reference_discount"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_barcode"]::before {
+        display: block;
+        margin-bottom: 2px;
+        color: #64748b;
+        font-size: .72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"] {
+        border: 1px solid #bfdbfe !important;
+        background: #f8fbff !important;
+        color: #82466f;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td.o_list_record_remove,
+    .route_mobile_direct_return_lines_field .o_data_row td.o_list_record_remove,
+    .route_mobile_direct_products_field .o_data_row td:last-child,
+    .route_mobile_direct_return_lines_field .o_data_row td:last-child {
+        grid-column: 3;
+        justify-self: end;
+        align-self: center;
+        background: transparent !important;
+        min-height: auto !important;
+        padding: 2px !important;
+    }
+}
+
+
+
+
+
