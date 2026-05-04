@@ -948,6 +948,33 @@ class RouteVisit(models.Model):
             or (self.name and self.name in (r.note or ""))
         )
 
+    def _ensure_direct_stop_sale_orders_confirmed(self, sale_orders):
+        """Confirm draft direct-sale orders safely before closing a PDA stop.
+
+        The salesperson should not have to leave the visit and open the Sales
+        app just to press Confirm. Also, if a delivery was already validated by
+        the PDA route flow, the confirmation must not recreate, rewrite, or
+        delete done stock moves. The sale.order action_confirm method is made
+        idempotent for this case, so we can call it here safely.
+        """
+        self.ensure_one()
+        draft_orders = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
+        for order in draft_orders:
+            order.with_context(
+                route_visit_id=self.id,
+                default_route_visit_id=self.id,
+                route_return_to_visit_after_confirm=False,
+                pda_mode=True,
+                route_pda_salesperson_mode=True,
+            ).action_confirm()
+
+        still_draft = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
+        if still_draft:
+            raise UserError(
+                _("Please confirm the Direct Sale Order before finishing the stop: %s")
+                % ", ".join(still_draft.mapped("name"))
+            )
+
     def action_ux_no_sale(self):
         self.ensure_one()
         self._ensure_direct_sales_stop()
@@ -1290,8 +1317,7 @@ class RouteVisit(models.Model):
             if not sale_orders and not self.direct_stop_skip_sale:
                 raise UserError(_("Please choose Create Direct Sale or No Sale first."))
 
-            if sale_orders.filtered(lambda o: o.state in ("draft", "sent")):
-                raise UserError(_("Please confirm the Direct Sale Order before finishing the stop."))
+            self._ensure_direct_stop_sale_orders_confirmed(sale_orders)
 
             if self.route_enable_direct_return and not direct_returns and not self.direct_stop_skip_return:
                 raise UserError(_("Please choose Create Direct Return or No Return first."))
