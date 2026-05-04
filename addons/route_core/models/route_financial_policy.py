@@ -825,6 +825,25 @@ class SaleOrder(models.Model):
             return partner.property_product_pricelist
         return self.env["product.pricelist"]
 
+    def _route_prepare_direct_sale_pricelist_vals(self, vals):
+        """Force the outlet pricelist on Route Direct Sale orders.
+
+        Odoo may inject the customer's default pricelist before our route
+        defaults are applied. For Route Direct Sale, the outlet configuration
+        must win so the salesperson cannot accidentally sell using another
+        pricelist.
+        """
+        route_order_mode = vals.get("route_order_mode") or self.env.context.get("default_route_order_mode")
+        outlet_id = vals.get("route_outlet_id") or self.env.context.get("default_route_outlet_id")
+        if route_order_mode != "direct_sale" or not outlet_id:
+            return vals
+        outlet = self.env["route.outlet"].browse(outlet_id).exists()
+        pricelist = self._route_get_outlet_pricelist(outlet)
+        if pricelist:
+            vals = dict(vals)
+            vals["pricelist_id"] = pricelist.id
+        return vals
+
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
         result = super()._onchange_route_outlet_id()
@@ -839,30 +858,20 @@ class SaleOrder(models.Model):
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
-        if vals.get("route_order_mode") == "direct_sale" and vals.get("route_outlet_id") and not vals.get("pricelist_id"):
-            outlet = self.env["route.outlet"].browse(vals["route_outlet_id"]).exists()
-            pricelist = self._route_get_outlet_pricelist(outlet)
-            if pricelist:
-                vals["pricelist_id"] = pricelist.id
+        if vals.get("route_order_mode") == "direct_sale" and vals.get("route_outlet_id"):
+            vals = self._route_prepare_direct_sale_pricelist_vals(vals)
         return vals
 
     @api.model_create_multi
     def create(self, vals_list):
+        prepared_vals = []
         for vals in vals_list:
-            if vals.get("route_order_mode") == "direct_sale" and vals.get("route_outlet_id") and not vals.get("pricelist_id"):
-                outlet = self.env["route.outlet"].browse(vals["route_outlet_id"]).exists()
-                pricelist = self._route_get_outlet_pricelist(outlet)
-                if pricelist:
-                    vals["pricelist_id"] = pricelist.id
-        return super().create(vals_list)
+            prepared_vals.append(self._route_prepare_direct_sale_pricelist_vals(vals))
+        return super().create(prepared_vals)
 
     def write(self, vals):
-        if vals.get("route_outlet_id") and not vals.get("pricelist_id"):
+        vals_to_write = vals
+        if vals.get("route_outlet_id"):
             target_is_direct = vals.get("route_order_mode") == "direct_sale" or any(order.route_order_mode == "direct_sale" for order in self)
             if target_is_direct:
-                outlet = self.env["route.outlet"].browse(vals["route_outlet_id"]).exists()
-                pricelist = self._route_get_outlet_pricelist(outlet)
-                if pricelist:
-                    vals = dict(vals)
-                    vals["pricelist_id"] = pricelist.id
-        return super().write(vals)
+                vals_to_write = self._route_prepare_direct_sale_pricelist_vals(vals)
