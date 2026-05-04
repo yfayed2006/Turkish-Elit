@@ -481,13 +481,8 @@ class RouteVisit(models.Model):
 
             if direct_sales_stop:
                 sale_orders = rec._get_direct_stop_sale_orders() if rec.id else self.env["sale.order"]
-                confirmed_sale_orders = sale_orders.filtered(lambda order: order.state in ("sale", "done"))
                 direct_returns = rec._get_direct_stop_returns() if rec.id else self.env["route.direct.return"]
-
-                # A draft quotation is not a completed sales decision.  The
-                # salesperson must confirm it from the Route Sales order screen
-                # before the visit can move to the return step or finish.
-                sales_answered = bool(confirmed_sale_orders or rec.direct_stop_skip_sale)
+                sales_answered = bool(sale_orders or rec.direct_stop_skip_sale)
                 returns_answered = bool((not rec.route_enable_direct_return) or direct_returns or rec.direct_stop_skip_return)
                 rec.ux_can_receipt_actions = bool(
                     rec.state != "cancel"
@@ -515,10 +510,9 @@ class RouteVisit(models.Model):
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "direct_sale_decision"
                     rec.ux_stage_title = _("Sales decision")
-                    rec.ux_stage_help = _("Create and confirm the direct sale order before moving to returns.") if sale_orders else _("Decide whether to create a direct sale order for this stop.")
+                    rec.ux_stage_help = _("Decide whether to create a direct sale order for this stop.")
                     rec.ux_can_create_direct_sale = bool(rec.route_enable_direct_sale)
-                    rec.ux_can_open_direct_sale_orders = bool(sale_orders)
-                    rec.ux_can_no_sale = not bool(sale_orders)
+                    rec.ux_can_no_sale = True
                 elif rec.state == "in_progress" and not returns_answered:
                     rec.ux_stage = "arrival"
                     rec.ux_primary_action = "direct_return_decision"
@@ -971,37 +965,7 @@ class RouteVisit(models.Model):
         self._ensure_direct_sales_stop()
         if not self.route_enable_direct_sale:
             raise UserError(_("Direct Sale is disabled in Route Settings."))
-
         self.write({"direct_stop_skip_sale": False})
-
-        existing_orders = self._get_direct_stop_sale_orders().filtered(lambda order: order.state != "cancel")
-        if existing_orders:
-            order = existing_orders[:1]
-            view = self.env.ref("route_core.view_sale_order_form_route_direct_sale_mobile", raise_if_not_found=False)
-            if not view:
-                view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
-            action = {
-                "type": "ir.actions.act_window",
-                "name": _("Direct Sale Order"),
-                "res_model": "sale.order",
-                "res_id": order.id,
-                "view_mode": "form",
-                "target": "current",
-                "context": {
-                    "route_visit_id": self.id,
-                    "default_route_visit_id": self.id,
-                    "route_return_to_visit_after_confirm": True,
-                    "pda_mode": True,
-                    "route_pda_salesperson_mode": True,
-                    "create": False,
-                    "edit": True,
-                    "delete": False,
-                },
-            }
-            if view:
-                action["views"] = [(view.id, "form")]
-            return action
-
         outlet_pricelist = self.env["sale.order"]._route_get_outlet_pricelist(self.outlet_id) if self.outlet_id and hasattr(self.env["sale.order"], "_route_get_outlet_pricelist") else False
         action = {
             "type": "ir.actions.act_window",
@@ -1086,15 +1050,6 @@ class RouteVisit(models.Model):
             raise UserError(_("Direct Return is disabled in Route Settings."))
         self.write({"direct_stop_skip_return": False})
         sale_orders = self._get_direct_stop_sale_orders()
-        draft_orders = sale_orders.filtered(lambda order: order.state in ("draft", "sent"))
-        if draft_orders:
-            raise UserError(
-                _(
-                    "Please confirm the Direct Sale Order before creating a direct return: %s"
-                )
-                % ", ".join(draft_orders.mapped("name"))
-            )
-        sale_orders = sale_orders.filtered(lambda order: order.state in ("sale", "done"))
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Return"),
@@ -1429,18 +1384,7 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             return self.env["route.direct.return"]
-
-        # The receipt must mirror the same return set used by the direct-stop
-        # financial summary.  Some Direct Return records may still be in draft
-        # while their value is already part of the visit settlement snapshot,
-        # especially in PDA/open-return flows.  Requiring state == done here
-        # made the PDF show Direct Returns Total correctly in the KPI cards,
-        # but Return No. and Returned Products as empty.
-        if hasattr(self, "_get_direct_stop_active_returns"):
-            returns = self._get_direct_stop_active_returns()
-        else:
-            returns = self._get_direct_stop_returns()
-        return returns.filtered(lambda r: r.state != "cancel")
+        return self._get_direct_stop_returns().filtered(lambda r: r.state == "done")
 
     def _get_direct_stop_receipt_previous_due_lines(self):
         self.ensure_one()
@@ -1503,28 +1447,42 @@ class RouteVisit(models.Model):
 
     def _get_direct_stop_receipt_summary(self):
         self.ensure_one()
-        promise_payments = self._get_direct_stop_receipt_payments().filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        receipt_payments = self._get_direct_stop_receipt_payments()
+        promise_payments = receipt_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
         latest_promise = promise_payments.sorted(
             key=lambda p: (p.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"), p.id or 0),
             reverse=True,
         )[:1] if promise_payments else promise_payments
+        previous_due_amount = self.direct_stop_previous_due_amount or 0.0
+        current_sale_amount = self.direct_stop_sales_total or 0.0
+        current_return_amount = self.direct_stop_returns_total or 0.0
+        net_current_stop = self.direct_stop_current_net_amount or 0.0
         settled_amount = self.direct_stop_settlement_paid_amount or 0.0
         grand_total_due = self.direct_stop_grand_due_amount or 0.0
         immediate_remaining = max(grand_total_due - settled_amount, 0.0)
+        previous_due_paid_amount = min(previous_due_amount, settled_amount) if settled_amount else 0.0
+        current_stop_paid_amount = max(settled_amount - previous_due_paid_amount, 0.0)
+        if net_current_stop > 0.0:
+            current_stop_paid_amount = min(current_stop_paid_amount, net_current_stop)
+        else:
+            current_stop_paid_amount = 0.0
         latest_promise_status = False
         if latest_promise:
             latest_promise_status = latest_promise._get_snapshot_promise_status() if hasattr(latest_promise, "_get_snapshot_promise_status") else latest_promise.promise_status
         return {
-            "previous_due": self.direct_stop_previous_due_amount or 0.0,
+            "previous_due": previous_due_amount,
             "previous_due_since": self.direct_stop_previous_due_since_date,
-            "current_sale": self.direct_stop_sales_total or 0.0,
-            "current_return": self.direct_stop_returns_total or 0.0,
-            "net_current_stop": self.direct_stop_current_net_amount or 0.0,
+            "current_sale": current_sale_amount,
+            "current_return": current_return_amount,
+            "net_current_stop": net_current_stop,
             "grand_total_due": grand_total_due,
             "credit_amount": self.direct_stop_credit_amount or 0.0,
             "settled_amount": settled_amount,
             "remaining_amount": self.direct_stop_settlement_remaining_amount or 0.0,
             "immediate_remaining_amount": immediate_remaining,
+            "previous_due_paid_amount": previous_due_paid_amount,
+            "current_stop_paid_amount": current_stop_paid_amount,
+            "allocation_line_count": len(receipt_payments),
             "promise_amount": sum(payment.promise_amount or 0.0 for payment in promise_payments) if promise_payments else 0.0,
             "latest_promise_date": latest_promise.promise_date if latest_promise else False,
             "latest_promise_status": latest_promise_status or False,
@@ -1839,6 +1797,9 @@ class RouteVisit(models.Model):
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
+            _("Direct Sales Total: %.2f %s") % (summary["current_sale"], currency_code),
+            _("Direct Returns Total: %.2f %s") % (summary["current_return"], currency_code),
+            _("Current Stop Net: %.2f %s") % (summary["net_current_stop"], currency_code),
             _("Total Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
             _("Remaining After Collection: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
