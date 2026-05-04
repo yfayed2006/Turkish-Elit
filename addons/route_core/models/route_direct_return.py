@@ -109,6 +109,35 @@ class RouteDirectReturn(models.Model):
             "target": "self",
         }
 
+    def action_route_direct_return_back_to_visit(self):
+        self.ensure_one()
+        visit_action = self._get_route_visit_return_action() if self.visit_id else False
+        if visit_action:
+            return visit_action
+        return self.action_back_to_outlet_form()
+
+    def _action_route_direct_return_line_popup(self):
+        self.ensure_one()
+        if self.state != "draft":
+            raise UserError(_("You can add return products only while the direct return is still Draft."))
+        view = self.env.ref("route_core.view_route_direct_return_line_form_mobile", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Add / Scan Return Product"),
+            "res_model": "route.direct.return.line",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_return_id": self.id,
+                "default_quantity": 1.0,
+                "route_direct_return_mobile_line": True,
+            },
+            "views": [(view.id, "form")] if view else [(False, "form")],
+        }
+
+    def action_route_direct_return_add_product(self):
+        return self._action_route_direct_return_line_popup()
+
     def _ensure_direct_return_enabled(self):
         for rec in self:
             if not rec.company_id.route_enable_direct_return:
@@ -449,6 +478,12 @@ class RouteDirectReturnLine(models.Model):
     route_product_barcode = fields.Char(
         string="Barcode",
         copy=False,
+    )
+    route_product_image_128 = fields.Image(
+        string="Product Image",
+        related="product_id.image_128",
+        readonly=True,
+        store=False,
     )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
