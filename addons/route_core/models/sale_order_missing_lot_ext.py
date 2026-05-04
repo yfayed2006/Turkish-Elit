@@ -699,8 +699,17 @@ class SaleOrder(models.Model):
         return vals_list
 
     def _fill_move_line_qty_done(self, picking):
+        # Never rewrite or unlink move lines after a transfer is done.
+        # This is especially important for direct-sale PDA orders where the
+        # salesperson may confirm the sale order after the delivery has already
+        # been generated and validated.
+        if picking.state == "done":
+            return
+
         visit = getattr(picking, "route_visit_id", False)
         for move in picking.move_ids:
+            if move.state == "done":
+                continue
             qty = move.product_uom_qty or 0.0
             if qty <= 0:
                 continue
