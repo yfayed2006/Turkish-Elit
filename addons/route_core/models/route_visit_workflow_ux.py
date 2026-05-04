@@ -1430,11 +1430,12 @@ class RouteVisit(models.Model):
         if not self._is_direct_sales_stop():
             return self.env["route.direct.return"]
 
-        # Keep receipt/WhatsApp return references in sync with the same return set
-        # used by the live direct-stop financial summary.  In PDA flows the return
-        # value may already be included in the stop totals while the route return
-        # record is not strictly in Done yet, so filtering only by Done can make
-        # the message show Return: - even though returns are already counted.
+        # The receipt must mirror the same return set used by the direct-stop
+        # financial summary.  Some Direct Return records may still be in draft
+        # while their value is already part of the visit settlement snapshot,
+        # especially in PDA/open-return flows.  Requiring state == done here
+        # made the PDF show Direct Returns Total correctly in the KPI cards,
+        # but Return No. and Returned Products as empty.
         if hasattr(self, "_get_direct_stop_active_returns"):
             returns = self._get_direct_stop_active_returns()
         else:
@@ -1738,7 +1739,8 @@ class RouteVisit(models.Model):
         if summary.get("promise_amount"):
             lines.append(_("Promise Amount: %.2f %s") % (summary["promise_amount"], currency_code))
             if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
+                promise_date = self._format_route_payment_date(summary["latest_promise_date"]) if hasattr(self, "_format_route_payment_date") else str(summary["latest_promise_date"])
+                lines.append(_("Promise Date: %s") % promise_date)
         elif (summary.get("remaining_amount") or 0.0) <= 0.0:
             lines.append(_("Settlement Status: Paid in full"))
         if pdf_url:
@@ -1840,20 +1842,14 @@ class RouteVisit(models.Model):
         currency_code = self.currency_id.name if self.currency_id else ""
         credit_policy_map = self._get_direct_stop_credit_policy_labels()
 
-        # Keep WhatsApp short and customer-friendly. Detailed sale/return lines
-        # remain inside the attached PDF receipt and Statement of Account.
-        # The message still shows the key direct-stop financial split so the
-        # outlet/supervisor can immediately understand sale, return, net,
-        # total due, collected, and remaining without opening the PDF.
+        # Keep WhatsApp concise for customers. Detailed sale/return products
+        # and allocation lines remain in the attached PDF receipt.
         lines = [
             _("Settlement receipt"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
-            _("Direct Sales Total: %.2f %s") % (summary.get("current_sale", 0.0), currency_code),
-            _("Direct Returns Total: %.2f %s") % (summary.get("current_return", 0.0), currency_code),
-            _("Current Stop Net: %.2f %s") % (summary.get("net_current_stop", 0.0), currency_code),
             _("Total Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
             _("Remaining After Collection: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
@@ -1865,7 +1861,8 @@ class RouteVisit(models.Model):
         if promise_amount:
             lines.append(_("Promise Amount: %.2f %s") % (promise_amount, currency_code))
             if summary.get("latest_promise_date"):
-                lines.append(_("Promise Date: %s") % summary["latest_promise_date"])
+                promise_date = self._format_route_payment_date(summary["latest_promise_date"]) if hasattr(self, "_format_route_payment_date") else str(summary["latest_promise_date"])
+                lines.append(_("Promise Date: %s") % promise_date)
         elif credit_amount:
             lines.append(_("Credit: %.2f %s") % (credit_amount, currency_code))
             if self.direct_stop_credit_policy:
