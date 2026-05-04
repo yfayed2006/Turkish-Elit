@@ -529,6 +529,11 @@ class SaleOrder(models.Model):
         existing_picking = self._get_existing_route_delivery(visit)
         if existing_picking:
             picking = existing_picking
+            # Route deliveries can already be validated by the PDA flow.
+            # Do not touch move lines on a done transfer, because Odoo blocks
+            # changing/deleting stock moves after validation.
+            if picking.state == "done":
+                return picking
         else:
             source_location = self._get_route_sale_source_location(visit)
             dest_location = self._get_route_sale_destination_location(visit)
@@ -609,6 +614,12 @@ class SaleOrder(models.Model):
         existing_picking = self._get_existing_direct_sale_delivery()
         if existing_picking:
             picking = existing_picking
+            # A direct-sale order can be confirmed after the PDA flow already
+            # created and validated its delivery. In that case confirmation must
+            # be idempotent: keep the done transfer as-is and only move the sale
+            # order to Sale Order state.
+            if picking.state == "done":
+                return picking
         else:
             dest_location = self._get_direct_sale_destination_location()
             picking_type = self._get_route_outgoing_picking_type()
