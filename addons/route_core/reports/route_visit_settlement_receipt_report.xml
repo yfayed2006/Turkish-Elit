@@ -291,40 +291,55 @@ Policy:
 </tbody>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
 <div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Sold Products</div>
-<table style="width:100%; border-collapse:collapse;">
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<colgroup>
+<col style="width:14%;"/>
+<col style="width:38%;"/>
+<col style="width:9%;"/>
+<col style="width:10%;"/>
+<col style="width:12%;"/>
+<col style="width:8%;"/>
+<col style="width:9%;"/>
+</colgroup>
 <thead>
 <tr>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order Ref</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Barcode</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit Price</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Disc.</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not sale_lines">
 <td colspan="7" style="padding:10px; color:#64748b;">No sale products.</td>
 </tr>
-<tr t-foreach="sale_lines" t-as="line">
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<tr t-foreach="sale_lines" t-as="line" style="page-break-inside:avoid; break-inside:avoid;">
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['order_ref']"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
+<div style="font-weight:700;" t-esc="line['product_name']"/>
+<div style="color:#64748b; font-size:9.5px;">
+<span>Barcode: </span>
 <span t-esc="line['barcode'] or '-'"/>
+<t t-if="line.get('lot_name')">
+| Lot:
+<span t-esc="line.get('lot_name')"/>
+</t>
+</div>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-esc="line['product_name']"/>
-</td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % line['quantity']"/>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f%%' % (line.get('discount', 0.0) or 0.0)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
 <tfoot t-if="sale_lines">
@@ -363,49 +378,65 @@ Policy:
 </tbody>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
 <div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Returned Products</div>
-<table style="width:100%; border-collapse:collapse;">
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<colgroup>
+<col style="width:14%;"/>
+<col style="width:34%;"/>
+<col style="width:8%;"/>
+<col style="width:9%;"/>
+<col style="width:13%;"/>
+<col style="width:10%;"/>
+<col style="width:12%;"/>
+</colgroup>
 <thead>
 <tr>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return Ref</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Barcode</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reason</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit Price</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
+<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reason</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit/Disc.</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not return_lines">
-<td colspan="8" style="padding:10px; color:#64748b;">No return products.</td>
+<td colspan="7" style="padding:10px; color:#64748b;">No return products.</td>
 </tr>
-<tr t-foreach="return_lines" t-as="line">
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<tr t-foreach="return_lines" t-as="line" style="page-break-inside:avoid; break-inside:avoid;">
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['return_ref']"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
+<div style="font-weight:700;" t-esc="line['product_name']"/>
+<div style="color:#64748b; font-size:9.5px;">
+<span>Barcode: </span>
 <span t-esc="line['barcode'] or '-'"/>
+<t t-if="line.get('lot_name')">
+| Lot:
+<span t-esc="line.get('lot_name')"/>
+</t>
+</div>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-esc="line['product_name']"/>
-</td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f' % line['quantity']"/>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; white-space:normal; word-break:break-word;">
 <span t-esc="line['reason'] or '-'"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
+<div t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. %.2f%%' % (line.get('discount', 0.0) or 0.0)"/>
+</td>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
 <tfoot t-if="return_lines">
 <tr>
-<td colspan="7" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Returned Amount</td>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Returned Amount</td>
 <td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
 </tr>
 </tfoot>
