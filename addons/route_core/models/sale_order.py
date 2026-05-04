@@ -529,11 +529,6 @@ class SaleOrder(models.Model):
         existing_picking = self._get_existing_route_delivery(visit)
         if existing_picking:
             picking = existing_picking
-            # Route deliveries can already be validated by the PDA flow.
-            # Do not touch move lines on a done transfer, because Odoo blocks
-            # changing/deleting stock moves after validation.
-            if picking.state == "done":
-                return picking
         else:
             source_location = self._get_route_sale_source_location(visit)
             dest_location = self._get_route_sale_destination_location(visit)
@@ -614,12 +609,6 @@ class SaleOrder(models.Model):
         existing_picking = self._get_existing_direct_sale_delivery()
         if existing_picking:
             picking = existing_picking
-            # A direct-sale order can be confirmed after the PDA flow already
-            # created and validated its delivery. In that case confirmation must
-            # be idempotent: keep the done transfer as-is and only move the sale
-            # order to Sale Order state.
-            if picking.state == "done":
-                return picking
         else:
             dest_location = self._get_direct_sale_destination_location()
             picking_type = self._get_route_outgoing_picking_type()
@@ -833,14 +822,99 @@ class SaleOrder(models.Model):
         return visit.action_ux_no_return()
 
     def _route_confirm_without_procurement(self):
+        """Mark a route-controlled sale as confirmed without Odoo creating a second delivery.
+
+        Route Core creates and validates the vehicle delivery itself, because the source
+        location is the salesperson vehicle stock.  Calling the standard sale
+        procurement flow after that can create duplicate/incorrect stock moves, so for
+        direct route orders we explicitly move the quotation to sale state and keep the
+        delivery under Route Core control.
+        """
+        now = fields.Datetime.now()
         for order in self:
             if order.state not in ("draft", "sent"):
                 continue
 
             vals = {"state": "sale"}
             if "confirmation_date" in order._fields and not order.confirmation_date:
-                vals["confirmation_date"] = fields.Datetime.now()
+                vals["confirmation_date"] = now
+            if "date_order" in order._fields and not order.date_order:
+                vals["date_order"] = now
             order.write(vals)
+
+    def _route_direct_sale_confirm_core(self, return_to_visit_after_confirm=False):
+        """Confirm a Direct Sale order from the Route/PDA flow and return to the visit.
+
+        This method is intentionally used by the Route Core Confirm Sale button instead
+        of the standard Sales confirmation path.  It lets a salesperson confirm the
+        order from Route Sales, validates the vehicle delivery, keeps the order in
+        real Sale Order state, and avoids sending the salesperson to the Sales app.
+        """
+        self.ensure_one()
+        if self.route_order_mode != "direct_sale":
+            return super(SaleOrder, self).action_confirm()
+
+        order = self.sudo()
+        order._ensure_route_direct_sale_enabled()
+        if not order.route_outlet_id:
+            raise UserError(_("Route Outlet is required for Direct Sale orders."))
+        if not order.partner_id:
+            raise UserError(_("Customer is required for Direct Sale orders."))
+        if not order.route_source_location_id:
+            raise UserError(_("Source Location is required for Direct Sale orders."))
+        if order.route_payment_mode == "deferred" and not order.route_payment_due_date:
+            raise UserError(_("Deferred Due Date is required when Route Payment Mode is Deferred."))
+
+        sale_lines = order.order_line.filtered(
+            lambda line: line.product_id
+            and not line.display_type
+            and (line.product_uom_qty or 0.0) > 0
+        )
+        if not sale_lines:
+            raise UserError(_("Please add at least one product before confirming the direct sale."))
+
+        if hasattr(order, "_check_direct_sale_tracked_lines"):
+            order._check_direct_sale_tracked_lines()
+
+        # First make the commercial document a real Sale Order.  This is the state
+        # checked later by Direct Return and Finish Visit.
+        order._route_confirm_without_procurement()
+
+        delivery_result = order._create_and_validate_direct_sale_delivery()
+
+        # Some stock validation flows may return an intermediate wizard/action.  Keep
+        # the order confirmed even in that case so the visit never sees a delivered
+        # quotation as still pending confirmation.
+        if order.state in ("draft", "sent"):
+            order._route_confirm_without_procurement()
+
+        deliveries_done = order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done")
+        if deliveries_done:
+            order._ensure_direct_sale_payment_record()
+
+        if isinstance(delivery_result, dict):
+            return delivery_result
+
+        visit = order.route_visit_id or order._get_linked_route_visit()
+        if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales":
+            if hasattr(visit, "_get_pda_form_action"):
+                return visit.with_context(
+                    pda_mode=True,
+                    route_pda_salesperson_mode=True,
+                )._get_pda_form_action()
+            return {
+                "type": "ir.actions.act_window",
+                "name": _("PDA Visit"),
+                "res_model": "route.visit",
+                "res_id": visit.id,
+                "view_mode": "form",
+                "target": "current",
+            }
+        return order._get_route_visit_return_action() or True
+
+    def action_route_direct_sale_confirm_and_return(self):
+        self.ensure_one()
+        return self._route_direct_sale_confirm_core(return_to_visit_after_confirm=True)
 
     def action_confirm(self):
         normal_orders = self.env["sale.order"]
@@ -877,30 +951,16 @@ class SaleOrder(models.Model):
 
         direct_sale_return_action = False
         for order in direct_sale_orders:
-            order._ensure_route_direct_sale_enabled()
-            if not order.route_outlet_id:
-                raise UserError(_("Route Outlet is required for Direct Sale orders."))
-            if not order.partner_id:
-                raise UserError(_("Customer is required for Direct Sale orders."))
-            if not order.route_source_location_id:
-                raise UserError(_("Source Location is required for Direct Sale orders."))
-            if order.route_payment_mode == "deferred" and not order.route_payment_due_date:
-                raise UserError(_("Deferred Due Date is required when Route Payment Mode is Deferred."))
-
-            order._route_confirm_without_procurement()
-            delivery_result = order._create_and_validate_direct_sale_delivery()
-            deliveries_done = order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done")
-
-            if deliveries_done:
-                order._ensure_direct_sale_payment_record()
-                if len(self) == 1:
-                    visit = context_visit or order.route_visit_id or order._get_linked_route_visit()
-                    if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales":
-                        if return_to_visit_after_confirm and hasattr(visit, "_get_pda_form_action"):
-                            direct_sale_return_action = visit._get_pda_form_action() or direct_sale_return_action
-                        else:
-                            direct_sale_return_action = order._get_route_visit_return_action() or direct_sale_return_action
-
+            delivery_result = order._route_direct_sale_confirm_core(
+                return_to_visit_after_confirm=return_to_visit_after_confirm
+            )
+            if len(self) == 1 and return_to_visit_after_confirm:
+                visit = context_visit or order.route_visit_id or order._get_linked_route_visit()
+                if visit and getattr(visit, "visit_execution_mode", False) == "direct_sales" and hasattr(visit, "_get_pda_form_action"):
+                    direct_sale_return_action = visit.with_context(
+                        pda_mode=True,
+                        route_pda_salesperson_mode=True,
+                    )._get_pda_form_action() or direct_sale_return_action
             if isinstance(delivery_result, dict) and not direct_sale_return_action:
                 action_result = delivery_result
 
