@@ -402,7 +402,8 @@ class RouteDirectReturn(models.Model):
 
     def _get_or_create_lot(self, product, lot_name):
         self.ensure_one()
-        if not lot_name:
+        lot_name = (lot_name or "").strip()
+        if not product or not lot_name:
             return False
         lot = self.env["stock.lot"].search([
             ("name", "=", lot_name),
@@ -411,7 +412,7 @@ class RouteDirectReturn(models.Model):
         ], limit=1)
         if lot:
             return lot
-        return self.env["stock.lot"].create({
+        return self.env["stock.lot"].sudo().create({
             "name": lot_name,
             "product_id": product.id,
             "company_id": self.company_id.id,
@@ -457,15 +458,15 @@ class RouteDirectReturn(models.Model):
             if line.quantity <= 0:
                 raise UserError(_("Return quantity must be greater than zero for product %s.") % line.product_id.display_name)
             if self.route_enable_lot_serial_tracking:
-                if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
-                    line._route_apply_reference_sale_line_defaults()
-                if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
-                    raise UserError(
-                        _(
-                            "Lot/Serial is required for tracked product %(product)s. Please open the return line and choose or type the correct lot/serial number."
+                if line.product_id.tracking != "none":
+                    line._route_prepare_lot_for_picking()
+                    if not (line.lot_id or line.lot_name):
+                        raise UserError(
+                            _(
+                                "Lot/Serial is required for tracked product %(product)s. Please open the return line and choose an existing lot/serial or type a manual lot/serial number."
+                            )
+                            % {"product": line.product_id.display_name}
                         )
-                        % {"product": line.product_id.display_name}
-                    )
             else:
                 if line.product_id.tracking != "none":
                     raise UserError(
@@ -532,10 +533,9 @@ class RouteDirectReturn(models.Model):
                 auto_move_lines.sudo().unlink()
 
             for move, line in zip(moves, lines):
-                if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none" and not line.lot_id and line.lot_name:
-                    lot = self._get_or_create_lot(move.product_id, line.lot_name)
-                    if lot:
-                        line.lot_id = lot
+                lot = False
+                if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none":
+                    lot = line._route_prepare_lot_for_picking()
                 ml_vals = {
                     "picking_id": picking.id,
                     "move_id": move.id,
@@ -546,7 +546,7 @@ class RouteDirectReturn(models.Model):
                     "location_dest_id": destination.id,
                 }
                 if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none":
-                    lot = line.lot_id or self._get_or_create_lot(move.product_id, line.lot_name)
+                    lot = lot or line.lot_id or self._get_or_create_lot(move.product_id, line.lot_name)
                     if lot:
                         ml_vals["lot_id"] = lot.id
                     elif "lot_name" in self.env["stock.move.line"]._fields and line.lot_name:
@@ -1017,6 +1017,57 @@ class RouteDirectReturnLine(models.Model):
                     line.lot_id = available_lots[:1]
                     line._onchange_lot_id()
 
+    def _route_build_auto_lot_name(self):
+        """Build a safe fallback lot name for open direct returns.
+
+        Open returns can include products from old visits where the salesperson does not
+        know the original lot. Odoo still requires a lot for tracked products, so we create
+        a clearly traceable return lot instead of blocking the return picking.
+        """
+        self.ensure_one()
+        return_name = (self.return_id.name or "DIRECT-RETURN") if self.return_id else "DIRECT-RETURN"
+        return_name = return_name.replace("/", "-").replace(" ", "-")
+        product_part = self.product_id.default_code or str(self.product_id.id or "PRODUCT")
+        product_part = str(product_part).replace("/", "-").replace(" ", "-")
+        line_part = str(self.id or "NEW")
+        return "OPEN-RETURN-%s-%s-%s" % (return_name, product_part, line_part)
+
+    def _route_prepare_lot_for_picking(self):
+        """Ensure tracked open-return lines have a valid lot before stock picking validation."""
+        self.ensure_one()
+        product = self.product_id
+        direct_return = self.return_id
+        if (
+            not direct_return
+            or not direct_return.route_enable_lot_serial_tracking
+            or not product
+            or product.tracking == "none"
+        ):
+            return False
+
+        if self.lot_id:
+            if not self.lot_name:
+                self.lot_name = self.lot_id.name or False
+            return self.lot_id
+
+        self._route_apply_reference_sale_line_defaults()
+        if self.lot_id:
+            if not self.lot_name:
+                self.lot_name = self.lot_id.name or False
+            return self.lot_id
+
+        lot_name = (self.lot_name or "").strip()
+        if not lot_name:
+            lot_name = self._route_build_auto_lot_name()
+            self.lot_name = lot_name
+
+        lot = direct_return._get_or_create_lot(product, lot_name)
+        if lot:
+            self.lot_id = lot
+            self.lot_name = lot.name or lot_name
+            self._onchange_lot_id()
+        return lot
+
     @api.depends(
         "product_id",
         "quantity",
@@ -1104,6 +1155,8 @@ class RouteDirectReturnLine(models.Model):
         Lot = self.env["stock.lot"]
         for line in self:
             lot_name = (line.lot_name or "").strip()
+            if line.lot_name and line.lot_name != lot_name:
+                line.lot_name = lot_name
             if not lot_name or not line.product_id:
                 continue
             if line.lot_id and (line.lot_id.name or "").strip() == lot_name:
@@ -1183,6 +1236,11 @@ class RouteDirectReturnLine(models.Model):
         lines._route_apply_reference_sale_line_defaults()
         for line in lines.filtered(lambda line: line.product_id and not line.route_product_barcode):
             line.route_product_barcode = line.product_id.barcode or False
+        for line in lines.filtered(lambda line: line.product_id and line.product_id.tracking != "none" and line.route_enable_lot_serial_tracking and line.lot_name and not line.lot_id):
+            lot = line.return_id._get_or_create_lot(line.product_id, line.lot_name) if line.return_id else False
+            if lot:
+                line.lot_id = lot
+                line._onchange_lot_id()
         return lines
 
     def write(self, vals):
