@@ -95,6 +95,7 @@
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="available_lot_ids" invisible="1"/>
+<field name="route_available_product_ids" invisible="1"/>
 <field name="route_product_image_128" invisible="1"/>
 <div class="route_mobile_product_image_preview" invisible="not product_id">
 <field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
@@ -109,7 +110,7 @@
 <div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
-<field name="product_id" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': False}"/>
+<field name="product_id" domain="[('id', 'in', route_available_product_ids)]" options="{'no_create': True, 'no_open': False}"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
@@ -207,6 +208,7 @@
 <field name="route_enable_direct_sale" invisible="1"/>
 <field name="route_enable_direct_return" invisible="1"/>
 <field name="currency_id" invisible="1"/>
+<field name="route_reference_product_ids" invisible="1"/>
 <field name="visit_id" invisible="1"/>
 <div class="route_mobile_header_title">
 <h1>
@@ -277,8 +279,9 @@
 </div>
 <field name="line_ids" nolabel="1" readonly="state != 'draft'" class="route_mobile_direct_return_lines_field">
 <list editable="bottom" string="Return Lines" create="1" delete="1" class="route_mobile_return_line_list">
+<field name="route_available_product_ids" column_invisible="1"/>
 <field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
-<field name="product_id" string="Product" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': False}"/>
+<field name="product_id" string="Product" domain="[('id', 'in', route_available_product_ids)]" options="{'no_create': True, 'no_open': False}"/>
 <field name="route_product_barcode" string="Barcode" optional="show"/>
 <field name="quantity" string="Qty"/>
 <field name="uom_id" string="UoM" options="{'no_create': True, 'no_open': True}"/>
@@ -314,7 +317,7 @@
 <div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
-<field name="product_id" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': False}"/>
+<field name="product_id" domain="[('id', 'in', route_available_product_ids)]" options="{'no_create': True, 'no_open': False}"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
