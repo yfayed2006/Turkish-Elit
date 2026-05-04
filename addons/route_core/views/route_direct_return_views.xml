@@ -158,9 +158,10 @@
 <div class="route_mobile_detail_box" invisible="not route_enable_lot_serial_tracking or not product_id or product_id.tracking == 'none'">
 <div class="route_mobile_detail_label">Manual Lot / Serial</div>
 <div class="route_mobile_detail_value">
-<field name="lot_name"/>
+<field name="lot_name" placeholder="Type lot/serial if no saved lot exists"/>
 </div>
 </div>
+<div class="alert alert-info" role="alert" invisible="not route_enable_lot_serial_tracking or not product_id or product_id.tracking == 'none' or lot_id or lot_name"> If no saved lot appears, type the lot/serial manually. If it is left empty, Route Core will create a traceable open-return lot when generating the return picking. </div>
 <div class="route_mobile_detail_box" invisible="not route_enable_lot_serial_tracking or not route_enable_expiry_tracking">
 <div class="route_mobile_detail_label">Expiry Date</div>
 <div class="route_mobile_detail_value">
@@ -291,7 +292,7 @@
 <field name="uom_id" string="UoM" options="{'no_create': True, 'no_open': True}"/>
 <field name="available_lot_ids" column_invisible="1"/>
 <field name="lot_id" string="Lot/Serial" domain="[('id', 'in', available_lot_ids)]" options="{'no_create': True, 'no_open': True}" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="show"/>
-<field name="lot_name" string="Manual Lot/Serial" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="hide"/>
+<field name="lot_name" string="Manual Lot/Serial" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="show"/>
 <field name="expiry_date" string="Expiry" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
 <field name="return_reason" string="Reason"/>
 <field name="destination_location_id" string="Destination" optional="hide"/>
@@ -370,9 +371,10 @@
 <div class="route_mobile_detail_box" invisible="not route_enable_lot_serial_tracking or not product_id or product_id.tracking == 'none'">
 <div class="route_mobile_detail_label">Manual Lot / Serial</div>
 <div class="route_mobile_detail_value">
-<field name="lot_name"/>
+<field name="lot_name" placeholder="Type lot/serial if no saved lot exists"/>
 </div>
 </div>
+<div class="alert alert-info" role="alert" invisible="not route_enable_lot_serial_tracking or not product_id or product_id.tracking == 'none' or lot_id or lot_name"> If no saved lot appears, type the lot/serial manually. If it is left empty, Route Core will create a traceable open-return lot when generating the return picking. </div>
 <div class="route_mobile_detail_box" invisible="not route_enable_lot_serial_tracking or not route_enable_expiry_tracking">
 <div class="route_mobile_detail_label">Expiry Date</div>
 <div class="route_mobile_detail_value">
