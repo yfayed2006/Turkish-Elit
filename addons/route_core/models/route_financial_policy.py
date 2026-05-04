@@ -875,3 +875,4 @@ class SaleOrder(models.Model):
             target_is_direct = vals.get("route_order_mode") == "direct_sale" or any(order.route_order_mode == "direct_sale" for order in self)
             if target_is_direct:
                 vals_to_write = self._route_prepare_direct_sale_pricelist_vals(vals)
+        return super().write(vals_to_write)
