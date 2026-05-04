@@ -338,7 +338,7 @@ Policy:
 <span t-esc="line['uom_name']"/>
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f%%' % (line.get('discount', 0.0) or 0.0)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'{:.2f}%'.format(line.get('discount', 0.0) or 0.0)"/>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
@@ -429,7 +429,7 @@ Policy:
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
 <div t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. %.2f%%' % (line.get('discount', 0.0) or 0.0)"/>
+<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. {:.2f}%'.format(line.get('discount', 0.0) or 0.0)"/>
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
