@@ -966,6 +966,7 @@ class RouteVisit(models.Model):
         if not self.route_enable_direct_sale:
             raise UserError(_("Direct Sale is disabled in Route Settings."))
         self.write({"direct_stop_skip_sale": False})
+        outlet_pricelist = self.env["sale.order"]._route_get_outlet_pricelist(self.outlet_id) if self.outlet_id and hasattr(self.env["sale.order"], "_route_get_outlet_pricelist") else False
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Sale"),
@@ -978,6 +979,7 @@ class RouteVisit(models.Model):
                 "default_route_source_location_id": self.vehicle_id.stock_location_id.id if self.vehicle_id and self.vehicle_id.stock_location_id else False,
                 "default_route_payment_mode": "cash",
                 "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
+                "default_pricelist_id": outlet_pricelist.id if outlet_pricelist else False,
                 "default_partner_id": self.outlet_id.partner_id.id if self.outlet_id and self.outlet_id.partner_id else False,
                 "default_origin": self.name,
                 "default_route_visit_id": self.id,
