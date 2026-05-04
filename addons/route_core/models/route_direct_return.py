@@ -98,6 +98,75 @@ class RouteDirectReturn(models.Model):
         for rec in self:
             rec.amount_total = sum(rec.line_ids.mapped("estimated_amount"))
 
+    def _route_has_reference_return_source(self):
+        self.ensure_one()
+        return bool(self.sale_order_id or self.reference_picking_id)
+
+    def _route_get_reference_sale_orders(self):
+        self.ensure_one()
+        SaleOrder = self.env["sale.order"]
+        orders = SaleOrder.browse()
+
+        if self.sale_order_id:
+            orders |= self.sale_order_id
+
+        reference_picking = self.reference_picking_id
+        if reference_picking:
+            picking_sale = getattr(reference_picking, "sale_id", False)
+            if picking_sale:
+                orders |= picking_sale
+            elif reference_picking.origin:
+                origin_order = SaleOrder.search([
+                    ("name", "=", reference_picking.origin),
+                    ("route_order_mode", "=", "direct_sale"),
+                ], limit=1)
+                if origin_order:
+                    orders |= origin_order
+
+        visit_sale_order = getattr(self.visit_id, "sale_order_id", False)
+        if visit_sale_order and getattr(visit_sale_order, "route_order_mode", False) == "direct_sale":
+            orders |= visit_sale_order
+
+        return orders
+
+    def _route_get_reference_products(self):
+        self.ensure_one()
+        Product = self.env["product.product"]
+        products = Product.browse()
+
+        orders = self._route_get_reference_sale_orders()
+        if orders:
+            products |= orders.mapped("order_line").filtered(
+                lambda line: not line.display_type and line.product_id and line.product_id.sale_ok
+            ).mapped("product_id")
+
+        reference_picking = self.reference_picking_id
+        if reference_picking:
+            if "move_line_ids" in reference_picking._fields:
+                products |= reference_picking.mapped("move_line_ids").filtered(
+                    lambda move_line: move_line.product_id and move_line.product_id.sale_ok
+                ).mapped("product_id")
+            if "move_ids" in reference_picking._fields:
+                products |= reference_picking.mapped("move_ids").filtered(
+                    lambda move: move.product_id and move.product_id.sale_ok
+                ).mapped("product_id")
+            if "move_ids_without_package" in reference_picking._fields:
+                products |= reference_picking.mapped("move_ids_without_package").filtered(
+                    lambda move: move.product_id and move.product_id.sale_ok
+                ).mapped("product_id")
+
+        return products
+
+    @api.depends(
+        "sale_order_id",
+        "sale_order_id.order_line.product_id",
+        "reference_picking_id",
+        "visit_id",
+    )
+    def _compute_route_reference_product_ids(self):
+        for rec in self:
+            rec.route_reference_product_ids = rec._route_get_reference_products()
+
     def action_back_to_outlet_form(self):
         self.ensure_one()
         outlet = self.outlet_id
@@ -577,6 +646,31 @@ class RouteDirectReturnLine(models.Model):
     picking_id = fields.Many2one("stock.picking", string="Generated Picking", readonly=True)
     return_reason_label = fields.Char(string="Reason Label", compute="_compute_return_reason_label")
 
+    @api.depends(
+        "return_id",
+        "return_id.sale_order_id",
+        "return_id.reference_picking_id",
+        "return_id.route_reference_product_ids",
+    )
+    def _compute_route_available_product_ids(self):
+        Product = self.env["product.product"]
+        saleable_products = Product.search([("sale_ok", "=", True)])
+        for line in self:
+            direct_return = line.return_id
+            if direct_return and direct_return._route_has_reference_return_source():
+                line.route_available_product_ids = direct_return.route_reference_product_ids
+            else:
+                line.route_available_product_ids = saleable_products
+
+    def _route_product_allowed_by_reference(self, product):
+        self.ensure_one()
+        if not product:
+            return True
+        direct_return = self.return_id
+        if not direct_return or not direct_return._route_has_reference_return_source():
+            return True
+        return product in direct_return.route_reference_product_ids
+
     def _route_get_reference_lots(self):
         self.ensure_one()
         Lot = self.env["stock.lot"]
@@ -964,7 +1058,12 @@ class RouteDirectReturnLine(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         Lot = self.env["stock.lot"]
+        Product = self.env["product.product"]
         for vals in vals_list:
+            product = Product.browse(vals.get("product_id")).exists() if vals.get("product_id") else Product
+            if product:
+                vals.setdefault("route_product_barcode", product.barcode or False)
+                vals.setdefault("uom_id", product.uom_id.id if product.uom_id else False)
             lot = Lot.browse(vals.get("lot_id")).exists() if vals.get("lot_id") else Lot
             if lot:
                 vals.setdefault("lot_name", lot.name)
@@ -972,13 +1071,20 @@ class RouteDirectReturnLine(models.Model):
                     vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
         lines = super().create(vals_list)
         lines._route_apply_reference_sale_line_defaults()
+        for line in lines.filtered(lambda line: line.product_id and not line.route_product_barcode):
+            line.route_product_barcode = line.product_id.barcode or False
         return lines
 
     def write(self, vals):
+        vals = dict(vals)
+        if vals.get("product_id") and "route_product_barcode" not in vals:
+            product = self.env["product.product"].browse(vals["product_id"]).exists()
+            if product:
+                vals["route_product_barcode"] = product.barcode or False
+                vals.setdefault("uom_id", product.uom_id.id if product.uom_id else False)
         if vals.get("lot_id"):
             lot = self.env["stock.lot"].browse(vals["lot_id"]).exists()
             if lot:
-                vals = dict(vals)
                 vals.setdefault("lot_name", lot.name)
                 if not vals.get("expiry_date") and "expiration_date" in lot._fields and lot.expiration_date:
                     vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
