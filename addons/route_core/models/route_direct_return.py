@@ -58,6 +58,14 @@ class RouteDirectReturn(models.Model):
         store=False,
         readonly=True,
     )
+    pricelist_id = fields.Many2one(
+        "product.pricelist",
+        string="Pricelist",
+        compute="_compute_pricelist_id",
+        store=False,
+        readonly=True,
+        help="Pricelist used to price this direct return. It follows the reference sale order when available, otherwise the outlet direct-sale pricelist.",
+    )
     route_reference_product_ids = fields.Many2many(
         "product.product",
         string="Reference Return Products",
@@ -97,6 +105,21 @@ class RouteDirectReturn(models.Model):
     def _compute_amount_total(self):
         for rec in self:
             rec.amount_total = sum(rec.line_ids.mapped("estimated_amount"))
+
+    @api.depends("sale_order_id.pricelist_id", "outlet_id.direct_sale_pricelist_id", "outlet_id.partner_id.property_product_pricelist")
+    def _compute_pricelist_id(self):
+        for rec in self:
+            rec.pricelist_id = rec._route_get_effective_pricelist()
+
+    def _route_get_effective_pricelist(self):
+        self.ensure_one()
+        if self.outlet_id and getattr(self.outlet_id, "direct_sale_pricelist_id", False):
+            return self.outlet_id.direct_sale_pricelist_id
+        if self.sale_order_id and self.sale_order_id.pricelist_id:
+            return self.sale_order_id.pricelist_id
+        if self.outlet_id and self.outlet_id.partner_id and getattr(self.outlet_id.partner_id, "property_product_pricelist", False):
+            return self.outlet_id.partner_id.property_product_pricelist
+        return self.env["product.pricelist"]
 
     def _route_has_reference_return_source(self):
         self.ensure_one()
@@ -501,7 +524,18 @@ class RouteDirectReturn(models.Model):
             if picking.state == "draft":
                 picking.action_confirm()
 
+            auto_move_lines = self.env["stock.move.line"]
+            for move in moves:
+                if "move_line_ids" in move._fields:
+                    auto_move_lines |= move.move_line_ids
+            if auto_move_lines:
+                auto_move_lines.sudo().unlink()
+
             for move, line in zip(moves, lines):
+                if self.route_enable_lot_serial_tracking and move.product_id.tracking != "none" and not line.lot_id and line.lot_name:
+                    lot = self._get_or_create_lot(move.product_id, line.lot_name)
+                    if lot:
+                        line.lot_id = lot
                 ml_vals = {
                     "picking_id": picking.id,
                     "move_id": move.id,
@@ -515,6 +549,8 @@ class RouteDirectReturn(models.Model):
                     lot = line.lot_id or self._get_or_create_lot(move.product_id, line.lot_name)
                     if lot:
                         ml_vals["lot_id"] = lot.id
+                    elif "lot_name" in self.env["stock.move.line"]._fields and line.lot_name:
+                        ml_vals["lot_name"] = line.lot_name
                 self.env["stock.move.line"].create(ml_vals)
 
             result = picking.with_context(skip_immediate=True, skip_backorder=True).button_validate()
@@ -784,6 +820,84 @@ class RouteDirectReturnLine(models.Model):
             unit_price = sale_uom._compute_price(unit_price, return_uom)
         return unit_price or 0.0
 
+    def _route_get_return_pricelist(self):
+        self.ensure_one()
+        if self.return_id:
+            return self.return_id._route_get_effective_pricelist()
+        return self.env["product.pricelist"]
+
+    def _route_match_pricelist_item(self, item, product, quantity, order_date):
+        if not item or not product:
+            return False
+        if getattr(item, "date_start", False) and order_date and item.date_start > order_date:
+            return False
+        if getattr(item, "date_end", False) and order_date and item.date_end < order_date:
+            return False
+        if getattr(item, "min_quantity", 0.0) and (quantity or 0.0) < item.min_quantity:
+            return False
+
+        applied_on = getattr(item, "applied_on", False) or ""
+        if applied_on in ("0_product_variant", "product_variant", "variant"):
+            return bool(getattr(item, "product_id", False) and item.product_id == product)
+        if applied_on in ("1_product", "product", "product_template", "template"):
+            return bool(getattr(item, "product_tmpl_id", False) and item.product_tmpl_id == product.product_tmpl_id)
+        if applied_on in ("2_product_category", "category", "product_category"):
+            category = getattr(item, "categ_id", False)
+            if not category or not product.categ_id:
+                return False
+            return product.categ_id == category or product.categ_id.id in self.env["product.category"].search([("id", "child_of", category.id)]).ids
+        if applied_on in ("3_global", "global", "all_products", ""):
+            return True
+        return True
+
+    def _route_pricelist_item_specificity(self, item):
+        applied_on = getattr(item, "applied_on", False) or ""
+        if applied_on in ("0_product_variant", "product_variant", "variant"):
+            return 40
+        if applied_on in ("1_product", "product", "product_template", "template"):
+            return 30
+        if applied_on in ("2_product_category", "category", "product_category"):
+            return 20
+        return 10
+
+    def _route_get_pricelist_discount_percent(self, pricelist):
+        self.ensure_one()
+        if not pricelist or not self.product_id:
+            return False
+        quantity = self.quantity or 1.0
+        return_date = self.return_id.return_date if self.return_id and self.return_id.return_date else fields.Date.context_today(self)
+        item_ids = getattr(pricelist, "item_ids", self.env["product.pricelist.item"])
+        matched_items = item_ids.filtered(lambda item: self._route_match_pricelist_item(item, self.product_id, quantity, return_date))
+        if not matched_items:
+            return False
+        item = matched_items.sorted(
+            key=lambda item: (
+                self._route_pricelist_item_specificity(item),
+                getattr(item, "min_quantity", 0.0) or 0.0,
+                item.id or 0,
+            ),
+            reverse=True,
+        )[:1]
+        compute_price = getattr(item, "compute_price", False)
+        if compute_price == "percentage" and "percent_price" in item._fields:
+            return item.percent_price or 0.0
+        if compute_price == "formula" and "price_discount" in item._fields and item.price_discount:
+            discount = item.price_discount
+            if abs(discount) <= 1.0:
+                discount *= 100.0
+            return abs(discount)
+        return False
+
+    def _route_get_base_unit_price_for_discount(self):
+        self.ensure_one()
+        product = self.product_id
+        if not product:
+            return 0.0
+        price = product.lst_price or 0.0
+        return_uom = self.uom_id or product.uom_id
+        if product.uom_id and return_uom and product.uom_id != return_uom and hasattr(product.uom_id, "_compute_price"):
+            price = product.uom_id._compute_price(price, return_uom)
+        return price
 
     def _route_get_outlet_pricelist_return_unit_price(self):
         self.ensure_one()
@@ -792,14 +906,7 @@ class RouteDirectReturnLine(models.Model):
         if not product:
             return 0.0
 
-        pricelist = False
-        if direct_return and direct_return.sale_order_id and direct_return.sale_order_id.pricelist_id:
-            pricelist = direct_return.sale_order_id.pricelist_id
-        elif direct_return and direct_return.outlet_id:
-            if getattr(direct_return.outlet_id, "direct_sale_pricelist_id", False):
-                pricelist = direct_return.outlet_id.direct_sale_pricelist_id
-            elif direct_return.outlet_id.partner_id and getattr(direct_return.outlet_id.partner_id, "property_product_pricelist", False):
-                pricelist = direct_return.outlet_id.partner_id.property_product_pricelist
+        pricelist = self._route_get_return_pricelist()
 
         quantity = self.quantity or 1.0
         uom = self.uom_id or product.uom_id
@@ -928,14 +1035,25 @@ class RouteDirectReturnLine(models.Model):
                 continue
 
             sale_line = line._route_find_reference_sale_line()
+            pricelist_discount = line._route_get_pricelist_discount_percent(line._route_get_return_pricelist())
             if sale_line:
                 unit_price = line._route_get_discounted_sale_line_unit_price(sale_line)
-                line.reference_discount = sale_line.discount if "discount" in sale_line._fields else 0.0
+                sale_discount = sale_line.discount if "discount" in sale_line._fields else 0.0
+                if not sale_discount and pricelist_discount is not False:
+                    sale_discount = pricelist_discount or 0.0
+                    base_unit_price = line._route_get_base_unit_price_for_discount()
+                    if base_unit_price:
+                        unit_price = base_unit_price
+                line.reference_discount = sale_discount or 0.0
                 tax_field = "tax_ids" if "tax_ids" in sale_line._fields else ("tax_id" if "tax_id" in sale_line._fields else False)
                 line.route_reference_tax_ids = getattr(sale_line, tax_field) if tax_field else False
             else:
-                unit_price = line._route_get_outlet_pricelist_return_unit_price()
-                line.reference_discount = 0.0
+                if pricelist_discount is not False:
+                    unit_price = line._route_get_base_unit_price_for_discount()
+                    line.reference_discount = pricelist_discount or 0.0
+                else:
+                    unit_price = line._route_get_outlet_pricelist_return_unit_price()
+                    line.reference_discount = 0.0
                 line.route_reference_tax_ids = False
 
             line.estimated_unit_price = unit_price
