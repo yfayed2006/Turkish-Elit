@@ -131,9 +131,21 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Discount (%)</div>
+<div class="route_mobile_info_value">
+<field name="reference_discount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Amount</div>
 <div class="route_mobile_info_value">
 <field name="estimated_amount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Reference Taxes</div>
+<div class="route_mobile_info_value">
+<field name="route_reference_tax_ids" widget="many2many_tags" readonly="1"/>
 </div>
 </div>
 </div>
@@ -277,6 +289,8 @@
 <field name="return_reason" string="Reason"/>
 <field name="destination_location_id" string="Destination" optional="hide"/>
 <field name="estimated_unit_price" string="Unit Price" readonly="1"/>
+<field name="reference_discount" string="Disc. %" readonly="1" optional="show"/>
+<field name="route_reference_tax_ids" string="Taxes" widget="many2many_tags" readonly="1" optional="hide"/>
 <field name="estimated_amount" string="Amount" readonly="1"/>
 </list>
 <form string="Return Product">
@@ -322,9 +336,21 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Discount (%)</div>
+<div class="route_mobile_info_value">
+<field name="reference_discount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Amount</div>
 <div class="route_mobile_info_value">
 <field name="estimated_amount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Reference Taxes</div>
+<div class="route_mobile_info_value">
+<field name="route_reference_tax_ids" widget="many2many_tags" readonly="1"/>
 </div>
 </div>
 </div>
