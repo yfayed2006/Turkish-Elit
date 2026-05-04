@@ -217,6 +217,145 @@ class SaleOrderLine(models.Model):
                 line.product_id = product
                 line.route_product_barcode = product.barcode or barcode
 
+    def _route_get_direct_sale_pricelist(self):
+        self.ensure_one()
+        order = self.order_id
+        if not order or order.route_order_mode != "direct_sale":
+            return self.env["product.pricelist"]
+        if order.route_outlet_id and hasattr(order, "_route_get_outlet_pricelist"):
+            outlet_pricelist = order._route_get_outlet_pricelist(order.route_outlet_id)
+            if outlet_pricelist:
+                return outlet_pricelist
+        if order.pricelist_id:
+            return order.pricelist_id
+        return self.env["product.pricelist"]
+
+    def _route_match_pricelist_item(self, item, product, quantity, order_date):
+        if not item or not product:
+            return False
+        if getattr(item, "date_start", False) and order_date and item.date_start > order_date:
+            return False
+        if getattr(item, "date_end", False) and order_date and item.date_end < order_date:
+            return False
+        if getattr(item, "min_quantity", 0.0) and (quantity or 0.0) < item.min_quantity:
+            return False
+
+        applied_on = getattr(item, "applied_on", False) or ""
+        if applied_on in ("0_product_variant", "product_variant", "variant"):
+            return bool(getattr(item, "product_id", False) and item.product_id == product)
+        if applied_on in ("1_product", "product", "product_template", "template"):
+            return bool(getattr(item, "product_tmpl_id", False) and item.product_tmpl_id == product.product_tmpl_id)
+        if applied_on in ("2_product_category", "category", "product_category"):
+            category = getattr(item, "categ_id", False)
+            return bool(category and product.categ_id and (product.categ_id == category or product.categ_id.id in self.env["product.category"].search([("id", "child_of", category.id)]).ids))
+        if applied_on in ("3_global", "global", "all_products", ""):
+            return True
+        return True
+
+    def _route_pricelist_item_specificity(self, item):
+        applied_on = getattr(item, "applied_on", False) or ""
+        if applied_on in ("0_product_variant", "product_variant", "variant"):
+            return 40
+        if applied_on in ("1_product", "product", "product_template", "template"):
+            return 30
+        if applied_on in ("2_product_category", "category", "product_category"):
+            return 20
+        return 10
+
+    def _route_get_pricelist_discount_percent(self, pricelist):
+        self.ensure_one()
+        if not pricelist or not self.product_id:
+            return False
+        product = self.product_id
+        quantity = self.product_uom_qty or 1.0
+        order_date = fields.Date.to_date(self.order_id.date_order) if self.order_id and self.order_id.date_order else fields.Date.context_today(self)
+
+        item_ids = getattr(pricelist, "item_ids", self.env["product.pricelist.item"])
+        matched_items = item_ids.filtered(lambda item: self._route_match_pricelist_item(item, product, quantity, order_date))
+        if not matched_items:
+            return False
+        matched_items = matched_items.sorted(
+            key=lambda item: (
+                self._route_pricelist_item_specificity(item),
+                getattr(item, "min_quantity", 0.0) or 0.0,
+                item.id or 0,
+            ),
+            reverse=True,
+        )
+        item = matched_items[:1]
+        compute_price = getattr(item, "compute_price", False)
+        if compute_price == "percentage" and "percent_price" in item._fields:
+            return item.percent_price or 0.0
+        if compute_price == "formula" and "price_discount" in item._fields and item.price_discount:
+            discount = item.price_discount
+            # Some Odoo versions store formula discount as 0.12, others as 12.0.
+            if abs(discount) <= 1.0:
+                discount *= 100.0
+            return abs(discount)
+        return False
+
+    def _route_get_base_unit_price_for_discount(self):
+        self.ensure_one()
+        product = self.product_id
+        if not product:
+            return 0.0
+        price = product.lst_price or 0.0
+        line_uom = self._route_get_line_uom()
+        if line_uom and product.uom_id and line_uom != product.uom_id and hasattr(product.uom_id, "_compute_price"):
+            price = product.uom_id._compute_price(price, line_uom)
+        return price
+
+    def _route_apply_direct_sale_pricelist_discount_values(self):
+        for line in self:
+            if line.display_type or not line.product_id or not line.order_id or line.order_id.route_order_mode != "direct_sale":
+                continue
+            pricelist = line._route_get_direct_sale_pricelist()
+            discount = line._route_get_pricelist_discount_percent(pricelist)
+            if discount is False:
+                continue
+            if "discount" in line._fields:
+                line.discount = discount or 0.0
+            if discount:
+                base_price = line._route_get_base_unit_price_for_discount()
+                if base_price:
+                    line.price_unit = base_price
+
+    @api.onchange("product_id", "product_uom_qty", "product_uom_id", "order_id.pricelist_id", "order_id.route_outlet_id")
+    def _onchange_route_direct_sale_pricelist_discount(self):
+        self._route_apply_direct_sale_pricelist_discount_values()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        lines = super().create(vals_list)
+        if not self.env.context.get("route_skip_direct_sale_pricelist_discount"):
+            lines.with_context(route_skip_direct_sale_pricelist_discount=True)._route_write_direct_sale_pricelist_discount()
+        return lines
+
+    def write(self, vals):
+        res = super().write(vals)
+        trigger_fields = {"product_id", "product_uom_qty", "product_uom_id", "order_id"}
+        if not self.env.context.get("route_skip_direct_sale_pricelist_discount") and trigger_fields.intersection(vals):
+            self.with_context(route_skip_direct_sale_pricelist_discount=True)._route_write_direct_sale_pricelist_discount()
+        return res
+
+    def _route_write_direct_sale_pricelist_discount(self):
+        for line in self:
+            if line.display_type or not line.product_id or not line.order_id or line.order_id.route_order_mode != "direct_sale":
+                continue
+            pricelist = line._route_get_direct_sale_pricelist()
+            discount = line._route_get_pricelist_discount_percent(pricelist)
+            if discount is False:
+                continue
+            vals = {}
+            if "discount" in line._fields and abs((line.discount or 0.0) - (discount or 0.0)) > 0.0001:
+                vals["discount"] = discount or 0.0
+            if discount:
+                base_price = line._route_get_base_unit_price_for_discount()
+                if base_price and abs((line.price_unit or 0.0) - base_price) > 0.0001:
+                    vals["price_unit"] = base_price
+            if vals:
+                line.with_context(route_skip_direct_sale_pricelist_discount=True).write(vals)
+
     @api.depends(
         "product_id",
         "product_uom_qty",
