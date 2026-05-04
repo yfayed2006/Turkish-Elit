@@ -58,6 +58,13 @@ class RouteDirectReturn(models.Model):
         store=False,
         readonly=True,
     )
+    route_reference_product_ids = fields.Many2many(
+        "product.product",
+        string="Reference Return Products",
+        compute="_compute_route_reference_product_ids",
+        store=False,
+        help="Products that can be returned from the selected reference sale order or delivery.",
+    )
 
     route_enable_lot_serial_tracking = fields.Boolean(
         string="Enable Lot/Serial Workflow",
@@ -492,6 +499,13 @@ class RouteDirectReturnLine(models.Model):
         readonly=True,
         store=False,
     )
+    route_available_product_ids = fields.Many2many(
+        "product.product",
+        string="Available Return Products",
+        compute="_compute_route_available_product_ids",
+        store=False,
+        help="Products allowed for this return line based on the reference sale order or delivery.",
+    )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
     available_lot_ids = fields.Many2many(
@@ -837,6 +851,22 @@ class RouteDirectReturnLine(models.Model):
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for line in self:
+            if line.product_id and not line._route_product_allowed_by_reference(line.product_id):
+                product_name = line.product_id.display_name
+                line.product_id = False
+                line.route_product_barcode = False
+                line.uom_id = False
+                line.lot_id = False
+                line.lot_name = False
+                line.expiry_date = False
+                return {
+                    "warning": {
+                        "title": _("Product not in reference sale"),
+                        "message": _(
+                            "Product %(product)s is not part of the selected reference sale order/delivery. Direct returns should use only sold products from the reference document."
+                        ) % {"product": product_name},
+                    }
+                }
             line.route_product_barcode = line.product_id.barcode if line.product_id else False
             if line.product_id and not line.uom_id:
                 line.uom_id = line.product_id.uom_id
@@ -890,13 +920,27 @@ class RouteDirectReturnLine(models.Model):
             barcode = (line.route_product_barcode or "").strip()
             if not barcode or (line.product_id and barcode == (line.product_id.barcode or "")):
                 continue
-            product = Product._route_find_product_by_barcode(barcode, extra_domain=[("sale_ok", "=", True)])
+            extra_domain = [("sale_ok", "=", True)]
+            if line.return_id and line.return_id._route_has_reference_return_source():
+                allowed_products = line.return_id.route_reference_product_ids
+                extra_domain.append(("id", "in", allowed_products.ids or [0]))
+            product = Product._route_find_product_by_barcode(barcode, extra_domain=extra_domain)
             if product:
                 line.product_id = product
                 line.route_product_barcode = product.barcode or barcode
                 if not line.uom_id:
                     line.uom_id = product.uom_id
                 line._onchange_product_id()
+            elif line.return_id and line.return_id._route_has_reference_return_source():
+                line.product_id = False
+                return {
+                    "warning": {
+                        "title": _("Product not in reference sale"),
+                        "message": _(
+                            "This barcode was not found in the selected reference sale order/delivery. Choose one of the products sold in the reference document."
+                        ),
+                    }
+                }
 
     @api.onchange("return_reason")
     def _onchange_return_reason(self):
@@ -939,6 +983,16 @@ class RouteDirectReturnLine(models.Model):
                 if not vals.get("expiry_date") and "expiration_date" in lot._fields and lot.expiration_date:
                     vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
         return super().write(vals)
+
+    @api.constrains("product_id", "return_id", "return_id.sale_order_id", "return_id.reference_picking_id")
+    def _check_product_is_in_reference(self):
+        for line in self:
+            if line.product_id and not line._route_product_allowed_by_reference(line.product_id):
+                raise ValidationError(
+                    _(
+                        "Product %(product)s is not part of the selected reference sale order/delivery. Choose one of the sold products from the reference document."
+                    ) % {"product": line.product_id.display_name}
+                )
 
     @api.constrains("lot_id", "product_id")
     def _check_lot_product(self):
