@@ -1452,6 +1452,14 @@ class RouteVisit(models.Model):
             for visit in self._get_direct_stop_previous_due_visits()
         ]
 
+    def _route_receipt_clean_lot_name(self, lot_name):
+        lot_name = (lot_name or "").strip()
+        if not lot_name:
+            return ""
+        if lot_name.upper().startswith("OPEN-RETURN-"):
+            return _("Open Return Lot")
+        return lot_name
+
     def _get_direct_stop_receipt_sale_lines(self):
         self.ensure_one()
         lines = []
@@ -1469,7 +1477,7 @@ class RouteVisit(models.Model):
                         or getattr(getattr(line, "product_uom", False), "name", False)
                         or ""
                     ),
-                    "lot_name": lot.name if lot else "",
+                    "lot_name": self._route_receipt_clean_lot_name(lot.name if lot else ""),
                     "discount": line.discount if "discount" in line._fields else 0.0,
                     "unit_price": line.price_unit or 0.0,
                     "subtotal": line.price_subtotal or 0.0,
@@ -1488,7 +1496,7 @@ class RouteVisit(models.Model):
                     "product_name": line.product_id.display_name or "",
                     "quantity": line.quantity or 0.0,
                     "uom_name": line.uom_id.name if line.uom_id else "",
-                    "lot_name": line.lot_id.name if line.lot_id else (line.lot_name or ""),
+                    "lot_name": self._route_receipt_clean_lot_name(line.lot_id.name if line.lot_id else (line.lot_name or "")),
                     "reason": dict(line._fields["return_reason"].selection).get(line.return_reason) if line.return_reason else "",
                     "discount": line.reference_discount or 0.0,
                     "unit_price": line.estimated_unit_price or 0.0,
