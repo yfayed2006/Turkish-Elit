@@ -151,7 +151,7 @@
 <form string="Route Direct Sale" class="route_mobile_sale_order_form">
 <header>
 <button name="action_route_direct_sale_back_to_visit" type="object" string="Back to Visit" class="btn-secondary" invisible="route_order_mode != 'direct_sale'"/>
-<button name="action_confirm" type="object" string="Confirm Sale" class="btn-primary" invisible="state not in ('draft', 'sent')" context="{'route_return_to_visit_after_confirm': True}"/>
+<button name="action_route_direct_sale_confirm_and_return" type="object" string="Confirm Sale" class="btn-primary" invisible="state not in ('draft', 'sent')" context="{'route_return_to_visit_after_confirm': True}"/>
 <button name="action_open_direct_sale_deliveries" type="object" string="Deliveries" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done') or route_enable_direct_sale == False or route_operation_mode == 'consignment'"/>
 <button name="action_open_direct_sale_payments" type="object" string="Payments" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done') or route_enable_direct_sale == False or route_operation_mode == 'consignment'"/>
 <button name="action_create_direct_return" type="object" string="Create Return" class="btn-secondary" invisible="route_order_mode != 'direct_sale' or state not in ('sale', 'done') or route_enable_direct_return == False"/>
