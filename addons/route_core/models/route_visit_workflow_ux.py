@@ -1429,7 +1429,11 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             return self.env["route.direct.return"]
-        return self._get_direct_stop_returns().filtered(lambda r: r.state == "done")
+        # Direct-return records may remain in Draft after their stock return picking
+        # has already been created. The visit financial snapshot still counts those
+        # return lines, so the receipt/WhatsApp summary must show the same linked
+        # return reference instead of displaying Return: -.
+        return self._get_direct_stop_returns().filtered(lambda r: r.state != "cancel")
 
     def _get_direct_stop_receipt_previous_due_lines(self):
         self.ensure_one()
