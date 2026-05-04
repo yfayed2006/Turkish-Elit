@@ -1842,12 +1842,18 @@ class RouteVisit(models.Model):
 
         # Keep WhatsApp short and customer-friendly. Detailed sale/return lines
         # remain inside the attached PDF receipt and Statement of Account.
+        # The message still shows the key direct-stop financial split so the
+        # outlet/supervisor can immediately understand sale, return, net,
+        # total due, collected, and remaining without opening the PDF.
         lines = [
             _("Settlement receipt"),
             _("Visit: %s") % (self.name or "-"),
             _("Outlet: %s") % (self.outlet_id.display_name if self.outlet_id else "-"),
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Return: %s") % (summary.get("return_ref") or "-"),
+            _("Direct Sales Total: %.2f %s") % (summary.get("current_sale", 0.0), currency_code),
+            _("Direct Returns Total: %.2f %s") % (summary.get("current_return", 0.0), currency_code),
+            _("Current Stop Net: %.2f %s") % (summary.get("net_current_stop", 0.0), currency_code),
             _("Total Due Now: %.2f %s") % (summary["grand_total_due"], currency_code),
             _("Collected Now: %.2f %s") % (summary["settled_amount"], currency_code),
             _("Remaining After Collection: %.2f %s") % (summary.get("immediate_remaining_amount", summary["remaining_amount"]), currency_code),
