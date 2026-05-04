@@ -36,16 +36,11 @@
 <t t-set="payments" t-value="doc._get_direct_stop_receipt_payments()"/>
 <t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
 <t t-set="sale_total" t-value="sum(line['subtotal'] for line in sale_lines) if sale_lines else 0.0"/>
+<t t-set="sale_tax_total" t-value="max((summary.get('current_sale', 0.0) or 0.0) - (sale_total or 0.0), 0.0)"/>
+<t t-set="sale_gross_total" t-value="summary.get('current_sale', 0.0) or 0.0"/>
 <t t-set="return_total" t-value="sum(line['subtotal'] for line in return_lines) if return_lines else 0.0"/>
 <t t-set="payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
-<t t-set="previous_due_limit" t-value="8"/>
-<t t-set="payment_detail_limit" t-value="8"/>
-<t t-set="previous_due_count" t-value="len(previous_due_lines)"/>
-<t t-set="payment_count" t-value="len(payments)"/>
-<t t-set="previous_due_display_lines" t-value="previous_due_lines[:previous_due_limit]"/>
-<t t-set="payment_display_lines" t-value="payments[:payment_detail_limit]"/>
 <t t-set="credit_policy_label" t-value="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else 'Not required'"/>
-<style type="text/css"> .rc_receipt_section_keep { page-break-inside: avoid; break-inside: avoid; } .rc_receipt_section_title { page-break-after: avoid; } .rc_receipt_table thead { display: table-header-group; } .rc_receipt_table tr { page-break-inside: avoid; break-inside: avoid; } </style>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:14px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
 <tr>
@@ -245,10 +240,7 @@ Policy:
 </tr>
 </table>
 <div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">
-Open Previous Due Lines
-<span style="font-size:10px; color:#64748b; font-weight:400;">(customer summary)</span>
-</div>
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Open Previous Due Lines</div>
 <table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
@@ -261,7 +253,7 @@ Open Previous Due Lines
 <tr t-if="not previous_due_lines">
 <td colspan="3" style="padding:10px; color:#64748b;">No previous due lines.</td>
 </tr>
-<tr t-foreach="previous_due_display_lines" t-as="line">
+<tr t-foreach="previous_due_lines" t-as="line">
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-esc="line['visit_ref']"/>
 </td>
@@ -270,17 +262,12 @@ Open Previous Due Lines
 </td>
 <td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;" t-esc="'%.2f %s' % (line['amount'], currency_label)"/>
 </tr>
-<tr t-if="previous_due_count > previous_due_limit">
-<td colspan="3" style="padding:9px 10px; color:#64748b; background:#f8fafc; border-bottom:1px solid #f1f5f9;">
-<span t-esc="'Showing first %s of %s previous due lines on this customer receipt. Full allocation remains available in Statement of Account and internal payment records.' % (previous_due_limit, previous_due_count)"/>
-</td>
-</tr>
 </tbody>
 </table>
 </div>
-<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
-<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Direct Sale Orders</div>
-<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px;">
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Direct Sale Orders</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order Ref</th>
@@ -306,9 +293,9 @@ Open Previous Due Lines
 </tbody>
 </table>
 </div>
-<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
-<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Sold Products</div>
-<table class="rc_receipt_table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Sold Products</div>
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
 <colgroup>
 <col style="width:14%;"/>
 <col style="width:38%;"/>
@@ -353,21 +340,29 @@ Open Previous Due Lines
 <span t-esc="line['uom_name']"/>
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'{:.2f}%'.format(line.get('discount', 0.0) or 0.0)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%'"/>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
 </tbody>
 <tfoot t-if="sale_lines">
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Sold Amount</td>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Sold Amount</td>
 <td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (sale_total, currency_label)"/>
+</tr>
+<tr>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Tax Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (sale_tax_total, currency_label)"/>
+</tr>
+<tr>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Sold Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (sale_gross_total, currency_label)"/>
 </tr>
 </tfoot>
 </table>
 </div>
-<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
-<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Direct Returns</div>
-<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px;">
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Direct Returns</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return Ref</th>
@@ -393,9 +388,9 @@ Open Previous Due Lines
 </tbody>
 </table>
 </div>
-<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
-<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Returned Products</div>
-<table class="rc_receipt_table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Returned Products</div>
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
 <colgroup>
 <col style="width:14%;"/>
 <col style="width:34%;"/>
@@ -444,7 +439,7 @@ Open Previous Due Lines
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
 <div t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. {:.2f}%'.format(line.get('discount', 0.0) or 0.0)"/>
+<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. ' + (('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%')"/>
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
 </tr>
@@ -457,12 +452,9 @@ Open Previous Due Lines
 </tfoot>
 </table>
 </div>
-<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px; page-break-inside:avoid; break-inside:avoid;">
-<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">
-Confirmed Settlement Payments
-<span style="font-size:10px; color:#64748b; font-weight:400;">(customer summary)</span>
-</div>
-<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
+<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px;">
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Confirmed Settlement Payments</div>
+<table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Payment Date</th>
@@ -478,7 +470,7 @@ Confirmed Settlement Payments
 <tr t-if="not payments">
 <td colspan="7" style="padding:10px; color:#64748b;">No confirmed settlement payments.</td>
 </tr>
-<tr t-foreach="payment_display_lines" t-as="payment">
+<tr t-foreach="payments" t-as="payment">
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.payment_date"/>
 </td>
@@ -499,11 +491,6 @@ Confirmed Settlement Payments
 </td>
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
-</td>
-</tr>
-<tr t-if="payment_count > payment_detail_limit">
-<td colspan="7" style="padding:9px 10px; color:#64748b; background:#f8fafc; border-bottom:1px solid #f1f5f9;">
-<span t-esc="'Showing first %s of %s confirmed payment allocation lines on this customer receipt. The total confirmed collection is shown below; full allocation remains available in the system.' % (payment_detail_limit, payment_count)"/>
 </td>
 </tr>
 </tbody>
