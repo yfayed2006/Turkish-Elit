@@ -359,7 +359,14 @@ class RouteDirectReturn(models.Model):
                 raise UserError(_("Return quantity must be greater than zero for product %s.") % line.product_id.display_name)
             if self.route_enable_lot_serial_tracking:
                 if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
-                    raise UserError(_("Lot/Serial is required for tracked product %s.") % line.product_id.display_name)
+                    line._route_apply_reference_sale_line_defaults()
+                if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
+                    raise UserError(
+                        _(
+                            "Lot/Serial is required for tracked product %(product)s. Please open the return line and choose one of the lots sold in the reference sale/delivery."
+                        )
+                        % {"product": line.product_id.display_name}
+                    )
             else:
                 if line.product_id.tracking != "none":
                     raise UserError(
@@ -516,6 +523,21 @@ class RouteDirectReturnLine(models.Model):
         store=False,
         readonly=True,
     )
+    reference_discount = fields.Float(
+        string="Discount (%)",
+        compute="_compute_estimated_amount",
+        store=False,
+        readonly=True,
+        help="Discount copied from the matching reference sale order line when available.",
+    )
+    route_reference_tax_ids = fields.Many2many(
+        "account.tax",
+        string="Reference Taxes",
+        compute="_compute_estimated_amount",
+        store=False,
+        readonly=True,
+        help="Taxes copied from the matching reference sale order line when available.",
+    )
     route_enable_lot_serial_tracking = fields.Boolean(related="return_id.route_enable_lot_serial_tracking", readonly=True, store=False)
     route_enable_expiry_tracking = fields.Boolean(related="return_id.route_enable_expiry_tracking", readonly=True, store=False)
     return_reason = fields.Selection(
@@ -631,28 +653,29 @@ class RouteDirectReturnLine(models.Model):
         return False
 
     def _route_get_discounted_sale_line_unit_price(self, sale_line):
+        """Return the reference sale unit price before discount, converted to the return UoM.
+
+        The matching discount percentage is displayed separately and applied in
+        _compute_estimated_amount so return lines mirror the original sale line:
+        Unit Price + Discount % + Amount.
+        """
         self.ensure_one()
         if not sale_line:
             return 0.0
 
-        qty = sale_line.product_uom_qty or 0.0
-        if qty and "price_total" in sale_line._fields:
-            unit_price = (sale_line.price_total or 0.0) / qty
-        elif qty and "price_subtotal" in sale_line._fields:
-            unit_price = (sale_line.price_subtotal or 0.0) / qty
-        elif "price_reduce_taxinc" in sale_line._fields:
-            unit_price = sale_line.price_reduce_taxinc or 0.0
-        elif "price_reduce" in sale_line._fields:
-            unit_price = sale_line.price_reduce or 0.0
-        else:
-            discount = sale_line.discount if "discount" in sale_line._fields else 0.0
-            unit_price = (sale_line.price_unit or 0.0) * (1.0 - ((discount or 0.0) / 100.0))
+        unit_price = sale_line.price_unit or 0.0
 
-        sale_uom = sale_line.product_uom if "product_uom" in sale_line._fields else False
+        if "product_uom_id" in sale_line._fields and sale_line.product_uom_id:
+            sale_uom = sale_line.product_uom_id
+        elif "product_uom" in sale_line._fields and sale_line.product_uom:
+            sale_uom = sale_line.product_uom
+        else:
+            sale_uom = False
         return_uom = self.uom_id or self.product_id.uom_id
         if sale_uom and return_uom and sale_uom != return_uom and hasattr(sale_uom, "_compute_price"):
             unit_price = sale_uom._compute_price(unit_price, return_uom)
         return unit_price or 0.0
+
 
     def _route_get_outlet_pricelist_return_unit_price(self):
         self.ensure_one()
@@ -734,6 +757,41 @@ class RouteDirectReturnLine(models.Model):
         sale_lines = matching_lot_lines or sale_lines
         return sale_lines.sorted(key=lambda l: (l.order_id.date_order or fields.Datetime.now(), l.id or 0), reverse=True)[:1]
 
+    def _route_apply_reference_sale_line_defaults(self):
+        """Suggest UoM and lot from the reference sale/delivery when possible."""
+        for line in self:
+            if not line.product_id:
+                continue
+
+            sale_line = line._route_find_reference_sale_line()
+            if sale_line:
+                if "product_uom_id" in sale_line._fields and sale_line.product_uom_id:
+                    line.uom_id = sale_line.product_uom_id
+                elif "product_uom" in sale_line._fields and sale_line.product_uom:
+                    line.uom_id = sale_line.product_uom
+                elif not line.uom_id:
+                    line.uom_id = line.product_id.uom_id
+
+                sale_lot = getattr(sale_line, "route_lot_id", False)
+                if (
+                    line.route_enable_lot_serial_tracking
+                    and line.product_id.tracking != "none"
+                    and sale_lot
+                    and not line.lot_id
+                ):
+                    line.lot_id = sale_lot
+                    line._onchange_lot_id()
+
+            if (
+                line.route_enable_lot_serial_tracking
+                and line.product_id.tracking != "none"
+                and not line.lot_id
+            ):
+                available_lots = line._route_get_available_return_lots()
+                if available_lots:
+                    line.lot_id = available_lots[:1]
+                    line._onchange_lot_id()
+
     @api.depends(
         "product_id",
         "quantity",
@@ -757,16 +815,24 @@ class RouteDirectReturnLine(models.Model):
             if not product:
                 line.estimated_unit_price = 0.0
                 line.estimated_amount = 0.0
+                line.reference_discount = 0.0
+                line.route_reference_tax_ids = False
                 continue
 
             sale_line = line._route_find_reference_sale_line()
             if sale_line:
                 unit_price = line._route_get_discounted_sale_line_unit_price(sale_line)
+                line.reference_discount = sale_line.discount if "discount" in sale_line._fields else 0.0
+                tax_field = "tax_ids" if "tax_ids" in sale_line._fields else ("tax_id" if "tax_id" in sale_line._fields else False)
+                line.route_reference_tax_ids = getattr(sale_line, tax_field) if tax_field else False
             else:
                 unit_price = line._route_get_outlet_pricelist_return_unit_price()
+                line.reference_discount = 0.0
+                line.route_reference_tax_ids = False
 
             line.estimated_unit_price = unit_price
-            line.estimated_amount = (line.quantity or 0.0) * (unit_price or 0.0)
+            discount_factor = 1.0 - ((line.reference_discount or 0.0) / 100.0)
+            line.estimated_amount = (line.quantity or 0.0) * (unit_price or 0.0) * discount_factor
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
@@ -778,13 +844,13 @@ class RouteDirectReturnLine(models.Model):
                 line.lot_id = False
                 line.lot_name = False
                 line.expiry_date = False
+                if line.product_id:
+                    line._route_apply_reference_sale_line_defaults()
                 continue
             available_lots = line._route_get_available_return_lots()
             if line.lot_id and line.lot_id not in available_lots:
                 line.lot_id = False
-            if not line.lot_id and len(available_lots) == 1:
-                line.lot_id = available_lots[:1]
-                line._onchange_lot_id()
+            line._route_apply_reference_sale_line_defaults()
 
     @api.onchange("lot_id")
     def _onchange_lot_id(self):
@@ -860,7 +926,9 @@ class RouteDirectReturnLine(models.Model):
                 vals.setdefault("lot_name", lot.name)
                 if not vals.get("expiry_date") and "expiration_date" in lot._fields and lot.expiration_date:
                     vals["expiry_date"] = fields.Date.to_date(lot.expiration_date)
-        return super().create(vals_list)
+        lines = super().create(vals_list)
+        lines._route_apply_reference_sale_line_defaults()
+        return lines
 
     def write(self, vals):
         if vals.get("lot_id"):
