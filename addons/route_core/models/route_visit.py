@@ -1563,6 +1563,181 @@ class RouteVisit(models.Model):
 
         return "<div class='route_pda_payment_cards_html'>%s</div>" % "".join(cards)
 
+
+    def _build_direct_stop_settlement_cards_html(self):
+        """Build a compact PDA payment view for Direct Sales stops.
+
+        Direct-stop settlement may allocate one cash decision across many older
+        unpaid visits plus the current stop.  Showing every allocation line is
+        correct for audit/reporting, but it creates a very long salesperson PDA
+        screen.  This summary keeps the operational screen focused while the
+        detailed allocation remains available in the technical list/report.
+        """
+        self.ensure_one()
+        payments = self._get_direct_stop_settlement_payments() if self.id else self.env["route.visit.payment"]
+        payments = payments.filtered(lambda p: p.state != "cancelled")
+
+        confirmed = payments.filtered(lambda p: p.state == "confirmed")
+        draft = payments.filtered(lambda p: p.state == "draft")
+        visible_payments = confirmed or draft or payments
+
+        if not visible_payments and not (
+            (getattr(self, "direct_stop_grand_due_amount", 0.0) or 0.0)
+            or (getattr(self, "direct_stop_settlement_paid_amount", 0.0) or 0.0)
+            or (getattr(self, "direct_stop_immediate_remaining_amount", 0.0) or 0.0)
+            or (getattr(self, "direct_stop_open_promise_amount", 0.0) or 0.0)
+        ):
+            return _("<div class='route_pda_payment_empty'>No payments are available yet for this visit.</div>")
+
+        payment_model = self.env["route.visit.payment"]
+        mode_map = dict(payment_model._fields["payment_mode"].selection)
+        collection_map = dict(payment_model._fields["collection_type"].selection)
+        state_map = dict(payment_model._fields["state"].selection)
+        promise_status_map = dict(payment_model._fields["promise_status"].selection)
+
+        def _sum(records, field_name):
+            return sum(getattr(record, field_name, 0.0) or 0.0 for record in records)
+
+        def _payment_sort_key(payment):
+            return (
+                payment.payment_date or fields.Datetime.to_datetime("1900-01-01 00:00:00"),
+                payment.id or 0,
+            )
+
+        latest_payment = visible_payments.sorted(key=_payment_sort_key, reverse=True)[:1] if visible_payments else visible_payments
+        latest_promise = visible_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        latest_promise = latest_promise.sorted(key=_payment_sort_key, reverse=True)[:1] if latest_promise else latest_promise
+
+        previous_due_payments = payments.filtered(
+            lambda p: p.visit_id and p.visit_id.id != self.id and p.settlement_visit_id and p.settlement_visit_id.id == self.id
+        )
+        current_stop_payments = payments - previous_due_payments
+
+        mode_labels = []
+        for mode in visible_payments.mapped("payment_mode"):
+            label = mode_map.get(mode, mode or "")
+            if label and label not in mode_labels:
+                mode_labels.append(label)
+        collection_labels = []
+        for collection in visible_payments.mapped("collection_type"):
+            label = collection_map.get(collection, collection or "")
+            if label and label not in collection_labels:
+                collection_labels.append(label)
+
+        if confirmed and draft:
+            state_label = _("Partially Confirmed")
+            state_key = "draft"
+        elif confirmed:
+            state_label = state_map.get("confirmed", _("Confirmed"))
+            state_key = "confirmed"
+        elif draft:
+            state_label = state_map.get("draft", _("Draft"))
+            state_key = "draft"
+        else:
+            state_label = _("No Payment Lines")
+            state_key = "none"
+
+        badges = []
+        if mode_labels:
+            badges.append(
+                "<span class='route_pda_payment_badge route_pda_payment_badge_mode'>%s</span>"
+                % escape(" / ".join(mode_labels))
+            )
+        if collection_labels:
+            badges.append(
+                "<span class='route_pda_payment_badge route_pda_payment_badge_collection'>%s</span>"
+                % escape(" / ".join(collection_labels))
+            )
+        badges.append(
+            "<span class='route_pda_payment_badge route_pda_payment_badge_state route_pda_payment_state_%s'>%s</span>"
+            % (escape(state_key), escape(state_label))
+        )
+
+        total_due = getattr(self, "direct_stop_grand_due_amount", 0.0) or 0.0
+        collected_now = getattr(self, "direct_stop_settlement_paid_amount", 0.0) or _sum(confirmed, "amount")
+        remaining_now = getattr(self, "direct_stop_immediate_remaining_amount", 0.0) or max(total_due - collected_now, 0.0)
+        promise_amount = getattr(self, "direct_stop_open_promise_amount", 0.0) or _sum(visible_payments, "promise_amount")
+        previous_paid = _sum(previous_due_payments.filtered(lambda p: p.state == "confirmed"), "amount")
+        current_paid = _sum(current_stop_payments.filtered(lambda p: p.state == "confirmed"), "amount")
+        draft_amount = _sum(draft, "amount")
+
+        metrics = [
+            ("Total Due Now", total_due),
+            ("Collected Now", collected_now),
+            ("Remaining", remaining_now),
+            ("Promise Amount", promise_amount),
+            ("Previous Due Paid", previous_paid),
+            ("Current Stop Paid", current_paid),
+        ]
+        if draft_amount:
+            metrics.append(("Draft To Confirm", draft_amount))
+
+        metric_html = "".join(
+            "<div class='route_pda_payment_metric'>"
+            "<span class='route_pda_payment_metric_label'>%s</span>"
+            "<span class='route_pda_payment_metric_value'>%s</span>"
+            "</div>"
+            % (escape(label), escape(self._format_route_currency_amount(amount)))
+            for label, amount in metrics
+        )
+
+        footer_items = []
+        if latest_promise and latest_promise.promise_date:
+            footer_items.append(
+                "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                "<span class='route_pda_payment_footer_label'>Promise On</span>"
+                "<span class='route_pda_payment_footer_value'>%s</span>"
+                "</div>" % escape(self._format_route_payment_date(latest_promise.promise_date))
+            )
+            raw_status = latest_promise._get_snapshot_promise_status() if hasattr(latest_promise, "_get_snapshot_promise_status") else latest_promise.promise_status
+            status_label = promise_status_map.get(raw_status, raw_status or "")
+            if status_label:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Promise Status</span>"
+                    "<span class='route_pda_payment_footer_value'>%s</span>"
+                    "</div>" % escape(status_label)
+                )
+        if len(payments) > 1:
+            footer_items.append(
+                "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                "<span class='route_pda_payment_footer_label'>Allocation Lines</span>"
+                "<span class='route_pda_payment_footer_value'>%s</span>"
+                "</div>" % escape(str(len(payments)))
+            )
+        footer_html = "<div class='route_pda_payment_footer'>%s</div>" % "".join(footer_items) if footer_items else ""
+
+        note_html = ""
+        if len(payments) > 1:
+            note_html = (
+                "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
+                "%s"
+                "</div>"
+                % escape(_("Detailed allocation across previous due visits is kept in the system and receipt report. The PDA screen shows the settlement summary only."))
+            )
+
+        return (
+            "<div class='route_pda_payment_cards_html'>"
+            "<div class='route_pda_payment_card route_pda_payment_card_html route_pda_payment_card_visit route_pda_payment_card_direct_summary'>"
+            "<div class='route_pda_payment_head'>"
+            "<div class='route_pda_payment_title'>%s</div>"
+            "<div class='route_pda_payment_date'>%s</div>"
+            "</div>"
+            "<div class='route_pda_payment_badges route_pda_payment_badges_primary'>%s</div>"
+            "<div class='route_pda_payment_metrics'>%s</div>"
+            "%s"
+            "%s"
+            "</div>"
+            "</div>"
+        ) % (
+            escape(_("Direct Stop Settlement")),
+            escape(self._format_route_payment_datetime(latest_payment.payment_date)) if latest_payment else "",
+            "".join(badges),
+            metric_html,
+            footer_html,
+            note_html,
+        )
+
     @api.depends(
         "visit_execution_mode",
         "payment_ids.state",
@@ -1596,6 +1771,9 @@ class RouteVisit(models.Model):
     )
     def _compute_display_payment_cards_html(self):
         for rec in self:
+            if rec.visit_execution_mode == "direct_sales":
+                rec.display_payment_cards_html = rec._build_direct_stop_settlement_cards_html()
+                continue
             payments = rec.display_payment_ids
             rec.display_payment_cards_html = rec._build_payment_cards_html(
                 payments,
