@@ -1429,11 +1429,17 @@ class RouteVisit(models.Model):
         self.ensure_one()
         if not self._is_direct_sales_stop():
             return self.env["route.direct.return"]
-        # Direct-return records may remain in Draft after their stock return picking
-        # has already been created. The visit financial snapshot still counts those
-        # return lines, so the receipt/WhatsApp summary must show the same linked
-        # return reference instead of displaying Return: -.
-        return self._get_direct_stop_returns().filtered(lambda r: r.state != "cancel")
+
+        # Keep receipt/WhatsApp return references in sync with the same return set
+        # used by the live direct-stop financial summary.  In PDA flows the return
+        # value may already be included in the stop totals while the route return
+        # record is not strictly in Done yet, so filtering only by Done can make
+        # the message show Return: - even though returns are already counted.
+        if hasattr(self, "_get_direct_stop_active_returns"):
+            returns = self._get_direct_stop_active_returns()
+        else:
+            returns = self._get_direct_stop_returns()
+        return returns.filtered(lambda r: r.state != "cancel")
 
     def _get_direct_stop_receipt_previous_due_lines(self):
         self.ensure_one()
