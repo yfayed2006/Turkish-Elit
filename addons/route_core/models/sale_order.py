@@ -822,13 +822,13 @@ class SaleOrder(models.Model):
         return visit.action_ux_no_return()
 
     def _route_confirm_without_procurement(self):
-        """Mark a route-controlled sale as confirmed without Odoo creating a second delivery.
+        """Mark a route-controlled quotation as a real Sale Order.
 
-        Route Core creates and validates the vehicle delivery itself, because the source
-        location is the salesperson vehicle stock.  Calling the standard sale
-        procurement flow after that can create duplicate/incorrect stock moves, so for
-        direct route orders we explicitly move the quotation to sale state and keep the
-        delivery under Route Core control.
+        Route Core validates the vehicle delivery itself, because the source
+        location is the salesperson vehicle.  For direct-sale route orders we
+        therefore avoid the standard sale procurement flow, but the commercial
+        document still must become a real Sale Order.  This method is used by
+        the PDA Confirm Sale button and by the normal action_confirm override.
         """
         now = fields.Datetime.now()
         for order in self:
@@ -840,15 +840,29 @@ class SaleOrder(models.Model):
                 vals["confirmation_date"] = now
             if "date_order" in order._fields and not order.date_order:
                 vals["date_order"] = now
-            order.write(vals)
+
+            # Salespeople may confirm from Route Sales without having full Sales
+            # app permissions.  Use sudo only for the technical confirmation
+            # write; all business validations are performed before this call.
+            order.sudo().write(vals)
+            order.sudo().flush_recordset(["state"])
+            order.invalidate_recordset(["state"])
+
+            if order.sudo().state in ("draft", "sent"):
+                raise UserError(
+                    _(
+                        "The Direct Sale Order could not be confirmed. "
+                        "Please refresh the order and try Confirm Sale again."
+                    )
+                )
 
     def _route_direct_sale_confirm_core(self, return_to_visit_after_confirm=False):
-        """Confirm a Direct Sale order from the Route/PDA flow and return to the visit.
+        """Confirm a Direct Sale order from the Route/PDA flow.
 
-        This method is intentionally used by the Route Core Confirm Sale button instead
-        of the standard Sales confirmation path.  It lets a salesperson confirm the
-        order from Route Sales, validates the vehicle delivery, keeps the order in
-        real Sale Order state, and avoids sending the salesperson to the Sales app.
+        The salesperson must not leave Route Sales to confirm the order in the
+        Sales app.  This method confirms the sale document, validates the
+        vehicle delivery, creates the direct-sale payment snapshot, then returns
+        to the current visit.
         """
         self.ensure_one()
         if self.route_order_mode != "direct_sale":
@@ -856,6 +870,7 @@ class SaleOrder(models.Model):
 
         order = self.sudo()
         order._ensure_route_direct_sale_enabled()
+
         if not order.route_outlet_id:
             raise UserError(_("Route Outlet is required for Direct Sale orders."))
         if not order.partner_id:
@@ -876,20 +891,18 @@ class SaleOrder(models.Model):
         if hasattr(order, "_check_direct_sale_tracked_lines"):
             order._check_direct_sale_tracked_lines()
 
-        # First make the commercial document a real Sale Order.  This is the state
-        # checked later by Direct Return and Finish Visit.
         order._route_confirm_without_procurement()
+        if order.sudo().state in ("draft", "sent"):
+            raise UserError(_("The Direct Sale Order is still a quotation. Please try Confirm Sale again."))
 
         delivery_result = order._create_and_validate_direct_sale_delivery()
 
-        # Some stock validation flows may return an intermediate wizard/action.  Keep
-        # the order confirmed even in that case so the visit never sees a delivered
-        # quotation as still pending confirmation.
-        if order.state in ("draft", "sent"):
+        # Keep the commercial document confirmed even if stock validation returns
+        # an intermediate action/wizard.
+        if order.sudo().state in ("draft", "sent"):
             order._route_confirm_without_procurement()
 
-        deliveries_done = order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done")
-        if deliveries_done:
+        if order._get_direct_sale_deliveries().filtered(lambda p: p.state == "done"):
             order._ensure_direct_sale_payment_record()
 
         if isinstance(delivery_result, dict):
@@ -910,6 +923,7 @@ class SaleOrder(models.Model):
                 "view_mode": "form",
                 "target": "current",
             }
+
         return order._get_route_visit_return_action() or True
 
     def action_route_direct_sale_confirm_and_return(self):
@@ -961,6 +975,7 @@ class SaleOrder(models.Model):
                         pda_mode=True,
                         route_pda_salesperson_mode=True,
                     )._get_pda_form_action() or direct_sale_return_action
+
             if isinstance(delivery_result, dict) and not direct_sale_return_action:
                 action_result = delivery_result
 
