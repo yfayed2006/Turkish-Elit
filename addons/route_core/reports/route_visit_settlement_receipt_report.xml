@@ -45,6 +45,7 @@
 <t t-set="previous_due_display_lines" t-value="previous_due_lines[:previous_due_limit]"/>
 <t t-set="payment_display_lines" t-value="payments[:payment_detail_limit]"/>
 <t t-set="credit_policy_label" t-value="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else 'Not required'"/>
+<style type="text/css"> .rc_receipt_section_keep { page-break-inside: avoid; break-inside: avoid; } .rc_receipt_section_title { page-break-after: avoid; } .rc_receipt_table thead { display: table-header-group; } .rc_receipt_table tr { page-break-inside: avoid; break-inside: avoid; } </style>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:14px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
 <tr>
@@ -277,9 +278,9 @@ Open Previous Due Lines
 </tbody>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Direct Sale Orders</div>
-<table style="width:100%; border-collapse:collapse;">
+<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
+<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Direct Sale Orders</div>
+<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order Ref</th>
@@ -305,9 +306,9 @@ Open Previous Due Lines
 </tbody>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Sold Products</div>
-<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
+<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Sold Products</div>
+<table class="rc_receipt_table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
 <colgroup>
 <col style="width:14%;"/>
 <col style="width:38%;"/>
@@ -364,9 +365,9 @@ Open Previous Due Lines
 </tfoot>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Direct Returns</div>
-<table style="width:100%; border-collapse:collapse;">
+<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid;">
+<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Direct Returns</div>
+<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return Ref</th>
@@ -392,9 +393,9 @@ Open Previous Due Lines
 </tbody>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Returned Products</div>
-<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
+<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">Returned Products</div>
+<table class="rc_receipt_table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
 <colgroup>
 <col style="width:14%;"/>
 <col style="width:34%;"/>
@@ -456,12 +457,12 @@ Open Previous Due Lines
 </tfoot>
 </table>
 </div>
-<div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">
+<div class="rc_receipt_section_keep" style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px; page-break-inside:avoid; break-inside:avoid;">
+<div class="rc_receipt_section_title" style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec; page-break-after:avoid;">
 Confirmed Settlement Payments
 <span style="font-size:10px; color:#64748b; font-weight:400;">(customer summary)</span>
 </div>
-<table style="width:100%; border-collapse:collapse;">
+<table class="rc_receipt_table" style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
 <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Payment Date</th>
