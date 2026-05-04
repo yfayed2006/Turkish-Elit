@@ -15,6 +15,10 @@
 <xpath expr="//field[@name='partner_id']" position="attributes">
 <attribute name="readonly">route_order_mode == 'direct_sale' and route_outlet_id</attribute>
 </xpath>
+<xpath expr="//field[@name='pricelist_id']" position="attributes">
+<attribute name="readonly">route_order_mode == 'direct_sale'</attribute>
+<attribute name="options">{'no_create': True, 'no_open': True}</attribute>
+</xpath>
 <xpath expr="//field[@name='order_line']/tree/field[@name='product_id'] | //field[@name='order_line']/list/field[@name='product_id']" position="after">
 <field name="route_product_barcode" string="Barcode" optional="show"/>
 <field name="route_source_available_qty" string="Available in Vehicle" optional="show" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale'"/>
@@ -186,7 +190,7 @@
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Pricelist</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
-<field name="pricelist_id" options="{'no_create': True, 'no_open': False}"/>
+<field name="pricelist_id" readonly="route_order_mode == 'direct_sale'" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
