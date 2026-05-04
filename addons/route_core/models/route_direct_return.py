@@ -71,7 +71,7 @@ class RouteDirectReturn(models.Model):
         string="Reference Return Products",
         compute="_compute_route_reference_product_ids",
         store=False,
-        help="Products that can be returned from the selected reference sale order or delivery.",
+        help="Products found in the selected reference sale order or delivery. Open direct returns can still use other saleable products when needed.",
     )
 
     route_enable_lot_serial_tracking = fields.Boolean(
@@ -462,7 +462,7 @@ class RouteDirectReturn(models.Model):
                 if line.product_id.tracking != "none" and not (line.lot_id or line.lot_name):
                     raise UserError(
                         _(
-                            "Lot/Serial is required for tracked product %(product)s. Please open the return line and choose one of the lots sold in the reference sale/delivery."
+                            "Lot/Serial is required for tracked product %(product)s. Please open the return line and choose or type the correct lot/serial number."
                         )
                         % {"product": line.product_id.display_name}
                     )
@@ -609,7 +609,7 @@ class RouteDirectReturnLine(models.Model):
         string="Available Return Products",
         compute="_compute_route_available_product_ids",
         store=False,
-        help="Products allowed for this return line based on the reference sale order or delivery.",
+        help="Saleable products available for direct return entry. Reference products are used only to suggest price, discount, taxes, UoM, and lot defaults.",
     )
     quantity = fields.Float(string="Qty", required=True, default=1.0)
     uom_id = fields.Many2one("uom.uom", string="UoM", ondelete="restrict", required=True)
@@ -692,20 +692,15 @@ class RouteDirectReturnLine(models.Model):
         Product = self.env["product.product"]
         saleable_products = Product.search([("sale_ok", "=", True)])
         for line in self:
-            direct_return = line.return_id
-            if direct_return and direct_return._route_has_reference_return_source():
-                line.route_available_product_ids = direct_return.route_reference_product_ids
-            else:
-                line.route_available_product_ids = saleable_products
+            # Direct Return must support both reference returns and open returns.
+            # The reference sale/delivery is used to suggest price, discount, taxes, UoM, and lots,
+            # but it must not block returning older products sold in previous visits.
+            line.route_available_product_ids = saleable_products
 
     def _route_product_allowed_by_reference(self, product):
         self.ensure_one()
-        if not product:
-            return True
-        direct_return = self.return_id
-        if not direct_return or not direct_return._route_has_reference_return_source():
-            return True
-        return product in direct_return.route_reference_product_ids
+        # Kept for compatibility with older code paths. Open direct returns are allowed.
+        return True
 
     def _route_get_reference_lots(self):
         self.ensure_one()
@@ -965,6 +960,21 @@ class RouteDirectReturnLine(models.Model):
         sale_lines = orders.mapped("order_line").filtered(
             lambda l: not l.display_type and l.product_id == product
         )
+
+        # If the selected reference order/delivery does not contain this product, treat the line
+        # as an open return and try the latest historical direct-sale line for the same outlet.
+        # This keeps old-visit returns usable while still copying the best available commercial terms.
+        if not sale_lines and direct_return.outlet_id:
+            historical_orders = SaleOrder.search([
+                ("route_order_mode", "=", "direct_sale"),
+                ("route_outlet_id", "=", direct_return.outlet_id.id),
+                ("state", "not in", ["cancel"]),
+                ("order_line.product_id", "=", product.id),
+            ], order="date_order desc, id desc", limit=5)
+            sale_lines = historical_orders.mapped("order_line").filtered(
+                lambda l: not l.display_type and l.product_id == product
+            )
+
         if not sale_lines:
             return self.env["sale.order.line"]
 
@@ -1063,22 +1073,6 @@ class RouteDirectReturnLine(models.Model):
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for line in self:
-            if line.product_id and not line._route_product_allowed_by_reference(line.product_id):
-                product_name = line.product_id.display_name
-                line.product_id = False
-                line.route_product_barcode = False
-                line.uom_id = False
-                line.lot_id = False
-                line.lot_name = False
-                line.expiry_date = False
-                return {
-                    "warning": {
-                        "title": _("Product not in reference sale"),
-                        "message": _(
-                            "Product %(product)s is not part of the selected reference sale order/delivery. Direct returns should use only sold products from the reference document."
-                        ) % {"product": product_name},
-                    }
-                }
             line.route_product_barcode = line.product_id.barcode if line.product_id else False
             if line.product_id and not line.uom_id:
                 line.uom_id = line.product_id.uom_id
@@ -1132,24 +1126,22 @@ class RouteDirectReturnLine(models.Model):
             barcode = (line.route_product_barcode or "").strip()
             if not barcode or (line.product_id and barcode == (line.product_id.barcode or "")):
                 continue
-            extra_domain = [("sale_ok", "=", True)]
-            if line.return_id and line.return_id._route_has_reference_return_source():
-                allowed_products = line.return_id.route_reference_product_ids
-                extra_domain.append(("id", "in", allowed_products.ids or [0]))
-            product = Product._route_find_product_by_barcode(barcode, extra_domain=extra_domain)
+            # Do not restrict barcode lookup to the selected reference sale/delivery.
+            # Salespeople may need to return products sold in older visits.
+            product = Product._route_find_product_by_barcode(barcode, extra_domain=[("sale_ok", "=", True)])
             if product:
                 line.product_id = product
                 line.route_product_barcode = product.barcode or barcode
                 if not line.uom_id:
                     line.uom_id = product.uom_id
                 line._onchange_product_id()
-            elif line.return_id and line.return_id._route_has_reference_return_source():
+            else:
                 line.product_id = False
                 return {
                     "warning": {
-                        "title": _("Product not in reference sale"),
+                        "title": _("Product not found"),
                         "message": _(
-                            "This barcode was not found in the selected reference sale order/delivery. Choose one of the products sold in the reference document."
+                            "No saleable product was found for this barcode. Check the barcode or choose the product manually."
                         ),
                     }
                 }
@@ -1210,13 +1202,9 @@ class RouteDirectReturnLine(models.Model):
 
     @api.constrains("product_id", "return_id", "return_id.sale_order_id", "return_id.reference_picking_id")
     def _check_product_is_in_reference(self):
-        for line in self:
-            if line.product_id and not line._route_product_allowed_by_reference(line.product_id):
-                raise ValidationError(
-                    _(
-                        "Product %(product)s is not part of the selected reference sale order/delivery. Choose one of the sold products from the reference document."
-                    ) % {"product": line.product_id.display_name}
-                )
+        # Open direct returns are allowed: the selected reference sale/delivery is a pricing/lot helper,
+        # not a hard product restriction.
+        return True
 
     @api.constrains("lot_id", "product_id")
     def _check_lot_product(self):
