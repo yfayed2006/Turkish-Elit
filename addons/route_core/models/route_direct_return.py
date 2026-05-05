@@ -627,6 +627,13 @@ class RouteDirectReturnLine(models.Model):
     )
     lot_name = fields.Char(string="Manual Lot/Serial")
     expiry_date = fields.Date(string="Expiry")
+    expiry_month_label = fields.Char(
+        string="Expiry",
+        compute="_compute_expiry_month_label",
+        store=False,
+        readonly=True,
+        help="Compact year-month expiry label for the Route/PDA return card.",
+    )
     currency_id = fields.Many2one(related="return_id.company_id.currency_id", store=False, readonly=True)
     estimated_unit_price = fields.Monetary(
         string="Estimated Unit Price",
@@ -681,6 +688,12 @@ class RouteDirectReturnLine(models.Model):
     note = fields.Char(string="Line Note")
     picking_id = fields.Many2one("stock.picking", string="Generated Picking", readonly=True)
     return_reason_label = fields.Char(string="Reason Label", compute="_compute_return_reason_label")
+
+    @api.depends("expiry_date")
+    def _compute_expiry_month_label(self):
+        for line in self:
+            expiry_date = fields.Date.to_date(line.expiry_date) if line.expiry_date else False
+            line.expiry_month_label = expiry_date.strftime("%Y-%m") if expiry_date else False
 
     @api.depends(
         "return_id",
