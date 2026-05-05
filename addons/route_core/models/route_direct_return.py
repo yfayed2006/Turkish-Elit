@@ -64,7 +64,7 @@ class RouteDirectReturn(models.Model):
         compute="_compute_pricelist_id",
         store=False,
         readonly=True,
-        help="Pricelist used to price this direct return. It follows the reference sale order when available, otherwise the outlet direct-sale pricelist.",
+        help="Pricelist used to price this direct return. Open direct returns use the outlet/customer direct-sale pricelist; reference documents are kept for tracking only.",
     )
     route_reference_product_ids = fields.Many2many(
         "product.product",
