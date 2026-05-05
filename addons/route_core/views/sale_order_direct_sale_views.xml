@@ -49,11 +49,11 @@
 <field name="route_enable_direct_return" invisible="1"/>
 <field name="route_show_no_direct_return" invisible="1"/>
 </xpath>
-<!--   Keep lot/expiry fields inside the Route mobile/PDA direct-sale view only.
+<!--    Keep lot/expiry fields inside the Route mobile/PDA direct-sale view only.
      Showing route_lot_id inside the inherited standard Sales form can make
      sale.order web_read fail after confirmation for users that do not have the
      exact stock.lot lookup context/access used by the PDA flow. The actual lot
-     restriction is still applied during confirmation and delivery creation.   -->
+     restriction is still applied during confirmation and delivery creation.    -->
 </field>
 </record>
 <record id="view_sale_order_line_form_route_direct_sale" model="ir.ui.view">
@@ -132,6 +132,24 @@
 <div class="route_mobile_detail_label">Discount (%)</div>
 <div class="route_mobile_detail_value">
 <field name="discount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Untaxed Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_subtotal" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Tax Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_tax" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Total Incl. Tax</div>
+<div class="route_mobile_detail_value">
+<field name="price_total" readonly="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box">
@@ -258,7 +276,9 @@
 <field name="route_expiry_month_label" string="Expiry" readonly="1" column_invisible="parent.route_order_mode != 'direct_sale' or parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
 <field name="price_unit" string="Unit" readonly="1"/>
 <field name="discount" string="Disc. %" optional="show" readonly="1"/>
-<field name="price_subtotal" string="Subtotal" readonly="1"/>
+<field name="price_subtotal" string="Untaxed" readonly="1"/>
+<field name="price_tax" string="Tax" readonly="1" optional="show"/>
+<field name="price_total" string="Total Incl. Tax" readonly="1" optional="show"/>
 </list>
 <form string="Product">
 <sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
@@ -331,6 +351,24 @@
 <div class="route_mobile_detail_label">Discount (%)</div>
 <div class="route_mobile_detail_value">
 <field name="discount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Untaxed Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_subtotal" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Tax Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_tax" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Total Incl. Tax</div>
+<div class="route_mobile_detail_value">
+<field name="price_total" readonly="1"/>
 </div>
 </div>
 <div class="route_mobile_detail_box">
