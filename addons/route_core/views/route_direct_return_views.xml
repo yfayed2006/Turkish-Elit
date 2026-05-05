@@ -253,26 +253,26 @@
 <field name="partner_id" readonly="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card route_mobile_return_secondary_card">
 <div class="route_mobile_info_label">Salesperson</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
 <field name="user_id" readonly="1"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
+<div class="route_mobile_info_card route_mobile_return_secondary_card">
 <div class="route_mobile_info_label">Vehicle</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
 <field name="vehicle_id" readonly="state != 'draft'" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Reference Sale Order</div>
+<div class="route_mobile_info_card route_mobile_return_tracking_card">
+<div class="route_mobile_info_label">Tracking Sale Order</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
 <field name="sale_order_id" readonly="state != 'draft'" domain="[('route_order_mode', '=', 'direct_sale'), ('route_outlet_id', '=', outlet_id)]" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Reference Delivery</div>
+<div class="route_mobile_info_card route_mobile_return_tracking_card" invisible="state != 'draft' and not reference_picking_id">
+<div class="route_mobile_info_label">Tracking Delivery</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
 <field name="reference_picking_id" readonly="state != 'draft'" options="{'no_create': True, 'no_open': True}"/>
 </div>
@@ -298,9 +298,9 @@
 </div>
 <div class="route_mobile_direct_return_notice">
 <div class="route_mobile_direct_return_notice_title">Direct Return Settlement</div>
-<div class="route_mobile_direct_return_notice_text">Return prices, discounts, and taxes are calculated from this outlet's direct-sale pricelist. Reference sale order or delivery is optional and used for tracking only. The confirmed return value will reduce the current stop settlement.</div>
+<div class="route_mobile_direct_return_notice_text">Pricelist-based return. Reference sale order or delivery is optional for tracking only. Confirmed returns reduce the current stop settlement.</div>
 </div>
-<div class="route_mobile_detail_box route_mobile_detail_box_subtle">
+<div class="route_mobile_detail_box route_mobile_detail_box_subtle" invisible="state != 'draft' and not note">
 <div class="route_mobile_detail_label">Notes</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="note" placeholder="Return notes..." readonly="state != 'draft'"/>
