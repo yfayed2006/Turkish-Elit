@@ -100,6 +100,16 @@ class RoutePdaHome(models.TransientModel):
     collection_followup_count = fields.Integer(string="Collections Needing Follow-up", compute="_compute_dashboard")
     open_promise_entry_count = fields.Integer(string="Open Promise Entries", compute="_compute_dashboard")
     overdue_promise_entry_count = fields.Integer(string="Overdue Promise Entries", compute="_compute_dashboard")
+    collection_collected_today_amount = fields.Monetary(string="Collected Today", currency_field="currency_id", compute="_compute_dashboard")
+    collection_total_signal_amount = fields.Monetary(string="Collection Signal Total", currency_field="currency_id", compute="_compute_dashboard")
+    collection_cash_share_percent = fields.Float(string="Cash Share %", compute="_compute_dashboard")
+    collection_bank_share_percent = fields.Float(string="Bank Share %", compute="_compute_dashboard")
+    collection_pos_share_percent = fields.Float(string="POS Share %", compute="_compute_dashboard")
+    collection_deferred_share_percent = fields.Float(string="Promise Share %", compute="_compute_dashboard")
+    collection_direct_stop_share_percent = fields.Float(string="Direct Stop %", compute="_compute_dashboard")
+    collection_direct_sale_order_share_percent = fields.Float(string="Direct Sale Order %", compute="_compute_dashboard")
+    collection_consignment_share_percent = fields.Float(string="Consignment %", compute="_compute_dashboard")
+    collection_followup_share_percent = fields.Float(string="Follow-up %", compute="_compute_dashboard")
 
     direct_sale_cash_today_amount = fields.Monetary(string="Direct Sale Cash Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_bank_today_amount = fields.Monetary(string="Direct Sale Bank Transfer Today", currency_field="currency_id", compute="_compute_dashboard")
@@ -854,6 +864,29 @@ class RoutePdaHome(models.TransientModel):
                 else (visit.remaining_due_amount or 0.0)
                 for visit in today_visits.filtered(lambda v: v.state not in ("done", "cancel", "cancelled"))
             )
+            rec.collection_collected_today_amount = rec.cash_today_amount + rec.bank_today_amount + rec.pos_today_amount
+            rec.collection_total_signal_amount = rec.collection_collected_today_amount + rec.deferred_today_amount + rec.remaining_due_amount
+            mix_total = rec.collection_collected_today_amount + rec.deferred_today_amount
+            if mix_total:
+                rec.collection_cash_share_percent = (rec.cash_today_amount / mix_total) * 100.0
+                rec.collection_bank_share_percent = (rec.bank_today_amount / mix_total) * 100.0
+                rec.collection_pos_share_percent = (rec.pos_today_amount / mix_total) * 100.0
+                rec.collection_deferred_share_percent = (rec.deferred_today_amount / mix_total) * 100.0
+            else:
+                rec.collection_cash_share_percent = 0.0
+                rec.collection_bank_share_percent = 0.0
+                rec.collection_pos_share_percent = 0.0
+                rec.collection_deferred_share_percent = 0.0
+            flow_total = rec.visit_collection_count + rec.direct_stop_payment_count + rec.direct_sale_order_payment_count
+            if flow_total:
+                rec.collection_consignment_share_percent = (rec.visit_collection_count / flow_total) * 100.0
+                rec.collection_direct_stop_share_percent = (rec.direct_stop_payment_count / flow_total) * 100.0
+                rec.collection_direct_sale_order_share_percent = (rec.direct_sale_order_payment_count / flow_total) * 100.0
+            else:
+                rec.collection_consignment_share_percent = 0.0
+                rec.collection_direct_stop_share_percent = 0.0
+                rec.collection_direct_sale_order_share_percent = 0.0
+            rec.collection_followup_share_percent = (rec.collection_followup_count / rec.confirmed_collection_count) * 100.0 if rec.confirmed_collection_count else 0.0
 
     def action_open_today_plans(self):
         self.ensure_one()
