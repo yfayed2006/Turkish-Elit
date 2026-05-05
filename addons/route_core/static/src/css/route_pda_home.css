@@ -4811,6 +4811,40 @@
 }
 
 
+/* Direct stop summary reference open buttons */
+.route_mobile_open_reference_value {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+
+.route_mobile_open_reference_value .o_field_widget {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.route_mobile_reference_open {
+    flex: 0 0 auto;
+    border: 0 !important;
+    background: rgba(122, 76, 111, 0.10) !important;
+    color: #7a4c6f !important;
+    border-radius: 999px !important;
+    padding: 4px 12px !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    text-decoration: none !important;
+    line-height: 1.2 !important;
+}
+
+.route_mobile_reference_open:hover,
+.route_mobile_reference_open:focus {
+    background: rgba(122, 76, 111, 0.18) !important;
+    color: #5f3655 !important;
+}
+
+
 
 
 
