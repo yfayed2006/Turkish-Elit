@@ -4684,3 +4684,133 @@
 
 
 
+
+
+/* Route Core final salesperson cleanup: compact direct sale/return and completed visit mobile screens */
+@media (max-width: 767px) {
+    .route_pda_visit_nav_bar {
+        gap: 6px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .route_pda_visit_nav_btn {
+        min-height: 38px !important;
+        padding: 8px 10px !important;
+        font-size: 0.88rem !important;
+        border-radius: 11px !important;
+    }
+
+    .route_pda_visit_quick_panel {
+        gap: 8px !important;
+    }
+
+    .route_pda_visit_quick_card {
+        min-height: 72px !important;
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_pda_visit_quick_label,
+    .route_mobile_info_label,
+    .route_mobile_detail_label {
+        font-size: 0.72rem !important;
+        letter-spacing: 0.015em !important;
+    }
+
+    .route_pda_visit_quick_value,
+    .route_mobile_info_value,
+    .route_mobile_detail_value {
+        font-size: 0.98rem !important;
+        line-height: 1.25 !important;
+    }
+
+    .route_pda_visit_stage_alert {
+        padding: 10px 12px !important;
+        margin-bottom: 10px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_mobile_summary_grid,
+    .route_mobile_detail_grid,
+    .route_mobile_sale_order_sheet .route_mobile_summary_grid {
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .route_mobile_info_card,
+    .route_mobile_sale_order_top_grid .route_mobile_info_card,
+    .route_mobile_sale_totals_grid .route_mobile_info_card {
+        min-height: 78px !important;
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_mobile_detail_box {
+        padding: 10px 12px !important;
+        margin-bottom: 8px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_mobile_header_title {
+        margin-bottom: 8px !important;
+    }
+
+    .route_mobile_header_title h1 {
+        font-size: 1.75rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .route_mobile_section_header {
+        margin-top: 8px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .route_mobile_section_title {
+        margin: 10px 0 8px !important;
+        font-size: 0.96rem !important;
+    }
+
+    .route_mobile_direct_return_sheet .route_mobile_return_secondary_card {
+        display: none !important;
+    }
+
+    .route_mobile_direct_return_notice {
+        padding: 10px 12px !important;
+        margin: 8px 0 10px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_mobile_direct_return_notice_title {
+        font-size: 0.96rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .route_mobile_direct_return_notice_text {
+        font-size: 0.88rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .route_mobile_info_card_priority {
+        background: #fffafd !important;
+        border-color: #f2d9eb !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row,
+    .route_mobile_direct_return_lines_field .o_data_row {
+        margin: 10px 0 !important;
+        padding: 12px !important;
+        gap: 7px 9px !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td,
+    .route_mobile_direct_return_lines_field .o_data_row td {
+        min-height: 50px !important;
+        padding: 7px 9px !important;
+        border-radius: 13px !important;
+    }
+}
+
+
+
+
+
