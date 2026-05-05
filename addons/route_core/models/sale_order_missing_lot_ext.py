@@ -27,6 +27,13 @@ class SaleOrderLine(models.Model):
         readonly=True,
         store=False,
     )
+    route_expiry_month_label = fields.Char(
+        string="Expiry",
+        compute="_compute_route_expiry_month_label",
+        store=False,
+        readonly=True,
+        help="Compact year-month expiry label for the Route/PDA product card.",
+    )
     route_available_product_ids = fields.Many2many(
         "product.product",
         string="Available Vehicle Products",
@@ -45,6 +52,17 @@ class SaleOrderLine(models.Model):
         digits="Product Unit of Measure",
         store=False,
     )
+
+
+    @api.depends("route_expiry_date")
+    def _compute_route_expiry_month_label(self):
+        for line in self:
+            expiry = line.route_expiry_date
+            if not expiry:
+                line.route_expiry_month_label = False
+                continue
+            expiry_dt = fields.Datetime.to_datetime(expiry)
+            line.route_expiry_month_label = expiry_dt.strftime("%Y-%m") if expiry_dt else False
 
 
     def _route_get_line_uom(self):
