@@ -1,4 +1,5 @@
 import re
+from dateutil.relativedelta import relativedelta
 from urllib.parse import quote
 
 from odoo import _, api, fields, models
@@ -41,6 +42,19 @@ class RouteVisit(models.Model):
     )
     visit_execution_mode_label = fields.Char(
         compute="_compute_visit_execution_mode",
+        store=False,
+    )
+    visit_history_time_bucket = fields.Selection(
+        [
+            ("today", "Today"),
+            ("last_7_days", "Last 7 Days"),
+            ("last_30_days", "Last 30 Days"),
+            ("this_month", "This Month"),
+            ("older", "Older"),
+        ],
+        string="Visit Time",
+        compute="_compute_visit_history_time_bucket",
+        search="_search_visit_history_time_bucket",
         store=False,
     )
     ux_stage = fields.Selection(
@@ -371,6 +385,51 @@ class RouteVisit(models.Model):
                     "limit": limit_amount,
                     "over": max(current_shelf_value - limit_amount, 0.0),
                 }
+
+    @api.depends("date")
+    def _compute_visit_history_time_bucket(self):
+        today = fields.Date.context_today(self)
+        first_day = today.replace(day=1)
+        for rec in self:
+            visit_date = rec.date
+            if not visit_date:
+                rec.visit_history_time_bucket = False
+            elif visit_date == today:
+                rec.visit_history_time_bucket = "today"
+            elif visit_date >= today - relativedelta(days=6):
+                rec.visit_history_time_bucket = "last_7_days"
+            elif visit_date >= today - relativedelta(days=29):
+                rec.visit_history_time_bucket = "last_30_days"
+            elif visit_date >= first_day:
+                rec.visit_history_time_bucket = "this_month"
+            else:
+                rec.visit_history_time_bucket = "older"
+
+    def _search_visit_history_time_bucket(self, operator, value):
+        today = fields.Date.context_today(self)
+        if operator not in ("=", "in"):
+            return []
+        values = value if isinstance(value, (list, tuple, set)) else [value]
+        domains = []
+        for bucket in values:
+            if bucket == "today":
+                domains.append([("date", "=", today)])
+            elif bucket == "last_7_days":
+                domains.append([("date", ">=", today - relativedelta(days=6))])
+            elif bucket == "last_30_days":
+                domains.append([("date", ">=", today - relativedelta(days=29))])
+            elif bucket == "this_month":
+                domains.append([("date", ">=", today.replace(day=1))])
+            elif bucket == "older":
+                domains.append([("date", "<", today - relativedelta(days=29))])
+        if not domains:
+            return []
+        if len(domains) == 1:
+            return domains[0]
+        result = ["|"] * (len(domains) - 1)
+        for domain in domains:
+            result += domain
+        return result
 
     @api.depends("route_operation_mode", "outlet_operation_mode")
     def _compute_visit_execution_mode(self):
