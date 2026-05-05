@@ -857,19 +857,19 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Sale</div>
+<div class="route_mobile_info_label">Sale Total</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_sales_total" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Returns</div>
+<div class="route_mobile_info_label">Return Total</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_returns_total" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Net</div>
+<div class="route_mobile_info_label">Net Due</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
 </div>
@@ -887,7 +887,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining After Collection</div>
+<div class="route_mobile_info_label">Remaining</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -930,13 +930,13 @@
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
 <div class="route_mobile_detail_label">Visit Process State</div>
 <div class="route_mobile_detail_value">
 <field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </div>
 </div>
-<div class="route_mobile_detail_box">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
 <div class="route_mobile_detail_label">Current Step</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -1035,7 +1035,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining After Collection</div>
+<div class="route_mobile_info_label">Remaining</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
