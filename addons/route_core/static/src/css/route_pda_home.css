@@ -4685,163 +4685,222 @@
 
 
 
-
-/* Route Core final salesperson cleanup: compact direct sale/return and completed visit mobile screens */
-@media (max-width: 767px) {
-    .route_pda_visit_nav_bar {
-        gap: 6px !important;
-        margin-bottom: 8px !important;
-    }
-
-    .route_pda_visit_nav_btn {
-        min-height: 38px !important;
-        padding: 8px 10px !important;
-        font-size: 0.88rem !important;
-        border-radius: 11px !important;
-    }
-
-    .route_pda_visit_quick_panel {
-        gap: 8px !important;
-    }
-
-    .route_pda_visit_quick_card {
-        min-height: 72px !important;
-        padding: 10px 12px !important;
-        border-radius: 14px !important;
-    }
-
-    .route_pda_visit_quick_label,
-    .route_mobile_info_label,
-    .route_mobile_detail_label {
-        font-size: 0.72rem !important;
-        letter-spacing: 0.015em !important;
-    }
-
-    .route_pda_visit_quick_value,
-    .route_mobile_info_value,
-    .route_mobile_detail_value {
-        font-size: 0.98rem !important;
-        line-height: 1.25 !important;
-    }
-
-    .route_pda_visit_stage_alert {
-        padding: 10px 12px !important;
-        margin-bottom: 10px !important;
-        border-radius: 14px !important;
-    }
-
-    .route_mobile_summary_grid,
-    .route_mobile_detail_grid,
-    .route_mobile_sale_order_sheet .route_mobile_summary_grid {
-        gap: 8px !important;
-        margin-bottom: 10px !important;
-    }
-
-    .route_mobile_info_card,
-    .route_mobile_sale_order_top_grid .route_mobile_info_card,
-    .route_mobile_sale_totals_grid .route_mobile_info_card {
-        min-height: 78px !important;
-        padding: 10px 12px !important;
-        border-radius: 14px !important;
-    }
-
-    .route_mobile_detail_box {
-        padding: 10px 12px !important;
-        margin-bottom: 8px !important;
-        border-radius: 14px !important;
-    }
-
-    .route_mobile_header_title {
-        margin-bottom: 8px !important;
-    }
-
-    .route_mobile_header_title h1 {
-        font-size: 1.75rem !important;
-        margin-bottom: 6px !important;
-    }
-
-    .route_mobile_section_header {
-        margin-top: 8px !important;
-        margin-bottom: 8px !important;
-    }
-
-    .route_mobile_section_title {
-        margin: 10px 0 8px !important;
-        font-size: 0.96rem !important;
-    }
-
-    .route_mobile_direct_return_sheet .route_mobile_return_secondary_card {
-        display: none !important;
-    }
-
-    .route_mobile_direct_return_notice {
-        padding: 10px 12px !important;
-        margin: 8px 0 10px !important;
-        border-radius: 14px !important;
-    }
-
-    .route_mobile_direct_return_notice_title {
-        font-size: 0.96rem !important;
-        margin-bottom: 4px !important;
-    }
-
-    .route_mobile_direct_return_notice_text {
-        font-size: 0.88rem !important;
-        line-height: 1.35 !important;
-    }
-
-    .route_mobile_info_card_priority {
-        background: #fffafd !important;
-        border-color: #f2d9eb !important;
-    }
-
-    .route_mobile_direct_products_field .o_data_row,
-    .route_mobile_direct_return_lines_field .o_data_row {
-        margin: 10px 0 !important;
-        padding: 12px !important;
-        gap: 7px 9px !important;
-    }
-
-    .route_mobile_direct_products_field .o_data_row td,
-    .route_mobile_direct_return_lines_field .o_data_row td {
-        min-height: 50px !important;
-        padding: 7px 9px !important;
-        border-radius: 13px !important;
-    }
+/* My Visit History - mobile card redesign */
+.route_visit_history_kanban {
+    padding: 10px !important;
+    background: #f8fafc !important;
 }
 
-
-/* Direct stop summary reference open buttons */
-.route_mobile_open_reference_value {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
+.route_visit_history_kanban .o_kanban_renderer,
+.route_visit_history_kanban .o_kanban_record {
+    --route-history-accent: #7d4d71;
 }
 
-.route_mobile_open_reference_value .o_field_widget {
-    min-width: 0;
-    flex: 1 1 auto;
+.route_visit_history_card {
+    border: 1px solid #e5e7eb !important;
+    border-left: 5px solid #0ea5a8 !important;
+    border-radius: 20px !important;
+    padding: 16px !important;
+    margin: 10px 0 !important;
+    background: #ffffff !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .08) !important;
 }
 
-.route_mobile_reference_open {
-    flex: 0 0 auto;
-    border: 0 !important;
-    background: rgba(122, 76, 111, 0.10) !important;
-    color: #7a4c6f !important;
-    border-radius: 999px !important;
-    padding: 4px 12px !important;
-    font-size: 0.78rem !important;
-    font-weight: 800 !important;
-    text-decoration: none !important;
+.route_visit_history_card_head,
+.route_visit_history_location_row {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+}
+
+.route_visit_history_ref {
+    color: #0f766e !important;
+    font-size: 1.05rem !important;
+    font-weight: 950 !important;
     line-height: 1.2 !important;
 }
 
-.route_mobile_reference_open:hover,
-.route_mobile_reference_open:focus {
-    background: rgba(122, 76, 111, 0.18) !important;
-    color: #5f3655 !important;
+.route_visit_history_date,
+.route_visit_history_subline,
+.route_visit_history_location_meta,
+.route_visit_history_reason {
+    color: #64748b !important;
+    font-size: .9rem !important;
+    font-weight: 700 !important;
+}
+
+.route_visit_history_outlet {
+    margin-top: 10px !important;
+    color: #111827 !important;
+    font-size: 1.25rem !important;
+    font-weight: 950 !important;
+    line-height: 1.25 !important;
+}
+
+.route_visit_history_subline {
+    display: flex !important;
+    gap: 7px !important;
+    flex-wrap: wrap !important;
+    margin-top: 4px !important;
+}
+
+.route_visit_history_dot {
+    color: #94a3b8 !important;
+}
+
+.route_visit_history_badges {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 6px !important;
+}
+
+.route_visit_history_badge,
+.route_visit_history_location_status {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 999px !important;
+    padding: 6px 10px !important;
+    font-size: .78rem !important;
+    font-weight: 950 !important;
+    white-space: nowrap !important;
+}
+
+.route_visit_history_badge_done,
+.route_visit_history_location_inside {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+}
+
+.route_visit_history_badge_cancelled,
+.route_visit_history_location_outside {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+.route_visit_history_badge_active {
+    background: #dbeafe !important;
+    color: #1d4ed8 !important;
+}
+
+.route_visit_history_badge_pending,
+.route_visit_history_location_pending {
+    background: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+.route_visit_history_mini_grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-top: 14px !important;
+}
+
+.route_visit_history_metric {
+    min-height: 64px !important;
+    border-radius: 16px !important;
+    background: #f8fafc !important;
+    padding: 10px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.route_visit_history_label {
+    color: #64748b !important;
+    font-size: .74rem !important;
+    font-weight: 950 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .03em !important;
+}
+
+.route_visit_history_value {
+    color: #0f172a !important;
+    font-size: 1rem !important;
+    font-weight: 950 !important;
+    margin-top: 4px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.route_visit_history_metric_money .route_visit_history_value {
+    color: #7d4d71 !important;
+}
+
+.route_visit_history_location_block {
+    margin-top: 12px !important;
+    border-radius: 16px !important;
+    background: #f1f5f9 !important;
+    padding: 12px !important;
+}
+
+.route_visit_history_location_meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
+}
+
+.route_visit_history_location_meta span,
+.route_visit_history_reason {
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    padding: 6px 8px !important;
+}
+
+.route_visit_history_reason {
+    margin-top: 8px !important;
+    color: #7c2d12 !important;
+    background: #fff7ed !important;
+}
+
+.route_visit_history_actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+}
+
+.route_visit_history_action_main,
+.route_visit_history_action {
+    border-radius: 14px !important;
+    font-weight: 950 !important;
+    min-height: 42px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+}
+
+.route_visit_history_action_main {
+    grid-column: 1 / -1 !important;
+    background: #7d4d71 !important;
+    border-color: #7d4d71 !important;
+}
+
+@media (max-width: 767.98px) {
+    .route_visit_history_kanban .o_kanban_record {
+        width: 100% !important;
+    }
+
+    .route_visit_history_kanban .o_kanban_renderer {
+        padding: 0 10px 18px !important;
+    }
+
+    .route_visit_history_mini_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .route_visit_history_actions {
+        grid-template-columns: 1fr !important;
+    }
+
+    .route_visit_history_action_main {
+        grid-column: auto !important;
+    }
 }
 
 
