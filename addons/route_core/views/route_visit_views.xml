@@ -171,6 +171,7 @@
 <button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_open_whatsapp_share_wizard" string="Share Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
@@ -552,6 +553,7 @@
 <button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
+<button name="action_open_whatsapp_share_wizard" string="Share Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
 <field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
 </header>
 <sheet>
