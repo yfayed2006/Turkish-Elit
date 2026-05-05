@@ -1,5 +1,5 @@
 <odoo>
-<!--                  Admin / all payments                  -->
+<!--                   Admin / all payments                   -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -16,6 +16,7 @@
 <field name="salesperson_id"/>
 <field name="payment_date"/>
 <field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -30,7 +31,7 @@
 </list>
 </field>
 </record>
-<!--                  Tailored visit list                  -->
+<!--                   Tailored visit list                   -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -40,6 +41,7 @@
 <field name="source_document_ref" string="Document"/>
 <field name="outlet_id"/>
 <field name="payment_date"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Collection"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
@@ -50,7 +52,7 @@
 </list>
 </field>
 </record>
-<!--                  Tailored direct sale list                  -->
+<!--                   Tailored direct sale list                   -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -62,6 +64,7 @@
 <field name="area_id" optional="hide"/>
 <field name="salesperson_id" optional="hide"/>
 <field name="payment_date"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Collection"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
@@ -83,6 +86,7 @@
 <field name="arch" type="xml">
 <kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
 <field name="payment_date"/>
+<field name="collection_time_bucket"/>
 <field name="payment_business_flow"/>
 <field name="payment_business_flow_short"/>
 <field name="payment_mode"/>
@@ -384,7 +388,7 @@
 </form>
 </field>
 </record>
-<!--                  Admin / all payments search                  -->
+<!--                   Admin / all payments search                   -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -399,6 +403,7 @@
 <field name="area_id"/>
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -434,6 +439,7 @@
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
 <searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="source_type" string="Source Type"/>
 <field name="outlet_id" string="Outlet"/>
@@ -446,7 +452,7 @@
 </search>
 </field>
 </record>
-<!--                  Visit collections search                  -->
+<!--                   Visit collections search                   -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -458,12 +464,20 @@
 <field name="area_id"/>
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="state"/>
 <field name="source_document_ref" string="Visit"/>
 <filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
+<separator/>
+<filter name="filter_collection_today" string="Today" domain="[('collection_time_bucket', '=', 'today')]"/>
+<filter name="filter_collection_last_7_days" string="Last 7 Days" domain="[('collection_time_bucket', '=', 'last_7_days')]"/>
+<filter name="filter_collection_last_30_days" string="Last 30 Days" domain="[('collection_time_bucket', '=', 'last_30_days')]"/>
+<filter name="filter_collection_this_month" string="This Month" domain="[('collection_time_bucket', '=', 'this_month')]"/>
+<filter name="filter_collection_older" string="Older" domain="[('collection_time_bucket', '=', 'older')]"/>
+<separator/>
 <filter name="filter_consignment" string="Consignment" domain="[('payment_business_flow', '=', 'consignment_visit')]"/>
 <filter name="filter_direct_stop" string="Direct Stop" domain="[('payment_business_flow', '=', 'direct_stop')]"/>
 <filter name="filter_direct_sale_order" string="Direct Sale Order" domain="[('payment_business_flow', '=', 'direct_sale_order')]"/>
@@ -482,6 +496,7 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
+<filter name="group_by_collection_time" string="Collection Time" domain="[]" context="{'group_by': 'collection_time_bucket'}"/>
 <filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
@@ -489,6 +504,7 @@
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="payment_mode" string="Mode"/>
@@ -497,7 +513,7 @@
 </search>
 </field>
 </record>
-<!--                  Direct sale payments search                  -->
+<!--                   Direct sale payments search                   -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -508,6 +524,7 @@
 <field name="area_id"/>
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -530,6 +547,7 @@
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
 <separator/>
+<filter name="group_by_collection_time" string="Collection Time" domain="[]" context="{'group_by': 'collection_time_bucket'}"/>
 <filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
@@ -537,6 +555,7 @@
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="payment_mode" string="Mode"/>
