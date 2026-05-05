@@ -26,11 +26,11 @@
 <div class="route_mobile_info_label">Return Total Incl. Tax</div>
 </xpath>
 <xpath expr="//field[@name='line_ids']//*[self::list or self::tree]/field[@name='estimated_amount']" position="attributes">
-<attribute name="string">Untaxed</attribute>
+<attribute name="string">Return Total</attribute>
 </xpath>
-<xpath expr="//field[@name='line_ids']//*[self::list or self::tree]/field[@name='estimated_amount']" position="after">
+<xpath expr="//field[@name='line_ids']//*[self::list or self::tree]/field[@name='estimated_amount']" position="before">
+<field name="estimated_untaxed_amount" string="Untaxed" readonly="1" optional="show"/>
 <field name="estimated_tax_amount" string="Tax" readonly="1" optional="show"/>
-<field name="estimated_total_amount" string="Total Incl. Tax" readonly="1" optional="show"/>
 </xpath>
 </field>
 </record>
@@ -41,19 +41,19 @@
 <field name="priority" eval="260"/>
 <field name="arch" type="xml">
 <xpath expr="//field[@name='estimated_amount']/ancestor::div[contains(@class, 'route_mobile_info_card')][1]/div[contains(@class, 'route_mobile_info_label')]" position="replace">
-<div class="route_mobile_info_label">Untaxed Amount</div>
+<div class="route_mobile_info_label">Return Total</div>
 </xpath>
-<xpath expr="//field[@name='estimated_amount']/ancestor::div[contains(@class, 'route_mobile_info_card')][1]" position="after">
+<xpath expr="//field[@name='estimated_amount']/ancestor::div[contains(@class, 'route_mobile_info_card')][1]" position="before">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Untaxed Amount</div>
+<div class="route_mobile_info_value">
+<field name="estimated_untaxed_amount" readonly="1"/>
+</div>
+</div>
 <div class="route_mobile_info_card">
 <div class="route_mobile_info_label">Tax Amount</div>
 <div class="route_mobile_info_value">
 <field name="estimated_tax_amount" readonly="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Total Incl. Tax</div>
-<div class="route_mobile_info_value">
-<field name="estimated_total_amount" readonly="1"/>
 </div>
 </div>
 </xpath>
@@ -61,5 +61,7 @@
 <div class="route_mobile_info_label">Taxes</div>
 </xpath>
 </field>
+</record>
+</odoo>
 </record>
 </odoo>
