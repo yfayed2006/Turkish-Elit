@@ -54,8 +54,8 @@ class RouteVisit(models.Model):
         ],
         string="Visit Time",
         compute="_compute_visit_history_time_bucket",
-        search="_search_visit_history_time_bucket",
         store=True,
+        index=True,
         readonly=True,
     )
     ux_stage = fields.Selection(
