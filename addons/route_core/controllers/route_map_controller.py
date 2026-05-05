@@ -169,10 +169,25 @@ class RouteMapFrameController(http.Controller):
         return getattr(visit, "geo_checkin_status", False) or getattr(visit, "geo_review_state", False) or ""
 
     def _visit_mode_label(self, visit):
+        # Route map cards must show the operational execution flow, not the
+        # recommended/planning visit mode.  Direct Sales stops can still have
+        # visit_mode = "regular", so reading visit_mode first made the map card
+        # display "Regular Visit" while the visit summary/receipt correctly
+        # displayed "Direct Sales Stop".
+        execution_mode = getattr(visit, "visit_execution_mode", False)
+        if execution_mode == "direct_sales":
+            return getattr(visit, "visit_execution_mode_label", False) or _("Direct Sales Stop")
+
+        outlet = visit.outlet_id
+        outlet_mode = getattr(outlet, "outlet_operation_mode", False) if outlet else False
+        if outlet_mode in ("direct_sale", "direct_sales"):
+            return _("Direct Sales Stop")
+
+        # For non-direct stops keep the previous behavior so regular/collection
+        # recommendations remain visible where they are meaningful.
         for field_name in ("visit_mode", "operation_mode", "outlet_operation_mode"):
             if field_name in visit._fields and visit[field_name]:
                 return self._field_label(visit, field_name)
-        outlet = visit.outlet_id
         if outlet and "outlet_operation_mode" in outlet._fields and outlet.outlet_operation_mode:
             return self._field_label(outlet, "outlet_operation_mode")
         return "Visit"
