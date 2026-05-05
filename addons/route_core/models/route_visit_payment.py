@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from markupsafe import escape
 
 from odoo import _, api, fields, models
@@ -121,6 +123,21 @@ class RouteVisitPayment(models.Model):
         default=fields.Datetime.now,
         required=True,
     )
+    collection_time_bucket = fields.Selection(
+        [
+            ("today", "Today"),
+            ("last_7_days", "Last 7 Days"),
+            ("last_30_days", "Last 30 Days"),
+            ("this_month", "This Month"),
+            ("older", "Older"),
+        ],
+        string="Collection Time",
+        compute="_compute_collection_time_bucket",
+        store=True,
+        index=True,
+        readonly=True,
+    )
+
 
     payment_mode = fields.Selection(
         [
@@ -243,6 +260,31 @@ class RouteVisitPayment(models.Model):
         compute="_compute_visit_remaining_due",
         store=False,
     )
+
+    @api.depends("payment_date")
+    def _compute_collection_time_bucket(self):
+        today = fields.Date.context_today(self)
+        first_day = today.replace(day=1)
+        for rec in self:
+            if not rec.payment_date:
+                rec.collection_time_bucket = False
+                continue
+            payment_dt = rec.payment_date
+            if isinstance(payment_dt, str):
+                payment_dt = fields.Datetime.to_datetime(payment_dt)
+            payment_date = fields.Date.to_date(payment_dt)
+            if not payment_date:
+                rec.collection_time_bucket = False
+            elif payment_date == today:
+                rec.collection_time_bucket = "today"
+            elif payment_date >= today - timedelta(days=6):
+                rec.collection_time_bucket = "last_7_days"
+            elif payment_date >= today - timedelta(days=29):
+                rec.collection_time_bucket = "last_30_days"
+            elif payment_date >= first_day:
+                rec.collection_time_bucket = "this_month"
+            else:
+                rec.collection_time_bucket = "older"
 
     def name_get(self):
         result = []
