@@ -235,16 +235,32 @@ class RouteMapFrameController(http.Controller):
         currency = getattr(visit, "currency_id", False) or request.env.company.currency_id
         lat = self._safe_float(getattr(outlet, "geo_latitude", 0.0)) if outlet else 0.0
         lng = self._safe_float(getattr(outlet, "geo_longitude", 0.0)) if outlet else 0.0
-        due_now = self._first_field_value(
-            visit,
-            ("current_visit_remaining", "visit_remaining_amount", "amount_due", "total_outlet_due", "outlet_due_amount"),
-            0.0,
-        )
-        remaining = self._first_field_value(
-            visit,
-            ("current_visit_remaining", "visit_remaining_amount", "remaining_amount", "amount_due"),
-            0.0,
-        )
+        if getattr(visit, "visit_execution_mode", False) == "direct_sales":
+            # For direct sales stops, the map must use the same settlement figures
+            # shown in Visit Summary / Visit History.  Older generic fields can be
+            # zero after the balance is covered by a promise, which made the map
+            # popup show Due = 0 even when the visit net due was still visible.
+            due_now = self._first_field_value(
+                visit,
+                ("direct_stop_grand_due_amount", "net_due_amount", "direct_stop_current_net_amount", "remaining_due_amount"),
+                0.0,
+            )
+            remaining = self._first_field_value(
+                visit,
+                ("direct_stop_immediate_remaining_amount", "direct_stop_settlement_remaining_amount", "remaining_due_amount"),
+                0.0,
+            )
+        else:
+            due_now = self._first_field_value(
+                visit,
+                ("net_due_amount", "visit_remaining_amount", "amount_due", "total_outlet_due", "outlet_due_amount"),
+                0.0,
+            )
+            remaining = self._first_field_value(
+                visit,
+                ("remaining_due_amount", "current_visit_remaining", "visit_remaining_amount", "remaining_amount", "amount_due"),
+                0.0,
+            )
         return {
             "id": visit.id,
             "index": index,
@@ -1160,7 +1176,7 @@ body {
         <div class="route-card-metrics">
             <div class="route-metric"><div class="route-metric-label">Mode</div><div class="route-metric-value">%(mode)s</div></div>
             <div class="route-metric"><div class="route-metric-label">Area</div><div class="route-metric-value">%(area)s</div></div>
-            <div class="route-metric"><div class="route-metric-label">Due Now</div><div class="route-metric-value">%(due_now)s</div></div>
+            <div class="route-metric"><div class="route-metric-label">Net Due</div><div class="route-metric-value">%(due_now)s</div></div>
             <div class="route-metric"><div class="route-metric-label">Remaining</div><div class="route-metric-value">%(remaining)s</div></div>
             <div class="route-metric" style="grid-column:1/-1;"><div class="route-metric-label">Current Step</div><div class="route-metric-value">%(current_step)s</div></div>
         </div>
@@ -1235,7 +1251,8 @@ function popupHtml(visit) {
     return `<div class="route-popup-title">${esc(visit.outlet)}</div>
         <div class="route-popup-ref">${esc(visit.name)} · ${esc(visit.date)}</div>
         <div><strong>Step:</strong> ${esc(visit.current_step || visit.status)}</div>
-        <div><strong>Due:</strong> ${esc(visit.due_now)}</div>
+        <div><strong>Net Due:</strong> ${esc(visit.due_now)}</div>
+        <div><strong>Remaining:</strong> ${esc(visit.remaining)}</div>
         <div class="route-popup-actions">
             <a class="route-btn primary" target="_top" href="${esc(visit.openUrl)}">${visit.bucket === 'done' ? 'Summary' : 'Open Visit'}</a>
             <a class="route-btn" target="_blank" rel="noopener" href="${esc(mapLink)}">Navigate</a>
