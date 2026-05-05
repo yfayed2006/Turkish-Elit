@@ -4904,6 +4904,67 @@
 }
 
 
+/* My Visit History - refinement: cleaner cards, hidden empty location, reference open buttons */
+.route_visit_history_card {
+    padding: 18px !important;
+    border-radius: 22px !important;
+}
+.route_visit_history_card .route_visit_history_outlet {
+    margin-top: 12px !important;
+    font-size: 1.32rem !important;
+}
+.route_visit_history_mini_grid {
+    gap: 9px !important;
+}
+.route_visit_history_metric {
+    min-height: 58px !important;
+    padding: 9px 11px !important;
+}
+.route_visit_history_metric .route_visit_history_value {
+    font-size: .96rem !important;
+    line-height: 1.2 !important;
+}
+.route_visit_history_location_block:empty {
+    display: none !important;
+}
+.route_visit_history_actions {
+    margin-top: 12px !important;
+}
+.route_visit_history_action_main {
+    min-height: 44px !important;
+}
+.route_mobile_open_reference_value {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+.route_mobile_reference_open {
+    border-radius: 999px !important;
+    padding: 5px 12px !important;
+    background: #f3e8f1 !important;
+    color: #7d4d71 !important;
+    font-weight: 950 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+.route_mobile_reference_open:hover {
+    background: #ead7e6 !important;
+    color: #5d3554 !important;
+}
+@media (max-width: 767.98px) {
+    .route_visit_history_card {
+        margin: 8px 0 12px !important;
+    }
+    .route_visit_history_mini_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .route_visit_history_metric {
+        border-radius: 15px !important;
+    }
+}
+
+
 
 
 
