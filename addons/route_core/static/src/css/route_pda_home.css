@@ -4964,6 +4964,57 @@
     }
 }
 
+/* My Visit History mobile refinement - stacked summary reference buttons */
+.route_mobile_reference_stack {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+}
+.route_mobile_reference_number {
+    display: block !important;
+    width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    line-height: 1.25 !important;
+}
+.route_mobile_reference_open_full {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: flex-start !important;
+    min-height: 34px !important;
+    max-width: 100% !important;
+}
+@media (max-width: 767.98px) {
+    .route_mobile_reference_open_full {
+        width: 100% !important;
+        align-self: stretch !important;
+        margin-top: 2px !important;
+    }
+    .route_mobile_detail_box:has(.route_mobile_reference_stack) {
+        min-height: 142px !important;
+    }
+    .route_visit_history_card {
+        padding: 18px 16px !important;
+        border-radius: 22px !important;
+    }
+    .route_visit_history_ref {
+        font-size: 1.18rem !important;
+    }
+    .route_visit_history_outlet {
+        font-size: 1.34rem !important;
+    }
+    .route_visit_history_actions {
+        gap: 8px !important;
+    }
+    .route_visit_history_action_main,
+    .route_visit_history_action {
+        border-radius: 16px !important;
+    }
+}
+
 
 
 
