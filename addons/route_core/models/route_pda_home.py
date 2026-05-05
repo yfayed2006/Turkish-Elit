@@ -998,7 +998,7 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_history_salesperson",
             name="My Visit History",
             domain=[("user_id", "=", self.env.user.id), ("state", "in", ["done", "cancel", "cancelled"])],
-            context={"search_default_filter_last_30_days": 1, "create": 0, "edit": 0, "delete": 0, "route_history_mobile_mode": 1},
+            context={"search_default_filter_today": 1, "create": 0, "edit": 0, "delete": 0, "route_history_mobile_mode": 1},
         )
         action["view_mode"] = "kanban,list,form"
         action["views"] = [
