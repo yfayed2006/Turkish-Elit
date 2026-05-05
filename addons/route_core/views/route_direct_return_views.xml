@@ -96,6 +96,7 @@
 <field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="available_lot_ids" invisible="1"/>
 <field name="route_product_image_128" invisible="1"/>
+<field name="route_available_product_ids" invisible="1"/>
 <div class="route_mobile_product_image_preview" invisible="not product_id">
 <field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
 </div>
@@ -109,7 +110,7 @@
 <div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
-<field name="product_id" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': True}"/>
+<field name="product_id" domain="[('id', 'in', route_available_product_ids)]" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
@@ -198,7 +199,7 @@
 <header>
 <button name="action_route_direct_return_back_to_visit" type="object" string="Back to Visit" class="btn-secondary" invisible="not visit_id"/>
 <button name="action_back_to_outlet_form" type="object" string="Back to Outlet" class="btn-secondary" invisible="visit_id or (not outlet_id and not context.get('route_outlet_back_id'))"/>
-<button name="action_create_pickings" type="object" string="Create Return Pickings" class="btn-primary" invisible="state != 'draft' or route_enable_direct_return == False"/>
+<button name="action_create_pickings" type="object" string="Confirm Return" class="btn-primary" invisible="state != 'draft' or route_enable_direct_return == False"/>
 <button name="action_view_pickings" type="object" string="View Pickings" class="btn-secondary" invisible="picking_count == 0"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,done,cancel"/>
 </header>
@@ -271,6 +272,10 @@
 </div>
 </div>
 </div>
+<div class="route_mobile_direct_return_notice">
+<div class="route_mobile_direct_return_notice_title">Direct Return Settlement</div>
+<div class="route_mobile_direct_return_notice_text">Return prices, discounts, and taxes are copied from the reference sale when possible. Otherwise Route Core uses the outlet/direct-sale pricelist. The confirmed return value will reduce the current stop settlement.</div>
+</div>
 <div class="route_mobile_detail_box route_mobile_detail_box_subtle">
 <div class="route_mobile_detail_label">Notes</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
@@ -285,6 +290,7 @@
 </div>
 <field name="line_ids" nolabel="1" readonly="state != 'draft'" class="route_mobile_direct_return_lines_field">
 <list editable="bottom" string="Return Lines" create="1" delete="1" class="route_mobile_return_line_list">
+<field name="route_available_product_ids" column_invisible="1"/>
 <field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
 <field name="product_id" string="Product" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': True}"/>
 <field name="route_product_barcode" string="Barcode" optional="show"/>
@@ -292,14 +298,14 @@
 <field name="uom_id" string="UoM" options="{'no_create': True, 'no_open': True}"/>
 <field name="available_lot_ids" column_invisible="1"/>
 <field name="lot_id" string="Lot/Serial" domain="[('id', 'in', available_lot_ids)]" options="{'no_create': True, 'no_open': True}" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="show"/>
-<field name="lot_name" string="Manual Lot/Serial" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="show"/>
+<field name="lot_name" string="Manual Lot/Serial" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="hide"/>
 <field name="expiry_date" string="Expiry" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
 <field name="return_reason" string="Reason"/>
 <field name="destination_location_id" string="Destination" optional="hide"/>
 <field name="estimated_unit_price" string="Unit Price" readonly="1"/>
 <field name="reference_discount" string="Disc. %" readonly="1" optional="show"/>
 <field name="route_reference_tax_ids" string="Taxes" widget="many2many_tags" readonly="1" optional="hide"/>
-<field name="estimated_amount" string="Amount" readonly="1"/>
+<field name="estimated_amount" string="Return Amount" readonly="1"/>
 </list>
 <form string="Return Product">
 <sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
@@ -309,6 +315,7 @@
 <field name="route_enable_expiry_tracking" invisible="1"/>
 <field name="available_lot_ids" invisible="1"/>
 <field name="route_product_image_128" invisible="1"/>
+<field name="route_available_product_ids" invisible="1"/>
 <div class="route_mobile_product_image_preview" invisible="not product_id">
 <field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
 </div>
@@ -322,7 +329,7 @@
 <div class="route_mobile_info_card route_mobile_info_card_full">
 <div class="route_mobile_info_label">Product</div>
 <div class="route_mobile_info_value route_mobile_wrap_value">
-<field name="product_id" domain="[('sale_ok', '=', True)]" options="{'no_create': True, 'no_open': True}"/>
+<field name="product_id" domain="[('id', 'in', route_available_product_ids)]" options="{'no_create': True, 'no_open': True}"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
