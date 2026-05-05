@@ -849,7 +849,7 @@
 <div class="route_collection_panel_head">
 <div>
 <div class="route_collection_panel_title">Payment Mix</div>
-<div class="route_collection_panel_subtitle">Today’s collected and deferred value by payment channel.</div>
+<div class="route_collection_panel_subtitle">Payment channel share; amounts are already summarized above.</div>
 </div>
 </div>
 <div class="route_collection_mix_rows route_collection_mix_cards">
