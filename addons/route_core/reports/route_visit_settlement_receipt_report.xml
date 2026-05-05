@@ -1,4 +1,3 @@
-<odoo>
 <record id="paperformat_route_visit_settlement_receipt" model="report.paperformat">
 <field name="name">Direct Stop Settlement Receipt</field>
 <field name="default" eval="False"/>
@@ -68,6 +67,7 @@
 <div t-if="doc.company_id.logo" style="margin-bottom:12px;">
 <img t-att-src="image_data_uri(doc.company_id.logo)" style="max-height:52px; max-width:150px; object-fit:contain;" alt="Company Logo"/>
 </div>
+<div t-else="" style="font-size:16px; font-weight:700; color:#0f766e; margin-bottom:12px;" t-esc="doc.company_id.name or 'Route Core'"/>
 <div style="display:inline-block; text-align:left; min-width:190px; border:1px solid #dbe3ec; background:#ffffff; padding:10px 12px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:4px;">Receipt Meta</div>
 <div style="font-size:12px; margin-bottom:4px;">
@@ -297,38 +297,42 @@ Policy:
 </div>
 <div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
 <div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Sold Products</div>
-<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9.8px;">
 <colgroup>
-<col style="width:14%;"/>
-<col style="width:38%;"/>
-<col style="width:9%;"/>
-<col style="width:10%;"/>
 <col style="width:12%;"/>
+<col style="width:34%;"/>
+<col style="width:7%;"/>
 <col style="width:8%;"/>
 <col style="width:9%;"/>
+<col style="width:7%;"/>
+<col style="width:8%;"/>
+<col style="width:7%;"/>
+<col style="width:8%;"/>
 </colgroup>
 <thead>
 <tr>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order</th>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Disc.</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount Breakdown</th>
+<th style="text-align:left; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Order</th>
+<th style="text-align:left; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
+<th style="text-align:left; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Disc.</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Untaxed</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Tax</th>
+<th style="text-align:right; padding:6px 6px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; color:#1e3a8a;">Total</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not sale_lines">
-<td colspan="7" style="padding:10px; color:#64748b;">No sale products.</td>
+<td colspan="9" style="padding:10px; color:#64748b;">No sale products.</td>
 </tr>
 <tr t-foreach="sale_lines" t-as="line" style="page-break-inside:avoid; break-inside:avoid;">
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<td style="padding:7px 6px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['order_ref']"/>
 </td>
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
+<td style="padding:7px 6px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
 <div style="font-weight:700;" t-esc="line['product_name']"/>
-<div style="color:#64748b; font-size:9.5px;">
+<div style="color:#64748b; font-size:9px;">
 <span>Barcode: </span>
 <span t-esc="line['barcode'] or '-'"/>
 <t t-if="line.get('lot_name')">
@@ -337,34 +341,29 @@ Policy:
 </t>
 </div>
 </td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:7px 6px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%'"/>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
-<div style="color:#64748b; font-size:9.5px;">Untaxed</div>
-<div t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
-<div style="color:#64748b; font-size:9.5px; margin-top:2px;">Tax</div>
-<div t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
-<div style="color:#1e3a8a; font-weight:700; margin-top:2px;">Total</div>
-<div style="color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line['subtotal']), currency_label)"/>
-</td>
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%'"/>
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
+<td style="padding:7px 6px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line['subtotal']), currency_label)"/>
 </tr>
 </tbody>
 <tfoot t-if="sale_lines">
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Sold Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (sale_total, currency_label)"/>
+<td colspan="8" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Sold Amount</td>
+<td style="padding:8px 6px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (sale_total, currency_label)"/>
 </tr>
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Tax Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (sale_tax_total, currency_label)"/>
+<td colspan="8" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Tax Amount</td>
+<td style="padding:8px 6px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (sale_tax_total, currency_label)"/>
 </tr>
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Sold Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (sale_gross_total, currency_label)"/>
+<td colspan="8" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Sold Amount</td>
+<td style="padding:8px 6px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (sale_gross_total, currency_label)"/>
 </tr>
 </tfoot>
 </table>
@@ -399,38 +398,44 @@ Policy:
 </div>
 <div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:14px; page-break-inside:avoid; break-inside:avoid;">
 <div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Returned Products</div>
-<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:10.5px;">
+<table style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:9.6px;">
 <colgroup>
-<col style="width:14%;"/>
-<col style="width:34%;"/>
-<col style="width:8%;"/>
-<col style="width:9%;"/>
-<col style="width:13%;"/>
-<col style="width:10%;"/>
 <col style="width:12%;"/>
+<col style="width:28%;"/>
+<col style="width:6%;"/>
+<col style="width:7%;"/>
+<col style="width:12%;"/>
+<col style="width:8%;"/>
+<col style="width:6%;"/>
+<col style="width:8%;"/>
+<col style="width:6%;"/>
+<col style="width:7%;"/>
 </colgroup>
 <thead>
 <tr>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return</th>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
-<th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reason</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit/Disc.</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount Breakdown</th>
+<th style="text-align:left; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Return</th>
+<th style="text-align:left; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Product / Barcode / Lot</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Qty</th>
+<th style="text-align:left; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
+<th style="text-align:left; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reason</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Disc.</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Untaxed</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Tax</th>
+<th style="text-align:right; padding:6px 5px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; color:#1e3a8a;">Total</th>
 </tr>
 </thead>
 <tbody>
 <tr t-if="not return_lines">
-<td colspan="7" style="padding:10px; color:#64748b;">No return products.</td>
+<td colspan="10" style="padding:10px; color:#64748b;">No return products.</td>
 </tr>
 <tr t-foreach="return_lines" t-as="line" style="page-break-inside:avoid; break-inside:avoid;">
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<td style="padding:7px 5px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['return_ref']"/>
 </td>
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
+<td style="padding:7px 5px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35; white-space:normal; word-break:break-word;">
 <div style="font-weight:700;" t-esc="line['product_name']"/>
-<div style="color:#64748b; font-size:9.5px;">
+<div style="color:#64748b; font-size:8.8px;">
 <span>Barcode: </span>
 <span t-esc="line['barcode'] or '-'"/>
 <t t-if="line.get('lot_name')">
@@ -439,39 +444,32 @@ Policy:
 </t>
 </div>
 </td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f' % line['quantity']"/>
+<td style="padding:7px 5px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
 <span t-esc="line['uom_name']"/>
 </td>
-<td style="padding:7px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top; white-space:normal; word-break:break-word;">
+<td style="padding:7px 5px; border-bottom:1px solid #f1f5f9; vertical-align:top; white-space:normal; word-break:break-word;">
 <span t-esc="line['reason'] or '-'"/>
 </td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
-<div t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
-<div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. ' + (('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%')"/>
-</td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
-<div style="color:#64748b; font-size:9.5px;">Untaxed</div>
-<div t-esc="'%.2f %s' % (line.get('untaxed', line.get('subtotal', 0.0)), currency_label)"/>
-<div style="color:#64748b; font-size:9.5px; margin-top:2px;">Tax</div>
-<div t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
-<div style="color:#1e3a8a; font-weight:700; margin-top:2px;">Total</div>
-<div style="color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line.get('subtotal', 0.0)), currency_label)"/>
-</td>
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%'"/>
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line.get('untaxed', line.get('subtotal', 0.0)), currency_label)"/>
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
+<td style="padding:7px 5px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line.get('subtotal', 0.0)), currency_label)"/>
 </tr>
 </tbody>
 <tfoot t-if="return_lines">
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Returned Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (return_untaxed_total, currency_label)"/>
+<td colspan="9" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Returned Amount</td>
+<td style="padding:8px 5px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (return_untaxed_total, currency_label)"/>
 </tr>
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Return Tax Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (return_tax_total, currency_label)"/>
+<td colspan="9" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Return Tax Amount</td>
+<td style="padding:8px 5px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (return_tax_total, currency_label)"/>
 </tr>
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Returned Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
+<td colspan="9" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Returned Amount</td>
+<td style="padding:8px 5px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
 </tr>
 </tfoot>
 </table>
@@ -630,6 +628,7 @@ Date:
 <div t-if="doc.company_id.logo" style="margin-bottom:12px;">
 <img t-att-src="image_data_uri(doc.company_id.logo)" style="max-height:52px; max-width:150px; object-fit:contain;" alt="Company Logo"/>
 </div>
+<div t-else="" style="font-size:16px; font-weight:700; color:#0f766e; margin-bottom:12px;" t-esc="doc.company_id.name or 'Route Core'"/>
 <div style="display:inline-block; text-align:left; min-width:190px; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:4px;">Receipt Meta</div>
 <div style="font-size:12px; margin-bottom:4px;">
