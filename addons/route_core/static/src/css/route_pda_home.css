@@ -5504,3 +5504,304 @@
 
 
 
+
+/* Visit Collections compact App Store dashboard - no image icons */
+.route_pda_app_label_no_icon {
+    margin-top: 0 !important;
+}
+
+.route_pda_app_btn_collections_no_icon {
+    justify-content: center !important;
+}
+
+.route_collection_no_images .route_collection_hero_icon_wrap,
+.route_collection_no_images .route_collection_hero_icon,
+.route_collection_no_images .route_collection_kpi_icon,
+.route_collection_no_images .route_collection_action_icon {
+    display: none !important;
+}
+
+.route_collection_no_images.route_pda_collections_dashboard_sheet {
+    max-width: 1120px;
+}
+
+.route_collection_no_images .route_collection_hero {
+    display: block !important;
+    padding: 14px 16px !important;
+    margin-bottom: 12px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 55%, #fff7fb 100%) !important;
+    border: 1px solid #ead8e9 !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+}
+
+.route_collection_no_images .route_collection_kicker {
+    margin-bottom: 6px !important;
+    padding: 4px 10px !important;
+    font-size: 0.72rem !important;
+}
+
+.route_collection_no_images .route_collection_title {
+    font-size: 1.45rem !important;
+    margin-bottom: 3px !important;
+}
+
+.route_collection_no_images .route_collection_subtitle {
+    font-size: 0.88rem !important;
+    line-height: 1.35 !important;
+}
+
+.route_collection_section_title {
+    color: #111827;
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin: 12px 0 8px;
+}
+
+.route_collection_no_images .route_collection_kpi_grid,
+.route_collection_no_images .route_collection_attention_grid,
+.route_collection_no_images .route_collection_flow_grid,
+.route_collection_no_images .route_collection_action_zone,
+.route_collection_no_images .route_collection_mix_cards {
+    display: grid !important;
+    gap: 10px !important;
+}
+
+.route_collection_no_images .route_collection_kpi_grid_snapshot {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    margin-bottom: 12px !important;
+}
+
+.route_collection_no_images .route_collection_kpi_card,
+.route_collection_no_images .route_collection_attention_card,
+.route_collection_no_images .route_collection_flow_card {
+    min-height: 86px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    border: 1px solid #e6edf4 !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+}
+
+.route_collection_no_images .route_collection_kpi_card:after {
+    width: 68px !important;
+    height: 68px !important;
+    inset-inline-end: -24px !important;
+    bottom: -26px !important;
+    opacity: 0.10 !important;
+}
+
+.route_collection_no_images .route_collection_kpi_collected:after { background: #5b3f72; }
+.route_collection_no_images .route_collection_kpi_remaining:after { background: #ec4899; }
+
+.route_collection_no_images .route_collection_kpi_label,
+.route_collection_no_images .route_collection_attention_label,
+.route_collection_no_images .route_collection_flow_label {
+    display: block !important;
+    min-height: 30px !important;
+    font-size: 0.78rem !important;
+    line-height: 1.2 !important;
+}
+
+.route_collection_no_images .route_collection_kpi_value,
+.route_collection_no_images .route_collection_kpi_value .o_field_widget,
+.route_collection_no_images .route_collection_kpi_value .o_input,
+.route_collection_no_images .route_collection_attention_value,
+.route_collection_no_images .route_collection_attention_value .o_field_widget,
+.route_collection_no_images .route_collection_attention_value .o_input,
+.route_collection_no_images .route_collection_flow_value,
+.route_collection_no_images .route_collection_flow_value .o_field_widget,
+.route_collection_no_images .route_collection_flow_value .o_input {
+    font-size: 1.18rem !important;
+    line-height: 1.15 !important;
+}
+
+.route_collection_no_images .route_collection_dashboard_grid_compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    margin-bottom: 12px !important;
+    gap: 10px !important;
+}
+
+.route_collection_no_images .route_collection_panel,
+.route_collection_no_images .route_collection_flow_panel {
+    padding: 12px !important;
+    border-radius: 18px !important;
+}
+
+.route_collection_no_images .route_collection_panel_head {
+    margin-bottom: 10px !important;
+}
+
+.route_collection_no_images .route_collection_panel_title {
+    font-size: 1rem !important;
+}
+
+.route_collection_no_images .route_collection_panel_subtitle {
+    font-size: 0.78rem !important;
+    line-height: 1.3 !important;
+}
+
+.route_collection_no_images .route_collection_attention_grid,
+.route_collection_no_images .route_collection_flow_grid,
+.route_collection_no_images .route_collection_mix_cards,
+.route_collection_no_images .route_collection_action_zone_compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.route_collection_no_images .route_collection_mix_rows {
+    gap: 10px !important;
+}
+
+.route_collection_no_images .route_collection_mix_row {
+    grid-template-columns: auto 1fr !important;
+    align-content: start !important;
+    gap: 6px 8px !important;
+    min-height: 86px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+    background: #f8fafc !important;
+}
+
+.route_collection_no_images .route_collection_mix_amount {
+    grid-column: 1 / -1 !important;
+    color: #111827 !important;
+    font-size: 1.05rem !important;
+}
+
+.route_collection_no_images .route_collection_mix_amount .o_field_widget,
+.route_collection_no_images .route_collection_mix_amount .o_input {
+    color: #111827 !important;
+    font-size: 1.05rem !important;
+}
+
+.route_collection_no_images .route_collection_mix_percent {
+    grid-column: 1 / -1 !important;
+    display: block !important;
+    font-size: 0.78rem !important;
+}
+
+.route_collection_no_images .route_collection_flow_panel {
+    margin-bottom: 12px !important;
+}
+
+.route_collection_no_images .route_collection_action_card {
+    min-height: 116px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+    text-align: left !important;
+}
+
+.route_collection_no_images .route_collection_action_title {
+    font-size: 1.05rem !important;
+}
+
+.route_collection_no_images .route_collection_action_hint {
+    font-size: 0.8rem !important;
+}
+
+@media (max-width: 992px) {
+    .route_collection_no_images .route_collection_dashboard_grid_compact {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .route_pda_app_btn_collections_no_icon {
+        min-height: 160px !important;
+    }
+
+    .route_collection_no_images .route_collection_hero {
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .route_collection_no_images .route_collection_title {
+        font-size: 1.28rem !important;
+    }
+
+    .route_collection_no_images .route_collection_subtitle {
+        font-size: 0.8rem !important;
+    }
+
+    .route_collection_section_title {
+        font-size: 0.98rem !important;
+        margin: 10px 0 7px !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_grid_snapshot,
+    .route_collection_no_images .route_collection_attention_grid,
+    .route_collection_no_images .route_collection_flow_grid,
+    .route_collection_no_images .route_collection_mix_cards,
+    .route_collection_no_images .route_collection_action_zone_compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_card,
+    .route_collection_no_images .route_collection_attention_card,
+    .route_collection_no_images .route_collection_flow_card,
+    .route_collection_no_images .route_collection_mix_row {
+        min-height: 82px !important;
+        padding: 10px !important;
+        border-radius: 14px !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_label,
+    .route_collection_no_images .route_collection_attention_label,
+    .route_collection_no_images .route_collection_flow_label {
+        min-height: 28px !important;
+        font-size: 0.7rem !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_value,
+    .route_collection_no_images .route_collection_kpi_value .o_field_widget,
+    .route_collection_no_images .route_collection_kpi_value .o_input,
+    .route_collection_no_images .route_collection_attention_value,
+    .route_collection_no_images .route_collection_attention_value .o_field_widget,
+    .route_collection_no_images .route_collection_attention_value .o_input,
+    .route_collection_no_images .route_collection_flow_value,
+    .route_collection_no_images .route_collection_flow_value .o_field_widget,
+    .route_collection_no_images .route_collection_flow_value .o_input {
+        font-size: 1rem !important;
+    }
+
+    .route_collection_no_images .route_collection_panel,
+    .route_collection_no_images .route_collection_flow_panel {
+        padding: 10px !important;
+        border-radius: 16px !important;
+    }
+
+    .route_collection_no_images .route_collection_action_card {
+        min-height: 104px !important;
+        padding: 12px !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_collection_no_images .route_collection_kpi_grid_snapshot,
+    .route_collection_no_images .route_collection_attention_grid,
+    .route_collection_no_images .route_collection_flow_grid,
+    .route_collection_no_images .route_collection_mix_cards,
+    .route_collection_no_images .route_collection_action_zone_compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_label,
+    .route_collection_no_images .route_collection_attention_label,
+    .route_collection_no_images .route_collection_flow_label {
+        font-size: 0.66rem !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_value,
+    .route_collection_no_images .route_collection_attention_value,
+    .route_collection_no_images .route_collection_flow_value {
+        font-size: 0.95rem !important;
+    }
+}
+
+
+
+
+
+
