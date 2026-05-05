@@ -143,6 +143,174 @@
 </kanban>
 </field>
 </record>
+<record id="view_route_visit_history_mobile_kanban" model="ir.ui.view">
+<field name="name">route.visit.history.mobile.kanban</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<kanban class="o_kanban_mobile route_visit_history_kanban" create="0" edit="0" delete="0" default_order="date desc, id desc">
+<header>
+<button name="action_pda_back_route_workspace" type="object" string="Route Workspace" class="btn-primary route_pda_nav_btn" icon="fa-home" display="always"/>
+</header>
+<field name="name"/>
+<field name="date"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="vehicle_id"/>
+<field name="state"/>
+<field name="visit_process_state"/>
+<field name="visit_execution_mode"/>
+<field name="visit_execution_mode_label"/>
+<field name="direct_stop_grand_due_amount"/>
+<field name="direct_stop_immediate_remaining_amount"/>
+<field name="consignment_amount_due_now"/>
+<field name="consignment_immediate_remaining_amount"/>
+<field name="collected_amount"/>
+<field name="direct_stop_settlement_paid_amount"/>
+<field name="route_geo_enabled"/>
+<field name="geo_checkin_status"/>
+<field name="geo_review_state"/>
+<field name="geo_checkin_datetime"/>
+<field name="geo_checkin_distance_display"/>
+<field name="geo_checkin_outside_zone_reason"/>
+<field name="geo_review_supervisor_decision"/>
+<field name="currency_id"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_visit_history_card">
+<div class="route_visit_history_card_head">
+<div>
+<div class="route_visit_history_ref">
+<field name="name"/>
+</div>
+<div class="route_visit_history_date">
+<field name="date"/>
+</div>
+</div>
+<div class="route_visit_history_badges">
+<t t-if="record.state.raw_value == 'done' or record.visit_process_state.raw_value == 'done'">
+<span class="route_visit_history_badge route_visit_history_badge_done">Done</span>
+</t>
+<t t-elif="record.state.raw_value in ['cancel', 'cancelled']">
+<span class="route_visit_history_badge route_visit_history_badge_cancelled">Cancelled</span>
+</t>
+<t t-elif="record.state.raw_value == 'in_progress' or record.visit_process_state.raw_value in ['checked_in', 'counting', 'reconciled', 'collection_done', 'ready_to_close']">
+<span class="route_visit_history_badge route_visit_history_badge_active">In Progress</span>
+</t>
+<t t-else="">
+<span class="route_visit_history_badge route_visit_history_badge_pending">Pending</span>
+</t>
+</div>
+</div>
+<div class="route_visit_history_outlet">
+<field name="outlet_id"/>
+</div>
+<div class="route_visit_history_subline">
+<span>
+<field name="partner_id"/>
+</span>
+<span class="route_visit_history_dot">•</span>
+<span>
+<field name="area_id"/>
+</span>
+</div>
+<div class="route_visit_history_mini_grid">
+<div class="route_visit_history_metric">
+<span class="route_visit_history_label">Mode</span>
+<span class="route_visit_history_value">
+<field name="visit_execution_mode_label"/>
+</span>
+</div>
+<div class="route_visit_history_metric">
+<span class="route_visit_history_label">Vehicle</span>
+<span class="route_visit_history_value">
+<field name="vehicle_id"/>
+</span>
+</div>
+<div class="route_visit_history_metric route_visit_history_metric_money">
+<span class="route_visit_history_label">Due</span>
+<span class="route_visit_history_value">
+<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
+<field name="direct_stop_grand_due_amount"/>
+</t>
+<t t-else="">
+<field name="consignment_amount_due_now"/>
+</t>
+</span>
+</div>
+<div class="route_visit_history_metric route_visit_history_metric_money">
+<span class="route_visit_history_label">Remaining</span>
+<span class="route_visit_history_value">
+<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
+<field name="direct_stop_immediate_remaining_amount"/>
+</t>
+<t t-else="">
+<field name="consignment_immediate_remaining_amount"/>
+</t>
+</span>
+</div>
+</div>
+<t t-if="record.route_geo_enabled.raw_value">
+<div class="route_visit_history_location_block">
+<div class="route_visit_history_location_row">
+<span class="route_visit_history_label">Location</span>
+<t t-if="record.geo_checkin_status.raw_value == 'outside'">
+<span class="route_visit_history_location_status route_visit_history_location_outside">Outside Zone</span>
+</t>
+<t t-elif="record.geo_checkin_status.raw_value == 'inside'">
+<span class="route_visit_history_location_status route_visit_history_location_inside">Inside Zone</span>
+</t>
+<t t-elif="record.geo_checkin_status.raw_value == 'outlet_missing'">
+<span class="route_visit_history_location_status route_visit_history_location_pending">Outlet Missing</span>
+</t>
+<t t-else="">
+<span class="route_visit_history_location_status route_visit_history_location_pending">Pending Check-in</span>
+</t>
+</div>
+<div class="route_visit_history_location_meta">
+<t t-if="record.geo_checkin_datetime.raw_value">
+<span>
+<field name="geo_checkin_datetime"/>
+</span>
+</t>
+<t t-if="record.geo_checkin_distance_display.raw_value">
+<span>
+<field name="geo_checkin_distance_display"/>
+</span>
+</t>
+<t t-if="record.geo_review_supervisor_decision.raw_value">
+<span>
+<field name="geo_review_supervisor_decision"/>
+</span>
+</t>
+</div>
+<t t-if="record.geo_checkin_outside_zone_reason.raw_value">
+<div class="route_visit_history_reason">
+<field name="geo_checkin_outside_zone_reason"/>
+</div>
+</t>
+</div>
+</t>
+<div class="route_visit_history_actions">
+<a type="open" role="button" class="btn btn-primary route_visit_history_action_main">
+<i class="fa fa-external-link"/>
+Open Visit
+</a>
+<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary route_visit_history_action" invisible="not route_geo_enabled">
+<i class="fa fa-map-marker"/>
+Outlet Map
+</button>
+<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary route_visit_history_action" invisible="not geo_checkin_datetime">
+<i class="fa fa-location-arrow"/>
+Check-in Map
+</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_visit_form" model="ir.ui.view">
 <field name="name">route.visit.form</field>
 <field name="model">route.visit</field>
@@ -857,19 +1025,19 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Sale Total</div>
+<div class="route_mobile_info_label">Current Visit Sale</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_sales_total" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Return Total</div>
+<div class="route_mobile_info_label">Current Visit Returns</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_returns_total" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Net Due</div>
+<div class="route_mobile_info_label">Current Visit Net</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
 </div>
@@ -887,7 +1055,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining</div>
+<div class="route_mobile_info_label">Remaining After Collection</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -920,25 +1088,23 @@
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_sale_order_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_return_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
+<div class="route_mobile_detail_box">
 <div class="route_mobile_detail_label">Visit Process State</div>
 <div class="route_mobile_detail_value">
 <field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
 </div>
 </div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
+<div class="route_mobile_detail_box">
 <div class="route_mobile_detail_label">Current Step</div>
 <div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="ux_stage_title" readonly="1" nolabel="1"/>
@@ -1037,7 +1203,7 @@
 </div>
 </div>
 <div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining</div>
+<div class="route_mobile_info_label">Remaining After Collection</div>
 <div class="route_mobile_info_value">
 <field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
 </div>
@@ -1052,16 +1218,14 @@
 <div class="route_mobile_detail_grid">
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_sale_order_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_return_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
@@ -1233,6 +1397,40 @@
 <field name="partner_id" string="Customer"/>
 <field name="user_id" string="Salesperson"/>
 <field name="vehicle_id" string="Vehicle"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="view_route_visit_history_salesperson_search" model="ir.ui.view">
+<field name="name">route.visit.history.salesperson.search</field>
+<field name="model">route.visit</field>
+<field name="arch" type="xml">
+<search string="My Visit History">
+<field name="name" string="Visit"/>
+<field name="outlet_id"/>
+<field name="partner_id"/>
+<field name="area_id"/>
+<field name="date"/>
+<filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
+<filter name="filter_last_7_days" string="Last 7 Days" domain="[('date', '>=', (context_today() - relativedelta(days=6)).strftime('%Y-%m-%d'))]"/>
+<filter name="filter_last_30_days" string="Last 30 Days" domain="[('date', '>=', (context_today() - relativedelta(days=29)).strftime('%Y-%m-%d'))]"/>
+<filter name="filter_this_month" string="This Month" domain="[('date', '>=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
+<filter name="filter_visit_date" string="Custom Dates" date="date"/>
+<separator/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
+<filter name="filter_outside_zone" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
+<filter name="filter_pending_location" string="Pending Location" domain="[('geo_review_state', 'in', ['pending_checkin', 'outlet_missing'])]"/>
+<separator/>
+<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
+<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
+<searchpanel>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="partner_id" string="Customer"/>
+<field name="state" string="Status"/>
 </searchpanel>
 </search>
 </field>
