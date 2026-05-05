@@ -1482,6 +1482,8 @@ class RouteVisit(models.Model):
                     "discount": line.discount if "discount" in line._fields else 0.0,
                     "unit_price": line.price_unit or 0.0,
                     "subtotal": line.price_subtotal or 0.0,
+                    "tax_amount": getattr(line, "price_tax", 0.0) or max((getattr(line, "price_total", 0.0) or 0.0) - (line.price_subtotal or 0.0), 0.0),
+                    "total": getattr(line, "price_total", False) or (line.price_subtotal or 0.0),
                 })
         return lines
 
@@ -1501,7 +1503,10 @@ class RouteVisit(models.Model):
                     "reason": dict(line._fields["return_reason"].selection).get(line.return_reason) if line.return_reason else "",
                     "discount": line.reference_discount or 0.0,
                     "unit_price": line.estimated_unit_price or 0.0,
-                    "subtotal": line.estimated_amount or 0.0,
+                    "untaxed": getattr(line, "estimated_untaxed_amount", False) or line.estimated_amount or 0.0,
+                    "tax_amount": getattr(line, "estimated_tax_amount", 0.0) or 0.0,
+                    "total": getattr(line, "estimated_total_amount", False) or line.estimated_amount or 0.0,
+                    "subtotal": getattr(line, "estimated_total_amount", False) or line.estimated_amount or 0.0,
                 })
         return lines
 
