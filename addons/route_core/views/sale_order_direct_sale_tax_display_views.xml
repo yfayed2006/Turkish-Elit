@@ -1,0 +1,46 @@
+<odoo>
+<record id="view_sale_order_line_form_route_direct_sale_tax_display" model="ir.ui.view">
+<field name="name">sale.order.line.form.route.direct.sale.tax.display</field>
+<field name="model">sale.order.line</field>
+<field name="inherit_id" ref="route_core.view_sale_order_line_form_route_direct_sale"/>
+<field name="priority" eval="260"/>
+<field name="arch" type="xml">
+<xpath expr="//field[@name='discount']/ancestor::div[contains(@class, 'route_mobile_detail_box')][1]" position="after">
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Untaxed Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_subtotal" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Tax Amount</div>
+<div class="route_mobile_detail_value">
+<field name="price_tax" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_detail_box" invisible="display_type">
+<div class="route_mobile_detail_label">Total Incl. Tax</div>
+<div class="route_mobile_detail_value">
+<field name="price_total" readonly="1"/>
+</div>
+</div>
+</xpath>
+</field>
+</record>
+<record id="view_sale_order_form_route_direct_sale_mobile_tax_display" model="ir.ui.view">
+<field name="name">sale.order.form.route.direct.sale.mobile.tax.display</field>
+<field name="model">sale.order</field>
+<field name="inherit_id" ref="route_core.view_sale_order_form_route_direct_sale_mobile"/>
+<field name="priority" eval="260"/>
+<field name="arch" type="xml">
+<xpath expr="//field[@name='order_line']//*[self::list or self::tree]/field[@name='price_subtotal']" position="attributes">
+<attribute name="string">Untaxed</attribute>
+<attribute name="readonly">1</attribute>
+</xpath>
+<xpath expr="//field[@name='order_line']//*[self::list or self::tree]/field[@name='price_subtotal']" position="after">
+<field name="price_tax" string="Tax" readonly="1" optional="show"/>
+<field name="price_total" string="Total Incl. Tax" readonly="1" optional="show"/>
+</xpath>
+</field>
+</record>
+</odoo>
