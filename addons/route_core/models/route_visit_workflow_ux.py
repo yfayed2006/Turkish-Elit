@@ -1064,6 +1064,54 @@ class RouteVisit(models.Model):
             },
         }
 
+    def action_ux_open_direct_sale_order_ref(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        sale_orders = self._get_direct_stop_sale_orders()
+        if not sale_orders and self.sale_order_id:
+            sale_orders = self.sale_order_id
+        if not sale_orders:
+            raise UserError(_("No direct sale order is linked to this visit."))
+
+        form_view = self.env.ref("route_core.view_sale_order_form_route_direct_sale_mobile", raise_if_not_found=False)
+        if not form_view:
+            form_view = self.env.ref("route_core.view_sale_order_form_route_direct_sale", raise_if_not_found=False)
+
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Sale Order"),
+            "res_model": "sale.order",
+            "target": "current",
+            "context": {
+                "route_visit_id": self.id,
+                "default_route_visit_id": self.id,
+                "route_return_to_visit_after_confirm": True,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+                "create": 0,
+                "delete": 0,
+            },
+        }
+        if len(sale_orders) == 1:
+            action.update({
+                "view_mode": "form",
+                "res_id": sale_orders.id,
+            })
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+        else:
+            action.update({
+                "view_mode": "list,form",
+                "domain": [("id", "in", sale_orders.ids)],
+            })
+            views = [(False, "list")]
+            if form_view:
+                views.append((form_view.id, "form"))
+            else:
+                views.append((False, "form"))
+            action["views"] = views
+        return action
+
     def action_ux_open_direct_sale_payments(self):
         self.ensure_one()
         self._ensure_direct_sales_stop()
@@ -1130,6 +1178,50 @@ class RouteVisit(models.Model):
             "target": "current",
             "domain": [("id", "in", returns.ids)],
         }
+
+    def action_ux_open_direct_return_ref(self):
+        self.ensure_one()
+        self._ensure_direct_sales_stop()
+        if not self.route_enable_direct_return:
+            raise UserError(_("Direct Return is disabled in Route Settings."))
+        returns = self._get_direct_stop_returns()
+        if not returns:
+            raise UserError(_("No direct return is linked to this visit."))
+
+        form_view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Direct Return"),
+            "res_model": "route.direct.return",
+            "target": "current",
+            "context": {
+                "route_visit_id": self.id,
+                "default_visit_id": self.id,
+                "pda_mode": True,
+                "route_pda_salesperson_mode": True,
+                "create": 0,
+                "delete": 0,
+            },
+        }
+        if len(returns) == 1:
+            action.update({
+                "view_mode": "form",
+                "res_id": returns.id,
+            })
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+        else:
+            action.update({
+                "view_mode": "list,form",
+                "domain": [("id", "in", returns.ids)],
+            })
+            views = [(False, "list")]
+            if form_view:
+                views.append((form_view.id, "form"))
+            else:
+                views.append((False, "form"))
+            action["views"] = views
+        return action
 
     def action_ux_refresh_visit(self):
         self.ensure_one()
