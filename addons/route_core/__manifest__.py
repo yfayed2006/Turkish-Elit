@@ -1,6 +1,6 @@
 {
     "name": "Route Core",
-    "version": "19.0.1.0.131",
+    "version": "19.0.1.0.132",
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
@@ -77,6 +77,7 @@
         "wizard/route_visit_collect_payment_wizard_views.xml",
         "wizard/route_visit_statement_wizard_views.xml",
         "wizard/route_visit_finish_summary_wizard_views.xml",
+        "wizard/route_visit_whatsapp_share_wizard_views.xml",
         "wizard/route_visit_missing_lot_wizard_views.xml",
         "wizard/route_loading_source_wizard_views.xml",
         "wizard/route_vehicle_closing_scan_wizard_views.xml",
@@ -96,7 +97,6 @@
     "installable": True,
     "application": True,
 }
-
 
 
 
