@@ -299,7 +299,7 @@
 <field name="available_lot_ids" column_invisible="1"/>
 <field name="lot_id" string="Lot/Serial" domain="[('id', 'in', available_lot_ids)]" options="{'no_create': True, 'no_open': True}" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="show"/>
 <field name="lot_name" string="Manual Lot/Serial" column_invisible="parent.route_enable_lot_serial_tracking == False" optional="hide"/>
-<field name="expiry_date" string="Expiry" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
+<field name="expiry_month_label" string="Expiry" readonly="1" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False" optional="show"/>
 <field name="return_reason" string="Reason"/>
 <field name="destination_location_id" string="Destination" optional="hide"/>
 <field name="estimated_unit_price" string="Unit Price" readonly="1"/>
