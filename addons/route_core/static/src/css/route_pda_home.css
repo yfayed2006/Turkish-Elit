@@ -4344,3 +4344,104 @@
 
 
 
+
+/* Direct Return final mobile polish - compact settlement-focused screen */
+.route_mobile_direct_return_form .route_mobile_header_title h1 {
+    margin-bottom: 8px !important;
+}
+
+.route_mobile_direct_return_notice {
+    margin: 10px 0 12px !important;
+    padding: 12px 14px !important;
+    border: 1px solid #dbeafe !important;
+    border-left: 4px solid #82466f !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #f8fbff 0%, #fff7fb 100%) !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045) !important;
+}
+
+.route_mobile_direct_return_notice_title {
+    font-size: 0.88rem !important;
+    font-weight: 950 !important;
+    color: #1f2937 !important;
+    margin-bottom: 4px !important;
+}
+
+.route_mobile_direct_return_notice_text {
+    font-size: 0.78rem !important;
+    font-weight: 750 !important;
+    color: #64748b !important;
+    line-height: 1.35 !important;
+}
+
+.route_mobile_direct_return_form .route_mobile_return_total_card {
+    border-color: #bfdbfe !important;
+    background: #f8fbff !important;
+}
+
+.route_mobile_direct_return_form .route_mobile_return_total_card .route_mobile_info_value,
+.route_mobile_direct_return_form .route_mobile_return_total_card .o_field_widget {
+    font-weight: 950 !important;
+    color: #82466f !important;
+}
+
+@media (max-width: 767px) {
+    .route_mobile_direct_return_sheet .route_mobile_sale_order_top_grid {
+        gap: 8px !important;
+    }
+
+    .route_mobile_direct_return_sheet .route_mobile_info_card {
+        min-height: 68px !important;
+        padding: 9px 10px !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row {
+        border-left-color: #82466f !important;
+        background: linear-gradient(145deg, #ffffff 0%, #fbf7fb 100%) !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="lot_name"] {
+        display: none !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"] {
+        border: 1px solid #bfdbfe !important;
+        background: #f8fbff !important;
+        color: #82466f !important;
+        font-weight: 950 !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"]::before {
+        content: "Return" !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="return_reason"] {
+        background: #fff7ed !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="return_reason"]::before {
+        content: "Reason" !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_reference_tax_ids"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 7 !important;
+        background: #f8fafc !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_reference_tax_ids"]::before {
+        content: "Taxes" !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        color: #64748b !important;
+        font-size: .72rem !important;
+        font-weight: 950 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .02em !important;
+    }
+}
+
+
+
+
+
