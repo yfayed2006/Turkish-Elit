@@ -167,7 +167,7 @@
 <field name="view_id" ref="route_core.view_route_visit_history_mobile_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_history_salesperson_search"/>
 <field name="domain">[("user_id", "=", uid), ("state", "in", ["done", "cancel", "cancelled"])]</field>
-<field name="context">{'search_default_filter_today': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_history_mobile_mode': 1}</field>
+<field name="context">{'create': 0, 'edit': 0, 'delete': 0, 'route_history_mobile_mode': 1}</field>
 <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face">Review your completed and closed visits here.</p>
 </field>
