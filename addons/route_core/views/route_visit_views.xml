@@ -1092,16 +1092,20 @@ Check-in Map
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_reference_stack">
+<div class="route_mobile_reference_number">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_sale_order_ref" string="Open Sale" type="object" class="btn-link route_mobile_reference_open"/>
+</div>
+<button name="action_ux_open_direct_sale_order_ref" string="Open Sale" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
+<div class="route_mobile_detail_value route_mobile_reference_stack">
+<div class="route_mobile_reference_number">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
-<button name="action_ux_open_direct_return_ref" string="Open Return" type="object" class="btn-link route_mobile_reference_open"/>
+</div>
+<button name="action_ux_open_direct_return_ref" string="Open Return" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
@@ -1413,7 +1417,7 @@ Check-in Map
 <field name="arch" type="xml">
 <search string="My Visit History">
 <field name="name" string="Visit"/>
-<field name="visit_history_time_bucket" string="Visit Time"/>
+<field name="visit_history_time_bucket" string="Visit Time" expand="1" enable_counters="1"/>
 <field name="outlet_id"/>
 <field name="partner_id"/>
 <field name="area_id"/>
@@ -1434,7 +1438,7 @@ Check-in Map
 <filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
 <searchpanel>
-<field name="visit_history_time_bucket" string="Visit Time"/>
+<field name="visit_history_time_bucket" string="Visit Time" expand="1" enable_counters="1"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="partner_id" string="Customer"/>
