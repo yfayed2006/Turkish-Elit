@@ -38,7 +38,9 @@
 <t t-set="sale_total" t-value="sum(line['subtotal'] for line in sale_lines) if sale_lines else 0.0"/>
 <t t-set="sale_tax_total" t-value="max((summary.get('current_sale', 0.0) or 0.0) - (sale_total or 0.0), 0.0)"/>
 <t t-set="sale_gross_total" t-value="summary.get('current_sale', 0.0) or 0.0"/>
-<t t-set="return_total" t-value="sum(line['subtotal'] for line in return_lines) if return_lines else 0.0"/>
+<t t-set="return_untaxed_total" t-value="sum(line.get('untaxed', line.get('subtotal', 0.0)) for line in return_lines) if return_lines else 0.0"/>
+<t t-set="return_tax_total" t-value="sum(line.get('tax_amount', 0.0) for line in return_lines) if return_lines else 0.0"/>
+<t t-set="return_total" t-value="sum(line.get('total', line.get('subtotal', 0.0)) for line in return_lines) if return_lines else 0.0"/>
 <t t-set="payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
 <t t-set="credit_policy_label" t-value="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else 'Not required'"/>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:14px;">
@@ -313,7 +315,7 @@ Policy:
 <th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
 <th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit</th>
 <th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Disc.</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount Breakdown</th>
 </tr>
 </thead>
 <tbody>
@@ -341,7 +343,14 @@ Policy:
 </td>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
 <td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;" t-esc="('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%'"/>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
+<div style="color:#64748b; font-size:9.5px;">Untaxed</div>
+<div t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<div style="color:#64748b; font-size:9.5px; margin-top:2px;">Tax</div>
+<div t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
+<div style="color:#1e3a8a; font-weight:700; margin-top:2px;">Total</div>
+<div style="color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line['subtotal']), currency_label)"/>
+</td>
 </tr>
 </tbody>
 <tfoot t-if="sale_lines">
@@ -408,7 +417,7 @@ Policy:
 <th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">UoM</th>
 <th style="text-align:left; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reason</th>
 <th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Unit/Disc.</th>
-<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
+<th style="text-align:right; padding:7px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount Breakdown</th>
 </tr>
 </thead>
 <tbody>
@@ -441,13 +450,28 @@ Policy:
 <div t-esc="'%.2f %s' % (line['unit_price'], currency_label)"/>
 <div style="color:#64748b; font-size:9.5px;" t-esc="'Disc. ' + (('%.2f' % (line.get('discount', 0.0) or 0.0)) + '%')"/>
 </td>
-<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;" t-esc="'%.2f %s' % (line['subtotal'], currency_label)"/>
+<td style="padding:7px 8px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.35;">
+<div style="color:#64748b; font-size:9.5px;">Untaxed</div>
+<div t-esc="'%.2f %s' % (line.get('untaxed', line.get('subtotal', 0.0)), currency_label)"/>
+<div style="color:#64748b; font-size:9.5px; margin-top:2px;">Tax</div>
+<div t-esc="'%.2f %s' % (line.get('tax_amount', 0.0), currency_label)"/>
+<div style="color:#1e3a8a; font-weight:700; margin-top:2px;">Total</div>
+<div style="color:#1e3a8a; font-weight:700;" t-esc="'%.2f %s' % (line.get('total', line.get('subtotal', 0.0)), currency_label)"/>
+</td>
 </tr>
 </tbody>
 <tfoot t-if="return_lines">
 <tr>
-<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Returned Amount</td>
-<td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Untaxed Returned Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (return_untaxed_total, currency_label)"/>
+</tr>
+<tr>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;">Return Tax Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#ffffff; border-top:1px solid #e5e7eb;" t-esc="'%.2f %s' % (return_tax_total, currency_label)"/>
+</tr>
+<tr>
+<td colspan="6" style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;">Total Returned Amount</td>
+<td style="padding:8px 10px; text-align:right; font-weight:700; background:#eff6ff; color:#1e3a8a; border-top:1px solid #bfdbfe;" t-esc="'%.2f %s' % (return_total, currency_label)"/>
 </tr>
 </tfoot>
 </table>
