@@ -744,36 +744,54 @@
 <div class="route_collection_section_title">Daily Money Snapshot</div>
 <div class="route_collection_kpi_grid route_collection_kpi_grid_snapshot">
 <div class="route_collection_kpi_card route_collection_kpi_collected">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-line-chart"/>
+</div>
 <div class="route_collection_kpi_label">Collected Today</div>
 <div class="route_collection_kpi_value">
 <field name="collection_collected_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_cash">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-money"/>
+</div>
 <div class="route_collection_kpi_label">Cash In Hand</div>
 <div class="route_collection_kpi_value">
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_bank">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-university"/>
+</div>
 <div class="route_collection_kpi_label">Bank Transfer</div>
 <div class="route_collection_kpi_value">
 <field name="bank_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_pos">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-credit-card"/>
+</div>
 <div class="route_collection_kpi_label">POS Today</div>
 <div class="route_collection_kpi_value">
 <field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_promise">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-calendar-check-o"/>
+</div>
 <div class="route_collection_kpi_label">Deferred / Promise</div>
 <div class="route_collection_kpi_value">
 <field name="deferred_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_remaining">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-exclamation-circle"/>
+</div>
 <div class="route_collection_kpi_label">Remaining Due</div>
 <div class="route_collection_kpi_value">
 <field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
@@ -790,24 +808,36 @@
 </div>
 <div class="route_collection_attention_grid">
 <div class="route_collection_attention_card route_collection_attention_amount">
+<span class="route_collection_attention_icon">
+<i class="fa fa-calendar-check-o"/>
+</span>
 <span class="route_collection_attention_label">Open Promise Amount</span>
 <span class="route_collection_attention_value">
 <field name="open_promise_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
 </div>
 <div class="route_collection_attention_card route_collection_attention_open">
+<span class="route_collection_attention_icon">
+<i class="fa fa-list-ul"/>
+</span>
 <span class="route_collection_attention_label">Open Promise Entries</span>
 <span class="route_collection_attention_value">
 <field name="open_promise_entry_count" readonly="1" nolabel="1"/>
 </span>
 </div>
 <div class="route_collection_attention_card route_collection_attention_overdue">
+<span class="route_collection_attention_icon">
+<i class="fa fa-clock-o"/>
+</span>
 <span class="route_collection_attention_label">Overdue Promises</span>
 <span class="route_collection_attention_value">
 <field name="overdue_promise_entry_count" readonly="1" nolabel="1"/>
 </span>
 </div>
 <div class="route_collection_attention_card route_collection_attention_remaining">
+<span class="route_collection_attention_icon">
+<i class="fa fa-exclamation-triangle"/>
+</span>
 <span class="route_collection_attention_label">Remaining Due</span>
 <span class="route_collection_attention_value">
 <field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
@@ -874,6 +904,9 @@
 <div class="route_collection_panel_title">Collection Sources</div>
 <div class="route_collection_flow_grid">
 <div class="route_collection_flow_card" invisible="route_show_consignment_tools == False">
+<span class="route_collection_flow_icon">
+<i class="fa fa-archive"/>
+</span>
 <span class="route_collection_flow_label">Consignment Visits</span>
 <span class="route_collection_flow_value">
 <field name="visit_collection_count" readonly="1" nolabel="1"/>
@@ -884,6 +917,9 @@
 </span>
 </div>
 <div class="route_collection_flow_card" invisible="route_show_direct_sale_tools == False">
+<span class="route_collection_flow_icon">
+<i class="fa fa-map-marker"/>
+</span>
 <span class="route_collection_flow_label">Direct Stop Settlements</span>
 <span class="route_collection_flow_value">
 <field name="direct_stop_payment_count" readonly="1" nolabel="1"/>
@@ -894,6 +930,9 @@
 </span>
 </div>
 <div class="route_collection_flow_card" invisible="route_show_direct_sale_tools == False">
+<span class="route_collection_flow_icon">
+<i class="fa fa-file-text-o"/>
+</span>
 <span class="route_collection_flow_label">Direct Sale Orders</span>
 <span class="route_collection_flow_value">
 <field name="direct_sale_order_payment_count" readonly="1" nolabel="1"/>
@@ -904,6 +943,9 @@
 </span>
 </div>
 <div class="route_collection_flow_card">
+<span class="route_collection_flow_icon">
+<i class="fa fa-hourglass-half"/>
+</span>
 <span class="route_collection_flow_label">Deferred Today</span>
 <span class="route_collection_flow_value">
 <field name="deferred_payment_count" readonly="1" nolabel="1"/>
@@ -915,11 +957,8 @@
 </div>
 </div>
 <div class="route_collection_action_zone route_collection_action_zone_compact">
-<button type="object" name="action_open_collections_snapshot_from_collections_center" class="btn route_collection_action_card route_collection_action_card_summary">
-<span class="route_collection_action_title">Daily Summary Details</span>
-<span class="route_collection_action_hint">Open full priority snapshot and breakdown.</span>
-</button>
 <button type="object" name="action_open_visit_collections" class="btn route_collection_action_card route_collection_action_card_all">
+<i class="fa fa-credit-card route_collection_action_icon"/>
 <span class="route_collection_action_title">All Collections</span>
 <span class="route_collection_action_hint">Open confirmed collection cards and payment details.</span>
 <span class="route_collection_action_badge">
