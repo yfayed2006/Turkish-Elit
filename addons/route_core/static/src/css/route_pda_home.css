@@ -4441,6 +4441,62 @@
     }
 }
 
+/* Route Core direct-sale/direct-return final mobile product card polish
+   - Barcode uses a full-width bottom tile so long barcode numbers do not squeeze beside amount.
+   - Expiry uses the new year-month label fields where available. */
+@media (max-width: 767px) {
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_month_label"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_month_label"] {
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        background: #f8fafc !important;
+        color: #111827 !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 5 !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_month_label"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_month_label"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 6 !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_barcode"],
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_barcode"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 7 !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        width: auto !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        text-overflow: clip !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_month_label"]::before,
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_month_label"]::before {
+        content: "Expiry";
+        display: block;
+        margin-bottom: 4px;
+        color: #64748b;
+        font-size: .72rem;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
+}
+
 
 
 
