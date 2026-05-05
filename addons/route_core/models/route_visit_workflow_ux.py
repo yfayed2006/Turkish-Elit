@@ -55,7 +55,8 @@ class RouteVisit(models.Model):
         string="Visit Time",
         compute="_compute_visit_history_time_bucket",
         search="_search_visit_history_time_bucket",
-        store=False,
+        store=True,
+        readonly=True,
     )
     ux_stage = fields.Selection(
         [
@@ -2224,6 +2225,7 @@ class RouteVisit(models.Model):
                 "default_visit_id": self.id,
             },
         }
+
 
 
 
