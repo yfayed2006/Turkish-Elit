@@ -5505,7 +5505,7 @@
 
 
 
-/* Visit Collections compact App Store dashboard - no image icons */
+/* Visit Collections compact App Store dashboard - small inline icons */
 .route_pda_app_label_no_icon {
     margin-top: 0 !important;
 }
@@ -5515,9 +5515,7 @@
 }
 
 .route_collection_no_images .route_collection_hero_icon_wrap,
-.route_collection_no_images .route_collection_hero_icon,
-.route_collection_no_images .route_collection_kpi_icon,
-.route_collection_no_images .route_collection_action_icon {
+.route_collection_no_images .route_collection_hero_icon {
     display: none !important;
 }
 
@@ -5797,6 +5795,225 @@
     .route_collection_no_images .route_collection_attention_value,
     .route_collection_no_images .route_collection_flow_value {
         font-size: 0.95rem !important;
+    }
+}
+
+/* Visit Collections dashboard refinement: restore small card icons and make All Collections the only action card */
+.route_collection_no_images .route_collection_kpi_card,
+.route_collection_no_images .route_collection_attention_card,
+.route_collection_no_images .route_collection_flow_card {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.route_collection_no_images .route_collection_kpi_icon,
+.route_collection_no_images .route_collection_attention_icon,
+.route_collection_no_images .route_collection_flow_icon {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 11px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 8px !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10) !important;
+}
+
+.route_collection_no_images .route_collection_kpi_collected .route_collection_kpi_icon { background: #5b3f72 !important; }
+.route_collection_no_images .route_collection_kpi_cash .route_collection_kpi_icon { background: #16a34a !important; }
+.route_collection_no_images .route_collection_kpi_bank .route_collection_kpi_icon { background: #2563eb !important; }
+.route_collection_no_images .route_collection_kpi_pos .route_collection_kpi_icon { background: #7c3aed !important; }
+.route_collection_no_images .route_collection_kpi_promise .route_collection_kpi_icon { background: #d97706 !important; }
+.route_collection_no_images .route_collection_kpi_remaining .route_collection_kpi_icon { background: #db2777 !important; }
+
+.route_collection_no_images .route_collection_attention_amount .route_collection_attention_icon { background: #7c3aed !important; }
+.route_collection_no_images .route_collection_attention_open .route_collection_attention_icon { background: #2563eb !important; }
+.route_collection_no_images .route_collection_attention_overdue .route_collection_attention_icon { background: #ea580c !important; }
+.route_collection_no_images .route_collection_attention_remaining .route_collection_attention_icon { background: #db2777 !important; }
+
+.route_collection_no_images .route_collection_flow_icon { background: #0f766e !important; }
+.route_collection_no_images .route_collection_flow_card:nth-child(2) .route_collection_flow_icon { background: #5b3f72 !important; }
+.route_collection_no_images .route_collection_flow_card:nth-child(3) .route_collection_flow_icon { background: #2563eb !important; }
+.route_collection_no_images .route_collection_flow_card:nth-child(4) .route_collection_flow_icon { background: #d97706 !important; }
+
+.route_collection_no_images .route_collection_action_zone_compact,
+.route_collection_no_images .route_collection_action_zone {
+    grid-template-columns: 1fr !important;
+}
+
+.route_collection_no_images .route_collection_action_card_all {
+    min-height: 118px !important;
+    border-radius: 22px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    padding-inline-start: 22px !important;
+}
+
+.route_collection_no_images .route_collection_action_card_all:after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -28px;
+    bottom: -34px;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_icon {
+    display: inline-flex !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    font-size: 1rem !important;
+}
+
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_title,
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_hint,
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_badge {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* All Collections cards: clearer separation and a more premium mobile list */
+.o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    gap: 14px !important;
+    padding: 10px !important;
+    background: #f8fafc !important;
+}
+
+.o_kanban_view.route_pda_payment_kanban .o_kanban_record {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.route_pda_payment_card_collection {
+    border: 1px solid #dbe5ef !important;
+    border-inline-start: 5px solid #0f766e !important;
+    border-radius: 20px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06) !important;
+    padding: 14px !important;
+    gap: 12px !important;
+    overflow: hidden !important;
+}
+
+.route_pda_payment_card_collection + .route_pda_payment_card_collection {
+    margin-top: 10px !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_head {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #eef2f7 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_title {
+    font-size: 1.12rem !important;
+    color: #0f766e !important;
+    font-weight: 900 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_subtitle {
+    font-size: 0.88rem !important;
+    color: #64748b !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_badges {
+    gap: 6px !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_badge {
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    font-weight: 900 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_metrics {
+    gap: 8px !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_metric {
+    border-radius: 14px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e8eef5 !important;
+    padding: 10px !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_metric_label {
+    color: #64748b !important;
+    font-weight: 900 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_metric_value {
+    font-size: 1.08rem !important;
+    font-weight: 900 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_footer {
+    justify-content: flex-start !important;
+    border-top: 1px solid #eef2f7 !important;
+    padding-top: 10px !important;
+    margin-top: 0 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_footer_token {
+    border-radius: 999px !important;
+    background: #f1f5f9 !important;
+    padding: 5px 10px !important;
+}
+
+@media (max-width: 768px) {
+    .route_collection_no_images .route_collection_kpi_icon,
+    .route_collection_no_images .route_collection_attention_icon,
+    .route_collection_no_images .route_collection_flow_icon {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 10px !important;
+        font-size: 0.82rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_card,
+    .route_collection_no_images .route_collection_attention_card,
+    .route_collection_no_images .route_collection_flow_card,
+    .route_collection_no_images .route_collection_mix_row {
+        min-height: 96px !important;
+    }
+
+    .route_collection_no_images .route_collection_action_card_all {
+        min-height: 112px !important;
+    }
+
+    .o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        padding: 8px !important;
+    }
+
+    .route_pda_payment_card_collection {
+        border-radius: 18px !important;
+        padding: 12px !important;
+    }
+
+    .route_pda_payment_card_collection .route_pda_payment_metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .route_pda_payment_card_collection .route_pda_payment_metric_single {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_pda_payment_card_collection .route_pda_payment_metrics {
+        grid-template-columns: 1fr !important;
     }
 }
 
