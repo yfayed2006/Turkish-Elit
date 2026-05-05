@@ -1463,6 +1463,21 @@
     color: #6b7280;
 }
 
+.route_pda_payment_card_collection .route_pda_payment_footer_label {
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_footer_value {
+    color: #334155 !important;
+    font-size: 0.96rem !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+}
+
 .route_pda_payment_sheet .o_group .o_td_label,
 .route_pda_payment_sheet .o_group .o_form_label {
     white-space: nowrap;
@@ -5899,18 +5914,19 @@
     border-inline-start: 5px solid #0f766e !important;
     border-radius: 20px !important;
     background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06) !important;
-    padding: 14px !important;
-    gap: 12px !important;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08) !important;
+    padding: 16px !important;
+    gap: 14px !important;
     overflow: hidden !important;
+    position: relative !important;
 }
 
 .route_pda_payment_card_collection + .route_pda_payment_card_collection {
-    margin-top: 10px !important;
+    margin-top: 14px !important;
 }
 
 .route_pda_payment_card_collection .route_pda_payment_head {
-    padding-bottom: 10px !important;
+    padding: 2px 2px 12px 4px !important;
     border-bottom: 1px solid #eef2f7 !important;
 }
 
@@ -5918,6 +5934,9 @@
     font-size: 1.12rem !important;
     color: #0f766e !important;
     font-weight: 900 !important;
+    line-height: 1.25 !important;
+    overflow: visible !important;
+    padding-inline-start: 3px !important;
 }
 
 .route_pda_payment_card_collection .route_pda_payment_subtitle {
@@ -5957,16 +5976,35 @@
 }
 
 .route_pda_payment_card_collection .route_pda_payment_footer {
-    justify-content: flex-start !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+    gap: 10px !important;
     border-top: 1px solid #eef2f7 !important;
-    padding-top: 10px !important;
+    padding-top: 12px !important;
     margin-top: 0 !important;
 }
 
+.route_pda_payment_card_collection .route_pda_payment_footer_item {
+    display: flex !important;
+    min-width: 0 !important;
+}
+
 .route_pda_payment_card_collection .route_pda_payment_footer_token {
-    border-radius: 999px !important;
-    background: #f1f5f9 !important;
-    padding: 5px 10px !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    border-radius: 16px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e5edf5 !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+    padding: 10px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    white-space: normal !important;
 }
 
 @media (max-width: 768px) {
@@ -6009,160 +6047,24 @@
     .route_pda_payment_card_collection .route_pda_payment_metric_single {
         grid-column: 1 / -1 !important;
     }
+
+    .route_pda_payment_card_collection .route_pda_payment_footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
 }
 
 @media (max-width: 420px) {
     .route_pda_payment_card_collection .route_pda_payment_metrics {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-
-
-
-
-
-
-
-/* Visit Collections final mobile polish: centered cards, soft shadows, and clearer collection list separation */
-.route_collection_no_images .route_collection_kpi_card,
-.route_collection_no_images .route_collection_attention_card,
-.route_collection_no_images .route_collection_flow_card,
-.route_collection_no_images .route_collection_mix_row {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07) !important;
-    transition: transform 0.18s ease, box-shadow 0.18s ease !important;
-}
-
-.route_collection_no_images .route_collection_kpi_card:hover,
-.route_collection_no_images .route_collection_attention_card:hover,
-.route_collection_no_images .route_collection_flow_card:hover,
-.route_collection_no_images .route_collection_mix_row:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 14px 26px rgba(15, 23, 42, 0.10) !important;
-}
-
-.route_collection_no_images .route_collection_kpi_icon,
-.route_collection_no_images .route_collection_attention_icon,
-.route_collection_no_images .route_collection_flow_icon {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    margin-inline: auto !important;
-}
-
-.route_collection_no_images .route_collection_kpi_label,
-.route_collection_no_images .route_collection_kpi_value,
-.route_collection_no_images .route_collection_attention_label,
-.route_collection_no_images .route_collection_attention_value,
-.route_collection_no_images .route_collection_flow_label,
-.route_collection_no_images .route_collection_flow_value,
-.route_collection_no_images .route_collection_flow_percent,
-.route_collection_no_images .route_collection_mix_label,
-.route_collection_no_images .route_collection_mix_amount,
-.route_collection_no_images .route_collection_mix_percent {
-    width: 100% !important;
-    text-align: center !important;
-    justify-content: center !important;
-}
-
-.route_collection_no_images .route_collection_mix_dot {
-    margin: 0 auto 8px auto !important;
-    width: 12px !important;
-    height: 12px !important;
-}
-
-.route_collection_no_images .route_collection_panel,
-.route_collection_no_images .route_collection_flow_panel,
-.route_collection_no_images .route_collection_hero {
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055) !important;
-}
-
-.route_collection_no_images .route_collection_action_card_all {
-    box-shadow: 0 16px 34px rgba(91, 63, 114, 0.18) !important;
-}
-
-.route_collection_no_images .route_collection_action_card_all .route_collection_action_icon,
-.route_collection_no_images .route_collection_action_card_all .route_collection_action_title,
-.route_collection_no_images .route_collection_action_card_all .route_collection_action_hint,
-.route_collection_no_images .route_collection_action_card_all .route_collection_action_badge {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    text-align: center !important;
-    justify-content: center !important;
-}
-
-.route_collection_no_images .route_collection_action_card_all {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding-inline: 22px !important;
-}
-
-.o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped {
-    gap: 18px !important;
-    padding: 12px !important;
-    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%) !important;
-}
-
-.route_pda_payment_card_collection {
-    margin: 0 0 16px 0 !important;
-    border: 1px solid #dbe5ef !important;
-    border-inline-start: 6px solid #0f766e !important;
-    border-radius: 22px !important;
-    background: #ffffff !important;
-    box-shadow: 0 13px 28px rgba(15, 23, 42, 0.075) !important;
-}
-
-.route_pda_payment_card_collection .route_pda_payment_head,
-.route_pda_payment_card_collection .route_pda_payment_badges,
-.route_pda_payment_card_collection .route_pda_payment_metrics,
-.route_pda_payment_card_collection .route_pda_payment_footer {
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-.route_pda_payment_card_collection .route_pda_payment_badges {
-    margin-top: 8px !important;
-}
-
-.route_pda_payment_card_collection .route_pda_payment_footer {
-    background: #f8fafc !important;
-    border: 1px solid #eef2f7 !important;
-    border-radius: 16px !important;
-    padding: 8px !important;
-}
-
-.route_pda_payment_card_collection .route_pda_payment_footer_token {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-}
-
-@media (max-width: 768px) {
-    .route_collection_no_images .route_collection_kpi_card,
-    .route_collection_no_images .route_collection_attention_card,
-    .route_collection_no_images .route_collection_flow_card,
-    .route_collection_no_images .route_collection_mix_row {
-        min-height: 108px !important;
-        padding: 12px 8px !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 
-    .route_collection_no_images .route_collection_kpi_label,
-    .route_collection_no_images .route_collection_attention_label,
-    .route_collection_no_images .route_collection_flow_label,
-    .route_collection_no_images .route_collection_mix_label {
-        min-height: auto !important;
-        line-height: 1.15 !important;
+    .route_pda_payment_card_collection .route_pda_payment_metric_single {
+        grid-column: 1 / -1 !important;
     }
 
-    .route_pda_payment_card_collection {
-        margin-bottom: 18px !important;
-        padding: 14px !important;
+    .route_pda_payment_card_collection .route_pda_payment_footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 }
 
