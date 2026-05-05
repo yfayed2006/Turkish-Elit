@@ -276,6 +276,10 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
         self.ensure_one()
         return self.visit_id.action_send_direct_stop_whatsapp_supervisor()
 
+    def action_share_receipt(self):
+        self.ensure_one()
+        return self.visit_id.action_open_whatsapp_share_wizard()
+
     def action_close(self):
         self.ensure_one()
         if self.visit_id and hasattr(self.visit_id, '_get_pda_form_action'):
