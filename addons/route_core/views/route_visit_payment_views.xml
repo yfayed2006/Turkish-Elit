@@ -1,5 +1,5 @@
 <odoo>
-<!--                 Admin / all payments                 -->
+<!--                  Admin / all payments                  -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -20,7 +20,7 @@
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount" string="Collected"/>
-<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="due_date" optional="hide"/>
 <field name="promise_date" optional="hide"/>
 <field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
@@ -30,7 +30,7 @@
 </list>
 </field>
 </record>
-<!--                 Tailored visit list                 -->
+<!--                  Tailored visit list                  -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -45,12 +45,12 @@
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount" string="Collected"/>
-<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 </list>
 </field>
 </record>
-<!--                 Tailored direct sale list                 -->
+<!--                  Tailored direct sale list                  -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -67,7 +67,7 @@
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="amount" string="Collected"/>
-<field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="due_date" string="Due Date" optional="hide"/>
 <field name="promise_date" string="Next Promise" optional="hide"/>
 <field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
@@ -149,14 +149,14 @@
 </span>
 </div>
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Open Due</span>
+<span class="route_pda_payment_metric_label">Uncovered Due</span>
 <span class="route_pda_payment_metric_value">
 <field name="remaining_due_amount"/>
 </span>
 </div>
 <t t-if="record.effective_promise_amount.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
-<span class="route_pda_payment_metric_label">Promise</span>
+<span class="route_pda_payment_metric_label">Promise / Deferred</span>
 <span class="route_pda_payment_metric_value">
 <field name="effective_promise_amount"/>
 </span>
@@ -244,13 +244,13 @@
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Open Due</div>
+<div class="route_pda_info_label">Uncovered Due</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="remaining_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not effective_promise_amount or effective_promise_amount == 0">
-<div class="route_pda_info_label">Promise Amount</div>
+<div class="route_pda_info_label">Promise / Deferred</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="effective_promise_amount" readonly="1" nolabel="1"/>
 </div>
@@ -384,7 +384,7 @@
 </form>
 </field>
 </record>
-<!--                 Admin / all payments search                 -->
+<!--                  Admin / all payments search                  -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -446,7 +446,7 @@
 </search>
 </field>
 </record>
-<!--                 Visit collections search                 -->
+<!--                  Visit collections search                  -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -497,7 +497,7 @@
 </search>
 </field>
 </record>
-<!--                 Direct sale payments search                 -->
+<!--                  Direct sale payments search                  -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
