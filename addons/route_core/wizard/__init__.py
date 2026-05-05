@@ -18,4 +18,5 @@ from . import route_schedule_stop_wizard
 
 from . import route_visit_geo_reason_wizard
 from . import route_visit_first_consignment_wizard
+from . import route_visit_whatsapp_share_wizard
 
