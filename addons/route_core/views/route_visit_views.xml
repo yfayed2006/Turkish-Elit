@@ -920,14 +920,16 @@
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
+<button name="action_ux_open_direct_sale_order_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
+<button name="action_ux_open_direct_return_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
@@ -1050,14 +1052,16 @@
 <div class="route_mobile_detail_grid">
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
 <field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
+<button name="action_ux_open_direct_sale_order_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
 <div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
+<div class="route_mobile_detail_value route_mobile_wrap_value route_mobile_open_reference_value">
 <field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
+<button name="action_ux_open_direct_return_ref" string="Open" type="object" class="btn-link route_mobile_reference_open"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
