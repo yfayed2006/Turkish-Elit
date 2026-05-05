@@ -1476,14 +1476,14 @@ class RouteVisit(models.Model):
                 f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(payment.amount))}</span>"
                 "</div>",
                 "<div class='route_pda_payment_metric'>"
-                "<span class='route_pda_payment_metric_label'>Open Due</span>"
+                "<span class='route_pda_payment_metric_label'>Uncovered Due</span>"
                 f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(open_due_amount))}</span>"
                 "</div>",
             ]
             if promise_amount:
                 metrics.append(
                     "<div class='route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise'>"
-                    "<span class='route_pda_payment_metric_label'>Promise Amount</span>"
+                    "<span class='route_pda_payment_metric_label'>Promise / Deferred</span>"
                     f"<span class='route_pda_payment_metric_value'>{escape(self._format_route_currency_amount(promise_amount))}</span>"
                     "</div>"
                 )
