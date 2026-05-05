@@ -4501,3 +4501,186 @@
 
 
 
+
+/* Route Core final tax layout fix for direct sale and direct return product cards
+   Keeps the tax breakdown readable in the mobile/PDA one2many cards after adding
+   tax and total fields to the product lists. */
+@media (max-width: 767px) {
+    /* Direct Sale product card: Qty/UoM, Vehicle/Lot, Unit/Disc, Untaxed/Tax,
+       Total Incl. Tax, Expiry, Barcode. */
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"] {
+        grid-column: 2 !important;
+        grid-row: 5 !important;
+        border: 1px solid #e5e7eb !important;
+        background: #f8fafc !important;
+        color: #111827 !important;
+        min-height: 54px !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_tax"] {
+        grid-column: 3 !important;
+        grid-row: 5 !important;
+        display: block !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        border: 0 !important;
+        background: #f8fafc !important;
+        color: #111827 !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_total"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 6 !important;
+        display: block !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        border: 1px solid #bfdbfe !important;
+        background: #f8fbff !important;
+        color: #82466f !important;
+        font-weight: 950 !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_expiry_month_label"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 7 !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="route_product_barcode"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 8 !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_subtotal"]::before {
+        content: "Untaxed" !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_tax"]::before {
+        content: "Tax" !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        color: #64748b !important;
+        font-size: .72rem !important;
+        font-weight: 950 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .02em !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td[name="price_total"]::before {
+        content: "Total Incl. Tax" !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        color: #64748b !important;
+        font-size: .72rem !important;
+        font-weight: 950 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .02em !important;
+    }
+
+    /* Direct Return product card: Qty/UoM, Lot/Reason, Unit/Disc,
+       Untaxed/Tax, Return Total, Expiry, Barcode. */
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_untaxed_amount"] {
+        grid-column: 2 !important;
+        grid-row: 5 !important;
+        display: block !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        border: 0 !important;
+        background: #f8fafc !important;
+        color: #111827 !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_tax_amount"] {
+        grid-column: 3 !important;
+        grid-row: 5 !important;
+        display: block !important;
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+        border-radius: 14px !important;
+        border: 0 !important;
+        background: #f8fafc !important;
+        color: #111827 !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 6 !important;
+        border: 1px solid #bfdbfe !important;
+        background: #f8fbff !important;
+        color: #82466f !important;
+        font-weight: 950 !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="expiry_month_label"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 7 !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="route_product_barcode"] {
+        grid-column: 2 / 4 !important;
+        grid-row: 8 !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_untaxed_amount"]::before {
+        content: "Untaxed" !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        color: #64748b !important;
+        font-size: .72rem !important;
+        font-weight: 950 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .02em !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_tax_amount"]::before {
+        content: "Tax" !important;
+        display: block !important;
+        margin-bottom: 4px !important;
+        color: #64748b !important;
+        font-size: .72rem !important;
+        font-weight: 950 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .02em !important;
+    }
+
+    .route_mobile_direct_return_lines_field .o_data_row td[name="estimated_amount"]::before {
+        content: "Return Total" !important;
+    }
+
+    .route_mobile_direct_products_field .o_data_row td.o_list_record_remove,
+    .route_mobile_direct_return_lines_field .o_data_row td.o_list_record_remove {
+        grid-column: 3 !important;
+        grid-row: 9 !important;
+        justify-self: end !important;
+        align-self: center !important;
+        background: transparent !important;
+        min-height: auto !important;
+        padding: 2px !important;
+    }
+}
+
+
+
+
+
