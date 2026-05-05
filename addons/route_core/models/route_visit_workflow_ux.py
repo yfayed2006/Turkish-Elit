@@ -2050,6 +2050,25 @@ class RouteVisit(models.Model):
             "target": "new",
         }
 
+    def _route_build_whatsapp_share_message_preview(self):
+        self.ensure_one()
+        if self._is_direct_sales_stop():
+            return self._build_direct_stop_whatsapp_message(pdf_url=_('Receipt PDF link will be generated when sending.'))
+        return self._build_consignment_whatsapp_message(pdf_url=_('Receipt PDF link will be generated when sending.'))
+
+    def action_open_whatsapp_share_wizard(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Share Receipt"),
+            "res_model": "route.visit.whatsapp.share.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_visit_id": self.id,
+            },
+        }
+
 
 
 
