@@ -144,6 +144,7 @@ class RouteVisitPayment(models.Model):
             ("cash", "Cash"),
             ("bank", "Bank Transfer"),
             ("pos", "POS"),
+            ("cheque", "Cheque"),
             ("deferred", "Deferred"),
         ],
         string="Payment Mode",
@@ -214,6 +215,10 @@ class RouteVisitPayment(models.Model):
     reference = fields.Char(string="Reference")
     bank_name = fields.Char(string="Bank Name")
     pos_terminal = fields.Char(string="POS Terminal")
+    cheque_number = fields.Char(string="Cheque Number")
+    cheque_date = fields.Date(string="Cheque Date")
+    cheque_holder_name = fields.Char(string="Cheque Holder")
+    cheque_note = fields.Text(string="Cheque Details")
     note = fields.Text(string="Note")
     note_display_html = fields.Html(
         string="Rendered Note",
@@ -480,6 +485,71 @@ class RouteVisitPayment(models.Model):
             return "open"
         return self.promise_status
 
+    def _prepare_cheque_reference(self):
+        for rec in self:
+            if rec.payment_mode == "cheque" and rec.cheque_number and not rec.reference:
+                rec.reference = rec.cheque_number
+
+    def _validate_cheque_details(self):
+        self.ensure_one()
+        if self.payment_mode != "cheque":
+            return
+        if self.collection_type in ("defer_date", "next_visit"):
+            return
+        if not self.cheque_number:
+            raise ValidationError(_("Please enter the cheque number."))
+        if not self.bank_name:
+            raise ValidationError(_("Please enter the cheque bank name."))
+        if not self.cheque_date:
+            raise ValidationError(_("Please enter the cheque date."))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("payment_mode") == "cheque" and vals.get("cheque_number") and not vals.get("reference"):
+                vals["reference"] = vals.get("cheque_number")
+        records = super().create(vals_list)
+        return records
+
+    def write(self, vals):
+        if vals.get("payment_mode") == "cheque" and vals.get("cheque_number") and not vals.get("reference"):
+            vals = dict(vals)
+            vals["reference"] = vals.get("cheque_number")
+        result = super().write(vals)
+        if "cheque_number" in vals or "payment_mode" in vals:
+            self._prepare_cheque_reference()
+        return result
+
+    @api.onchange("payment_mode")
+    def _onchange_payment_mode(self):
+        for rec in self:
+            if rec.payment_mode in ("cash", "deferred"):
+                rec.bank_name = False
+                rec.pos_terminal = False
+                rec.cheque_number = False
+                rec.cheque_date = False
+                rec.cheque_holder_name = False
+                rec.cheque_note = False
+            elif rec.payment_mode == "bank":
+                rec.pos_terminal = False
+                rec.cheque_number = False
+                rec.cheque_date = False
+                rec.cheque_holder_name = False
+                rec.cheque_note = False
+            elif rec.payment_mode == "pos":
+                rec.bank_name = False
+                rec.cheque_number = False
+                rec.cheque_date = False
+                rec.cheque_holder_name = False
+                rec.cheque_note = False
+            elif rec.payment_mode == "cheque":
+                rec.pos_terminal = False
+                rec._prepare_cheque_reference()
+
+    @api.onchange("cheque_number")
+    def _onchange_cheque_number(self):
+        self._prepare_cheque_reference()
+
     def _check_direct_stop_settlement_payment_rules(self):
         self.ensure_one()
         if self.amount < 0:
@@ -490,6 +560,8 @@ class RouteVisitPayment(models.Model):
 
         if self.collection_type in ("full", "partial") and self.payment_mode == "deferred":
             raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
+
+        self._validate_cheque_details()
 
         # Direct-stop settlements can be split across older unpaid visits plus the current stop.
         # The settlement wizard already validates the total collection against the direct-stop
@@ -749,7 +821,7 @@ class RouteVisitPayment(models.Model):
                 if rec.sale_order_id.route_order_mode != "direct_sale":
                     raise ValidationError(_("Only Direct Sale orders can be used here."))
 
-    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id", "payment_mode")
+    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id", "payment_mode", "bank_name", "cheque_number", "cheque_date")
     def _check_payment_rules(self):
         for rec in self:
             if not rec._get_target_model():
@@ -770,6 +842,8 @@ class RouteVisitPayment(models.Model):
 
             if rec.collection_type in ("full", "partial") and rec.payment_mode == "deferred":
                 raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
+
+            rec._validate_cheque_details()
 
             if rec.collection_type == "full":
                 if due <= 0:
