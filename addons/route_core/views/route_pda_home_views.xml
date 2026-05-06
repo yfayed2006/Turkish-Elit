@@ -738,7 +738,7 @@
 <div class="route_collection_hero_text">
 <div class="route_collection_kicker">Today’s money control</div>
 <div class="route_collection_title">Visit Collections</div>
-<div class="route_collection_subtitle">Cash, bank, POS, promises, and remaining balances in one salesperson dashboard.</div>
+<div class="route_collection_subtitle">Cash, bank, POS, cheques, promises, and remaining balances in one salesperson dashboard.</div>
 </div>
 </div>
 <div class="route_collection_section_title">Daily Money Snapshot</div>
@@ -777,6 +777,15 @@
 <div class="route_collection_kpi_label">POS Today</div>
 <div class="route_collection_kpi_value">
 <field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_collection_kpi_card route_collection_kpi_cheque">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-ticket"/>
+</div>
+<div class="route_collection_kpi_label">Cheques Today</div>
+<div class="route_collection_kpi_value">
+<field name="cheque_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_collection_kpi_card route_collection_kpi_promise">
@@ -883,6 +892,17 @@
 </span>
 <span class="route_collection_mix_percent">
 <field name="collection_pos_share_percent" readonly="1" nolabel="1"/>
+%
+</span>
+</div>
+<div class="route_collection_mix_row">
+<span class="route_collection_mix_dot route_collection_mix_dot_cheque"/>
+<span class="route_collection_mix_label">Cheque</span>
+<span class="route_collection_mix_amount">
+<field name="cheque_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</span>
+<span class="route_collection_mix_percent">
+<field name="collection_cheque_share_percent" readonly="1" nolabel="1"/>
 %
 </span>
 </div>
@@ -1007,6 +1027,12 @@ Entries
 <div class="route_pda_info_label">POS Today</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="pos_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Cheques Today</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
