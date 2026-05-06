@@ -93,8 +93,11 @@ class RoutePdaHome(models.TransientModel):
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
     pos_today_amount = fields.Monetary(string="POS", currency_field="currency_id", compute="_compute_dashboard")
     cheque_today_amount = fields.Monetary(string="Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
+    cheque_pending_clearance_amount = fields.Monetary(string="Pending Cheque Clearance", currency_field="currency_id", compute="_compute_dashboard")
+    cheque_cleared_today_amount = fields.Monetary(string="Cleared Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
     cheque_open_due_amount = fields.Monetary(string="Cheque Open Due", currency_field="currency_id", compute="_compute_dashboard")
     cheque_followup_entry_count = fields.Integer(string="Cheque Follow-up Entries", compute="_compute_dashboard")
+    cheque_pending_clearance_entry_count = fields.Integer(string="Pending Cheque Clearance Entries", compute="_compute_dashboard")
     deferred_today_amount = fields.Monetary(string="Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
@@ -468,11 +471,34 @@ class RoutePdaHome(models.TransientModel):
     def _get_payment_cheque_open_due_amount(self, payment):
         if not payment or payment.state != "confirmed" or getattr(payment, "payment_mode", False) != "cheque":
             return 0.0
+        if hasattr(payment, "_get_route_open_due_from_cheque_amount"):
+            return payment._get_route_open_due_from_cheque_amount()
         cheque_state = getattr(payment, "cheque_followup_state", False) or "received"
         financial_state = getattr(payment, "cheque_financial_state", False)
         if cheque_state in ("bounced", "cancelled") or financial_state in ("open_due", "cancelled"):
             return getattr(payment, "cheque_open_due_amount", 0.0) or payment.amount or 0.0
         return 0.0
+
+    def _get_payment_cheque_pending_clearance_amount(self, payment):
+        if not payment or payment.state != "confirmed" or getattr(payment, "payment_mode", False) != "cheque":
+            return 0.0
+        if hasattr(payment, "_get_route_pending_clearance_amount"):
+            return payment._get_route_pending_clearance_amount()
+        cheque_state = getattr(payment, "cheque_followup_state", False) or "received"
+        financial_state = getattr(payment, "cheque_financial_state", False)
+        if cheque_state in (False, "received", "deposited") or financial_state == "pending":
+            return payment.amount or 0.0
+        return 0.0
+
+    def _get_payment_cheque_financially_cleared_amount(self, payment):
+        if not payment or payment.state != "confirmed":
+            return 0.0
+        if hasattr(payment, "_get_route_accounting_cleared_amount"):
+            return payment._get_route_accounting_cleared_amount()
+        if getattr(payment, "payment_mode", False) == "cheque":
+            cheque_state = getattr(payment, "cheque_followup_state", False) or "received"
+            return (payment.amount or 0.0) if cheque_state == "cleared" else 0.0
+        return payment.amount or 0.0
 
     def _get_payment_snapshot_promise_status(self, payment):
         if not payment or payment.state != "confirmed" or (payment.promise_amount or 0.0) <= 0.0:
@@ -812,6 +838,12 @@ class RoutePdaHome(models.TransientModel):
             cheque_open_due_payments = all_confirmed_payments.filtered(
                 lambda p: rec._get_payment_cheque_open_due_amount(p) > 0.0
             )
+            cheque_pending_clearance_payments = all_confirmed_payments.filtered(
+                lambda p: rec._get_payment_cheque_pending_clearance_amount(p) > 0.0
+            )
+            today_cheque_cleared_payments = today_payments.filtered(
+                lambda p: rec._get_payment_cheque_financially_cleared_amount(p) > 0.0 and rec._get_payment_snapshot_mode(p) == "cheque"
+            )
             followup_collections = all_confirmed_payments.filtered(
                 lambda p: (p.remaining_due_amount or 0.0) > 0.0
                 or rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
@@ -829,7 +861,10 @@ class RoutePdaHome(models.TransientModel):
             rec.confirmed_collection_count = len(all_confirmed_payments)
             rec.collection_followup_count = len(followup_collections)
             rec.cheque_followup_entry_count = len(cheque_open_due_payments)
+            rec.cheque_pending_clearance_entry_count = len(cheque_pending_clearance_payments)
             rec.cheque_open_due_amount = sum(rec._get_payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
+            rec.cheque_pending_clearance_amount = sum(rec._get_payment_cheque_pending_clearance_amount(p) for p in cheque_pending_clearance_payments)
+            rec.cheque_cleared_today_amount = sum(rec._get_payment_cheque_financially_cleared_amount(p) for p in today_cheque_cleared_payments)
             rec.open_promise_entry_count = len(open_promise_entries)
             rec.overdue_promise_entry_count = len(overdue_promise_entries)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
