@@ -1,5 +1,5 @@
 <odoo>
-<!--                   Admin / all payments                   -->
+<!--                    Admin / all payments                    -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -27,11 +27,13 @@
 <field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference" optional="hide"/>
+<field name="cheque_number" optional="hide"/>
+<field name="cheque_date" optional="hide"/>
 <field name="state" optional="hide"/>
 </list>
 </field>
 </record>
-<!--                   Tailored visit list                   -->
+<!--                    Tailored visit list                    -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -52,7 +54,7 @@
 </list>
 </field>
 </record>
-<!--                   Tailored direct sale list                   -->
+<!--                    Tailored direct sale list                    -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -76,6 +78,8 @@
 <field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference" string="Reference" optional="hide"/>
+<field name="cheque_number" string="Cheque No." optional="hide"/>
+<field name="cheque_date" string="Cheque Date" optional="hide"/>
 <field name="state" string="Status" optional="hide"/>
 </list>
 </field>
@@ -104,6 +108,9 @@
 <field name="remaining_due_amount"/>
 <field name="effective_promise_amount"/>
 <field name="promise_status"/>
+<field name="bank_name"/>
+<field name="cheque_number"/>
+<field name="cheque_date"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_collection">
@@ -167,7 +174,7 @@
 </div>
 </t>
 </div>
-<div class="route_pda_payment_footer" t-if="record.source_document_ref.raw_value or record.settlement_document_ref.raw_value or record.area_id.raw_value or record.promise_date.raw_value or record.due_date.raw_value">
+<div class="route_pda_payment_footer" t-if="record.source_document_ref.raw_value or record.settlement_document_ref.raw_value or record.area_id.raw_value or record.promise_date.raw_value or record.due_date.raw_value or record.cheque_number.raw_value or record.cheque_date.raw_value or record.bank_name.raw_value">
 <t t-if="record.source_document_ref.raw_value">
 <div class="route_pda_payment_footer_item route_pda_payment_footer_token">
 <span class="route_pda_payment_footer_label">Source</span>
@@ -189,6 +196,30 @@
 <span class="route_pda_payment_footer_label">Area</span>
 <span class="route_pda_payment_footer_value">
 <t t-esc="record.area_id.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_number.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Cheque</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.cheque_number.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.bank_name.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Bank</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.bank_name.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Cheque Date</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_date"/>
 </span>
 </div>
 </t>
@@ -323,7 +354,7 @@
 <span class="route_pda_payment_meta_label">Promise Status</span>
 <field name="promise_status" readonly="1" string="Promise Status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="payment_mode in ('cash', 'deferred')">
+<div class="route_pda_payment_meta_item" invisible="payment_mode not in ('bank', 'pos')">
 <span class="route_pda_payment_meta_label">Reference</span>
 <field name="reference" readonly="state != 'draft'" string="Reference" nolabel="1"/>
 </div>
@@ -334,6 +365,26 @@
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'pos'">
 <span class="route_pda_payment_meta_label">POS Terminal</span>
 <field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Number</span>
+<field name="cheque_number" readonly="state != 'draft'" string="Cheque Number" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Bank</span>
+<field name="bank_name" readonly="state != 'draft'" string="Cheque Bank" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Date</span>
+<field name="cheque_date" readonly="state != 'draft'" string="Cheque Date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Holder</span>
+<field name="cheque_holder_name" readonly="state != 'draft'" string="Cheque Holder" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Details</span>
+<field name="cheque_note" readonly="state != 'draft'" widget="text" string="Cheque Details" nolabel="1"/>
 </div>
 </div>
 </div>
@@ -388,7 +439,7 @@
 </form>
 </field>
 </record>
-<!--                   Admin / all payments search                   -->
+<!--                    Admin / all payments search                    -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -409,6 +460,8 @@
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="state"/>
 <field name="reference"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
 <field name="source_document_ref"/>
 <filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
 <filter name="filter_visit_source" string="Visit" domain="[('payment_business_flow', '=', 'consignment_visit')]"/>
@@ -418,6 +471,7 @@
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
@@ -452,7 +506,7 @@
 </search>
 </field>
 </record>
-<!--                   Visit collections search                   -->
+<!--                    Visit collections search                    -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -468,6 +522,8 @@
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
 <field name="state"/>
 <field name="source_document_ref" string="Visit"/>
 <filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
@@ -485,6 +541,7 @@
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
@@ -513,7 +570,7 @@
 </search>
 </field>
 </record>
-<!--                   Direct sale payments search                   -->
+<!--                    Direct sale payments search                    -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -530,12 +587,15 @@
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
 <field name="state"/>
 <field name="reference"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
 <field name="source_document_ref" string="Order"/>
 <filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
 <separator/>
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
