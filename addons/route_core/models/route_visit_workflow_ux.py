@@ -1902,6 +1902,11 @@ class RouteVisit(models.Model):
                 lines.append(_("Promise Date: %s") % promise_date)
         elif (summary.get("remaining_amount") or 0.0) <= 0.0:
             lines.append(_("Settlement Status: Paid in full"))
+
+        payment_lines = self._build_whatsapp_payment_method_lines(self._get_consignment_receipt_payments())
+        if payment_lines:
+            lines += [""] + payment_lines
+
         if pdf_url:
             lines += ["", _("Receipt PDF:"), pdf_url]
         return "\n".join(lines)
@@ -1995,6 +2000,38 @@ class RouteVisit(models.Model):
             ("next_stop", _("Carry to Next Stop")),
         ])
 
+    def _build_whatsapp_payment_method_lines(self, payments):
+        self.ensure_one()
+        payments = payments.filtered(lambda p: p.state == "confirmed" and ((p.amount or 0.0) > 0.0 or (p.promise_amount or 0.0) > 0.0))
+        if not payments:
+            return []
+
+        mode_labels = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
+        mode_order = ["cash", "bank", "pos", "cheque", "deferred"]
+        used_modes = []
+        for mode in mode_order:
+            if any((p.payment_mode or "cash") == mode for p in payments):
+                used_modes.append(mode_labels.get(mode, mode))
+
+        lines = []
+        if used_modes:
+            lines.append(_("Payment Mode: %s") % ", ".join(used_modes))
+
+        cheque_payments = payments.filtered(lambda p: p.payment_mode == "cheque")
+        if cheque_payments:
+            if len(cheque_payments) == 1:
+                cheque = cheque_payments[0]
+                if cheque.cheque_number:
+                    lines.append(_("Cheque Ref: %s") % cheque.cheque_number)
+                if cheque.bank_name:
+                    lines.append(_("Cheque Bank: %s") % cheque.bank_name)
+                if cheque.cheque_date:
+                    lines.append(_("Cheque Date: %s") % self._format_route_payment_date(cheque.cheque_date))
+            else:
+                lines.append(_("Cheques: %s") % len(cheque_payments))
+
+        return lines
+
     def _build_direct_stop_whatsapp_message(self, pdf_url=False):
         self.ensure_one()
         summary = self._get_direct_stop_receipt_summary()
@@ -2027,6 +2064,10 @@ class RouteVisit(models.Model):
             if self.direct_stop_credit_policy:
                 policy_label = credit_policy_map.get(self.direct_stop_credit_policy, self.direct_stop_credit_policy)
                 lines.append(_("Credit Handling: %s") % policy_label)
+
+        payment_lines = self._build_whatsapp_payment_method_lines(self._get_direct_stop_receipt_payments())
+        if payment_lines:
+            lines += [""] + payment_lines
 
         if pdf_url:
             lines += [
