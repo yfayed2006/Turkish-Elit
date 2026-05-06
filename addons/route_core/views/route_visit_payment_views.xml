@@ -17,6 +17,8 @@
 <field name="payment_date"/>
 <field name="payment_mode"/>
 <field name="collection_time_bucket" string="Collection Time" optional="hide"/>
+<field name="collection_due_bucket" string="Financial Status" optional="hide"/>
+<field name="collection_promise_bucket" string="Promise Filter" optional="hide"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -91,6 +93,8 @@
 <kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
 <field name="payment_date"/>
 <field name="collection_time_bucket"/>
+<field name="collection_due_bucket"/>
+<field name="collection_promise_bucket"/>
 <field name="payment_business_flow"/>
 <field name="payment_business_flow_short"/>
 <field name="payment_mode"/>
@@ -150,6 +154,12 @@
 <span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
 <t t-esc="record.state.value"/>
 </span>
+</t>
+<t t-if="record.collection_due_bucket.raw_value == 'remaining_due'">
+<span class="route_pda_payment_badge route_pda_payment_badge_balance">Remaining Due</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque'">
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Cheque Follow-up</span>
 </t>
 </div>
 <div class="route_pda_payment_metrics">
@@ -262,6 +272,8 @@
 </header>
 <sheet class="route_pda_payment_sheet">
 <field name="source_type" invisible="1"/>
+<field name="collection_due_bucket" invisible="1"/>
+<field name="collection_promise_bucket" invisible="1"/>
 <field name="can_open_statement" invisible="1"/>
 <field name="statement_visit_id" invisible="1"/>
 <field name="show_settlement_reference" invisible="1"/>
@@ -455,6 +467,8 @@
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
 <field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -479,6 +493,12 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
@@ -490,6 +510,8 @@
 <filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection Scenario" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
 <searchpanel>
@@ -500,6 +522,8 @@
 <field name="area_id" string="Area"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="payment_mode" string="Payment Mode"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise"/>
 <field name="collection_type" string="Collection Scenario"/>
 <field name="state" string="Status"/>
 </searchpanel>
@@ -519,6 +543,8 @@
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
 <field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -549,6 +575,12 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
@@ -559,12 +591,16 @@
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
 <field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="payment_mode" string="Mode"/>
+<field name="collection_due_bucket" string="Due"/>
+<field name="collection_promise_bucket" string="Promise"/>
 <field name="state" string="Status"/>
 </searchpanel>
 </search>
@@ -582,6 +618,8 @@
 <field name="salesperson_id"/>
 <field name="payment_mode"/>
 <field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
 <field name="collection_type"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -603,6 +641,12 @@
 <filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
 <filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
 <separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
@@ -613,12 +657,16 @@
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
 <filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
 <searchpanel>
 <field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="payment_mode" string="Mode"/>
+<field name="collection_due_bucket" string="Due"/>
+<field name="collection_promise_bucket" string="Promise"/>
 <field name="state" string="Status"/>
 </searchpanel>
 </search>
