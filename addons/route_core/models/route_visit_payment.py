@@ -210,6 +210,33 @@ class RouteVisitPayment(models.Model):
         store=False,
     )
 
+    collection_due_bucket = fields.Selection(
+        [
+            ("fully_collected", "Fully Collected"),
+            ("remaining_due", "Remaining Due"),
+        ],
+        string="Financial Status",
+        compute="_compute_collection_filter_buckets",
+        store=True,
+        index=True,
+        readonly=True,
+    )
+
+    collection_promise_bucket = fields.Selection(
+        [
+            ("no_promise", "No Promise"),
+            ("open", "Open Promise"),
+            ("due_today", "Promise Due Today"),
+            ("overdue", "Overdue Promise"),
+            ("closed", "Promise Closed"),
+        ],
+        string="Promise Filter",
+        compute="_compute_collection_filter_buckets",
+        store=True,
+        index=True,
+        readonly=True,
+    )
+
     due_date = fields.Date(string="Deferred Due Date")
 
     reference = fields.Char(string="Reference")
@@ -631,6 +658,41 @@ class RouteVisitPayment(models.Model):
     def _compute_remaining_due_amount(self):
         for rec in self:
             rec.remaining_due_amount = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
+
+    @api.depends(
+        "state",
+        "collection_type",
+        "amount",
+        "promise_amount",
+        "promise_date",
+        "due_date",
+        "source_type",
+        "visit_id.remaining_due_amount",
+        "visit_id.payment_ids.amount",
+        "visit_id.payment_ids.state",
+        "sale_order_id.amount_total",
+        "sale_order_id.direct_sale_payment_ids.amount",
+        "sale_order_id.direct_sale_payment_ids.state",
+    )
+    def _compute_collection_filter_buckets(self):
+        today = fields.Date.context_today(self)
+        for rec in self:
+            remaining_due = 0.0
+            if rec._get_target_model():
+                remaining_due = rec._get_target_remaining_due()
+
+            rec.collection_due_bucket = "remaining_due" if (remaining_due or 0.0) > 0.0001 else "fully_collected"
+
+            if rec.state != "confirmed" or (rec.promise_amount or 0.0) <= 0.0:
+                rec.collection_promise_bucket = "no_promise"
+            elif remaining_due <= 0.0001 and not rec._is_direct_stop_settlement_payment():
+                rec.collection_promise_bucket = "closed"
+            elif rec.promise_date and rec.promise_date < today:
+                rec.collection_promise_bucket = "overdue"
+            elif rec.promise_date and rec.promise_date == today:
+                rec.collection_promise_bucket = "due_today"
+            else:
+                rec.collection_promise_bucket = "open"
 
 
     @api.depends(
