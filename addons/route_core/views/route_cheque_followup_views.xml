@@ -1,180 +1,278 @@
-from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
-
-
-class RouteVisitPaymentChequeFollowup(models.Model):
-    _inherit = "route.visit.payment"
-
-    cheque_followup_state = fields.Selection(
-        [
-            ("received", "Received"),
-            ("deposited", "Deposited"),
-            ("cleared", "Cleared"),
-            ("bounced", "Bounced"),
-            ("cancelled", "Cancelled"),
-        ],
-        string="Cheque Status",
-        default=False,
-        index=True,
-        copy=False,
-    )
-    cheque_followup_state_label = fields.Char(
-        string="Cheque Status Label",
-        compute="_compute_cheque_followup_labels",
-        store=False,
-    )
-    cheque_followup_due_label = fields.Char(
-        string="Cheque Due Status",
-        compute="_compute_cheque_followup_labels",
-        store=False,
-    )
-    cheque_deposited_at = fields.Datetime(string="Deposited At", copy=False)
-    cheque_cleared_at = fields.Datetime(string="Cleared At", copy=False)
-    cheque_bounced_at = fields.Datetime(string="Bounced At", copy=False)
-    cheque_cancelled_at = fields.Datetime(string="Cheque Cancelled At", copy=False)
-    cheque_followup_updated_at = fields.Datetime(string="Cheque Last Update", copy=False)
-    cheque_followup_updated_by_id = fields.Many2one(
-        "res.users",
-        string="Cheque Updated By",
-        readonly=True,
-        copy=False,
-    )
-    cheque_followup_note = fields.Text(string="Cheque Follow-up Note", copy=False)
-
-    @api.model
-    def init(self):
-        """Backfill existing cheque payments after the feature is installed."""
-        try:
-            self.env.cr.execute(
-                """
-                UPDATE route_visit_payment
-                   SET cheque_followup_state = 'received'
-                 WHERE payment_mode = 'cheque'
-                   AND (cheque_followup_state IS NULL OR cheque_followup_state = '')
-                """
-            )
-        except Exception:
-            # Keep module upgrade safe even if the column is not ready in an unusual registry phase.
-            pass
-
-    @api.depends("payment_mode", "cheque_followup_state", "cheque_date")
-    def _compute_cheque_followup_labels(self):
-        today = fields.Date.context_today(self)
-        state_labels = dict(self._fields["cheque_followup_state"].selection)
-        for rec in self:
-            if rec.payment_mode != "cheque":
-                rec.cheque_followup_state_label = False
-                rec.cheque_followup_due_label = False
-                continue
-
-            state = rec.cheque_followup_state or "received"
-            rec.cheque_followup_state_label = state_labels.get(state, state)
-
-            if state == "cleared":
-                rec.cheque_followup_due_label = _("Cleared")
-            elif state == "bounced":
-                rec.cheque_followup_due_label = _("Bounced")
-            elif state == "cancelled":
-                rec.cheque_followup_due_label = _("Cancelled")
-            elif not rec.cheque_date:
-                rec.cheque_followup_due_label = _("No Cheque Date")
-            elif rec.cheque_date < today:
-                rec.cheque_followup_due_label = _("Overdue")
-            elif rec.cheque_date == today:
-                rec.cheque_followup_due_label = _("Due Today")
-            else:
-                rec.cheque_followup_due_label = _("Upcoming")
-
-    def _ensure_cheque_followup_payment(self):
-        for rec in self:
-            if rec.payment_mode != "cheque":
-                raise ValidationError(_("Cheque follow-up actions are available only for cheque payments."))
-            if rec.state != "confirmed":
-                raise ValidationError(_("Confirm the cheque payment before using cheque follow-up actions."))
-
-    def _write_cheque_followup_state(self, state, date_field=None):
-        self._ensure_cheque_followup_payment()
-        values = {
-            "cheque_followup_state": state,
-            "cheque_followup_updated_at": fields.Datetime.now(),
-            "cheque_followup_updated_by_id": self.env.user.id,
-        }
-        if date_field:
-            values[date_field] = fields.Datetime.now()
-        self.write(values)
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Cheque Follow-up"),
-                "message": _("Cheque status updated successfully."),
-                "type": "success",
-                "sticky": False,
-            },
-        }
-
-    def action_cheque_mark_deposited(self):
-        return self._write_cheque_followup_state("deposited", "cheque_deposited_at")
-
-    def action_cheque_mark_cleared(self):
-        return self._write_cheque_followup_state("cleared", "cheque_cleared_at")
-
-    def action_cheque_mark_bounced(self):
-        return self._write_cheque_followup_state("bounced", "cheque_bounced_at")
-
-    def action_cheque_mark_cancelled(self):
-        return self._write_cheque_followup_state("cancelled", "cheque_cancelled_at")
-
-    def action_cheque_reset_received(self):
-        self._ensure_cheque_followup_payment()
-        self.write(
-            {
-                "cheque_followup_state": "received",
-                "cheque_followup_updated_at": fields.Datetime.now(),
-                "cheque_followup_updated_by_id": self.env.user.id,
-                "cheque_deposited_at": False,
-                "cheque_cleared_at": False,
-                "cheque_bounced_at": False,
-                "cheque_cancelled_at": False,
-            }
-        )
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Cheque Follow-up"),
-                "message": _("Cheque was reset to Received."),
-                "type": "success",
-                "sticky": False,
-            },
-        }
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get("payment_mode") == "cheque" and not vals.get("cheque_followup_state"):
-                vals["cheque_followup_state"] = "received"
-            elif vals.get("payment_mode") and vals.get("payment_mode") != "cheque":
-                vals["cheque_followup_state"] = False
-        records = super().create(vals_list)
-        records.filtered(lambda rec: rec.payment_mode == "cheque" and not rec.cheque_followup_state).with_context(
-            bypass_cheque_followup_post_create=True
-        ).write({"cheque_followup_state": "received"})
-        return records
-
-    def write(self, vals):
-        values = dict(vals)
-        if values.get("payment_mode") == "cheque" and not values.get("cheque_followup_state"):
-            values["cheque_followup_state"] = "received"
-        elif values.get("payment_mode") and values.get("payment_mode") != "cheque":
-            values.update(
-                {
-                    "cheque_followup_state": False,
-                    "cheque_deposited_at": False,
-                    "cheque_cleared_at": False,
-                    "cheque_bounced_at": False,
-                    "cheque_cancelled_at": False,
-                    "cheque_followup_note": False,
-                }
-            )
-        return super().write(values)
+<odoo>
+<record id="view_route_cheque_followup_kanban" model="ir.ui.view">
+<field name="name">route.cheque.followup.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="priority" eval="20"/>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban route_cheque_control_kanban" create="0" edit="0" delete="0">
+<field name="source_document_ref"/>
+<field name="settlement_document_ref"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_date"/>
+<field name="amount"/>
+<field name="payment_mode"/>
+<field name="state"/>
+<field name="cheque_number"/>
+<field name="bank_name"/>
+<field name="cheque_date"/>
+<field name="cheque_holder_name"/>
+<field name="cheque_followup_state"/>
+<field name="cheque_followup_state_label"/>
+<field name="cheque_followup_due_label"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_cheque_control_card">
+<div class="route_pda_payment_head route_cheque_control_head">
+<div>
+<div class="route_pda_payment_title">
+<t t-esc="record.source_document_ref.value or record.settlement_document_ref.value or 'Cheque'"/>
+</div>
+<div class="route_pda_payment_subtitle">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.salesperson_id.raw_value"> • </t>
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<span t-attf-class="route_pda_payment_badge route_cheque_status_badge route_cheque_status_#{record.cheque_followup_state.raw_value or 'received'}">
+<t t-esc="record.cheque_followup_state_label.value or 'Received'"/>
+</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
+<t t-esc="record.cheque_followup_due_label.value or 'Cheque Follow-up'"/>
+</span>
+</div>
+<div class="route_pda_payment_metrics route_cheque_control_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Amount</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Cheque</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_number"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Bank</span>
+<span class="route_pda_payment_metric_value">
+<field name="bank_name"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Cheque Date</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_date"/>
+</span>
+</div>
+</div>
+<div class="route_cheque_control_actions">
+<button name="action_cheque_mark_deposited" type="object" class="btn btn-sm btn-secondary" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received']">Deposit</button>
+<button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received', 'deposited']">Clear</button>
+<button name="action_cheque_mark_bounced" type="object" class="btn btn-sm btn-warning" invisible="state != 'confirmed' or cheque_followup_state in ['cleared', 'bounced', 'cancelled']">Bounce</button>
+<button name="action_cheque_reset_received" type="object" class="btn btn-sm btn-light" invisible="state != 'confirmed' or cheque_followup_state in [False, 'received']">Reset</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_cheque_followup_list" model="ir.ui.view">
+<field name="name">route.cheque.followup.list</field>
+<field name="model">route.visit.payment</field>
+<field name="priority" eval="20"/>
+<field name="arch" type="xml">
+<list string="Cheque Follow-up" create="0" edit="0" delete="0">
+<field name="source_document_ref" string="Source"/>
+<field name="settlement_document_ref" string="Settlement" optional="hide"/>
+<field name="outlet_id"/>
+<field name="salesperson_id"/>
+<field name="payment_date"/>
+<field name="amount" string="Amount"/>
+<field name="cheque_number" string="Cheque No."/>
+<field name="bank_name" string="Bank"/>
+<field name="cheque_date" string="Cheque Date"/>
+<field name="cheque_followup_state" string="Cheque Status" widget="badge" decoration-info="cheque_followup_state == False or cheque_followup_state == 'received'" decoration-warning="cheque_followup_state == 'deposited'" decoration-success="cheque_followup_state == 'cleared'" decoration-danger="cheque_followup_state == 'bounced'" decoration-muted="cheque_followup_state == 'cancelled'"/>
+<field name="cheque_followup_due_label" string="Due Status"/>
+<button name="action_cheque_mark_deposited" type="object" string="Deposit" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received']"/>
+<button name="action_cheque_mark_cleared" type="object" string="Clear" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received', 'deposited']"/>
+<button name="action_cheque_mark_bounced" type="object" string="Bounce" invisible="state != 'confirmed' or cheque_followup_state in ['cleared', 'bounced', 'cancelled']"/>
+</list>
+</field>
+</record>
+<record id="view_route_cheque_followup_form" model="ir.ui.view">
+<field name="name">route.cheque.followup.form</field>
+<field name="model">route.visit.payment</field>
+<field name="priority" eval="20"/>
+<field name="arch" type="xml">
+<form string="Cheque Follow-up" create="0" delete="0" class="route_pda_payment_form route_cheque_control_form">
+<header>
+<button name="action_cheque_mark_deposited" string="Mark Deposited" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state not in [False, 'received']"/>
+<button name="action_cheque_mark_cleared" string="Mark Cleared" type="object" class="btn-success" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state not in [False, 'received', 'deposited']"/>
+<button name="action_cheque_mark_bounced" string="Mark Bounced" type="object" class="btn-warning" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state in ['cleared', 'bounced', 'cancelled']"/>
+<button name="action_cheque_mark_cancelled" string="Cancel Cheque" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state in ['cleared', 'cancelled']"/>
+<button name="action_cheque_reset_received" string="Reset to Received" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state in [False, 'received']"/>
+<field name="cheque_followup_state" widget="statusbar" statusbar_visible="received,deposited,cleared,bounced,cancelled"/>
+</header>
+<sheet class="route_pda_payment_sheet route_cheque_control_sheet">
+<field name="payment_mode" invisible="1"/>
+<field name="state" invisible="1"/>
+<field name="currency_id" invisible="1"/>
+<div class="route_pda_payment_summary_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Amount</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Due Status</div>
+<div class="route_pda_info_value">
+<field name="cheque_followup_due_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Payment Status</div>
+<div>
+<field name="state" readonly="1" widget="badge" nolabel="1"/>
+</div>
+</div>
+</div>
+<group string="Cheque Details">
+<group>
+<field name="cheque_number" readonly="1"/>
+<field name="bank_name" string="Cheque Bank" readonly="1"/>
+<field name="cheque_date" readonly="1"/>
+<field name="cheque_holder_name" readonly="1"/>
+</group>
+<group>
+<field name="source_document_ref" readonly="1"/>
+<field name="settlement_document_ref" readonly="1"/>
+<field name="outlet_id" readonly="1" options="{'no_open': True}"/>
+<field name="salesperson_id" readonly="1" options="{'no_open': True}"/>
+</group>
+</group>
+<group string="Follow-up Trail">
+<group>
+<field name="cheque_deposited_at" readonly="1"/>
+<field name="cheque_cleared_at" readonly="1"/>
+<field name="cheque_bounced_at" readonly="1"/>
+<field name="cheque_cancelled_at" readonly="1"/>
+</group>
+<group>
+<field name="cheque_followup_updated_at" readonly="1"/>
+<field name="cheque_followup_updated_by_id" readonly="1" options="{'no_open': True}"/>
+<field name="cheque_note" readonly="1"/>
+</group>
+</group>
+<group string="Follow-up Note">
+<field name="cheque_followup_note" placeholder="Add cheque follow-up note..." nolabel="1"/>
+</group>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_cheque_followup_search" model="ir.ui.view">
+<field name="name">route.cheque.followup.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Cheque Follow-up">
+<field name="source_document_ref" string="Source"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<field name="cheque_date" string="Cheque Date"/>
+<separator/>
+<filter name="filter_my_cheques" string="My Cheques" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_confirmed" string="Confirmed Payments" domain="[('state', '=', 'confirmed')]"/>
+<separator/>
+<filter name="filter_received" string="Received" domain="['|', ('cheque_followup_state', '=', False), ('cheque_followup_state', '=', 'received')]"/>
+<filter name="filter_deposited" string="Deposited" domain="[('cheque_followup_state', '=', 'deposited')]"/>
+<filter name="filter_cleared" string="Cleared" domain="[('cheque_followup_state', '=', 'cleared')]"/>
+<filter name="filter_bounced" string="Bounced" domain="[('cheque_followup_state', '=', 'bounced')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('cheque_followup_state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="filter_due_today" string="Due Today" domain="[('cheque_date', '=', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
+<filter name="filter_overdue" string="Overdue" domain="[('cheque_date', '<', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
+<filter name="filter_upcoming" string="Upcoming" domain="[('cheque_date', '>', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
+<separator/>
+<filter name="group_by_state" string="Cheque Status" domain="[]" context="{'group_by': 'cheque_followup_state'}"/>
+<filter name="group_by_bank" string="Bank" domain="[]" context="{'group_by': 'bank_name'}"/>
+<filter name="group_by_cheque_date" string="Cheque Date" domain="[]" context="{'group_by': 'cheque_date'}"/>
+<filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<searchpanel>
+<field name="cheque_followup_state" string="Cheque Status"/>
+<field name="bank_name" string="Bank"/>
+<field name="salesperson_id" string="Salesperson"/>
+<field name="outlet_id" string="Outlet"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="action_route_cheque_control" model="ir.actions.act_window">
+<field name="name">Cheque Control</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_kanban"/>
+<field name="search_view_id" ref="route_core.view_route_cheque_followup_search"/>
+<field name="domain">[('payment_mode', '=', 'cheque'), ('state', '=', 'confirmed')]</field>
+<field name="context">{'search_default_filter_confirmed': 1}</field>
+</record>
+<record id="action_route_cheque_control_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_kanban"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_control"/>
+</record>
+<record id="action_route_cheque_control_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_list"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_control"/>
+</record>
+<record id="action_route_cheque_control_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_form"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_control"/>
+</record>
+<record id="action_route_cheque_followup_salesperson" model="ir.actions.act_window">
+<field name="name">My Cheque Follow-up</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_kanban"/>
+<field name="search_view_id" ref="route_core.view_route_cheque_followup_search"/>
+<field name="domain">[('payment_mode', '=', 'cheque'), ('state', '=', 'confirmed'), ('salesperson_id', '=', uid)]</field>
+<field name="context">{'search_default_filter_my_cheques': 1, 'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_cheque_followup_salesperson_kanban_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="1"/>
+<field name="view_mode">kanban</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_kanban"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_followup_salesperson"/>
+</record>
+<record id="action_route_cheque_followup_salesperson_list_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="2"/>
+<field name="view_mode">list</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_list"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_followup_salesperson"/>
+</record>
+<record id="action_route_cheque_followup_salesperson_form_view" model="ir.actions.act_window.view">
+<field name="sequence" eval="3"/>
+<field name="view_mode">form</field>
+<field name="view_id" ref="route_core.view_route_cheque_followup_form"/>
+<field name="act_window_id" ref="route_core.action_route_cheque_followup_salesperson"/>
+</record>
+<menuitem id="menu_route_cheque_control" name="Cheque Control" parent="route_core.menu_route_control_workspace" action="route_core.action_route_cheque_control" sequence="44" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
+</odoo>
