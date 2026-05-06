@@ -725,6 +725,8 @@
 <form string="Visit Collections" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_visit_collections_sheet route_pda_collections_dashboard_sheet route_collection_no_images">
 <field name="currency_id" invisible="1"/>
+<field name="cheque_open_due_amount" invisible="1"/>
+<field name="cheque_followup_entry_count" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <div class="route_pda_detail_header route_pda_compact_header route_pda_collections_header">
@@ -797,6 +799,15 @@
 <field name="deferred_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
+<div class="route_collection_kpi_card route_collection_kpi_cheque_open_due">
+<div class="route_collection_kpi_icon">
+<i class="fa fa-exclamation-triangle"/>
+</div>
+<div class="route_collection_kpi_label">Cheque Open Due</div>
+<div class="route_collection_kpi_value">
+<field name="cheque_open_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
 <div class="route_collection_kpi_card route_collection_kpi_remaining">
 <div class="route_collection_kpi_icon">
 <i class="fa fa-exclamation-circle"/>
@@ -850,6 +861,24 @@
 <span class="route_collection_attention_label">Remaining Due</span>
 <span class="route_collection_attention_value">
 <field name="remaining_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</span>
+</div>
+<div class="route_collection_attention_card route_collection_attention_cheque_due">
+<span class="route_collection_attention_icon">
+<i class="fa fa-ticket"/>
+</span>
+<span class="route_collection_attention_label">Cheque Open Due</span>
+<span class="route_collection_attention_value">
+<field name="cheque_open_due_amount" widget="monetary" readonly="1" nolabel="1"/>
+</span>
+</div>
+<div class="route_collection_attention_card route_collection_attention_cheque_count">
+<span class="route_collection_attention_icon">
+<i class="fa fa-list-alt"/>
+</span>
+<span class="route_collection_attention_label">Cheque Follow-up</span>
+<span class="route_collection_attention_value">
+<field name="cheque_followup_entry_count" readonly="1" nolabel="1"/>
 </span>
 </div>
 </div>
@@ -1033,6 +1062,12 @@ Entries
 <div class="route_pda_info_label">Cheques Today</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="cheque_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_emphasis">
+<div class="route_pda_info_label">Cheque Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_open_due_amount" widget="monetary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card">
