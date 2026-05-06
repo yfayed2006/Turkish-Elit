@@ -1704,6 +1704,7 @@ class RouteVisit(models.Model):
             "cash": 0.0,
             "bank": 0.0,
             "pos": 0.0,
+            "cheque": 0.0,
             "deferred": 0.0,
             "promise": 0.0,
         }
@@ -1730,6 +1731,7 @@ class RouteVisit(models.Model):
                 "cash": selection_map.get("cash", _("Cash")),
                 "bank": selection_map.get("bank", _("Bank Transfer")),
                 "pos": selection_map.get("pos", _("POS")),
+                "cheque": selection_map.get("cheque", _("Cheque")),
                 "deferred": selection_map.get("deferred", _("Deferred")),
                 "promise": _("Promised Amount"),
             },
