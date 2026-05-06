@@ -190,12 +190,12 @@ Since:
 <td style="border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#15803d; letter-spacing:0.4px; margin-bottom:6px;">Collected Now</div>
 <div style="font-size:20px; font-weight:700; color:#166534;" t-esc="'%.2f %s' % (summary['settled_amount'], currency_label)"/>
-<div style="font-size:10px; color:#15803d; margin-top:5px;">Confirmed cash collection in this stop.</div>
+<div style="font-size:10px; color:#15803d; margin-top:5px;">Confirmed payment collection in this stop.</div>
 </td>
 <td style="border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#b91c1c; letter-spacing:0.4px; margin-bottom:6px;">Remaining After Collection</div>
 <div style="font-size:20px; font-weight:700; color:#991b1b;" t-esc="'%.2f %s' % (summary.get('immediate_remaining_amount', summary['remaining_amount']), currency_label)"/>
-<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Total due minus collected cash for this stop.</div>
+<div style="font-size:10px; color:#b91c1c; margin-top:5px;">Total due minus confirmed payment collection for this stop.</div>
 </td>
 <td style="border:1px solid #e5e7eb; background:#fafafa; padding:10px 12px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; letter-spacing:0.4px; margin-bottom:6px;">Promise Amount / Credit</div>
@@ -802,7 +802,7 @@ Date:
 <td style="width:50%; border:1px solid #dbe3ec; background:#ffffff; padding:6px 8px; vertical-align:top;">
 <div style="font-size:10px; text-transform:uppercase; color:#64748b; margin-bottom:6px;">Total Outlet Balance After Collection</div>
 <div style="font-size:18px; font-weight:700; color:#0f172a;" t-esc="'%.2f %s' % (total_outstanding_after_collection, currency_label)"/>
-<div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed cash collection in this visit.</div>
+<div style="font-size:10px; color:#64748b; margin-top:5px;">Total outlet due minus confirmed payment collection in this visit.</div>
 </td>
 </tr>
 </table>
