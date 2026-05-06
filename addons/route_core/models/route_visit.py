@@ -1524,6 +1524,28 @@ class RouteVisit(models.Model):
                     f"<span class='route_pda_payment_footer_value'>{escape(payment.pos_terminal)}</span>"
                     "</div>"
                 )
+            if payment.payment_mode == "cheque":
+                if payment.cheque_number:
+                    footer_items.append(
+                        "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                        "<span class='route_pda_payment_footer_label'>Cheque</span>"
+                        f"<span class='route_pda_payment_footer_value'>{escape(payment.cheque_number)}</span>"
+                        "</div>"
+                    )
+                if payment.bank_name:
+                    footer_items.append(
+                        "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                        "<span class='route_pda_payment_footer_label'>Bank</span>"
+                        f"<span class='route_pda_payment_footer_value'>{escape(payment.bank_name)}</span>"
+                        "</div>"
+                    )
+                if payment.cheque_date:
+                    footer_items.append(
+                        "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                        "<span class='route_pda_payment_footer_label'>Cheque Date</span>"
+                        f"<span class='route_pda_payment_footer_value'>{escape(self._format_route_payment_date(payment.cheque_date))}</span>"
+                        "</div>"
+                    )
             if show_source and payment.source_document_ref and payment.source_document_ref != self.name:
                 footer_items.append(
                     "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
@@ -1703,6 +1725,30 @@ class RouteVisit(models.Model):
                     "<span class='route_pda_payment_footer_value'>%s</span>"
                     "</div>" % escape(status_label)
                 )
+        latest_cheque = visible_payments.filtered(lambda p: p.payment_mode == "cheque")
+        latest_cheque = latest_cheque.sorted(key=_payment_sort_key, reverse=True)[:1] if latest_cheque else latest_cheque
+        if latest_cheque:
+            if latest_cheque.cheque_number:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Cheque</span>"
+                    "<span class='route_pda_payment_footer_value'>%s</span>"
+                    "</div>" % escape(latest_cheque.cheque_number)
+                )
+            if latest_cheque.bank_name:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token'>"
+                    "<span class='route_pda_payment_footer_label'>Bank</span>"
+                    "<span class='route_pda_payment_footer_value'>%s</span>"
+                    "</div>" % escape(latest_cheque.bank_name)
+                )
+            if latest_cheque.cheque_date:
+                footer_items.append(
+                    "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
+                    "<span class='route_pda_payment_footer_label'>Cheque Date</span>"
+                    "<span class='route_pda_payment_footer_value'>%s</span>"
+                    "</div>" % escape(self._format_route_payment_date(latest_cheque.cheque_date))
+                )
         if len(payments) > 1:
             footer_items.append(
                 "<div class='route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle'>"
@@ -1756,6 +1802,10 @@ class RouteVisit(models.Model):
         "payment_ids.reference",
         "payment_ids.bank_name",
         "payment_ids.pos_terminal",
+        "payment_ids.cheque_number",
+        "payment_ids.cheque_date",
+        "payment_ids.cheque_holder_name",
+        "payment_ids.cheque_note",
         "payment_ids.note",
         "payment_ids.source_document_ref",
         "payment_ids.settlement_document_ref",
@@ -1770,6 +1820,10 @@ class RouteVisit(models.Model):
         "settlement_payment_ids.reference",
         "settlement_payment_ids.bank_name",
         "settlement_payment_ids.pos_terminal",
+        "settlement_payment_ids.cheque_number",
+        "settlement_payment_ids.cheque_date",
+        "settlement_payment_ids.cheque_holder_name",
+        "settlement_payment_ids.cheque_note",
         "settlement_payment_ids.note",
         "settlement_payment_ids.source_document_ref",
         "settlement_payment_ids.settlement_document_ref",
