@@ -116,7 +116,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 rec.cheque_needs_followup = True
             elif followup_state == "cancelled":
                 rec.cheque_financial_state = "cancelled"
-                rec.cheque_financial_state_label = _("Cancelled - Open Due")
+                rec.cheque_financial_state_label = _("Cancelled - No Collection")
                 rec.cheque_open_due_amount = amount
                 rec.cheque_needs_followup = True
             else:
@@ -356,8 +356,31 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             "tag": "reload",
         }
 
+    def _validate_cheque_followup_transition(self, target_state):
+        allowed_transitions = {
+            "deposited": (False, "received"),
+            "cleared": (False, "received", "deposited"),
+            "bounced": (False, "received", "deposited"),
+            "cancelled": (False, "received", "deposited", "bounced"),
+        }
+        for rec in self:
+            current_state = rec.cheque_followup_state or "received"
+            if target_state in ("bounced", "cancelled") and current_state == "cleared":
+                raise ValidationError(
+                    _("This cheque is already financially cleared. Reset it to Received first if the cleared status was entered by mistake.")
+                )
+            if target_state in allowed_transitions and rec.cheque_followup_state not in allowed_transitions[target_state]:
+                raise ValidationError(
+                    _("Cheque status cannot be changed from %(current)s to %(target)s directly. Use Reset to Received first if this status was entered by mistake.")
+                    % {
+                        "current": dict(rec._fields["cheque_followup_state"].selection).get(current_state, current_state),
+                        "target": dict(rec._fields["cheque_followup_state"].selection).get(target_state, target_state),
+                    }
+                )
+
     def _write_cheque_followup_state(self, state, date_field=None):
         self._ensure_cheque_followup_payment()
+        self._validate_cheque_followup_transition(state)
         now = fields.Datetime.now()
         values = {
             "cheque_followup_state": state,
