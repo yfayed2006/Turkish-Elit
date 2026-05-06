@@ -65,6 +65,27 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_cheque_financial_policy",
         store=False,
     )
+    cheque_route_coverage_amount = fields.Monetary(
+        string="Route Coverage",
+        currency_field="currency_id",
+        compute="_compute_cheque_financial_policy",
+        store=False,
+        help="Amount that still covers the route/customer balance before final bank clearance. Bounced or cancelled cheques do not cover the balance.",
+    )
+    cheque_pending_clearance_amount = fields.Monetary(
+        string="Pending Bank Clearance",
+        currency_field="currency_id",
+        compute="_compute_cheque_financial_policy",
+        store=False,
+        help="Confirmed cheque amount waiting for bank deposit/clearance.",
+    )
+    cheque_financially_cleared_amount = fields.Monetary(
+        string="Financially Cleared Amount",
+        currency_field="currency_id",
+        compute="_compute_cheque_financial_policy",
+        store=False,
+        help="Cheque amount that is finally cleared by the bank and can be treated as cash/bank collected for accounting integration.",
+    )
     cheque_open_due_amount = fields.Monetary(
         string="Cheque Open Due",
         currency_field="currency_id",
@@ -89,6 +110,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.cheque_financial_state = False
             rec.cheque_financial_state_label = False
             rec.cheque_effective_collected_amount = 0.0
+            rec.cheque_route_coverage_amount = 0.0
+            rec.cheque_pending_clearance_amount = 0.0
+            rec.cheque_financially_cleared_amount = 0.0
             rec.cheque_open_due_amount = 0.0
             rec.cheque_is_financially_cleared = False
             rec.cheque_needs_followup = False
@@ -108,6 +132,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 rec.cheque_financial_state = "cleared"
                 rec.cheque_financial_state_label = _("Financially Cleared")
                 rec.cheque_effective_collected_amount = amount
+                rec.cheque_route_coverage_amount = amount
+                rec.cheque_financially_cleared_amount = amount
                 rec.cheque_is_financially_cleared = True
             elif followup_state == "bounced":
                 rec.cheque_financial_state = "open_due"
@@ -123,14 +149,53 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 rec.cheque_financial_state = "pending"
                 rec.cheque_financial_state_label = _("Pending Bank Clearance")
                 rec.cheque_effective_collected_amount = amount
+                rec.cheque_route_coverage_amount = amount
+                rec.cheque_pending_clearance_amount = amount
 
-    def _get_route_financial_collected_amount(self):
+    def _get_route_collection_covered_amount(self):
+        """Operational amount that currently covers the outlet balance.
+
+        A received/deposited cheque may close the field visit, but it remains
+        pending for bank/accounting clearance. If the cheque later bounces or
+        is cancelled, it no longer covers the balance and becomes open due.
+        """
         self.ensure_one()
         if self.state != "confirmed":
             return 0.0
-        if self.payment_mode == "cheque" and (self.cheque_followup_state or "received") in ("bounced", "cancelled"):
+        if self.payment_mode == "cheque":
+            if (self.cheque_followup_state or "received") in ("bounced", "cancelled"):
+                return 0.0
+            return self.cheque_route_coverage_amount or self.amount or 0.0
+        return self.amount or 0.0
+
+    def _get_route_accounting_cleared_amount(self):
+        """Amount that is final for accounting/bank collection purposes."""
+        self.ensure_one()
+        if self.state != "confirmed":
+            return 0.0
+        if self.payment_mode == "cheque":
+            return self.cheque_financially_cleared_amount or 0.0
+        if self.payment_mode == "deferred":
             return 0.0
         return self.amount or 0.0
+
+    def _get_route_pending_clearance_amount(self):
+        self.ensure_one()
+        if self.state != "confirmed" or self.payment_mode != "cheque":
+            return 0.0
+        return self.cheque_pending_clearance_amount or 0.0
+
+    def _get_route_open_due_from_cheque_amount(self):
+        self.ensure_one()
+        if self.state != "confirmed" or self.payment_mode != "cheque":
+            return 0.0
+        return self.cheque_open_due_amount or 0.0
+
+    def _get_route_financial_collected_amount(self):
+        # Kept as the existing operational collection source used by visit
+        # settlement screens. Use _get_route_accounting_cleared_amount() for
+        # the future accounting/journal integration.
+        return self._get_route_collection_covered_amount()
 
     def _get_route_financial_resolved_amount(self):
         self.ensure_one()
