@@ -6310,3 +6310,36 @@
         padding-inline-start: 10px !important;
     }
 }
+
+/* Cheque final control: expose bounced/cancelled cheque open due clearly in collection dashboards */
+.route_collection_kpi_cheque_open_due:after {
+    background: #f97316;
+}
+
+.route_collection_kpi_cheque_open_due .route_collection_kpi_icon {
+    background: #f97316;
+}
+
+.route_collection_attention_cheque_due {
+    background: #fff7ed;
+}
+
+.route_collection_attention_cheque_count {
+    background: #f0f9ff;
+}
+
+.route_collection_no_images .route_collection_kpi_cheque_open_due:after {
+    background: #f97316 !important;
+}
+
+.route_collection_no_images .route_collection_kpi_cheque_open_due .route_collection_kpi_icon {
+    background: #f97316 !important;
+}
+
+.route_collection_no_images .route_collection_attention_cheque_due .route_collection_attention_icon {
+    background: #f97316 !important;
+}
+
+.route_collection_no_images .route_collection_attention_cheque_count .route_collection_attention_icon {
+    background: #0284c7 !important;
+}
