@@ -6230,3 +6230,83 @@
         min-height: 104px !important;
     }
 }
+
+
+
+
+
+
+
+/* Cheque + collections final polish: clearer payment badges, stronger card separation, mobile-safe spacing */
+.route_pda_payment_card_collection {
+    padding-inline-start: 18px !important;
+    margin-bottom: 24px !important;
+    border: 1.5px solid #d7e2ee !important;
+    border-inline-start: 8px solid #0f766e !important;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.13) !important;
+}
+
+.route_pda_payment_card_collection + .route_pda_payment_card_collection {
+    margin-top: 18px !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_title {
+    padding-inline-start: 8px !important;
+    overflow: visible !important;
+}
+
+.route_pda_payment_badge_balance {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+.route_pda_payment_badge_cheque_highlight {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_footer_token {
+    align-items: center !important;
+    text-align: center !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.055) !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_footer_label,
+.route_pda_payment_card_collection .route_pda_payment_footer_value {
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.route_collection_no_images .route_collection_kpi_card,
+.route_collection_no_images .route_collection_attention_card,
+.route_collection_no_images .route_collection_flow_card,
+.route_collection_no_images .route_collection_mix_row {
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.075) !important;
+}
+
+.route_collection_no_images .route_collection_kpi_card:hover,
+.route_collection_no_images .route_collection_attention_card:hover,
+.route_collection_no_images .route_collection_flow_card:hover,
+.route_collection_no_images .route_collection_mix_row:hover {
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.11) !important;
+}
+
+@media (max-width: 768px) {
+    .route_pda_payment_card_collection {
+        margin: 0 8px 24px 8px !important;
+        padding-inline-start: 16px !important;
+    }
+
+    .route_pda_payment_card_collection::after {
+        bottom: -14px !important;
+        background: linear-gradient(90deg, transparent, rgba(100, 116, 139, 0.40), transparent) !important;
+    }
+
+    .route_pda_payment_card_collection .route_pda_payment_head {
+        gap: 8px !important;
+    }
+
+    .route_pda_payment_card_collection .route_pda_payment_title {
+        padding-inline-start: 10px !important;
+    }
+}
