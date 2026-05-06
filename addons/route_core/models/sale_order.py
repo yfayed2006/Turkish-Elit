@@ -44,11 +44,16 @@ class SaleOrder(models.Model):
         help="Internal source stock location used for direct sale fulfillment.",
     )
     route_payment_mode = fields.Selection(
-        [("cash", "Cash"), ("bank", "Bank Transfer"), ("pos", "POS"), ("deferred", "Deferred")],
+        [("cash", "Cash"), ("bank", "Bank Transfer"), ("pos", "POS"), ("cheque", "Cheque"), ("deferred", "Deferred")],
         string="Route Payment Mode",
         default="cash",
     )
     route_payment_due_date = fields.Date(string="Deferred Due Date")
+    route_cheque_number = fields.Char(string="Cheque Number")
+    route_cheque_bank_name = fields.Char(string="Cheque Bank")
+    route_cheque_date = fields.Date(string="Cheque Date")
+    route_cheque_holder_name = fields.Char(string="Cheque Holder")
+    route_cheque_note = fields.Text(string="Cheque Details")
     route_visit_id = fields.Many2one(
         "route.visit",
         string="Route Visit",
@@ -272,7 +277,12 @@ class SaleOrder(models.Model):
             "sale_order_id": self.id,
             "payment_date": self.date_order or fields.Datetime.now(),
             "payment_mode": payment_mode,
-            "reference": self.name,
+            "reference": self.route_cheque_number if payment_mode == "cheque" and self.route_cheque_number else self.name,
+            "bank_name": self.route_cheque_bank_name if payment_mode == "cheque" else False,
+            "cheque_number": self.route_cheque_number if payment_mode == "cheque" else False,
+            "cheque_date": self.route_cheque_date if payment_mode == "cheque" else False,
+            "cheque_holder_name": self.route_cheque_holder_name if payment_mode == "cheque" else False,
+            "cheque_note": self.route_cheque_note if payment_mode == "cheque" else False,
         }
 
         if payment_mode == "deferred":
@@ -879,6 +889,13 @@ class SaleOrder(models.Model):
             raise UserError(_("Source Location is required for Direct Sale orders."))
         if order.route_payment_mode == "deferred" and not order.route_payment_due_date:
             raise UserError(_("Deferred Due Date is required when Route Payment Mode is Deferred."))
+        if order.route_payment_mode == "cheque":
+            if not order.route_cheque_number:
+                raise UserError(_("Cheque Number is required when Route Payment Mode is Cheque."))
+            if not order.route_cheque_bank_name:
+                raise UserError(_("Cheque Bank is required when Route Payment Mode is Cheque."))
+            if not order.route_cheque_date:
+                raise UserError(_("Cheque Date is required when Route Payment Mode is Cheque."))
 
         sale_lines = order.order_line.filtered(
             lambda line: line.product_id
