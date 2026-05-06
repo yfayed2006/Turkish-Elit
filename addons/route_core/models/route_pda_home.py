@@ -92,6 +92,7 @@ class RoutePdaHome(models.TransientModel):
     cash_today_amount = fields.Monetary(string="Cash In Hand", currency_field="currency_id", compute="_compute_dashboard")
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
     pos_today_amount = fields.Monetary(string="POS", currency_field="currency_id", compute="_compute_dashboard")
+    cheque_today_amount = fields.Monetary(string="Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
     deferred_today_amount = fields.Monetary(string="Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
@@ -105,6 +106,7 @@ class RoutePdaHome(models.TransientModel):
     collection_cash_share_percent = fields.Float(string="Cash Share %", compute="_compute_dashboard")
     collection_bank_share_percent = fields.Float(string="Bank Share %", compute="_compute_dashboard")
     collection_pos_share_percent = fields.Float(string="POS Share %", compute="_compute_dashboard")
+    collection_cheque_share_percent = fields.Float(string="Cheque Share %", compute="_compute_dashboard")
     collection_deferred_share_percent = fields.Float(string="Promise Share %", compute="_compute_dashboard")
     collection_direct_stop_share_percent = fields.Float(string="Direct Stop %", compute="_compute_dashboard")
     collection_direct_sale_order_share_percent = fields.Float(string="Direct Sale Order %", compute="_compute_dashboard")
@@ -114,6 +116,7 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_cash_today_amount = fields.Monetary(string="Direct Sale Cash Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_bank_today_amount = fields.Monetary(string="Direct Sale Bank Transfer Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_pos_today_amount = fields.Monetary(string="Direct Sale POS Today", currency_field="currency_id", compute="_compute_dashboard")
+    direct_sale_cheque_today_amount = fields.Monetary(string="Direct Sale Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_deferred_today_amount = fields.Monetary(string="Direct Sale Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_open_promise_due_today_amount = fields.Monetary(string="Open Promises Due Today", currency_field="currency_id", compute="_compute_dashboard")
     direct_sale_open_promise_due_today_count = fields.Integer(string="Promise Entries Due Today", compute="_compute_dashboard")
@@ -845,6 +848,7 @@ class RoutePdaHome(models.TransientModel):
             rec.cash_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
             rec.bank_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
             rec.pos_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.cheque_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
             rec.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
             rec.deferred_payment_count = len(deferred_entries)
             rec.open_promise_amount = sum(
@@ -855,6 +859,7 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_cash_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cash")
             rec.direct_sale_bank_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
             rec.direct_sale_pos_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.direct_sale_cheque_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
             rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
             rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
             rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
@@ -864,18 +869,20 @@ class RoutePdaHome(models.TransientModel):
                 else (visit.remaining_due_amount or 0.0)
                 for visit in today_visits.filtered(lambda v: v.state not in ("done", "cancel", "cancelled"))
             )
-            rec.collection_collected_today_amount = rec.cash_today_amount + rec.bank_today_amount + rec.pos_today_amount
+            rec.collection_collected_today_amount = rec.cash_today_amount + rec.bank_today_amount + rec.pos_today_amount + rec.cheque_today_amount
             rec.collection_total_signal_amount = rec.collection_collected_today_amount + rec.deferred_today_amount + rec.remaining_due_amount
             mix_total = rec.collection_collected_today_amount + rec.deferred_today_amount
             if mix_total:
                 rec.collection_cash_share_percent = (rec.cash_today_amount / mix_total) * 100.0
                 rec.collection_bank_share_percent = (rec.bank_today_amount / mix_total) * 100.0
                 rec.collection_pos_share_percent = (rec.pos_today_amount / mix_total) * 100.0
+                rec.collection_cheque_share_percent = (rec.cheque_today_amount / mix_total) * 100.0
                 rec.collection_deferred_share_percent = (rec.deferred_today_amount / mix_total) * 100.0
             else:
                 rec.collection_cash_share_percent = 0.0
                 rec.collection_bank_share_percent = 0.0
                 rec.collection_pos_share_percent = 0.0
+                rec.collection_cheque_share_percent = 0.0
                 rec.collection_deferred_share_percent = 0.0
             flow_total = rec.visit_collection_count + rec.direct_stop_payment_count + rec.direct_sale_order_payment_count
             if flow_total:
