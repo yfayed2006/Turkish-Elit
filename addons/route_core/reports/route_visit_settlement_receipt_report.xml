@@ -215,12 +215,13 @@ Policy:
 </table>
 <table style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #cbd5e1;">
 <tr>
-<td colspan="5" style="padding:9px 12px; background:#f8fafc; color:#334155; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Settlement Breakdown</td>
+<td colspan="6" style="padding:9px 12px; background:#f8fafc; color:#334155; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Settlement Breakdown</td>
 </tr>
 <tr style="background:#f8fafc;">
 <td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">Cash</td>
 <td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">Bank Transfer</td>
 <td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">POS</td>
+<td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">Cheque</td>
 <td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">Deferred Collected</td>
 <td style="padding:8px 12px; font-weight:700; border-bottom:1px solid #e5e7eb;">Promised Amount</td>
 </tr>
@@ -228,6 +229,7 @@ Policy:
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals']['cash'], currency_label)"/>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals']['bank'], currency_label)"/>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals']['pos'], currency_label)"/>
+<td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals'].get('cheque', 0.0), currency_label)"/>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals']['deferred'], currency_label)"/>
 <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;" t-esc="'%.2f %s' % (payment_breakdown['totals']['promise'], currency_label)"/>
 </tr>
@@ -236,7 +238,7 @@ Policy:
 <strong>Latest Promise Date:</strong>
 <span t-esc="payment_breakdown['latest_promise_date'] or '-'"/>
 </td>
-<td colspan="2" style="padding:8px 12px;">
+<td colspan="3" style="padding:8px 12px;">
 <strong>Current Promise Status:</strong>
 <span t-esc="payment_breakdown['latest_promise_status'] or '-'"/>
 </td>
@@ -514,6 +516,22 @@ Policy:
 </td>
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
+<t t-if="payment.payment_mode == 'cheque'">
+<br/>
+<strong>Cheque:</strong>
+<span t-esc="payment.cheque_number or '-'"/>
+<br/>
+<strong>Bank:</strong>
+<span t-esc="payment.bank_name or '-'"/>
+<br/>
+<strong>Date:</strong>
+<span t-esc="payment.cheque_date or '-'"/>
+<t t-if="payment.cheque_holder_name">
+<br/>
+<strong>Holder:</strong>
+<span t-esc="payment.cheque_holder_name"/>
+</t>
+</t>
 </td>
 </tr>
 </tbody>
@@ -867,6 +885,22 @@ Date:
 </td>
 <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
+<t t-if="payment.payment_mode == 'cheque'">
+<br/>
+<strong>Cheque:</strong>
+<span t-esc="payment.cheque_number or '-'"/>
+<br/>
+<strong>Bank:</strong>
+<span t-esc="payment.bank_name or '-'"/>
+<br/>
+<strong>Date:</strong>
+<span t-esc="payment.cheque_date or '-'"/>
+<t t-if="payment.cheque_holder_name">
+<br/>
+<strong>Holder:</strong>
+<span t-esc="payment.cheque_holder_name"/>
+</t>
+</t>
 </td>
 </tr>
 </tbody>
