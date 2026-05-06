@@ -21,6 +21,10 @@
 <field name="cheque_followup_state"/>
 <field name="cheque_followup_state_label"/>
 <field name="cheque_followup_due_label"/>
+<field name="cheque_financial_state"/>
+<field name="cheque_financial_state_label"/>
+<field name="cheque_open_due_amount"/>
+<field name="cheque_needs_followup"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_cheque_control_card">
@@ -46,6 +50,9 @@
 <span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
 <t t-esc="record.cheque_followup_due_label.value or 'Cheque Follow-up'"/>
 </span>
+<t t-if="record.cheque_needs_followup.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_balance">Open Due</span>
+</t>
 </div>
 <div class="route_pda_payment_metrics route_cheque_control_metrics">
 <div class="route_pda_payment_metric">
@@ -102,6 +109,8 @@
 <field name="cheque_date" string="Cheque Date"/>
 <field name="cheque_followup_state" string="Cheque Status" widget="badge" decoration-info="cheque_followup_state == False or cheque_followup_state == 'received'" decoration-warning="cheque_followup_state == 'deposited'" decoration-success="cheque_followup_state == 'cleared'" decoration-danger="cheque_followup_state == 'bounced'" decoration-muted="cheque_followup_state == 'cancelled'"/>
 <field name="cheque_followup_due_label" string="Due Status"/>
+<field name="cheque_financial_state" string="Financial Effect" widget="badge" optional="show" decoration-info="cheque_financial_state == 'pending'" decoration-success="cheque_financial_state == 'cleared'" decoration-danger="cheque_financial_state in ['open_due', 'cancelled']"/>
+<field name="cheque_open_due_amount" string="Open Due" optional="hide"/>
 <button name="action_cheque_mark_deposited" type="object" string="Deposit" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received']"/>
 <button name="action_cheque_mark_cleared" type="object" string="Clear" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received', 'deposited']"/>
 <button name="action_cheque_mark_bounced" type="object" string="Bounce" invisible="state != 'confirmed' or cheque_followup_state in ['cleared', 'bounced', 'cancelled']"/>
@@ -126,6 +135,14 @@
 <field name="payment_mode" invisible="1"/>
 <field name="state" invisible="1"/>
 <field name="currency_id" invisible="1"/>
+<field name="cheque_financial_state" invisible="1"/>
+<field name="cheque_financial_state_label" invisible="1"/>
+<field name="cheque_open_due_amount" invisible="1"/>
+<field name="cheque_needs_followup" invisible="1"/>
+<div class="alert alert-warning" invisible="not cheque_needs_followup">
+<strong>Cheque needs follow-up.</strong>
+This cheque no longer covers the collection amount, so its amount is treated as open due for the outlet until another collection is made.
+</div>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
 <div class="route_pda_info_label">Cheque Amount</div>
@@ -143,6 +160,18 @@
 <div class="route_pda_info_label">Payment Status</div>
 <div>
 <field name="state" readonly="1" widget="badge" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Financial Effect</div>
+<div class="route_pda_info_value">
+<field name="cheque_financial_state_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
+<div class="route_pda_info_label">Open Due From Cheque</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 </div>
@@ -201,6 +230,8 @@
 <filter name="filter_cleared" string="Cleared" domain="[('cheque_followup_state', '=', 'cleared')]"/>
 <filter name="filter_bounced" string="Bounced" domain="[('cheque_followup_state', '=', 'bounced')]"/>
 <filter name="filter_cancelled" string="Cancelled" domain="[('cheque_followup_state', '=', 'cancelled')]"/>
+<filter name="filter_needs_followup" string="Needs Follow-up" domain="[('cheque_needs_followup', '=', True)]"/>
+<filter name="filter_pending_clearance" string="Pending Clearance" domain="[('cheque_followup_state', 'in', [False, 'received', 'deposited'])]"/>
 <separator/>
 <filter name="filter_due_today" string="Due Today" domain="[('cheque_date', '=', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
 <separator/>
@@ -211,6 +242,7 @@
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <searchpanel>
 <field name="cheque_followup_state" string="Cheque Status"/>
+<field name="cheque_financial_state" string="Financial Effect"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="outlet_id" string="Outlet"/>
 </searchpanel>
