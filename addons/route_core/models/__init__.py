@@ -63,3 +63,6 @@ from . import route_visit_missing_lot_final_flow_ext
 from . import route_visit_finish_state_fix
 from . import route_financial_policy
 from . import route_direct_return_pricelist_policy
+
+from . import route_cheque_followup
+
