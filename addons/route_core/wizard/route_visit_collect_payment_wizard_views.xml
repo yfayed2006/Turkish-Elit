@@ -137,7 +137,7 @@
 <span class="route_pda_payment_meta_label">Promise To Pay Amount</span>
 <field name="promise_amount" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="payment_mode in ('cash', 'deferred')">
+<div class="route_pda_payment_meta_item" invisible="payment_mode not in ('bank', 'pos')">
 <span class="route_pda_payment_meta_label">Reference</span>
 <field name="reference" nolabel="1"/>
 </div>
@@ -148,6 +148,26 @@
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'pos'">
 <span class="route_pda_payment_meta_label">POS Terminal</span>
 <field name="pos_terminal" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Number</span>
+<field name="cheque_number" nolabel="1" placeholder="Type cheque number"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Bank</span>
+<field name="bank_name" nolabel="1" placeholder="Type bank name"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Date</span>
+<field name="cheque_date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Holder</span>
+<field name="cheque_holder_name" nolabel="1" placeholder="Optional drawer / holder name"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Details</span>
+<field name="cheque_note" widget="text" nolabel="1" placeholder="Optional cheque details, branch, or remarks..."/>
 </div>
 </div>
 </div>
