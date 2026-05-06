@@ -92,26 +92,31 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             if rec.state != "confirmed":
                 raise ValidationError(_("Confirm the cheque payment before using cheque follow-up actions."))
 
+    def _cheque_followup_reload_action(self):
+        """Reload the current Odoo view after a status button updates the cheque.
+
+        Cheque follow-up buttons are used from both the kanban/list controller and
+        the form view. Returning a client reload keeps the user on the same screen
+        while forcing the statusbar, visible buttons, search panel counters, and
+        kanban badges to refresh immediately without a manual browser refresh.
+        """
+        return {
+            "type": "ir.actions.client",
+            "tag": "reload",
+        }
+
     def _write_cheque_followup_state(self, state, date_field=None):
         self._ensure_cheque_followup_payment()
+        now = fields.Datetime.now()
         values = {
             "cheque_followup_state": state,
-            "cheque_followup_updated_at": fields.Datetime.now(),
+            "cheque_followup_updated_at": now,
             "cheque_followup_updated_by_id": self.env.user.id,
         }
         if date_field:
-            values[date_field] = fields.Datetime.now()
+            values[date_field] = now
         self.write(values)
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Cheque Follow-up"),
-                "message": _("Cheque status updated successfully."),
-                "type": "success",
-                "sticky": False,
-            },
-        }
+        return self._cheque_followup_reload_action()
 
     def action_cheque_mark_deposited(self):
         return self._write_cheque_followup_state("deposited", "cheque_deposited_at")
@@ -138,16 +143,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 "cheque_cancelled_at": False,
             }
         )
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Cheque Follow-up"),
-                "message": _("Cheque was reset to Received."),
-                "type": "success",
-                "sticky": False,
-            },
-        }
+        return self._cheque_followup_reload_action()
 
     @api.model_create_multi
     def create(self, vals_list):
