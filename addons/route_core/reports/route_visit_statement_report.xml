@@ -18,7 +18,7 @@
 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px;">
 <div>
 <h2 style="margin:0 0 4px 0; font-size:28px; font-weight:700; color:#4b5563;">Statement of Account</h2>
-<div style="font-size:12px; color:#6b7280;">Pre-collection statement for review before settlement confirmation.</div>
+<div style="font-size:12px; color:#6b7280;">Pre-collection statement for review before settlement confirmation, with cheque clearance status when available.</div>
 </div>
 <div style="text-align:right; max-width:240px;">
 <div t-if="doc.company_id.logo" style="margin-bottom:8px;">
@@ -172,6 +172,16 @@
 <span t-esc="'%.2f %s' % (doc.next_promise_amount or 0.0, doc.currency_id.name or '')"/>
 </t>
 </td>
+</tr>
+<tr t-if="doc.cheque_pending_clearance_amount or doc.cheque_open_due_amount or doc.cheque_financially_cleared_amount">
+<td style="padding:8px 10px; border-top:1px solid #d1d5db; border-right:1px solid #d1d5db;">Pending Cheques</td>
+<td style="padding:8px 10px; border-top:1px solid #d1d5db; border-right:1px solid #d1d5db;" t-esc="'%s / %.2f %s' % (doc.cheque_pending_clearance_count or 0, doc.cheque_pending_clearance_amount or 0.0, doc.currency_id.name or '')"/>
+<td style="padding:8px 10px; border-top:1px solid #d1d5db; border-right:1px solid #d1d5db;">Cheque Open Due</td>
+<td style="padding:8px 10px; border-top:1px solid #d1d5db;" t-esc="'%s / %.2f %s' % (doc.cheque_open_due_count or 0, doc.cheque_open_due_amount or 0.0, doc.currency_id.name or '')"/>
+</tr>
+<tr t-if="doc.cheque_financially_cleared_amount">
+<td style="padding:8px 10px; border-top:1px solid #d1d5db; border-right:1px solid #d1d5db;">Financially Cleared Cheques</td>
+<td colspan="3" style="padding:8px 10px; border-top:1px solid #d1d5db;" t-esc="'%s / %.2f %s' % (doc.cheque_financially_cleared_count or 0, doc.cheque_financially_cleared_amount or 0.0, doc.currency_id.name or '')"/>
 </tr>
 </table>
 <div style="position:absolute; left:24px; right:24px; bottom:16px; border-top:1px solid #9ca3af; padding-top:8px; text-align:center; color:#6b7280; font-size:12px;">
