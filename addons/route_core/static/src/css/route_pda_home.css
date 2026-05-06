@@ -1238,6 +1238,7 @@
 .route_pda_payment_mode_cash { background: #dcfce7; color: #166534; }
 .route_pda_payment_mode_bank { background: #dbeafe; color: #1d4ed8; }
 .route_pda_payment_mode_pos { background: #ede9fe; color: #6d28d9; }
+.route_pda_payment_mode_cheque { background: #e0f2fe; color: #0369a1; }
 .route_pda_payment_mode_deferred { background: #fef3c7; color: #92400e; }
 .route_pda_payment_status_open { background: #dbeafe; color: #1d4ed8; }
 .route_pda_payment_status_due_today { background: #fde68a; color: #92400e; }
@@ -5195,6 +5196,7 @@
 .route_collection_kpi_cash:after { background: #22c55e; }
 .route_collection_kpi_bank:after { background: #3b82f6; }
 .route_collection_kpi_pos:after { background: #8b5cf6; }
+.route_collection_kpi_cheque:after { background: #0ea5e9; }
 .route_collection_kpi_promise:after { background: #f59e0b; }
 
 .route_collection_kpi_icon {
@@ -5212,6 +5214,7 @@
 .route_collection_kpi_cash .route_collection_kpi_icon { background: #16a34a; }
 .route_collection_kpi_bank .route_collection_kpi_icon { background: #2563eb; }
 .route_collection_kpi_pos .route_collection_kpi_icon { background: #7c3aed; }
+.route_collection_kpi_cheque .route_collection_kpi_icon { background: #0284c7; }
 .route_collection_kpi_promise .route_collection_kpi_icon { background: #d97706; }
 
 .route_collection_kpi_label,
@@ -5301,6 +5304,7 @@
 .route_collection_mix_dot_cash { background: #16a34a; }
 .route_collection_mix_dot_bank { background: #2563eb; }
 .route_collection_mix_dot_pos { background: #7c3aed; }
+.route_collection_mix_dot_cheque { background: #0284c7; }
 .route_collection_mix_dot_promise { background: #d97706; }
 
 .route_collection_mix_label {
@@ -5606,6 +5610,7 @@
 }
 
 .route_collection_no_images .route_collection_kpi_collected:after { background: #5b3f72; }
+.route_collection_no_images .route_collection_kpi_cheque:after { background: #0ea5e9; }
 .route_collection_no_images .route_collection_kpi_remaining:after { background: #ec4899; }
 
 .route_collection_no_images .route_collection_kpi_label,
@@ -5841,6 +5846,7 @@
 .route_collection_no_images .route_collection_kpi_bank .route_collection_kpi_icon { background: #2563eb !important; }
 .route_collection_no_images .route_collection_kpi_pos .route_collection_kpi_icon { background: #7c3aed !important; }
 .route_collection_no_images .route_collection_kpi_promise .route_collection_kpi_icon { background: #d97706 !important; }
+.route_collection_no_images .route_collection_kpi_cheque .route_collection_kpi_icon { background: #0284c7 !important; }
 .route_collection_no_images .route_collection_kpi_remaining .route_collection_kpi_icon { background: #db2777 !important; }
 
 .route_collection_no_images .route_collection_attention_amount .route_collection_attention_icon { background: #7c3aed !important; }
@@ -6224,9 +6230,3 @@
         min-height: 104px !important;
     }
 }
-
-
-
-
-
-
