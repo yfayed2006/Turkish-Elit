@@ -33,6 +33,13 @@ class RouteVisitStatementWizard(models.TransientModel):
     overdue_promise_count = fields.Integer(string="Overdue Promises", compute="_compute_statement", readonly=True)
     overdue_promise_amount = fields.Monetary(string="Overdue Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
 
+    cheque_pending_clearance_count = fields.Integer(string="Pending Cheques", compute="_compute_statement", readonly=True)
+    cheque_pending_clearance_amount = fields.Monetary(string="Pending Cheque Clearance", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    cheque_open_due_count = fields.Integer(string="Cheque Open Due Entries", compute="_compute_statement", readonly=True)
+    cheque_open_due_amount = fields.Monetary(string="Cheque Open Due", currency_field="currency_id", compute="_compute_statement", readonly=True)
+    cheque_financially_cleared_count = fields.Integer(string="Cleared Cheques", compute="_compute_statement", readonly=True)
+    cheque_financially_cleared_amount = fields.Monetary(string="Financially Cleared Cheques", currency_field="currency_id", compute="_compute_statement", readonly=True)
+
     last_payment_date = fields.Datetime(string="Last Payment Date", compute="_compute_statement", readonly=True)
     last_payment_amount = fields.Monetary(string="Last Payment Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
@@ -157,6 +164,12 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.open_promise_amount = 0.0
             rec.overdue_promise_count = 0
             rec.overdue_promise_amount = 0.0
+            rec.cheque_pending_clearance_count = 0
+            rec.cheque_pending_clearance_amount = 0.0
+            rec.cheque_open_due_count = 0
+            rec.cheque_open_due_amount = 0.0
+            rec.cheque_financially_cleared_count = 0
+            rec.cheque_financially_cleared_amount = 0.0
             rec.last_payment_date = False
             rec.last_payment_amount = 0.0
             rec.next_promise_date = False
@@ -233,6 +246,32 @@ class RouteVisitStatementWizard(models.TransientModel):
             rec.open_promise_amount = sum((p.promise_amount or 0.0) for p in open_promises) if open_promises else 0.0
             rec.overdue_promise_count = len(overdue_promises)
             rec.overdue_promise_amount = sum((p.promise_amount or 0.0) for p in overdue_promises) if overdue_promises else 0.0
+
+            cheque_payments = previous_confirmed.filtered(lambda p: p.payment_mode == "cheque")
+            pending_cheques = cheque_payments.filtered(
+                lambda p: (p._get_route_pending_clearance_amount() if hasattr(p, "_get_route_pending_clearance_amount") else (p.amount or 0.0 if (p.cheque_followup_state or "received") in ("received", "deposited") else 0.0)) > 0.0
+            )
+            open_due_cheques = cheque_payments.filtered(
+                lambda p: (p._get_route_open_due_from_cheque_amount() if hasattr(p, "_get_route_open_due_from_cheque_amount") else (p.amount or 0.0 if (p.cheque_followup_state or "received") in ("bounced", "cancelled") else 0.0)) > 0.0
+            )
+            cleared_cheques = cheque_payments.filtered(
+                lambda p: (p._get_route_accounting_cleared_amount() if hasattr(p, "_get_route_accounting_cleared_amount") else (p.amount or 0.0 if (p.cheque_followup_state or "received") == "cleared" else 0.0)) > 0.0
+            )
+            rec.cheque_pending_clearance_count = len(pending_cheques)
+            rec.cheque_pending_clearance_amount = sum(
+                p._get_route_pending_clearance_amount() if hasattr(p, "_get_route_pending_clearance_amount") else (p.amount or 0.0)
+                for p in pending_cheques
+            ) if pending_cheques else 0.0
+            rec.cheque_open_due_count = len(open_due_cheques)
+            rec.cheque_open_due_amount = sum(
+                p._get_route_open_due_from_cheque_amount() if hasattr(p, "_get_route_open_due_from_cheque_amount") else (p.amount or 0.0)
+                for p in open_due_cheques
+            ) if open_due_cheques else 0.0
+            rec.cheque_financially_cleared_count = len(cleared_cheques)
+            rec.cheque_financially_cleared_amount = sum(
+                p._get_route_accounting_cleared_amount() if hasattr(p, "_get_route_accounting_cleared_amount") else (p.amount or 0.0)
+                for p in cleared_cheques
+            ) if cleared_cheques else 0.0
 
             last_payment = previous_confirmed[:1] if previous_confirmed else Payment
             reference_date = rec._get_statement_reference_date(visit)
