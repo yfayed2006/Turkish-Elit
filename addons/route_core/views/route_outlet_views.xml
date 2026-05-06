@@ -645,6 +645,9 @@
 <field name="amount"/>
 <field name="remaining_due_amount"/>
 <field name="promise_status"/>
+<field name="bank_name"/>
+<field name="cheque_number"/>
+<field name="cheque_date"/>
 <field name="state"/>
 <templates>
 <t t-name="card">
@@ -703,6 +706,7 @@
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
@@ -727,6 +731,8 @@
 <field name="amount" string="Collected" sum="Total Collected"/>
 <field name="remaining_due_amount" string="Open Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" optional="show"/>
+<field name="cheque_number" string="Cheque No." optional="hide"/>
+<field name="cheque_date" string="Cheque Date" optional="hide"/>
 <field name="state" string="Status" optional="hide"/>
 </list>
 </field>
