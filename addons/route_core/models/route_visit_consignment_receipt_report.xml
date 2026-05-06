@@ -233,6 +233,22 @@
 </td>
 <td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
 <span t-field="payment.reference"/>
+<t t-if="payment.payment_mode == 'cheque'">
+<br/>
+<strong>Cheque:</strong>
+<span t-esc="payment.cheque_number or '-'"/>
+<br/>
+<strong>Bank:</strong>
+<span t-esc="payment.bank_name or '-'"/>
+<br/>
+<strong>Date:</strong>
+<span t-esc="payment.cheque_date or '-'"/>
+<t t-if="payment.cheque_holder_name">
+<br/>
+<strong>Holder:</strong>
+<span t-esc="payment.cheque_holder_name"/>
+</t>
+</t>
 </td>
 </tr>
 </tbody>
