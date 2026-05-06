@@ -445,6 +445,15 @@ class RoutePdaHome(models.TransientModel):
             return "deferred"
         return payment.payment_mode or "cash"
 
+    def _get_payment_snapshot_amount(self, payment):
+        if not payment or payment.state != "confirmed":
+            return 0.0
+        if hasattr(payment, "_get_route_financial_collected_amount"):
+            return payment._get_route_financial_collected_amount()
+        if getattr(payment, "payment_mode", False) == "cheque" and (getattr(payment, "cheque_followup_state", False) or "received") in ("bounced", "cancelled"):
+            return 0.0
+        return payment.amount or 0.0
+
     def _get_payment_snapshot_promise_status(self, payment):
         if not payment or payment.state != "confirmed" or (payment.promise_amount or 0.0) <= 0.0:
             return False
@@ -845,10 +854,10 @@ class RoutePdaHome(models.TransientModel):
 
             rec.current_source_name = warehouse_loc.display_name if warehouse_loc else "-"
 
-            rec.cash_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
-            rec.bank_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
-            rec.pos_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
-            rec.cheque_today_amount = sum((p.amount or 0.0) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
+            rec.cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            rec.bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
+            rec.pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
             rec.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
             rec.deferred_payment_count = len(deferred_entries)
             rec.open_promise_amount = sum(
@@ -856,10 +865,10 @@ class RoutePdaHome(models.TransientModel):
                 for p in all_confirmed_payments
                 if rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
             )
-            rec.direct_sale_cash_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cash")
-            rec.direct_sale_bank_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
-            rec.direct_sale_pos_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
-            rec.direct_sale_cheque_today_amount = sum((p.amount or 0.0) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
+            rec.direct_sale_cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            rec.direct_sale_bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
+            rec.direct_sale_pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
+            rec.direct_sale_cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
             rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
             rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
             rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
