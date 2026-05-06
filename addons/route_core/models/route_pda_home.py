@@ -93,6 +93,8 @@ class RoutePdaHome(models.TransientModel):
     bank_today_amount = fields.Monetary(string="Bank Transfer", currency_field="currency_id", compute="_compute_dashboard")
     pos_today_amount = fields.Monetary(string="POS", currency_field="currency_id", compute="_compute_dashboard")
     cheque_today_amount = fields.Monetary(string="Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
+    cheque_open_due_amount = fields.Monetary(string="Cheque Open Due", currency_field="currency_id", compute="_compute_dashboard")
+    cheque_followup_entry_count = fields.Integer(string="Cheque Follow-up Entries", compute="_compute_dashboard")
     deferred_today_amount = fields.Monetary(string="Deferred / Promised Today", currency_field="currency_id", compute="_compute_dashboard")
     open_promise_amount = fields.Monetary(string="Open Promises", currency_field="currency_id", compute="_compute_dashboard")
     remaining_due_amount = fields.Monetary(string="Remaining Due", currency_field="currency_id", compute="_compute_dashboard")
@@ -454,6 +456,24 @@ class RoutePdaHome(models.TransientModel):
             return 0.0
         return payment.amount or 0.0
 
+    def _get_payment_target_visit(self, payment):
+        if not payment:
+            return self.env["route.visit"]
+        if getattr(payment, "settlement_visit_id", False):
+            return payment.settlement_visit_id
+        if getattr(payment, "visit_id", False):
+            return payment.visit_id
+        return self.env["route.visit"]
+
+    def _get_payment_cheque_open_due_amount(self, payment):
+        if not payment or payment.state != "confirmed" or getattr(payment, "payment_mode", False) != "cheque":
+            return 0.0
+        cheque_state = getattr(payment, "cheque_followup_state", False) or "received"
+        financial_state = getattr(payment, "cheque_financial_state", False)
+        if cheque_state in ("bounced", "cancelled") or financial_state in ("open_due", "cancelled"):
+            return getattr(payment, "cheque_open_due_amount", 0.0) or payment.amount or 0.0
+        return 0.0
+
     def _get_payment_snapshot_promise_status(self, payment):
         if not payment or payment.state != "confirmed" or (payment.promise_amount or 0.0) <= 0.0:
             return False
@@ -789,8 +809,13 @@ class RoutePdaHome(models.TransientModel):
             overdue_promise_entries = open_promise_entries.filtered(
                 lambda p: rec._get_payment_snapshot_promise_status(p) == "overdue"
             )
+            cheque_open_due_payments = all_confirmed_payments.filtered(
+                lambda p: rec._get_payment_cheque_open_due_amount(p) > 0.0
+            )
             followup_collections = all_confirmed_payments.filtered(
-                lambda p: (p.remaining_due_amount or 0.0) > 0.0 or rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+                lambda p: (p.remaining_due_amount or 0.0) > 0.0
+                or rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+                or rec._get_payment_cheque_open_due_amount(p) > 0.0
             )
 
             visit_collection_targets = set(visit_collections.mapped("visit_id").ids)
@@ -803,6 +828,8 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_payment_count = len(direct_stop_targets) + len(direct_sale_order_targets)
             rec.confirmed_collection_count = len(all_confirmed_payments)
             rec.collection_followup_count = len(followup_collections)
+            rec.cheque_followup_entry_count = len(cheque_open_due_payments)
+            rec.cheque_open_due_amount = sum(rec._get_payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
             rec.open_promise_entry_count = len(open_promise_entries)
             rec.overdue_promise_entry_count = len(overdue_promise_entries)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
@@ -872,12 +899,20 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
             rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
             rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
-            rec.remaining_due_amount = sum(
+            active_remaining_visits = today_visits.filtered(lambda v: v.state not in ("done", "cancel", "cancelled"))
+            active_remaining_visit_ids = set(active_remaining_visits.ids)
+            active_visit_remaining_due = sum(
                 (visit.direct_stop_settlement_remaining_amount or 0.0)
                 if getattr(visit, "visit_execution_mode", False) == "direct_sales"
                 else (visit.remaining_due_amount or 0.0)
-                for visit in today_visits.filtered(lambda v: v.state not in ("done", "cancel", "cancelled"))
+                for visit in active_remaining_visits
             )
+            closed_or_unlinked_cheque_open_due = 0.0
+            for payment in cheque_open_due_payments:
+                target_visit = rec._get_payment_target_visit(payment)
+                if not target_visit or target_visit.id not in active_remaining_visit_ids:
+                    closed_or_unlinked_cheque_open_due += rec._get_payment_cheque_open_due_amount(payment)
+            rec.remaining_due_amount = active_visit_remaining_due + closed_or_unlinked_cheque_open_due
             rec.collection_collected_today_amount = rec.cash_today_amount + rec.bank_today_amount + rec.pos_today_amount + rec.cheque_today_amount
             rec.collection_total_signal_amount = rec.collection_collected_today_amount + rec.deferred_today_amount + rec.remaining_due_amount
             mix_total = rec.collection_collected_today_amount + rec.deferred_today_amount
