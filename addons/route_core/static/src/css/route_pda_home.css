@@ -6073,3 +6073,160 @@
 
 
 
+
+/* Visit Collections polish round: centered dashboard cards + stronger All Collections card separation */
+.route_collection_no_images .route_collection_kpi_card,
+.route_collection_no_images .route_collection_attention_card,
+.route_collection_no_images .route_collection_flow_card,
+.route_collection_no_images .route_collection_mix_row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 7px !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.055) !important;
+}
+
+.route_collection_no_images .route_collection_kpi_icon,
+.route_collection_no_images .route_collection_attention_icon,
+.route_collection_no_images .route_collection_flow_icon,
+.route_collection_no_images .route_collection_mix_dot {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-inline-start: auto !important;
+    margin-inline-end: auto !important;
+    flex: 0 0 auto !important;
+}
+
+.route_collection_no_images .route_collection_kpi_label,
+.route_collection_no_images .route_collection_attention_label,
+.route_collection_no_images .route_collection_flow_label,
+.route_collection_no_images .route_collection_mix_label,
+.route_collection_no_images .route_collection_kpi_value,
+.route_collection_no_images .route_collection_attention_value,
+.route_collection_no_images .route_collection_flow_value,
+.route_collection_no_images .route_collection_mix_amount,
+.route_collection_no_images .route_collection_mix_percent {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-inline-start: auto !important;
+    margin-inline-end: auto !important;
+}
+
+.route_collection_no_images .route_collection_mix_row {
+    grid-template-columns: none !important;
+    align-content: center !important;
+    min-height: 104px !important;
+}
+
+.route_collection_no_images .route_collection_mix_amount,
+.route_collection_no_images .route_collection_mix_percent {
+    grid-column: auto !important;
+}
+
+/* Keep the final All Collections CTA centered and visually balanced */
+.route_collection_no_images .route_collection_action_card_all {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 10px !important;
+    padding: 20px !important;
+    box-shadow: 0 14px 30px rgba(91, 63, 114, 0.20) !important;
+}
+
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_icon,
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_title,
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_hint,
+.route_collection_no_images .route_collection_action_card_all .route_collection_action_badge {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-inline-start: auto !important;
+    margin-inline-end: auto !important;
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+/* All Collections list: make every visit feel like an independent separated card */
+.o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    gap: 22px !important;
+    row-gap: 22px !important;
+    padding: 14px !important;
+    background: #f3f6fa !important;
+}
+
+.o_kanban_view.route_pda_payment_kanban .o_kanban_record {
+    margin: 0 0 18px 0 !important;
+    border-radius: 22px !important;
+    overflow: visible !important;
+}
+
+.route_pda_payment_card_collection {
+    border: 1.5px solid #d4e0ec !important;
+    border-inline-start: 7px solid #0f766e !important;
+    border-radius: 22px !important;
+    background: #ffffff !important;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.11) !important;
+    margin: 0 4px 18px 4px !important;
+}
+
+.route_pda_payment_card_collection::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: -11px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(100, 116, 139, 0.28), transparent);
+    pointer-events: none;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_head {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    margin: -4px -4px 0 -4px !important;
+    border-radius: 18px 18px 0 0 !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_title {
+    padding-inline-start: 6px !important;
+    letter-spacing: 0.01em !important;
+}
+
+.route_pda_payment_card_collection .route_pda_payment_metrics,
+.route_pda_payment_card_collection .route_pda_payment_footer {
+    padding-inline-start: 2px !important;
+    padding-inline-end: 2px !important;
+}
+
+@media (max-width: 768px) {
+    .o_kanban_view.route_pda_payment_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        gap: 20px !important;
+        row-gap: 20px !important;
+        padding: 10px !important;
+    }
+
+    .route_pda_payment_card_collection {
+        margin: 0 6px 18px 6px !important;
+        padding: 14px !important;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    .route_collection_no_images .route_collection_kpi_card,
+    .route_collection_no_images .route_collection_attention_card,
+    .route_collection_no_images .route_collection_flow_card,
+    .route_collection_no_images .route_collection_mix_row {
+        min-height: 104px !important;
+    }
+}
+
+
+
+
+
+
