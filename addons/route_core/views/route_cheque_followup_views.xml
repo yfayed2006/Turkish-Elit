@@ -203,8 +203,8 @@
 <filter name="filter_cancelled" string="Cancelled" domain="[('cheque_followup_state', '=', 'cancelled')]"/>
 <separator/>
 <filter name="filter_due_today" string="Due Today" domain="[('cheque_date', '=', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
-<filter name="filter_overdue" string="Overdue" domain="[('cheque_date', '&lt;', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
-<filter name="filter_upcoming" string="Upcoming" domain="[('cheque_date', '&gt;', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
+<filter name="filter_overdue" string="Overdue" domain="[('cheque_date', '<', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
+<filter name="filter_upcoming" string="Upcoming" domain="[('cheque_date', '>', context_today()), ('cheque_followup_state', 'not in', ['cleared', 'cancelled'])]"/>
 <separator/>
 <filter name="group_by_state" string="Cheque Status" domain="[]" context="{'group_by': 'cheque_followup_state'}"/>
 <filter name="group_by_bank" string="Bank" domain="[]" context="{'group_by': 'bank_name'}"/>
@@ -213,7 +213,6 @@
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <searchpanel>
 <field name="cheque_followup_state" string="Cheque Status"/>
-<field name="bank_name" string="Bank"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="outlet_id" string="Outlet"/>
 </searchpanel>
