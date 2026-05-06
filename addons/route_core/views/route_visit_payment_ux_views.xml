@@ -18,6 +18,8 @@
 <field name="effective_promise_amount" string="Promise Amount"/>
 <field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="reference"/>
+<field name="cheque_number"/>
+<field name="cheque_date"/>
 <field name="state"/>
 </list>
 <form>
@@ -39,6 +41,10 @@
 <field name="reference" readonly="1"/>
 <field name="bank_name" readonly="1"/>
 <field name="pos_terminal" readonly="1"/>
+<field name="cheque_number" readonly="1"/>
+<field name="cheque_date" readonly="1"/>
+<field name="cheque_holder_name" readonly="1"/>
+<field name="cheque_note" readonly="1"/>
 <field name="state" readonly="1"/>
 </group>
 </group>
