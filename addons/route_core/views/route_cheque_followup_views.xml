@@ -93,7 +93,7 @@
 <button name="action_cheque_mark_deposited" type="object" class="btn btn-sm btn-secondary" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received']">Deposit</button>
 <button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="state != 'confirmed' or cheque_followup_state != 'deposited'">Clear</button>
 <button name="action_cheque_mark_bounced" type="object" class="btn btn-sm btn-warning" invisible="state != 'confirmed' or cheque_followup_state != 'deposited'">Bounce</button>
-<button name="action_cheque_mark_cancelled" type="object" class="btn btn-sm btn-secondary" invisible="state != 'confirmed' or cheque_followup_state not in ['deposited', 'bounced']">Cancel</button>
+<button name="action_cheque_mark_cancelled" type="object" class="btn btn-sm btn-secondary" invisible="state != 'confirmed' or cheque_followup_state != 'deposited'">Cancel</button>
 <button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="state != 'confirmed' or cheque_followup_state != 'deposited' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Received</button>
 <button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="state != 'confirmed' or cheque_followup_state != 'cleared' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Clearance</button>
 <button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="state != 'confirmed' or cheque_followup_state not in ['bounced', 'cancelled'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Open Due</button>
@@ -142,12 +142,12 @@
 <button name="action_cheque_mark_deposited" string="Mark Deposited" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state not in [False, 'received']"/>
 <button name="action_cheque_mark_cleared" string="Mark Cleared" type="object" class="btn-success" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state != 'deposited'"/>
 <button name="action_cheque_mark_bounced" string="Mark Bounced" type="object" class="btn-warning" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state != 'deposited'"/>
-<button name="action_cheque_mark_cancelled" string="Cancel Cheque" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state not in ['deposited', 'bounced']"/>
-<button name="action_cheque_reset_received" string="Reset to Received" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state in [False, 'received'] or route_cheque_accounting_move_count != 0"/>
+<button name="action_cheque_mark_cancelled" string="Cancel Cheque" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state != 'deposited'"/>
 <button name="action_route_post_cheque_accounting" string="Post Received Entry" type="object" class="btn-primary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state != 'deposited' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_post_cheque_accounting" string="Post Bank Clearance Entry" type="object" class="btn-primary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state != 'cleared' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_post_cheque_accounting" string="Post Open Due Entry" type="object" class="btn-primary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state not in ['bounced', 'cancelled'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_open_cheque_accounting_moves" string="Accounting Entries" type="object" class="btn-secondary" invisible="route_cheque_accounting_move_count == 0"/>
+<button name="action_cheque_reset_received" string="Reset to Received" type="object" class="btn-secondary" invisible="state != 'confirmed' or payment_mode != 'cheque' or cheque_followup_state in [False, 'received'] or route_cheque_accounting_move_count != 0"/>
 <field name="cheque_followup_state" widget="statusbar" statusbar_visible="received,deposited,cleared,bounced,cancelled"/>
 </header>
 <sheet class="route_pda_payment_sheet route_cheque_control_sheet">
