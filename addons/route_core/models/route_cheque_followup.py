@@ -2,6 +2,43 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
+class RouteChequeAccountingCompany(models.Model):
+    _inherit = "res.company"
+
+    route_cheque_accounting_enabled = fields.Boolean(
+        string="Enable Route Cheque Accounting",
+        default=False,
+        help="When enabled, cheque follow-up can create accounting journal entries for received, cleared, bounced, and cancelled route cheques.",
+    )
+    route_cheque_accounting_auto_post = fields.Boolean(
+        string="Auto Post Cheque Accounting",
+        default=False,
+        help="Automatically post cheque accounting entries when cheque status changes. Keep disabled while testing configuration, then enable when the flow is validated.",
+    )
+    route_cheque_accounting_journal_id = fields.Many2one(
+        "account.journal",
+        string="Route Cheque Journal",
+        domain="[('company_id', '=', id)]",
+        help="Miscellaneous journal used for route cheque received/open-due accounting entries.",
+    )
+    route_cheque_pending_account_id = fields.Many2one(
+        "account.account",
+        string="Cheques Under Collection Account",
+        help="Asset/clearing account used while route cheques are received or deposited but not yet cleared by the bank.",
+    )
+    route_cheque_receivable_account_id = fields.Many2one(
+        "account.account",
+        string="Route Receivable / Open Due Account",
+        help="Receivable or clearing account used to represent customer/outlet open due balances for route collections.",
+    )
+    route_cheque_bank_journal_id = fields.Many2one(
+        "account.journal",
+        string="Cleared Cheque Bank Journal",
+        domain="[('company_id', '=', id), ('type', 'in', ['bank', 'cash'])]",
+        help="Bank/cash journal debited when a route cheque is financially cleared.",
+    )
+
+
 class RouteVisitPaymentChequeFollowup(models.Model):
     _inherit = "route.visit.payment"
 
@@ -103,6 +140,280 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         store=True,
         index=True,
     )
+
+    route_cheque_accounting_enabled = fields.Boolean(
+        string="Route Cheque Accounting Enabled",
+        related="company_id.route_cheque_accounting_enabled",
+        store=False,
+        readonly=True,
+    )
+    route_cheque_accounting_auto_post = fields.Boolean(
+        string="Auto Post Route Cheque Accounting",
+        related="company_id.route_cheque_accounting_auto_post",
+        store=False,
+        readonly=True,
+    )
+    route_cheque_received_move_id = fields.Many2one(
+        "account.move",
+        string="Received Accounting Entry",
+        readonly=True,
+        copy=False,
+    )
+    route_cheque_cleared_move_id = fields.Many2one(
+        "account.move",
+        string="Cleared Accounting Entry",
+        readonly=True,
+        copy=False,
+    )
+    route_cheque_open_due_move_id = fields.Many2one(
+        "account.move",
+        string="Open Due Accounting Entry",
+        readonly=True,
+        copy=False,
+    )
+    route_cheque_accounting_state = fields.Selection(
+        [
+            ("disabled", "Accounting Disabled"),
+            ("not_posted", "Not Posted"),
+            ("received_posted", "Received Entry Posted"),
+            ("cleared_posted", "Bank Cleared Entry Posted"),
+            ("open_due_posted", "Open Due Entry Posted"),
+        ],
+        string="Accounting State",
+        compute="_compute_route_cheque_accounting_state",
+        store=False,
+    )
+    route_cheque_accounting_state_label = fields.Char(
+        string="Accounting State Label",
+        compute="_compute_route_cheque_accounting_state",
+        store=False,
+    )
+    route_cheque_accounting_move_count = fields.Integer(
+        string="Accounting Entries",
+        compute="_compute_route_cheque_accounting_state",
+        store=False,
+    )
+
+    @api.depends(
+        "route_cheque_accounting_enabled",
+        "payment_mode",
+        "state",
+        "cheque_followup_state",
+        "route_cheque_received_move_id.state",
+        "route_cheque_cleared_move_id.state",
+        "route_cheque_open_due_move_id.state",
+    )
+    def _compute_route_cheque_accounting_state(self):
+        state_labels = dict(self._fields["route_cheque_accounting_state"].selection)
+        for rec in self:
+            moves = rec._route_cheque_accounting_moves()
+            rec.route_cheque_accounting_move_count = len(moves)
+
+            if not rec.route_cheque_accounting_enabled or rec.payment_mode != "cheque" or rec.state != "confirmed":
+                rec.route_cheque_accounting_state = "disabled"
+            else:
+                followup_state = rec.cheque_followup_state or "received"
+                received_posted = bool(rec.route_cheque_received_move_id and rec.route_cheque_received_move_id.state == "posted")
+                cleared_posted = bool(rec.route_cheque_cleared_move_id and rec.route_cheque_cleared_move_id.state == "posted")
+                open_due_posted = bool(rec.route_cheque_open_due_move_id and rec.route_cheque_open_due_move_id.state == "posted")
+
+                if followup_state == "cleared" and received_posted and cleared_posted:
+                    rec.route_cheque_accounting_state = "cleared_posted"
+                elif followup_state in ("bounced", "cancelled") and received_posted and open_due_posted:
+                    rec.route_cheque_accounting_state = "open_due_posted"
+                elif followup_state in (False, "received", "deposited") and received_posted:
+                    rec.route_cheque_accounting_state = "received_posted"
+                else:
+                    rec.route_cheque_accounting_state = "not_posted"
+
+            rec.route_cheque_accounting_state_label = state_labels.get(
+                rec.route_cheque_accounting_state,
+                rec.route_cheque_accounting_state or "",
+            )
+
+    def _route_cheque_accounting_moves(self):
+        self.ensure_one()
+        moves = self.env["account.move"]
+        for move in (self.route_cheque_received_move_id, self.route_cheque_cleared_move_id, self.route_cheque_open_due_move_id):
+            if move:
+                moves |= move
+        return moves.exists()
+
+    def _route_cheque_validate_accounting_settings(self):
+        self.ensure_one()
+        company = self.company_id
+        if not company.route_cheque_accounting_enabled:
+            raise ValidationError(_("Enable Route Cheque Accounting in Route Settings first."))
+        if not company.route_cheque_accounting_journal_id:
+            raise ValidationError(_("Configure Route Cheque Journal in Route Settings."))
+        if not company.route_cheque_pending_account_id:
+            raise ValidationError(_("Configure Cheques Under Collection Account in Route Settings."))
+        if not company.route_cheque_receivable_account_id:
+            raise ValidationError(_("Configure Route Receivable / Open Due Account in Route Settings."))
+        return company
+
+    def _route_cheque_get_partner(self):
+        self.ensure_one()
+        outlet = self.outlet_id or (self.visit_id.outlet_id if self.visit_id else False) or (self.settlement_visit_id.outlet_id if self.settlement_visit_id else False)
+        return outlet.partner_id if outlet and outlet.partner_id else False
+
+    def _route_cheque_move_ref(self, label):
+        self.ensure_one()
+        parts = [label]
+        if self.cheque_number:
+            parts.append(self.cheque_number)
+        if self.source_document_ref:
+            parts.append(self.source_document_ref)
+        if self.settlement_document_ref and self.settlement_document_ref != self.source_document_ref:
+            parts.append(self.settlement_document_ref)
+        return " - ".join(parts)
+
+    def _route_cheque_create_account_move(self, label, debit_account, credit_account, journal, amount, move_date):
+        self.ensure_one()
+        if (amount or 0.0) <= 0.0:
+            return False
+        if not debit_account or not credit_account or not journal:
+            raise ValidationError(_("Missing accounting configuration for route cheque entry."))
+
+        partner = self._route_cheque_get_partner()
+        ref = self._route_cheque_move_ref(label)
+        move_vals = {
+            "move_type": "entry",
+            "company_id": self.company_id.id,
+            "journal_id": journal.id,
+            "date": move_date or fields.Date.context_today(self),
+            "ref": ref,
+            "line_ids": [
+                (0, 0, {
+                    "name": ref,
+                    "account_id": debit_account.id,
+                    "partner_id": partner.id if partner else False,
+                    "debit": amount,
+                    "credit": 0.0,
+                }),
+                (0, 0, {
+                    "name": ref,
+                    "account_id": credit_account.id,
+                    "partner_id": partner.id if partner else False,
+                    "debit": 0.0,
+                    "credit": amount,
+                }),
+            ],
+        }
+        move = self.env["account.move"].sudo().with_company(self.company_id).create(move_vals)
+        move.action_post()
+        return move
+
+    def _route_cheque_ensure_received_accounting_entry(self):
+        self.ensure_one()
+        if self.route_cheque_received_move_id:
+            if self.route_cheque_received_move_id.state != "posted":
+                self.route_cheque_received_move_id.action_post()
+            return self.route_cheque_received_move_id
+
+        company = self._route_cheque_validate_accounting_settings()
+        move = self._route_cheque_create_account_move(
+            _("Route Cheque Received"),
+            company.route_cheque_pending_account_id,
+            company.route_cheque_receivable_account_id,
+            company.route_cheque_accounting_journal_id,
+            self.amount or 0.0,
+            fields.Date.to_date(self.payment_date) or fields.Date.context_today(self),
+        )
+        if move:
+            self.sudo().write({"route_cheque_received_move_id": move.id})
+        return move
+
+    def _route_cheque_ensure_cleared_accounting_entry(self):
+        self.ensure_one()
+        if self.route_cheque_cleared_move_id:
+            if self.route_cheque_cleared_move_id.state != "posted":
+                self.route_cheque_cleared_move_id.action_post()
+            return self.route_cheque_cleared_move_id
+
+        company = self._route_cheque_validate_accounting_settings()
+        bank_journal = company.route_cheque_bank_journal_id
+        if not bank_journal:
+            raise ValidationError(_("Configure Cleared Cheque Bank Journal in Route Settings."))
+        bank_account = bank_journal.default_account_id
+        if not bank_account:
+            raise ValidationError(_("The selected Cleared Cheque Bank Journal has no default account."))
+
+        self._route_cheque_ensure_received_accounting_entry()
+        move = self._route_cheque_create_account_move(
+            _("Route Cheque Bank Cleared"),
+            bank_account,
+            company.route_cheque_pending_account_id,
+            bank_journal,
+            self.amount or 0.0,
+            fields.Date.to_date(self.cheque_cleared_at) or fields.Date.context_today(self),
+        )
+        if move:
+            self.sudo().write({"route_cheque_cleared_move_id": move.id})
+        return move
+
+    def _route_cheque_ensure_open_due_accounting_entry(self, label):
+        self.ensure_one()
+        if self.route_cheque_open_due_move_id:
+            if self.route_cheque_open_due_move_id.state != "posted":
+                self.route_cheque_open_due_move_id.action_post()
+            return self.route_cheque_open_due_move_id
+
+        company = self._route_cheque_validate_accounting_settings()
+        followup_state = self.cheque_followup_state or "received"
+        move_date = fields.Date.context_today(self)
+        if followup_state == "bounced" and self.cheque_bounced_at:
+            move_date = fields.Date.to_date(self.cheque_bounced_at)
+        elif followup_state == "cancelled" and self.cheque_cancelled_at:
+            move_date = fields.Date.to_date(self.cheque_cancelled_at)
+
+        self._route_cheque_ensure_received_accounting_entry()
+        move = self._route_cheque_create_account_move(
+            label,
+            company.route_cheque_receivable_account_id,
+            company.route_cheque_pending_account_id,
+            company.route_cheque_accounting_journal_id,
+            self.amount or 0.0,
+            move_date,
+        )
+        if move:
+            self.sudo().write({"route_cheque_open_due_move_id": move.id})
+        return move
+
+    def _route_post_cheque_accounting_for_current_state(self):
+        for rec in self:
+            rec._ensure_cheque_followup_payment()
+            state = rec.cheque_followup_state or "received"
+            if state in (False, "received", "deposited"):
+                rec._route_cheque_ensure_received_accounting_entry()
+            elif state == "cleared":
+                rec._route_cheque_ensure_cleared_accounting_entry()
+            elif state == "bounced":
+                rec._route_cheque_ensure_open_due_accounting_entry(_("Route Cheque Bounced"))
+            elif state == "cancelled":
+                rec._route_cheque_ensure_open_due_accounting_entry(_("Route Cheque Cancelled"))
+
+    def action_route_post_cheque_accounting(self):
+        batch_records = self._get_cheque_followup_batch_records()
+        batch_records._route_post_cheque_accounting_for_current_state()
+        return self._cheque_followup_reload_action()
+
+    def action_route_open_cheque_accounting_moves(self):
+        moves = self.env["account.move"]
+        for rec in self:
+            moves |= rec._route_cheque_accounting_moves()
+        moves = moves.exists()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Cheque Accounting Entries"),
+            "res_model": "account.move",
+            "view_mode": "list,form",
+            "domain": [("id", "in", moves.ids)],
+            "context": {"create": False},
+        }
+        if len(moves) == 1:
+            action.update({"view_mode": "form", "res_id": moves.id})
+        return action
 
     @api.depends("payment_mode", "state", "amount", "cheque_followup_state")
     def _compute_cheque_financial_policy(self):
@@ -499,6 +810,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         if date_field:
             values[date_field] = now
         batch_records.write(values)
+        auto_records = batch_records.filtered(lambda payment: payment.company_id.route_cheque_accounting_enabled and payment.company_id.route_cheque_accounting_auto_post)
+        if auto_records:
+            auto_records._route_post_cheque_accounting_for_current_state()
         return self._cheque_followup_reload_action()
 
     def action_cheque_mark_deposited(self):
@@ -515,6 +829,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def action_cheque_reset_received(self):
         batch_records = self._get_cheque_followup_batch_records()
+        for payment in batch_records:
+            if payment._route_cheque_accounting_moves():
+                raise ValidationError(_("This cheque already has accounting entries. Reverse or correct the accounting entries before resetting the cheque status."))
         batch_records.write(
             {
                 "cheque_followup_state": "received",
