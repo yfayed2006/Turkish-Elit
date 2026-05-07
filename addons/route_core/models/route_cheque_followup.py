@@ -164,6 +164,55 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         index=True,
     )
 
+    cheque_physical_group_key = fields.Char(
+        string="Physical Cheque Group Key",
+        compute="_compute_cheque_physical_group_key",
+        store=True,
+        index=True,
+        copy=False,
+        help="Technical key used to show one operational card per physical cheque while preserving detailed allocation lines in the background.",
+    )
+    cheque_physical_is_primary = fields.Boolean(
+        string="Primary Physical Cheque Line",
+        compute="_compute_cheque_physical_summary",
+        search="_search_cheque_physical_is_primary",
+        store=False,
+        help="True only on the representative line used by Cheque Control to display one card per physical cheque.",
+    )
+    cheque_physical_total_amount = fields.Monetary(
+        string="Physical Cheque Amount",
+        currency_field="currency_id",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+        help="Total amount of all allocation lines covered by the same physical cheque.",
+    )
+    cheque_physical_allocation_count = fields.Integer(
+        string="Allocation Lines",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+    )
+    cheque_physical_display_ref = fields.Char(
+        string="Physical Cheque Reference",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+    )
+    cheque_physical_source_summary = fields.Char(
+        string="Allocation Sources",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+    )
+    cheque_physical_settlement_summary = fields.Char(
+        string="Settlement Reference",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+    )
+    cheque_physical_open_due_amount = fields.Monetary(
+        string="Physical Cheque Open Due",
+        currency_field="currency_id",
+        compute="_compute_cheque_physical_summary",
+        store=False,
+    )
+
     route_cheque_accounting_enabled = fields.Boolean(
         string="Route Cheque Accounting Enabled",
         related="company_id.route_cheque_accounting_enabled",
@@ -222,6 +271,203 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_route_cheque_accounting_state",
         store=False,
     )
+
+    def _route_cheque_normalize_group_value(self, value):
+        if not value:
+            return ""
+        return str(value).strip().casefold()
+
+    def _route_cheque_physical_anchor(self):
+        self.ensure_one()
+        if self.settlement_visit_id:
+            return "settlement", self.settlement_visit_id.id
+        if self.sale_order_id:
+            return "sale_order", self.sale_order_id.id
+        if self.visit_id:
+            return "visit", self.visit_id.id
+        return "payment", self.id or 0
+
+    def _route_cheque_physical_outlet(self):
+        self.ensure_one()
+        if self.settlement_visit_id and self.settlement_visit_id.outlet_id:
+            return self.settlement_visit_id.outlet_id
+        if self.outlet_id:
+            return self.outlet_id
+        if self.visit_id and self.visit_id.outlet_id:
+            return self.visit_id.outlet_id
+        if self.sale_order_id and self.sale_order_id.route_outlet_id:
+            return self.sale_order_id.route_outlet_id
+        return self.env["route.outlet"]
+
+    @api.depends(
+        "company_id",
+        "currency_id",
+        "payment_mode",
+        "state",
+        "cheque_number",
+        "bank_name",
+        "cheque_date",
+        "settlement_visit_id",
+        "settlement_visit_id.outlet_id",
+        "visit_id",
+        "visit_id.outlet_id",
+        "sale_order_id",
+        "sale_order_id.route_outlet_id",
+    )
+    def _compute_cheque_physical_group_key(self):
+        for rec in self:
+            if rec.payment_mode != "cheque" or not rec.cheque_number or not rec.bank_name or not rec.cheque_date:
+                rec.cheque_physical_group_key = False
+                continue
+
+            anchor_type, anchor_id = rec._route_cheque_physical_anchor()
+            outlet = rec._route_cheque_physical_outlet()
+            rec.cheque_physical_group_key = "|".join(
+                [
+                    str(rec.company_id.id or 0),
+                    str(rec.currency_id.id or 0),
+                    rec._route_cheque_normalize_group_value(rec.cheque_number),
+                    rec._route_cheque_normalize_group_value(rec.bank_name),
+                    fields.Date.to_string(rec.cheque_date) if rec.cheque_date else "",
+                    str(outlet.id or 0),
+                    anchor_type,
+                    str(anchor_id or 0),
+                ]
+            )
+
+    def _route_cheque_physical_group_domain(self):
+        self.ensure_one()
+        if not self.cheque_physical_group_key:
+            return [("id", "=", self.id)]
+        return [
+            ("payment_mode", "=", "cheque"),
+            ("state", "=", "confirmed"),
+            ("company_id", "=", self.company_id.id),
+            ("cheque_physical_group_key", "=", self.cheque_physical_group_key),
+        ]
+
+    def _route_cheque_physical_group_records(self):
+        self.ensure_one()
+        if not self.cheque_physical_group_key:
+            return self
+        return self.search(self._route_cheque_physical_group_domain())
+
+    def _route_cheque_physical_primary_sort_key(self):
+        self.ensure_one()
+        is_settlement_current_line = bool(
+            self.settlement_visit_id
+            and self.visit_id
+            and self.visit_id.id == self.settlement_visit_id.id
+        )
+        return (0 if is_settlement_current_line else 1, self.id or 0)
+
+    def _search_cheque_physical_is_primary(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Primary Physical Cheque Line."))
+
+        value = bool(value)
+        wants_primary = (operator == "=" and value) or (operator == "!=" and not value)
+        self.env.cr.execute(
+            """
+            SELECT id
+              FROM (
+                    SELECT id,
+                           row_number() OVER (
+                               PARTITION BY cheque_physical_group_key
+                               ORDER BY CASE
+                                            WHEN settlement_visit_id IS NOT NULL
+                                             AND visit_id IS NOT NULL
+                                             AND visit_id = settlement_visit_id THEN 0
+                                            ELSE 1
+                                        END,
+                                        id
+                           ) AS rn
+                      FROM route_visit_payment
+                     WHERE payment_mode = 'cheque'
+                       AND state = 'confirmed'
+                       AND cheque_physical_group_key IS NOT NULL
+                       AND cheque_physical_group_key != ''
+                   ) ranked
+             WHERE rn = 1
+            UNION
+            SELECT id
+              FROM route_visit_payment
+             WHERE payment_mode = 'cheque'
+               AND state = 'confirmed'
+               AND (cheque_physical_group_key IS NULL OR cheque_physical_group_key = '')
+            """
+        )
+        primary_ids = [row[0] for row in self.env.cr.fetchall()]
+        if not primary_ids:
+            primary_ids = [0]
+        return [("id", "in" if wants_primary else "not in", primary_ids)]
+
+    @api.depends(
+        "cheque_physical_group_key",
+        "payment_mode",
+        "state",
+        "amount",
+        "source_document_ref",
+        "settlement_document_ref",
+        "visit_id",
+        "settlement_visit_id",
+        "cheque_open_due_amount",
+        "route_cheque_received_move_id",
+        "route_cheque_cleared_move_id",
+        "route_cheque_open_due_move_id",
+    )
+    def _compute_cheque_physical_summary(self):
+        empty = self.browse()
+        grouped_records_by_key = {}
+        keys = set(rec.cheque_physical_group_key for rec in self if rec.cheque_physical_group_key)
+        if keys:
+            physical_records = self.search([
+                ("payment_mode", "=", "cheque"),
+                ("state", "=", "confirmed"),
+                ("cheque_physical_group_key", "in", list(keys)),
+            ])
+            for payment in physical_records:
+                grouped_records_by_key.setdefault(payment.cheque_physical_group_key, empty)
+                grouped_records_by_key[payment.cheque_physical_group_key] |= payment
+
+        for rec in self:
+            if rec.cheque_physical_group_key:
+                group_records = grouped_records_by_key.get(rec.cheque_physical_group_key, rec)
+            else:
+                group_records = rec
+
+            group_records = group_records.sorted(lambda payment: payment._route_cheque_physical_primary_sort_key())
+            primary = group_records[:1]
+            source_refs = []
+            settlement_refs = []
+            for payment in group_records:
+                if payment.source_document_ref and payment.source_document_ref not in source_refs:
+                    source_refs.append(payment.source_document_ref)
+                if payment.settlement_document_ref and payment.settlement_document_ref not in settlement_refs:
+                    settlement_refs.append(payment.settlement_document_ref)
+
+            allocation_count = len(group_records)
+            source_summary = ", ".join(source_refs[:4])
+            if len(source_refs) > 4:
+                source_summary = _("%(sources)s + %(extra)s more") % {
+                    "sources": source_summary,
+                    "extra": len(source_refs) - 4,
+                }
+
+            settlement_summary = ", ".join(settlement_refs[:2])
+            if len(settlement_refs) > 2:
+                settlement_summary = _("%(settlements)s + %(extra)s more") % {
+                    "settlements": settlement_summary,
+                    "extra": len(settlement_refs) - 2,
+                }
+
+            rec.cheque_physical_is_primary = bool(rec.id and primary and rec.id == primary.id)
+            rec.cheque_physical_total_amount = sum(group_records.mapped("amount")) or rec.amount or 0.0
+            rec.cheque_physical_allocation_count = allocation_count
+            rec.cheque_physical_display_ref = settlement_summary or (primary.source_document_ref if primary else rec.source_document_ref) or rec.source_document_ref or rec.settlement_document_ref or _("Cheque")
+            rec.cheque_physical_source_summary = source_summary or rec.source_document_ref or ""
+            rec.cheque_physical_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
+            rec.cheque_physical_open_due_amount = sum(group_records.mapped("cheque_open_due_amount")) or 0.0
 
     @api.depends(
         "route_cheque_accounting_enabled",
@@ -337,15 +583,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         self.ensure_one()
         posting_level = self.company_id.route_cheque_accounting_posting_level or "per_cheque"
 
-        # In real route usage a direct-stop settlement may create several allocation
-        # payment rows that share the same cheque number/bank/date. Those rows are
-        # operational allocations, not separate cheque amounts. For the default
-        # App-Store-friendly mode we must never sum all allocations into one bank
-        # posting because that can overstate the physical cheque amount. Therefore,
-        # Per Cheque posts the selected Cheque Control record amount only. The older
-        # detailed grouping remains available under Per Allocation Line.
-        if posting_level == "per_cheque":
-            source_key = ("cheque_control_record", self.id)
+        if posting_level == "per_cheque" and self.cheque_physical_group_key:
+            source_key = ("physical_cheque", self.cheque_physical_group_key)
         elif self.settlement_visit_id:
             source_key = ("settlement_visit", self.settlement_visit_id.id)
         elif self.visit_id:
@@ -374,10 +613,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     def _route_cheque_batch_amount(self):
         if not self:
             return 0.0
-        first = self[:1]
-        posting_level = first.company_id.route_cheque_accounting_posting_level or "per_cheque"
-        if posting_level == "per_cheque":
-            return first.amount or 0.0
         return sum(self.mapped("amount")) or 0.0
 
     def _route_cheque_batch_partner(self):
@@ -642,17 +877,18 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     rec._route_cheque_ensure_open_due_accounting_entry(_("Route Cheque Cancelled"))
 
     def action_route_post_cheque_accounting(self):
-        # Accounting posting must use the selected Cheque Control record(s), not the
-        # operational follow-up batch. The follow-up batch is still useful for
-        # status synchronization, but using it for accounting can sum unrelated
-        # allocation lines and create an overstated journal entry.
-        self._ensure_cheque_followup_payment()
-        self._route_post_cheque_accounting_for_current_state()
+        # Cheque Control displays one card per physical cheque, while keeping the
+        # allocation rows behind the scenes. Accounting must therefore post the
+        # whole physical cheque group, not only the representative card line.
+        records = self._get_cheque_followup_batch_records()
+        records._ensure_cheque_followup_payment()
+        records._route_post_cheque_accounting_for_current_state()
         return self._cheque_followup_reload_action()
 
     def action_route_open_cheque_accounting_moves(self):
+        records = self._get_cheque_followup_batch_records() if self else self
         moves = self.env["account.move"]
-        for rec in self:
+        for rec in records:
             moves |= rec._route_cheque_accounting_moves()
         moves = moves.exists()
         action = {
@@ -1031,6 +1267,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def _get_cheque_followup_batch_domain(self):
         self.ensure_one()
+        if self.cheque_physical_group_key:
+            return self._route_cheque_physical_group_domain()
+
         if not (self.cheque_number and self.bank_name and self.cheque_date):
             return [("id", "=", self.id)]
 
@@ -1085,10 +1324,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             values[date_field] = now
         batch_records.write(values)
 
-        # Auto-post only the record(s) the user acted on. This keeps accounting
-        # aligned with the visible Cheque Amount and prevents a direct-stop batch
-        # from posting the sum of all allocation lines.
-        auto_records = requested_records.filtered(
+        auto_records = batch_records.filtered(
             lambda payment: payment.company_id.route_cheque_accounting_enabled
             and payment.company_id.route_cheque_accounting_auto_post
         )
