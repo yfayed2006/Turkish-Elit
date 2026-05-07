@@ -23,7 +23,7 @@ class RouteChequeAccountingCompany(models.Model):
         string="Cheque Accounting Posting Level",
         default="per_cheque",
         required=True,
-        help="Per Cheque posts one accounting entry set for the real cheque amount. Per Allocation Line keeps the older detailed behavior and posts entries for each route collection allocation.",
+        help="Per Cheque posts the visible Cheque Control amount only, which is the safest default for route operations. Per Allocation Line keeps the older detailed behavior and posts entries for each route collection allocation.",
     )
     route_cheque_accounting_journal_id = fields.Many2one(
         "account.journal",
@@ -322,7 +322,18 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def _route_cheque_accounting_group_key(self):
         self.ensure_one()
-        if self.settlement_visit_id:
+        posting_level = self.company_id.route_cheque_accounting_posting_level or "per_cheque"
+
+        # In real route usage a direct-stop settlement may create several allocation
+        # payment rows that share the same cheque number/bank/date. Those rows are
+        # operational allocations, not separate cheque amounts. For the default
+        # App-Store-friendly mode we must never sum all allocations into one bank
+        # posting because that can overstate the physical cheque amount. Therefore,
+        # Per Cheque posts the selected Cheque Control record amount only. The older
+        # detailed grouping remains available under Per Allocation Line.
+        if posting_level == "per_cheque":
+            source_key = ("cheque_control_record", self.id)
+        elif self.settlement_visit_id:
             source_key = ("settlement_visit", self.settlement_visit_id.id)
         elif self.visit_id:
             source_key = ("visit", self.visit_id.id)
@@ -348,6 +359,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         return list(groups.values())
 
     def _route_cheque_batch_amount(self):
+        if not self:
+            return 0.0
+        first = self[:1]
+        posting_level = first.company_id.route_cheque_accounting_posting_level or "per_cheque"
+        if posting_level == "per_cheque":
+            return first.amount or 0.0
         return sum(self.mapped("amount")) or 0.0
 
     def _route_cheque_batch_partner(self):
@@ -612,8 +629,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     rec._route_cheque_ensure_open_due_accounting_entry(_("Route Cheque Cancelled"))
 
     def action_route_post_cheque_accounting(self):
-        batch_records = self._get_cheque_followup_batch_records()
-        batch_records._route_post_cheque_accounting_for_current_state()
+        # Accounting posting must use the selected Cheque Control record(s), not the
+        # operational follow-up batch. The follow-up batch is still useful for
+        # status synchronization, but using it for accounting can sum unrelated
+        # allocation lines and create an overstated journal entry.
+        self._ensure_cheque_followup_payment()
+        self._route_post_cheque_accounting_for_current_state()
         return self._cheque_followup_reload_action()
 
     def action_route_open_cheque_accounting_moves(self):
@@ -1016,7 +1037,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         return batch_records
 
     def _write_cheque_followup_state(self, state, date_field=None):
-        batch_records = self._get_cheque_followup_batch_records()
+        requested_records = self
+        batch_records = requested_records._get_cheque_followup_batch_records()
         batch_records._ensure_cheque_followup_payment()
         batch_records._validate_cheque_followup_transition(state)
         now = fields.Datetime.now()
@@ -1028,7 +1050,14 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         if date_field:
             values[date_field] = now
         batch_records.write(values)
-        auto_records = batch_records.filtered(lambda payment: payment.company_id.route_cheque_accounting_enabled and payment.company_id.route_cheque_accounting_auto_post)
+
+        # Auto-post only the record(s) the user acted on. This keeps accounting
+        # aligned with the visible Cheque Amount and prevents a direct-stop batch
+        # from posting the sum of all allocation lines.
+        auto_records = requested_records.filtered(
+            lambda payment: payment.company_id.route_cheque_accounting_enabled
+            and payment.company_id.route_cheque_accounting_auto_post
+        )
         if auto_records:
             auto_records._route_post_cheque_accounting_for_current_state()
         return self._cheque_followup_reload_action()
