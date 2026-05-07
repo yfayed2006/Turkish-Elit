@@ -44,6 +44,17 @@
 <field name="return_near_expiry_location_id"/>
 </group>
 </group>
+<group string="Cheque Accounting Settings">
+<group>
+<field name="route_cheque_accounting_enabled"/>
+<field name="route_cheque_accounting_auto_post" invisible="route_cheque_accounting_enabled == False"/>
+<field name="route_cheque_accounting_journal_id" options="{'no_create': False, 'no_open': False}" invisible="route_cheque_accounting_enabled == False"/>
+<field name="route_cheque_pending_account_id" options="{'no_create': False, 'no_open': False}" invisible="route_cheque_accounting_enabled == False"/>
+<field name="route_cheque_receivable_account_id" options="{'no_create': False, 'no_open': False}" invisible="route_cheque_accounting_enabled == False"/>
+<field name="route_cheque_bank_journal_id" options="{'no_create': False, 'no_open': False}" invisible="route_cheque_accounting_enabled == False"/>
+<div class="text-muted" colspan="2" invisible="route_cheque_accounting_enabled == False"> Received/Deposited creates the route cheque under collection entry. Cleared transfers the amount to the selected bank journal. Bounced/Cancelled returns the amount to Route Receivable / Open Due. Keep Auto Post disabled until the journals/accounts are validated. </div>
+</group>
+</group>
 </xpath>
 </field>
 </record>
