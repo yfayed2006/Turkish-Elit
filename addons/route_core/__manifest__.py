@@ -4,7 +4,7 @@
     "summary": "Sales representative route visits",
     "author": "Yasser Fayed",
     "license": "LGPL-3",
-    "depends": ["base", "sale", "mail", "stock", "contacts"],
+    "depends": ["base", "sale", "mail", "stock", "contacts", "account"],
     "data": [
         "security/route_security_groups.xml",
         "security/ir.model.access.csv",
