@@ -1233,7 +1233,7 @@ class RouteVisit(models.Model):
         for rec in self:
             rec.direct_stop_order_ids = orders_by_origin.get(rec.name, empty_orders)
 
-    @api.depends("name", "direct_stop_order_ids.name", "direct_stop_order_ids.state", "direct_stop_return_ids.name", "direct_stop_return_ids.state")
+    @api.depends("name", "direct_stop_return_ids.name", "direct_stop_return_ids.state")
     def _compute_direct_stop_document_refs(self):
         for rec in self:
             orders = rec.direct_stop_order_ids.filtered(lambda o: o.state not in ("cancel",)) if rec.direct_stop_order_ids else rec.direct_stop_order_ids
@@ -1320,8 +1320,7 @@ class RouteVisit(models.Model):
         "direct_stop_skip_sale",
         "direct_stop_skip_return",
         "direct_stop_credit_policy",
-        "direct_stop_order_ids.state",
-        "direct_stop_order_ids.amount_total",
+        "name",
         "direct_stop_return_ids.state",
         "direct_stop_return_ids.amount_total",
         "payment_ids.state",
@@ -2716,3 +2715,4 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
