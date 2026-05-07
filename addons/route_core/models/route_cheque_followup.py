@@ -112,7 +112,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             ("cleared", "Financially Cleared"),
             ("open_due", "Open Due"),
         ],
-        string="Cheque Effect",
+        string="Customer Balance Effect",
         compute="_compute_cheque_collection_effect_bucket",
         store=True,
         index=True,
@@ -973,9 +973,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             if state == "cleared":
                 rec.cheque_followup_due_label = _("Cleared")
             elif state == "bounced":
-                rec.cheque_followup_due_label = _("Bounced")
+                rec.cheque_followup_due_label = _("Returned to Open Due")
             elif state == "cancelled":
-                rec.cheque_followup_due_label = _("Cancelled")
+                rec.cheque_followup_due_label = _("Cancelled - Open Due")
             elif not rec.cheque_date:
                 rec.cheque_followup_due_label = _("No Cheque Date")
             elif rec.cheque_date < today:
