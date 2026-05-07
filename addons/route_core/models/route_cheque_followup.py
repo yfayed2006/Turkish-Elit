@@ -106,6 +106,19 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_cheque_financial_policy",
         store=False,
     )
+    cheque_collection_effect_bucket = fields.Selection(
+        [
+            ("pending", "Pending Clearance"),
+            ("cleared", "Financially Cleared"),
+            ("open_due", "Open Due"),
+        ],
+        string="Cheque Effect",
+        compute="_compute_cheque_collection_effect_bucket",
+        store=True,
+        index=True,
+        copy=False,
+        help="Operational cheque effect used by filters and search panels. Bounced and cancelled cheques are grouped as Open Due because both return the amount to outlet receivable/open due.",
+    )
     cheque_effective_collected_amount = fields.Monetary(
         string="Effective Collected",
         currency_field="currency_id",
@@ -653,6 +666,27 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         if len(moves) == 1:
             action.update({"view_mode": "form", "res_id": moves.id})
         return action
+
+    @api.depends("payment_mode", "state", "amount", "cheque_followup_state")
+    def _compute_cheque_collection_effect_bucket(self):
+        for rec in self:
+            rec.cheque_collection_effect_bucket = False
+            if rec.payment_mode != "cheque":
+                continue
+
+            followup_state = rec.cheque_followup_state or "received"
+            amount = rec.amount or 0.0
+
+            if rec.state != "confirmed":
+                rec.cheque_collection_effect_bucket = "pending"
+            elif followup_state == "cleared":
+                rec.cheque_collection_effect_bucket = "cleared"
+            elif followup_state in ("bounced", "cancelled") and amount:
+                rec.cheque_collection_effect_bucket = "open_due"
+            elif followup_state in ("bounced", "cancelled"):
+                rec.cheque_collection_effect_bucket = "open_due"
+            else:
+                rec.cheque_collection_effect_bucket = "pending"
 
     @api.depends("payment_mode", "state", "amount", "cheque_followup_state")
     def _compute_cheque_financial_policy(self):
