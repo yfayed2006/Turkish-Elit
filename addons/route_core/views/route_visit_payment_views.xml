@@ -1,5 +1,5 @@
 <odoo>
-<!--                        Admin / all payments                        -->
+<!--                         Admin / all payments                         -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -33,6 +33,7 @@
 <field name="cheque_date" optional="hide"/>
 <field name="cheque_followup_state" string="Cheque Status" optional="hide"/>
 <field name="cheque_financial_state" string="Cheque Financial Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Cheque Effect Filter" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
 <field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
@@ -40,7 +41,7 @@
 </list>
 </field>
 </record>
-<!--                        Tailored visit list                        -->
+<!--                         Tailored visit list                         -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -60,13 +61,14 @@
 <field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
 <field name="cheque_followup_state" string="Cheque Status" optional="hide"/>
 <field name="cheque_financial_state" string="Cheque Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Cheque Effect Filter" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
 <field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
 </list>
 </field>
 </record>
-<!--                        Tailored direct sale list                        -->
+<!--                         Tailored direct sale list                         -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -94,6 +96,7 @@
 <field name="cheque_date" string="Cheque Date" optional="hide"/>
 <field name="cheque_followup_state" string="Cheque Status" optional="hide"/>
 <field name="cheque_financial_state" string="Cheque Financial Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Cheque Effect Filter" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
 <field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
@@ -133,6 +136,7 @@
 <field name="cheque_followup_state"/>
 <field name="cheque_followup_state_label"/>
 <field name="cheque_financial_state_label"/>
+<field name="cheque_collection_effect_bucket"/>
 <field name="cheque_effective_collected_amount"/>
 <field name="cheque_route_coverage_amount"/>
 <field name="cheque_pending_clearance_amount"/>
@@ -536,7 +540,7 @@
 </form>
 </field>
 </record>
-<!--                        Admin / all payments search                        -->
+<!--                         Admin / all payments search                         -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -573,9 +577,9 @@
 <filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
-<filter name="filter_cheque_pending" string="Cheque Pending" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', '=', 'pending')]"/>
-<filter name="filter_cheque_cleared" string="Cheque Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', '=', 'cleared')]"/>
-<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', 'in', ['open_due', 'cancelled'])]"/>
+<filter name="filter_cheque_pending" string="Cheque Pending" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'pending')]"/>
+<filter name="filter_cheque_cleared" string="Cheque Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'cleared')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
 <filter name="filter_bounced_cheques" string="Bounced Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
@@ -620,7 +624,7 @@
 </search>
 </field>
 </record>
-<!--                        Visit collections search                        -->
+<!--                         Visit collections search                         -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -641,7 +645,7 @@
 <field name="cheque_number" string="Cheque Number"/>
 <field name="bank_name" string="Bank"/>
 <field name="cheque_followup_state" string="Cheque Status"/>
-<field name="cheque_financial_state" string="Cheque Effect"/>
+<field name="cheque_collection_effect_bucket" string="Cheque Effect"/>
 <field name="state"/>
 <field name="source_document_ref" string="Visit"/>
 <filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
@@ -662,9 +666,9 @@
 <filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
-<filter name="filter_cheque_pending" string="Cheque Pending" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', '=', 'pending')]"/>
-<filter name="filter_cheque_cleared" string="Cheque Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', '=', 'cleared')]"/>
-<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_financial_state', 'in', ['open_due', 'cancelled'])]"/>
+<filter name="filter_cheque_pending" string="Cheque Pending" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'pending')]"/>
+<filter name="filter_cheque_cleared" string="Cheque Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'cleared')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
 <filter name="filter_bounced_cheques" string="Bounced Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
 <separator/>
 <filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
@@ -688,7 +692,7 @@
 <filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_cheque_status" string="Cheque Status" domain="[]" context="{'group_by': 'cheque_followup_state'}"/>
-<filter name="group_by_cheque_effect" string="Cheque Effect" domain="[]" context="{'group_by': 'cheque_financial_state'}"/>
+<filter name="group_by_cheque_effect" string="Cheque Effect" domain="[]" context="{'group_by': 'cheque_collection_effect_bucket'}"/>
 <filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
 <filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
 <filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
@@ -698,7 +702,7 @@
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="payment_mode" string="Mode"/>
-<field name="cheque_financial_state" string="Cheque Effect"/>
+<field name="cheque_collection_effect_bucket" string="Cheque Effect"/>
 <field name="cheque_followup_state" string="Cheque Status"/>
 <field name="collection_due_bucket" string="Due"/>
 <field name="collection_promise_bucket" string="Promise"/>
@@ -707,7 +711,7 @@
 </search>
 </field>
 </record>
-<!--                        Direct sale payments search                        -->
+<!--                         Direct sale payments search                         -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
