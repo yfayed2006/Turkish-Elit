@@ -430,6 +430,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         }
         for rec in self:
             current_state = rec.cheque_followup_state or "received"
+            if current_state == target_state:
+                continue
             if target_state in ("bounced", "cancelled") and current_state == "cleared":
                 raise ValidationError(
                     _("This cheque is already financially cleared. Reset it to Received first if the cleared status was entered by mistake.")
@@ -443,9 +445,51 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     }
                 )
 
+    def _get_cheque_followup_batch_domain(self):
+        self.ensure_one()
+        if not (self.cheque_number and self.bank_name and self.cheque_date):
+            return [("id", "=", self.id)]
+
+        domain = [
+            ("payment_mode", "=", "cheque"),
+            ("state", "=", "confirmed"),
+            ("company_id", "=", self.company_id.id),
+            ("cheque_number", "=", self.cheque_number),
+            ("bank_name", "=", self.bank_name),
+            ("cheque_date", "=", self.cheque_date),
+        ]
+
+        if self.settlement_visit_id:
+            domain.append(("settlement_visit_id", "=", self.settlement_visit_id.id))
+        elif self.visit_id:
+            domain.extend(
+                [
+                    ("settlement_visit_id", "=", False),
+                    ("visit_id", "=", self.visit_id.id),
+                ]
+            )
+        elif self.sale_order_id:
+            domain.extend(
+                [
+                    ("settlement_visit_id", "=", False),
+                    ("sale_order_id", "=", self.sale_order_id.id),
+                ]
+            )
+        else:
+            domain.append(("id", "=", self.id))
+        return domain
+
+    def _get_cheque_followup_batch_records(self):
+        batch_records = self.browse()
+        for rec in self:
+            rec._ensure_cheque_followup_payment()
+            batch_records |= self.search(rec._get_cheque_followup_batch_domain())
+        return batch_records
+
     def _write_cheque_followup_state(self, state, date_field=None):
-        self._ensure_cheque_followup_payment()
-        self._validate_cheque_followup_transition(state)
+        batch_records = self._get_cheque_followup_batch_records()
+        batch_records._ensure_cheque_followup_payment()
+        batch_records._validate_cheque_followup_transition(state)
         now = fields.Datetime.now()
         values = {
             "cheque_followup_state": state,
@@ -454,7 +498,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         }
         if date_field:
             values[date_field] = now
-        self.write(values)
+        batch_records.write(values)
         return self._cheque_followup_reload_action()
 
     def action_cheque_mark_deposited(self):
@@ -470,8 +514,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         return self._write_cheque_followup_state("cancelled", "cheque_cancelled_at")
 
     def action_cheque_reset_received(self):
-        self._ensure_cheque_followup_payment()
-        self.write(
+        batch_records = self._get_cheque_followup_batch_records()
+        batch_records.write(
             {
                 "cheque_followup_state": "received",
                 "cheque_followup_updated_at": fields.Datetime.now(),
