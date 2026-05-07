@@ -1,5 +1,5 @@
 <odoo>
-<!--                       Admin / all payments                       -->
+<!--                        Admin / all payments                        -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -40,7 +40,7 @@
 </list>
 </field>
 </record>
-<!--                       Tailored visit list                       -->
+<!--                        Tailored visit list                        -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -66,7 +66,7 @@
 </list>
 </field>
 </record>
-<!--                       Tailored direct sale list                       -->
+<!--                        Tailored direct sale list                        -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -133,6 +133,7 @@
 <field name="cheque_followup_state"/>
 <field name="cheque_followup_state_label"/>
 <field name="cheque_financial_state_label"/>
+<field name="cheque_effective_collected_amount"/>
 <field name="cheque_route_coverage_amount"/>
 <field name="cheque_pending_clearance_amount"/>
 <field name="cheque_financially_cleared_amount"/>
@@ -197,6 +198,21 @@
 </t>
 </div>
 <div class="route_pda_payment_metrics">
+<t t-if="record.cheque_needs_followup.raw_value">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Effective Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_effective_collected_amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric route_pda_payment_metric_cheque_open_due">
+<span class="route_pda_payment_metric_label">Cheque Open Due</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_open_due_amount"/>
+</span>
+</div>
+</t>
+<t t-else="">
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Collected</span>
 <span class="route_pda_payment_metric_value">
@@ -209,6 +225,7 @@
 <field name="remaining_due_amount"/>
 </span>
 </div>
+</t>
 <t t-if="record.effective_promise_amount.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
 <span class="route_pda_payment_metric_label">Promise / Deferred</span>
@@ -317,17 +334,31 @@
 <field name="promise_review_followup_date" invisible="1"/>
 <field name="promise_reviewed_by_id" invisible="1"/>
 <field name="promise_review_note" invisible="1"/>
+<field name="cheque_needs_followup" invisible="1"/>
+<field name="cheque_effective_collected_amount" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
-<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="cheque_needs_followup">
 <div class="route_pda_info_label">Collected</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="amount" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="cheque_needs_followup">
 <div class="route_pda_info_label">Uncovered Due</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="remaining_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
+<div class="route_pda_info_label">Effective Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
+<div class="route_pda_info_label">Cheque Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not effective_promise_amount or effective_promise_amount == 0">
@@ -505,7 +536,7 @@
 </form>
 </field>
 </record>
-<!--                       Admin / all payments search                       -->
+<!--                        Admin / all payments search                        -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -589,7 +620,7 @@
 </search>
 </field>
 </record>
-<!--                       Visit collections search                       -->
+<!--                        Visit collections search                        -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -676,7 +707,7 @@
 </search>
 </field>
 </record>
-<!--                       Direct sale payments search                       -->
+<!--                        Direct sale payments search                        -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
