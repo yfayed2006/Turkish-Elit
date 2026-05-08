@@ -439,6 +439,41 @@ class SaleOrderLine(models.Model):
                     % line.product_id.display_name
                 )
 
+    @api.depends("product_id", "state", "qty_invoiced", "qty_delivered", "order_id.route_order_mode", "order_id.state")
+    def _compute_product_updatable(self):
+        """Keep Route Direct Sale draft lines editable until the sale is confirmed.
+
+        Odoo blocks product changes when the technical product_updatable flag is
+        false. In the PDA direct-sale flow the salesperson may save a quotation
+        line, notice that the wrong product was selected, and correct it before
+        pressing Confirm Sale. That should stay allowed only while the order is
+        still a quotation.
+        """
+        super()._compute_product_updatable()
+        for line in self:
+            order = line.order_id
+            if (
+                order
+                and order.route_order_mode == "direct_sale"
+                and order.state in ("draft", "sent")
+                and not line.display_type
+                and not line.is_downpayment
+            ):
+                line.product_updatable = True
+
+    def action_route_direct_sale_remove_line(self):
+        """Remove a PDA direct-sale line while the order is still a quotation."""
+        for line in self:
+            order = line.order_id
+            if not order or order.route_order_mode != "direct_sale":
+                raise UserError(_("This remove action is available only for Route Direct Sale lines."))
+            if order.state not in ("draft", "sent"):
+                raise UserError(_("You can remove products only before confirming the Direct Sale order."))
+            if (line.qty_invoiced or 0.0) > 0 or (line.qty_delivered or 0.0) > 0:
+                raise UserError(_("This product line already has delivered or invoiced quantity and cannot be removed."))
+        self.sudo().unlink()
+        return {"type": "ir.actions.client", "tag": "reload"}
+
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
