@@ -6517,3 +6517,45 @@ html[dir="rtl"] .route_cheque_control_card::before {
     right: 0 !important;
     border-radius: 0 22px 22px 0 !important;
 }
+
+
+/* Route Cheque Control - final side accent using real border
+   The previous pseudo-element line could be hidden by badge/field backgrounds.
+   A real border cannot be covered by inner card content. */
+.route_cheque_control_kanban .route_pda_payment_card,
+.route_cheque_control_kanban .route_cheque_control_card,
+.route_cheque_control_card {
+    position: relative !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 6px solid #0ea5a8 !important;
+    border-inline-start: 6px solid #0ea5a8 !important;
+    border-radius: 22px !important;
+    padding-left: 20px !important;
+    padding-inline-start: 20px !important;
+    background: #ffffff !important;
+    background-clip: padding-box !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+    overflow: hidden !important;
+}
+
+/* Completely disable the old overlay accent line. */
+.route_cheque_control_kanban .route_pda_payment_card::before,
+.route_cheque_control_kanban .route_cheque_control_card::before,
+.route_cheque_control_card::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* RTL support: move the real border to the right side in RTL UI. */
+html[dir="rtl"] .route_cheque_control_kanban .route_pda_payment_card,
+html[dir="rtl"] .route_cheque_control_kanban .route_cheque_control_card,
+html[dir="rtl"] .route_cheque_control_card {
+    border-left: 1px solid #e5e7eb !important;
+    border-right: 6px solid #0ea5a8 !important;
+    border-inline-start: 6px solid #0ea5a8 !important;
+    border-inline-end: 1px solid #e5e7eb !important;
+    padding-left: 18px !important;
+    padding-right: 20px !important;
+    padding-inline-start: 20px !important;
+    padding-inline-end: 18px !important;
+}
