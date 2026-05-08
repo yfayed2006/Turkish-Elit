@@ -1151,15 +1151,15 @@
 <field name="context">{'search_default_filter_custody_with_salesperson': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_accounting_collections_custody" model="ir.actions.act_window">
-<field name="name">Route Collections Custody</field>
+<field name="name">Route Custody</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
 <field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_accounting_visible', '=', True)]</field>
-<field name="context">{'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+<field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_custody_handed_accounting': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
-<menuitem id="menu_route_accounting_collections_custody" name="Route Collections Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
+<menuitem id="menu_route_accounting_collections_custody" name="Route Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
 <record id="action_route_visit_payment" model="ir.actions.act_window">
 <field name="name">All Payments</field>
 <field name="res_model">route.visit.payment</field>
