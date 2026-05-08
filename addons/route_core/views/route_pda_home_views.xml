@@ -95,6 +95,13 @@
 <field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
 </span>
 </button>
+<button type="object" name="action_open_my_custody" class="btn route_pda_app_btn route_pda_app_btn_info route_pda_app_btn_collections_no_icon">
+<span class="route_pda_app_label route_pda_app_label_no_icon">My Custody</span>
+<span class="route_pda_app_hint">Cash and Cheques to Hand Over</span>
+<span class="route_pda_app_hint_value route_pda_app_hint_money">
+<field name="cash_today_amount" widget="monetary" readonly="1" nolabel="1"/>
+</span>
+</button>
 </div>
 </div>
 <div class="route_pda_group route_pda_group_execution_snapshot">
