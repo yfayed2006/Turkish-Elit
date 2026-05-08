@@ -22,9 +22,9 @@
 <field name="comment">Management visibility across all route operations and configuration. Managers can decide who receives supervisor-facing access in user access rights.</field>
 </record>
 <record id="group_route_cheque_accountant" model="res.groups">
-<field name="name">Route Cheque Accountant</field>
+<field name="name">Route Collections Accountant</field>
 <field name="category_ids" eval="[(4, ref('route_core.module_category_route_core'))]"/>
-<field name="comment">Accounting users who receive physical route cheques from supervisors and manage the cheque bank/accounting lifecycle from the Accounting app.</field>
+<field name="comment">Accounting users who receive route cash and cheques directly from salespersons and manage cheque bank/accounting lifecycle from the Accounting app.</field>
 </record>
 </data>
 </odoo>
