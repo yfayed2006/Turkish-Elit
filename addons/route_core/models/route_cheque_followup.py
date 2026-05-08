@@ -290,6 +290,16 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_cash_custody_summary",
         store=False,
     )
+    cash_custody_visit_count = fields.Integer(
+        string="Covered Visits",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    cash_custody_area_summary = fields.Char(
+        string="Cash Areas",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
     cash_custody_display_ref = fields.Char(
         string="Cash Custody Reference",
         compute="_compute_cash_custody_summary",
@@ -517,14 +527,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def _route_cash_custody_group_domain(self):
         self.ensure_one()
-        if self.cash_custody_group_key:
-            return [
-                ("payment_mode", "=", "cash"),
-                ("state", "=", "confirmed"),
-                ("company_id", "=", self.company_id.id),
-                ("cash_custody_group_key", "=", self.cash_custody_group_key),
-            ]
-        if not self.salesperson_id:
+        if self.payment_mode != "cash" or self.state != "confirmed" or not self.salesperson_id:
             return [("id", "=", self.id)]
         domain = [
             ("payment_mode", "=", "cash"),
@@ -542,8 +545,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def _route_cash_custody_group_records(self):
         self.ensure_one()
-        if not self.cash_custody_group_key:
-            return self
         return self.search(self._route_cash_custody_group_domain())
 
     def _get_cash_custody_batch_records(self):
@@ -558,12 +559,18 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         self.ensure_one()
         return (self.payment_date or fields.Datetime.now(), self.id or 0)
 
-    def _route_cash_primary_ids_sql(self, accounting_visible=False):
+    def _route_cash_primary_ids_sql(self, accounting_visible=False, custody_states=None, salesperson_id=False):
         where_extra = ""
         params = []
-        if accounting_visible:
-            where_extra = " AND COALESCE(cash_custody_state, 'with_salesperson') IN %s"
+        if custody_states:
+            where_extra += " AND COALESCE(cash_custody_state, 'with_salesperson') IN %s"
+            params.append(tuple(custody_states))
+        elif accounting_visible:
+            where_extra += " AND COALESCE(cash_custody_state, 'with_salesperson') IN %s"
             params.append(("handed_to_accounting", "received_by_accounting"))
+        if salesperson_id:
+            where_extra += " AND salesperson_id = %s"
+            params.append(salesperson_id)
         self.env.cr.execute(
             f"""
             SELECT id
@@ -609,26 +616,14 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         "settlement_document_ref",
         "salesperson_id",
         "cash_custody_state",
+        "area_id",
+        "visit_id",
+        "settlement_visit_id",
     )
     def _compute_cash_custody_summary(self):
-        empty = self.browse()
-        grouped_records_by_key = {}
-        keys = set(rec.cash_custody_group_key for rec in self if rec.cash_custody_group_key)
-        if keys:
-            cash_records = self.search([
-                ("payment_mode", "=", "cash"),
-                ("state", "=", "confirmed"),
-                ("cash_custody_group_key", "in", list(keys)),
-            ])
-            for payment in cash_records:
-                grouped_records_by_key.setdefault(payment.cash_custody_group_key, empty)
-                grouped_records_by_key[payment.cash_custody_group_key] |= payment
-
         custody_labels = dict(self._fields["cash_custody_state"].selection)
         for rec in self:
-            if rec.cash_custody_group_key:
-                group_records = grouped_records_by_key.get(rec.cash_custody_group_key, rec)
-            elif rec.payment_mode == "cash" and rec.state == "confirmed":
+            if rec.payment_mode == "cash" and rec.state == "confirmed":
                 group_records = rec._route_cash_custody_group_records()
             else:
                 group_records = rec
@@ -637,11 +632,20 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             primary = group_records[:1]
             source_refs = []
             settlement_refs = []
+            area_names = []
+            covered_visit_keys = set()
             for payment in group_records:
                 if payment.source_document_ref and payment.source_document_ref not in source_refs:
                     source_refs.append(payment.source_document_ref)
                 if payment.settlement_document_ref and payment.settlement_document_ref not in settlement_refs:
                     settlement_refs.append(payment.settlement_document_ref)
+                if payment.area_id and payment.area_id.display_name not in area_names:
+                    area_names.append(payment.area_id.display_name)
+                covered_visit = payment.settlement_visit_id or payment.visit_id
+                if covered_visit:
+                    covered_visit_keys.add(("visit", covered_visit.id))
+                elif payment.source_document_ref:
+                    covered_visit_keys.add(("source", payment.source_document_ref))
 
             source_summary = ", ".join(source_refs[:4])
             if len(source_refs) > 4:
@@ -657,11 +661,20 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     "extra": len(settlement_refs) - 3,
                 }
 
+            area_summary = ", ".join(area_names[:3])
+            if len(area_names) > 3:
+                area_summary = _("%(areas)s + %(extra)s more") % {
+                    "areas": area_summary,
+                    "extra": len(area_names) - 3,
+                }
+
             custody_state = rec.cash_custody_state or "with_salesperson"
             custody_label = custody_labels.get(custody_state, custody_state)
             rec.cash_custody_is_primary = bool(rec.id and primary and rec.id == primary.id)
             rec.cash_custody_total_amount = sum(group_records.mapped("amount")) or rec.amount or 0.0
             rec.cash_custody_collection_count = len(group_records)
+            rec.cash_custody_visit_count = len(covered_visit_keys) or len(source_refs)
+            rec.cash_custody_area_summary = area_summary or (rec.area_id.display_name if rec.area_id else "")
             if custody_state == "with_salesperson":
                 rec.cash_custody_display_ref = _("Cash in Hand")
             elif custody_state == "handed_to_accounting":
@@ -673,15 +686,27 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.cash_custody_source_summary = source_summary or rec.source_document_ref or ""
             rec.cash_custody_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
 
-    def _route_custody_primary_ids_sql(self, accounting_visible=False):
+    def _route_custody_primary_ids_sql(self, accounting_visible=False, custody_states=None, salesperson_id=False):
         primary_ids = []
-        primary_ids.extend(self._route_cash_primary_ids_sql(accounting_visible=accounting_visible))
+        primary_ids.extend(
+            self._route_cash_primary_ids_sql(
+                accounting_visible=accounting_visible,
+                custody_states=custody_states,
+                salesperson_id=salesperson_id,
+            )
+        )
 
         cheque_where_extra = ""
         cheque_params = []
-        if accounting_visible:
-            cheque_where_extra = " AND cheque_custody_state IN %s"
+        if custody_states:
+            cheque_where_extra += " AND COALESCE(cheque_custody_state, 'with_salesperson') IN %s"
+            cheque_params.append(tuple(custody_states))
+        elif accounting_visible:
+            cheque_where_extra += " AND cheque_custody_state IN %s"
             cheque_params.append(("handed_to_accounting", "received_by_accounting"))
+        if salesperson_id:
+            cheque_where_extra += " AND salesperson_id = %s"
+            cheque_params.append(salesperson_id)
         self.env.cr.execute(
             f"""
             SELECT id
@@ -713,7 +738,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                AND (cheque_physical_group_key IS NULL OR cheque_physical_group_key = '')
                {cheque_where_extra}
             """,
-            cheque_params * 2 if accounting_visible else [],
+            cheque_params + cheque_params,
         )
         primary_ids.extend([row[0] for row in self.env.cr.fetchall()])
         return primary_ids
