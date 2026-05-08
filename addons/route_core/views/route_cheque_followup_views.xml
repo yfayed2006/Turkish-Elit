@@ -115,6 +115,14 @@
 </span>
 </div>
 </t>
+<t t-if="record.cheque_physical_allocation_count.raw_value > 1 and record.cheque_physical_settlement_summary.raw_value">
+<div class="route_pda_payment_metric route_pda_payment_metric_single">
+<span class="route_pda_payment_metric_label">Settlement Visits</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_physical_settlement_summary"/>
+</span>
+</div>
+</t>
 </div>
 <div class="route_cheque_control_actions">
 <button name="action_cheque_mark_deposited" type="object" class="btn btn-sm btn-secondary" invisible="state != 'confirmed' or cheque_followup_state not in [False, 'received']">Mark Deposited</button>
@@ -148,6 +156,7 @@
 <field name="cheque_physical_total_amount" string="Cheque Amount"/>
 <field name="cheque_physical_allocation_count" string="Allocations" optional="show"/>
 <field name="cheque_physical_source_summary" string="Allocation Sources" optional="show"/>
+<field name="cheque_physical_settlement_summary" string="Settlement Visits" optional="hide"/>
 <field name="cheque_number" string="Cheque No."/>
 <field name="bank_name" string="Bank"/>
 <field name="cheque_date" string="Cheque Date"/>
@@ -288,10 +297,16 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cheque_physical_allocation_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card" invisible="cheque_physical_allocation_count &lt;= 1">
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card" invisible="cheque_physical_allocation_count <= 1">
 <div class="route_pda_info_label">Allocation Sources</div>
 <div class="route_pda_info_value route_pda_info_value_left">
 <field name="cheque_physical_source_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card" invisible="cheque_physical_allocation_count <= 1 or not cheque_physical_settlement_summary">
+<div class="route_pda_info_label">Settlement Visits</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="cheque_physical_settlement_summary" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
