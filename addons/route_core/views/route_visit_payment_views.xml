@@ -133,7 +133,6 @@
 <field name="state"/>
 <field name="due_date"/>
 <field name="amount"/>
-<field name="remaining_due_amount"/>
 <field name="effective_promise_amount"/>
 <field name="promise_status"/>
 <field name="bank_name"/>
@@ -272,9 +271,7 @@
 </div>
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Uncovered Due</span>
-<span class="route_pda_payment_metric_value">
-<field name="remaining_due_amount"/>
-</span>
+<span class="route_pda_payment_metric_value"> </span>
 </div>
 </t>
 <t t-if="record.effective_promise_amount.raw_value">
@@ -879,7 +876,6 @@
 <field name="area_id"/>
 <field name="salesperson_id"/>
 <field name="amount"/>
-<field name="remaining_due_amount"/>
 <field name="currency_id"/>
 <field name="cash_custody_state"/>
 <field name="cash_custody_state_label"/>
