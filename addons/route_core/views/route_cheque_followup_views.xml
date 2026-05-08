@@ -912,8 +912,8 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_cheque_followup_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_cheque_followup_search"/>
-<field name="domain">[('payment_mode', '=', 'cheque'), ('state', '=', 'confirmed'), ('cheque_physical_is_primary', '=', True), ('cheque_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting'])]</field>
-<field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_handed_to_accounting': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+<field name="domain">[('payment_mode', '=', 'cheque'), ('state', '=', 'confirmed'), ('cheque_physical_is_primary', '=', True), ('cheque_custody_state', '=', 'received_by_accounting')]</field>
+<field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_received_by_accounting': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_cheque_accounting_control_kanban_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
