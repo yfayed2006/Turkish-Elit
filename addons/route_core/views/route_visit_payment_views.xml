@@ -909,3 +909,4 @@
 <field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'direct_sale'}</field>
 </record>
 <menuitem id="menu_route_visit_payment" name="All Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
+</odoo>
