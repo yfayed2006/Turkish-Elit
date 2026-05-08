@@ -1,5 +1,5 @@
 <odoo>
-<!--                                Admin / all payments                                -->
+<!--                                 Admin / all payments                                 -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -43,7 +43,7 @@
 </list>
 </field>
 </record>
-<!--                                Tailored visit list                                -->
+<!--                                 Tailored visit list                                 -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -72,7 +72,7 @@
 </list>
 </field>
 </record>
-<!--                                Tailored direct sale list                                -->
+<!--                                 Tailored direct sale list                                 -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -621,7 +621,7 @@
 </form>
 </field>
 </record>
-<!--                                Admin / all payments search                                -->
+<!--                                 Admin / all payments search                                 -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -708,7 +708,7 @@
 </search>
 </field>
 </record>
-<!--                                Visit collections search                                -->
+<!--                                 Visit collections search                                 -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -797,7 +797,7 @@
 </search>
 </field>
 </record>
-<!--                                Direct sale payments search                                -->
+<!--                                 Direct sale payments search                                 -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -886,6 +886,8 @@
 <field name="cash_custody_is_primary"/>
 <field name="cash_custody_total_amount"/>
 <field name="cash_custody_collection_count"/>
+<field name="cash_custody_visit_count"/>
+<field name="cash_custody_area_summary"/>
 <field name="cash_custody_display_ref"/>
 <field name="cash_custody_source_summary"/>
 <field name="cash_custody_settlement_summary"/>
@@ -1002,6 +1004,14 @@
 <field name="cash_custody_collection_count"/>
 </span>
 </div>
+<t t-if="record.cash_custody_visit_count.raw_value">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Covered Visits</span>
+<span class="route_pda_payment_metric_value">
+<field name="cash_custody_visit_count"/>
+</span>
+</div>
+</t>
 <t t-if="record.cash_custody_settlement_summary.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single">
 <span class="route_pda_payment_metric_label">Settlement Batch</span>
@@ -1063,7 +1073,15 @@
 </span>
 </div>
 </t>
-<t t-if="record.area_id.raw_value">
+<t t-if="record.payment_mode.raw_value == 'cash' and record.cash_custody_area_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Areas</span>
+<span class="route_pda_payment_footer_value">
+<field name="cash_custody_area_summary"/>
+</span>
+</div>
+</t>
+<t t-elif="record.payment_mode.raw_value == 'cheque' and record.area_id.raw_value">
 <div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
 <span class="route_pda_payment_footer_label">Area</span>
 <span class="route_pda_payment_footer_value">
@@ -1129,7 +1147,7 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
-<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('salesperson_id', '=', uid), ('route_custody_is_primary', '=', True)]</field>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('salesperson_id', '=', uid), ('route_custody_is_primary', '=', True), '|', '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', 'in', [False, 'with_salesperson']), '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', 'in', [False, 'with_salesperson'])]</field>
 <field name="context">{'search_default_filter_custody_with_salesperson': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_accounting_collections_custody" model="ir.actions.act_window">
@@ -1138,7 +1156,7 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
-<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_accounting_visible', '=', True)]</field>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_accounting_visible', '=', True), '|', '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting']), '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting'])]</field>
 <field name="context">{'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <menuitem id="menu_route_accounting_collections_custody" name="Route Collections Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
