@@ -6504,3 +6504,164 @@ html[dir="rtl"] .route_cheque_control_card {
     padding-inline-end: 18px !important;
     box-shadow: inset -6px 0 0 #0ea5a8, 0 10px 28px rgba(15, 23, 42, 0.08) !important;
 }
+
+/* My Custody grouped cards: one cash card per salesperson/status and one card per physical cheque. */
+.route_pda_custody_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    gap: 18px !important;
+    padding: 14px !important;
+    background: #f3f6fa !important;
+}
+
+.route_pda_custody_kanban .o_kanban_record {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.route_custody_card {
+    border: 1px solid #e5e7eb !important;
+    border-inline-start: 1px solid #e5e7eb !important;
+    border-radius: 22px !important;
+    padding: 18px 18px 18px 32px !important;
+    padding-inline-start: 32px !important;
+    background: #ffffff !important;
+    box-shadow: inset 6px 0 0 #0ea5a8, 0 14px 34px rgba(15, 23, 42, 0.10) !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+.route_custody_card::before,
+.route_custody_card::after {
+    display: none !important;
+    content: none !important;
+}
+
+.route_custody_card .route_pda_payment_head,
+.route_custody_card .route_custody_badges,
+.route_custody_card .route_custody_metrics,
+.route_custody_card .route_custody_footer,
+.route_custody_card .route_custody_actions {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.route_custody_card .route_pda_payment_head {
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #eef2f7 !important;
+}
+
+.route_custody_title {
+    color: #0f766e !important;
+    font-size: 1.22rem !important;
+    font-weight: 900 !important;
+    line-height: 1.2 !important;
+}
+
+.route_custody_subtitle {
+    font-weight: 800 !important;
+    color: #64748b !important;
+}
+
+.route_custody_badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    row-gap: 8px !important;
+    margin-top: 8px !important;
+}
+
+.route_custody_metrics {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-top: 10px !important;
+}
+
+.route_custody_metrics .route_pda_payment_metric {
+    min-height: 66px !important;
+    border-radius: 16px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e5edf5 !important;
+    padding: 12px !important;
+}
+
+.route_custody_metrics .route_pda_payment_metric_single {
+    grid-column: 1 / -1 !important;
+}
+
+.route_custody_footer {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-top: 12px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #eef2f7 !important;
+}
+
+.route_custody_footer .route_pda_payment_footer_token {
+    min-height: 58px !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+.route_custody_actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 12px !important;
+}
+
+.route_custody_actions .btn {
+    border-radius: 10px !important;
+    font-weight: 800 !important;
+}
+
+html[dir="rtl"] .route_custody_card {
+    padding-left: 18px !important;
+    padding-right: 32px !important;
+    padding-inline-start: 32px !important;
+    padding-inline-end: 18px !important;
+    box-shadow: inset -6px 0 0 #0ea5a8, 0 14px 34px rgba(15, 23, 42, 0.10) !important;
+}
+
+@media (min-width: 992px) {
+    .route_pda_custody_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: repeat(2, minmax(360px, 1fr)) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .route_pda_custody_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr !important;
+        padding: 10px !important;
+        gap: 18px !important;
+    }
+
+    .route_custody_card {
+        border-radius: 22px !important;
+        padding: 16px 16px 16px 30px !important;
+        padding-inline-start: 30px !important;
+    }
+
+    html[dir="rtl"] .route_custody_card {
+        padding-left: 16px !important;
+        padding-right: 30px !important;
+        padding-inline-start: 30px !important;
+        padding-inline-end: 16px !important;
+    }
+
+    .route_custody_metrics,
+    .route_custody_footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .route_custody_actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .route_custody_actions .btn {
+        width: 100% !important;
+    }
+}
