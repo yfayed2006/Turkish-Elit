@@ -1381,7 +1381,10 @@ class RoutePdaHome(models.TransientModel):
         Payment = self.env["route.visit.payment"]
         primary_ids = []
         if hasattr(Payment, "_route_custody_primary_ids_sql"):
-            primary_ids = Payment._route_custody_primary_ids_sql()
+            primary_ids = Payment._route_custody_primary_ids_sql(
+                custody_states=("with_salesperson",),
+                salesperson_id=self.env.user.id,
+            )
         return self._prepare_action(
             "route_core.action_route_salesperson_custody",
             name="My Custody",
@@ -1390,6 +1393,9 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", self.env.user.id),
                 ("state", "=", "confirmed"),
                 ("payment_mode", "in", ["cash", "cheque"]),
+                "|",
+                    "&", ("payment_mode", "=", "cash"), ("cash_custody_state", "in", [False, "with_salesperson"]),
+                    "&", ("payment_mode", "=", "cheque"), ("cheque_custody_state", "in", [False, "with_salesperson"]),
             ],
             context={
                 "search_default_filter_custody_with_salesperson": 1,
