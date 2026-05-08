@@ -328,6 +328,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         search="_search_route_custody_accounting_visible",
         store=False,
     )
+    route_custody_with_salesperson_visible = fields.Boolean(
+        string="Visible in Salesperson Custody",
+        compute="_compute_route_custody_flags",
+        search="_search_route_custody_with_salesperson_visible",
+        store=False,
+    )
 
     route_cheque_accounting_enabled = fields.Boolean(
         string="Route Cheque Accounting Enabled",
@@ -763,6 +769,16 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             visible_ids = [0]
         return [("id", "in" if wants_visible else "not in", visible_ids)]
 
+    def _search_route_custody_with_salesperson_visible(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Salesperson Custody visibility."))
+        value = bool(value)
+        wants_visible = (operator == "=" and value) or (operator == "!=" and not value)
+        visible_ids = self._route_custody_primary_ids_sql(custody_states=("with_salesperson",))
+        if not visible_ids:
+            visible_ids = [0]
+        return [("id", "in" if wants_visible else "not in", visible_ids)]
+
     @api.depends(
         "payment_mode",
         "cash_custody_is_primary",
@@ -777,10 +793,13 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.route_custody_is_primary = bool(is_cash_primary or is_cheque_primary)
             if rec.payment_mode == "cash":
                 rec.route_custody_accounting_visible = bool(is_cash_primary and rec.cash_custody_state in ("handed_to_accounting", "received_by_accounting"))
+                rec.route_custody_with_salesperson_visible = bool(is_cash_primary and (rec.cash_custody_state or "with_salesperson") == "with_salesperson")
             elif rec.payment_mode == "cheque":
                 rec.route_custody_accounting_visible = bool(is_cheque_primary and rec.cheque_custody_state in ("handed_to_accounting", "received_by_accounting"))
+                rec.route_custody_with_salesperson_visible = bool(is_cheque_primary and (rec.cheque_custody_state or "with_salesperson") == "with_salesperson")
             else:
                 rec.route_custody_accounting_visible = False
+                rec.route_custody_with_salesperson_visible = False
 
     def action_open_custody_details(self):
         self.ensure_one()
@@ -2233,3 +2252,4 @@ class SaleOrderChequeFinancialPolicy(models.Model):
             order.direct_sale_payment_count = len(active_payments)
             order.direct_sale_collected_amount = collected_amount
             order.direct_sale_remaining_due = order._get_route_payment_remaining_due()
+
