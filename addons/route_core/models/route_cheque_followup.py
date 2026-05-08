@@ -314,9 +314,11 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def _route_user_is_route_cheque_accountant_or_manager(self):
         user = self.env.user
+        # The bank/accounting lifecycle must be controlled by Accounting users.
+        # Route Managers can still monitor the business flow, but they need the
+        # Route Cheque Accountant role as well if they must process cheques.
         return bool(
             user.has_group("route_core.group_route_cheque_accountant")
-            or user.has_group("route_core.group_route_management")
             or user.has_group("base.group_system")
         )
 
