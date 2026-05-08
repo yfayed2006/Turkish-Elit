@@ -916,7 +916,11 @@ class RoutePdaHome(models.TransientModel):
 
             rec.current_source_name = warehouse_loc.display_name if warehouse_loc else "-"
 
-            rec.cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            cash_with_salesperson_payments = today_payments.filtered(
+                lambda p: rec._get_payment_snapshot_mode(p) == "cash"
+                and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
+            )
+            rec.cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in cash_with_salesperson_payments)
             rec.bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
             rec.pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
             rec.cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
@@ -927,7 +931,11 @@ class RoutePdaHome(models.TransientModel):
                 for p in all_confirmed_payments
                 if rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
             )
-            rec.direct_sale_cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cash")
+            direct_sale_cash_with_salesperson_payments = direct_sales_today_payments.filtered(
+                lambda p: rec._get_payment_snapshot_mode(p) == "cash"
+                and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
+            )
+            rec.direct_sale_cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sale_cash_with_salesperson_payments)
             rec.direct_sale_bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
             rec.direct_sale_pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
             rec.direct_sale_cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
