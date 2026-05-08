@@ -120,6 +120,25 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     route_cheque_can_accountant_receive = fields.Boolean(string="Can Accountant Receive Cheque", compute="_compute_route_cheque_access_flags", store=False)
     route_cheque_can_accountant_work = fields.Boolean(string="Can Accountant Process Cheque", compute="_compute_route_cheque_access_flags", store=False)
 
+    cash_custody_state = fields.Selection(
+        [("with_salesperson", "With Salesperson"), ("handed_to_accounting", "Handed to Accounting"), ("received_by_accounting", "Received by Accounting"), ("variance", "Variance / Needs Review")],
+        string="Cash Custody",
+        default=False,
+        index=True,
+        copy=False,
+        help="Tracks cash collected by the salesperson until Accounting confirms receipt.",
+    )
+    cash_custody_state_label = fields.Char(string="Cash Custody Label", compute="_compute_cash_custody_label", store=False)
+    cash_handed_to_accounting_at = fields.Datetime(string="Cash Handed to Accounting At", copy=False)
+    cash_handed_to_accounting_by_id = fields.Many2one("res.users", string="Cash Handed to Accounting By", readonly=True, copy=False)
+    cash_accounting_received_at = fields.Datetime(string="Cash Accounting Received At", copy=False)
+    cash_accounting_received_by_id = fields.Many2one("res.users", string="Cash Accounting Received By", readonly=True, copy=False)
+    cash_handover_note = fields.Text(string="Cash Handover Note", copy=False)
+    route_cash_can_handover_accounting = fields.Boolean(string="Can Hand Over Cash to Accounting", compute="_compute_route_cash_access_flags", store=False)
+    route_cash_can_accountant_receive = fields.Boolean(string="Can Accountant Receive Cash", compute="_compute_route_cash_access_flags", store=False)
+    route_cash_is_accounting_user = fields.Boolean(string="Is Cash Accounting User", compute="_compute_route_cash_access_flags", store=False)
+    route_cash_is_salesperson_user = fields.Boolean(string="Is Cash Salesperson User", compute="_compute_route_cash_access_flags", store=False)
+
     cheque_financial_state = fields.Selection(
         [
             ("pending", "Pending Clearance"),
@@ -304,6 +323,26 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         store=False,
     )
 
+    def _route_user_is_route_salesperson_or_manager(self):
+        user = self.env.user
+        return bool(
+            user.has_group("route_core.group_route_salesperson")
+            or user.has_group("route_core.group_route_management")
+            or user.has_group("base.group_system")
+        )
+
+    def _route_user_is_route_management_or_system(self):
+        user = self.env.user
+        return bool(user.has_group("route_core.group_route_management") or user.has_group("base.group_system"))
+
+    def _route_user_can_handover_salesperson_record(self, rec):
+        user = self.env.user
+        if self._route_user_is_route_management_or_system():
+            return True
+        if not user.has_group("route_core.group_route_salesperson"):
+            return False
+        return bool(rec.salesperson_id and rec.salesperson_id == user)
+
     def _route_user_is_route_supervisor_or_manager(self):
         user = self.env.user
         return bool(
@@ -322,13 +361,27 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             or user.has_group("base.group_system")
         )
 
+    def _check_route_cheque_salesperson_user(self):
+        invalid_records = self.filtered(lambda rec: not self._route_user_can_handover_salesperson_record(rec))
+        if invalid_records:
+            raise ValidationError(_("Only the responsible salesperson or Route Management can hand over collected cheques to Accounting."))
+
     def _check_route_cheque_supervisor_user(self):
         if not self._route_user_is_route_supervisor_or_manager():
-            raise ValidationError(_("Only a Route Supervisor or Route Manager can receive or hand over physical route cheques."))
+            raise ValidationError(_("Only a Route Supervisor or Route Manager can monitor route cheque custody."))
 
     def _check_route_cheque_accounting_user(self):
         if not self._route_user_is_route_cheque_accountant_or_manager():
-            raise ValidationError(_("Only a Route Cheque Accountant or Route Manager can process the accounting lifecycle of route cheques."))
+            raise ValidationError(_("Only a Route Cheque Accountant can process the accounting lifecycle of route cheques."))
+
+    def _check_route_cash_salesperson_user(self):
+        invalid_records = self.filtered(lambda rec: not self._route_user_can_handover_salesperson_record(rec))
+        if invalid_records:
+            raise ValidationError(_("Only the responsible salesperson or Route Management can hand over collected cash to Accounting."))
+
+    def _check_route_cash_accounting_user(self):
+        if not self._route_user_is_route_cheque_accountant_or_manager():
+            raise ValidationError(_("Only a Route Collections Accountant can confirm cash receipt."))
 
     @api.depends("payment_mode", "cheque_custody_state")
     def _compute_cheque_custody_label(self):
@@ -337,7 +390,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             if rec.payment_mode != "cheque":
                 rec.cheque_custody_state_label = False
                 continue
-            state = rec.cheque_custody_state or "with_supervisor"
+            state = rec.cheque_custody_state or "with_salesperson"
             rec.cheque_custody_state_label = labels.get(state, state)
 
     @api.depends("payment_mode", "state", "cheque_custody_state", "cheque_followup_state", "route_cheque_accounting_move_count")
@@ -346,19 +399,38 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         is_accounting = self._route_user_is_route_cheque_accountant_or_manager()
         for rec in self:
             is_confirmed_cheque = rec.payment_mode == "cheque" and rec.state == "confirmed"
-            custody_state = rec.cheque_custody_state or "with_supervisor"
+            custody_state = rec.cheque_custody_state or "with_salesperson"
             lifecycle_state = rec.cheque_followup_state or "received"
+            is_final_lifecycle = lifecycle_state in ("cleared", "bounced", "cancelled")
+            can_salesperson_handover = self._route_user_can_handover_salesperson_record(rec)
             rec.route_cheque_is_supervisor_user = is_supervisor
             rec.route_cheque_is_accounting_user = is_accounting
-            rec.route_cheque_can_supervisor_receive = bool(is_confirmed_cheque and is_supervisor and custody_state in (False, "with_salesperson"))
-            rec.route_cheque_can_handover_accounting = bool(is_confirmed_cheque and is_supervisor and custody_state in (False, "with_supervisor"))
+            rec.route_cheque_can_supervisor_receive = False
+            rec.route_cheque_can_handover_accounting = bool(is_confirmed_cheque and can_salesperson_handover and custody_state in (False, "with_salesperson") and not is_final_lifecycle and rec.route_cheque_accounting_move_count == 0)
             rec.route_cheque_can_accountant_receive = bool(is_confirmed_cheque and is_accounting and custody_state == "handed_to_accounting")
-            rec.route_cheque_can_accountant_work = bool(
-                is_confirmed_cheque
-                and is_accounting
-                and custody_state == "received_by_accounting"
-                and lifecycle_state in (False, "received", "deposited", "cleared", "bounced", "cancelled")
-            )
+            rec.route_cheque_can_accountant_work = bool(is_confirmed_cheque and is_accounting and custody_state == "received_by_accounting" and lifecycle_state in (False, "received", "deposited", "cleared", "bounced", "cancelled"))
+
+    @api.depends("payment_mode", "state", "cash_custody_state")
+    def _compute_route_cash_access_flags(self):
+        is_accounting = self._route_user_is_route_cheque_accountant_or_manager()
+        for rec in self:
+            is_confirmed_cash = rec.payment_mode == "cash" and rec.state == "confirmed"
+            custody_state = rec.cash_custody_state or "with_salesperson"
+            can_salesperson_handover = self._route_user_can_handover_salesperson_record(rec)
+            rec.route_cash_is_salesperson_user = can_salesperson_handover
+            rec.route_cash_is_accounting_user = is_accounting
+            rec.route_cash_can_handover_accounting = bool(is_confirmed_cash and can_salesperson_handover and custody_state in (False, "with_salesperson"))
+            rec.route_cash_can_accountant_receive = bool(is_confirmed_cash and is_accounting and custody_state == "handed_to_accounting")
+
+    @api.depends("payment_mode", "cash_custody_state")
+    def _compute_cash_custody_label(self):
+        labels = dict(self._fields["cash_custody_state"].selection)
+        for rec in self:
+            if rec.payment_mode != "cash":
+                rec.cash_custody_state_label = False
+                continue
+            state = rec.cash_custody_state or "with_salesperson"
+            rec.cash_custody_state_label = labels.get(state, state)
 
     def _route_cheque_normalize_group_value(self, value):
         if not value:
@@ -967,7 +1039,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     def action_route_post_cheque_accounting(self):
         self._check_route_cheque_accounting_user()
         records_for_custody = self._get_cheque_followup_batch_records()
-        if records_for_custody.filtered(lambda payment: (payment.cheque_custody_state or "with_supervisor") != "received_by_accounting"):
+        if records_for_custody.filtered(lambda payment: (payment.cheque_custody_state or "with_salesperson") != "received_by_accounting"):
             raise ValidationError(_("Accounting must confirm physical receipt of this cheque before posting cheque accounting entries."))
         # Cheque Control displays one card per physical cheque, while keeping the
         # allocation rows behind the scenes. Accounting must therefore post the
@@ -1284,7 +1356,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             self.env.cr.execute(
                 """
                 UPDATE route_visit_payment
-                   SET cheque_custody_state = 'with_supervisor'
+                   SET cheque_custody_state = 'with_salesperson'
                  WHERE payment_mode = 'cheque'
                    AND (cheque_custody_state IS NULL OR cheque_custody_state = '')
                 """
@@ -1436,7 +1508,13 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         )
 
     def action_cheque_handover_to_accounting(self):
-        self._check_route_cheque_supervisor_user()
+        self._check_route_cheque_salesperson_user()
+        records = self._get_cheque_followup_batch_records()
+        invalid_records = records.filtered(lambda payment: (payment.cheque_custody_state or "with_salesperson") != "with_salesperson")
+        if invalid_records:
+            raise ValidationError(_("Only cheques that are still with the salesperson can be handed over to Accounting."))
+        if records.filtered(lambda payment: (payment.cheque_followup_state or "received") in ("cleared", "bounced", "cancelled") or payment.route_cheque_accounting_move_count):
+            raise ValidationError(_("Finalized or posted cheques cannot be handed over again."))
         return self._write_cheque_custody_state(
             "handed_to_accounting",
             "cheque_handed_to_accounting_at",
@@ -1446,21 +1524,53 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     def action_cheque_accounting_receive(self):
         self._check_route_cheque_accounting_user()
         records = self._get_cheque_followup_batch_records()
-        invalid_records = records.filtered(lambda payment: (payment.cheque_custody_state or "with_supervisor") != "handed_to_accounting")
+        invalid_records = records.filtered(lambda payment: (payment.cheque_custody_state or "with_salesperson") != "handed_to_accounting")
         if invalid_records:
-            raise ValidationError(_("This cheque must be handed over to Accounting before the accountant can receive it."))
+            raise ValidationError(_("This cheque must be handed over directly by the salesperson before Accounting can confirm receipt."))
         return self._write_cheque_custody_state(
             "received_by_accounting",
             "cheque_accounting_received_at",
             "cheque_accounting_received_by_id",
         )
 
+    def _write_cash_custody_state(self, state, date_field=None, user_field=None):
+        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        if not records:
+            raise ValidationError(_("Cash handover actions are available only for cash payments."))
+        invalid_records = records.filtered(lambda rec: rec.state != "confirmed")
+        if invalid_records:
+            raise ValidationError(_("Confirm the cash collection before using handover actions."))
+        now = fields.Datetime.now()
+        values = {"cash_custody_state": state}
+        if date_field:
+            values[date_field] = now
+        if user_field:
+            values[user_field] = self.env.user.id
+        records.write(values)
+        return self._cheque_followup_reload_action()
+
+    def action_cash_handover_to_accounting(self):
+        self._check_route_cash_salesperson_user()
+        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        invalid_records = records.filtered(lambda payment: (payment.cash_custody_state or "with_salesperson") != "with_salesperson")
+        if invalid_records:
+            raise ValidationError(_("Only cash that is still with the salesperson can be handed over to Accounting."))
+        return records._write_cash_custody_state("handed_to_accounting", "cash_handed_to_accounting_at", "cash_handed_to_accounting_by_id")
+
+    def action_cash_accounting_receive(self):
+        self._check_route_cash_accounting_user()
+        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        invalid_records = records.filtered(lambda payment: (payment.cash_custody_state or "with_salesperson") != "handed_to_accounting")
+        if invalid_records:
+            raise ValidationError(_("This cash collection must be handed over by the salesperson before Accounting can confirm receipt."))
+        return records._write_cash_custody_state("received_by_accounting", "cash_accounting_received_at", "cash_accounting_received_by_id")
+
     def _write_cheque_followup_state(self, state, date_field=None):
         self._check_route_cheque_accounting_user()
         requested_records = self
         batch_records = requested_records._get_cheque_followup_batch_records()
         batch_records._ensure_cheque_followup_payment()
-        invalid_records = batch_records.filtered(lambda payment: (payment.cheque_custody_state or "with_supervisor") != "received_by_accounting")
+        invalid_records = batch_records.filtered(lambda payment: (payment.cheque_custody_state or "with_salesperson") != "received_by_accounting")
         if invalid_records:
             raise ValidationError(_("Accounting must confirm physical receipt of this cheque before changing its bank lifecycle status."))
         batch_records._validate_cheque_followup_transition(state)
@@ -1520,6 +1630,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 vals["cheque_followup_state"] = "received"
             if vals.get("payment_mode") == "cheque" and not vals.get("cheque_custody_state"):
                 vals["cheque_custody_state"] = "with_salesperson"
+            if vals.get("payment_mode") == "cash" and not vals.get("cash_custody_state"):
+                vals["cash_custody_state"] = "with_salesperson"
             elif vals.get("payment_mode") and vals.get("payment_mode") != "cheque":
                 vals["cheque_followup_state"] = False
         records = super().create(vals_list)
@@ -1529,6 +1641,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         records.filtered(lambda rec: rec.payment_mode == "cheque" and not rec.cheque_custody_state).with_context(
             bypass_cheque_followup_post_create=True
         ).write({"cheque_custody_state": "with_salesperson"})
+        records.filtered(lambda rec: rec.payment_mode == "cash" and not rec.cash_custody_state).with_context(
+            bypass_cheque_followup_post_create=True
+        ).write({"cash_custody_state": "with_salesperson"})
         return records
 
     def write(self, vals):
@@ -1537,6 +1652,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             values["cheque_followup_state"] = "received"
         if values.get("payment_mode") == "cheque" and not values.get("cheque_custody_state"):
             values["cheque_custody_state"] = "with_salesperson"
+        if values.get("payment_mode") == "cash" and not values.get("cash_custody_state"):
+            values["cash_custody_state"] = "with_salesperson"
         elif values.get("payment_mode") and values.get("payment_mode") != "cheque":
             values.update(
                 {
@@ -1555,6 +1672,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     "cheque_accounting_received_by_id": False,
                 }
             )
+        if values.get("payment_mode") and values.get("payment_mode") != "cash":
+            values.update({"cash_custody_state": False, "cash_handed_to_accounting_at": False, "cash_handed_to_accounting_by_id": False, "cash_accounting_received_at": False, "cash_accounting_received_by_id": False, "cash_handover_note": False})
         return super().write(values)
 
 
