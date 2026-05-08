@@ -113,7 +113,7 @@
 <field name="groups" eval="[(4, ref('route_core.group_route_salesperson'))]"/>
 <field name="domain_force">[('schedule_id.user_id', '=', user.id)]</field>
 </record>
-<!--  Route Core PDA product visibility: required for salesperson/mobile visit screens and missing-lot popups.  -->
+<!--   Route Core PDA product visibility: required for salesperson/mobile visit screens and missing-lot popups.   -->
 <record id="rule_route_product_product_internal_read" model="ir.rule">
 <field name="name">Route Core - Product Variants readable for PDA route operations</field>
 <field name="model_id" ref="product.model_product_product"/>
@@ -151,6 +151,17 @@
 <field name="domain_force">[(1, '=', 1)]</field>
 <field name="perm_read" eval="True"/>
 <field name="perm_write" eval="False"/>
+<field name="perm_create" eval="False"/>
+<field name="perm_unlink" eval="False"/>
+</record>
+<!--   Route cheque accountants should only access confirmed cheque payment records from the accounting cheque screen.   -->
+<record id="rule_route_visit_payment_cheque_accountant_confirmed_cheques" model="ir.rule">
+<field name="name">Route Visit Payment - cheque accountant confirmed cheques only</field>
+<field name="model_id" ref="model_route_visit_payment"/>
+<field name="groups" eval="[(4, ref('route_core.group_route_cheque_accountant'))]"/>
+<field name="domain_force">[('payment_mode', '=', 'cheque'), ('state', '=', 'confirmed')]</field>
+<field name="perm_read" eval="True"/>
+<field name="perm_write" eval="True"/>
 <field name="perm_create" eval="False"/>
 <field name="perm_unlink" eval="False"/>
 </record>
