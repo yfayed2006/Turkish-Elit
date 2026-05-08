@@ -1376,6 +1376,15 @@ class RoutePdaHome(models.TransientModel):
             },
         }
 
+    def action_open_my_custody(self):
+        self.ensure_one()
+        return self._prepare_action(
+            "route_core.action_route_salesperson_custody",
+            name="My Custody",
+            domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed"), ("payment_mode", "in", ["cash", "cheque"])],
+            context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
+        )
+
     def action_open_visit_collections(self):
         self.ensure_one()
         return self._prepare_action(
