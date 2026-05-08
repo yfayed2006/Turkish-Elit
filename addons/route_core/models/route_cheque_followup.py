@@ -264,6 +264,61 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         store=False,
     )
 
+    cash_custody_group_key = fields.Char(
+        string="Cash Custody Group Key",
+        compute="_compute_cash_custody_group_key",
+        store=True,
+        index=True,
+        copy=False,
+        help="Technical key used to show one custody card per salesperson cash balance while preserving detailed cash allocation lines in the background.",
+    )
+    cash_custody_is_primary = fields.Boolean(
+        string="Primary Cash Custody Line",
+        compute="_compute_cash_custody_summary",
+        search="_search_cash_custody_is_primary",
+        store=False,
+        help="True only on the representative line used by My Custody to display one cash handover card.",
+    )
+    cash_custody_total_amount = fields.Monetary(
+        string="Cash Custody Amount",
+        currency_field="currency_id",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    cash_custody_collection_count = fields.Integer(
+        string="Cash Collection Lines",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    cash_custody_display_ref = fields.Char(
+        string="Cash Custody Reference",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    cash_custody_source_summary = fields.Char(
+        string="Cash Source Visits",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    cash_custody_settlement_summary = fields.Char(
+        string="Cash Settlement Visits",
+        compute="_compute_cash_custody_summary",
+        store=False,
+    )
+    route_custody_is_primary = fields.Boolean(
+        string="Primary Custody Card",
+        compute="_compute_route_custody_flags",
+        search="_search_route_custody_is_primary",
+        store=False,
+        help="Technical helper used by custody screens to show cash once per salesperson/status and cheques once per physical cheque.",
+    )
+    route_custody_accounting_visible = fields.Boolean(
+        string="Visible to Route Accounting",
+        compute="_compute_route_custody_flags",
+        search="_search_route_custody_accounting_visible",
+        store=False,
+    )
+
     route_cheque_accounting_enabled = fields.Boolean(
         string="Route Cheque Accounting Enabled",
         related="company_id.route_cheque_accounting_enabled",
@@ -436,6 +491,292 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         if not value:
             return ""
         return str(value).strip().casefold()
+
+    @api.depends(
+        "company_id",
+        "currency_id",
+        "payment_mode",
+        "state",
+        "salesperson_id",
+        "cash_custody_state",
+    )
+    def _compute_cash_custody_group_key(self):
+        for rec in self:
+            if rec.payment_mode != "cash" or rec.state != "confirmed" or not rec.salesperson_id:
+                rec.cash_custody_group_key = False
+                continue
+            custody_state = rec.cash_custody_state or "with_salesperson"
+            rec.cash_custody_group_key = "|".join(
+                [
+                    str(rec.company_id.id or 0),
+                    str(rec.currency_id.id or 0),
+                    str(rec.salesperson_id.id or 0),
+                    custody_state,
+                ]
+            )
+
+    def _route_cash_custody_group_domain(self):
+        self.ensure_one()
+        if self.cash_custody_group_key:
+            return [
+                ("payment_mode", "=", "cash"),
+                ("state", "=", "confirmed"),
+                ("company_id", "=", self.company_id.id),
+                ("cash_custody_group_key", "=", self.cash_custody_group_key),
+            ]
+        if not self.salesperson_id:
+            return [("id", "=", self.id)]
+        domain = [
+            ("payment_mode", "=", "cash"),
+            ("state", "=", "confirmed"),
+            ("company_id", "=", self.company_id.id),
+            ("currency_id", "=", self.currency_id.id),
+            ("salesperson_id", "=", self.salesperson_id.id),
+        ]
+        custody_state = self.cash_custody_state or "with_salesperson"
+        if custody_state == "with_salesperson":
+            domain.extend(["|", ("cash_custody_state", "=", False), ("cash_custody_state", "=", "with_salesperson")])
+        else:
+            domain.append(("cash_custody_state", "=", custody_state))
+        return domain
+
+    def _route_cash_custody_group_records(self):
+        self.ensure_one()
+        if not self.cash_custody_group_key:
+            return self
+        return self.search(self._route_cash_custody_group_domain())
+
+    def _get_cash_custody_batch_records(self):
+        batch_records = self.browse()
+        for rec in self:
+            if rec.payment_mode != "cash":
+                raise ValidationError(_("Cash custody actions are available only for cash payments."))
+            batch_records |= rec._route_cash_custody_group_records()
+        return batch_records
+
+    def _route_cash_custody_primary_sort_key(self):
+        self.ensure_one()
+        return (self.payment_date or fields.Datetime.now(), self.id or 0)
+
+    def _route_cash_primary_ids_sql(self, accounting_visible=False):
+        where_extra = ""
+        params = []
+        if accounting_visible:
+            where_extra = " AND COALESCE(cash_custody_state, 'with_salesperson') IN %s"
+            params.append(("handed_to_accounting", "received_by_accounting"))
+        self.env.cr.execute(
+            f"""
+            SELECT id
+              FROM (
+                    SELECT id,
+                           row_number() OVER (
+                               PARTITION BY
+                                   company_id,
+                                   currency_id,
+                                   salesperson_id,
+                                   COALESCE(cash_custody_state, 'with_salesperson')
+                               ORDER BY payment_date DESC NULLS LAST, id DESC
+                           ) AS rn
+                      FROM route_visit_payment
+                     WHERE payment_mode = 'cash'
+                       AND state = 'confirmed'
+                       AND salesperson_id IS NOT NULL
+                       {where_extra}
+                   ) ranked
+             WHERE rn = 1
+            """,
+            params,
+        )
+        return [row[0] for row in self.env.cr.fetchall()]
+
+    def _search_cash_custody_is_primary(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Primary Cash Custody Line."))
+        value = bool(value)
+        wants_primary = (operator == "=" and value) or (operator == "!=" and not value)
+        primary_ids = self._route_cash_primary_ids_sql()
+        if not primary_ids:
+            primary_ids = [0]
+        return [("id", "in" if wants_primary else "not in", primary_ids)]
+
+    @api.depends(
+        "cash_custody_group_key",
+        "payment_mode",
+        "state",
+        "amount",
+        "payment_date",
+        "source_document_ref",
+        "settlement_document_ref",
+        "salesperson_id",
+        "cash_custody_state",
+    )
+    def _compute_cash_custody_summary(self):
+        empty = self.browse()
+        grouped_records_by_key = {}
+        keys = set(rec.cash_custody_group_key for rec in self if rec.cash_custody_group_key)
+        if keys:
+            cash_records = self.search([
+                ("payment_mode", "=", "cash"),
+                ("state", "=", "confirmed"),
+                ("cash_custody_group_key", "in", list(keys)),
+            ])
+            for payment in cash_records:
+                grouped_records_by_key.setdefault(payment.cash_custody_group_key, empty)
+                grouped_records_by_key[payment.cash_custody_group_key] |= payment
+
+        custody_labels = dict(self._fields["cash_custody_state"].selection)
+        for rec in self:
+            if rec.cash_custody_group_key:
+                group_records = grouped_records_by_key.get(rec.cash_custody_group_key, rec)
+            elif rec.payment_mode == "cash" and rec.state == "confirmed":
+                group_records = rec._route_cash_custody_group_records()
+            else:
+                group_records = rec
+
+            group_records = group_records.sorted(lambda payment: payment._route_cash_custody_primary_sort_key(), reverse=True)
+            primary = group_records[:1]
+            source_refs = []
+            settlement_refs = []
+            for payment in group_records:
+                if payment.source_document_ref and payment.source_document_ref not in source_refs:
+                    source_refs.append(payment.source_document_ref)
+                if payment.settlement_document_ref and payment.settlement_document_ref not in settlement_refs:
+                    settlement_refs.append(payment.settlement_document_ref)
+
+            source_summary = ", ".join(source_refs[:4])
+            if len(source_refs) > 4:
+                source_summary = _("%(sources)s + %(extra)s more") % {
+                    "sources": source_summary,
+                    "extra": len(source_refs) - 4,
+                }
+
+            settlement_summary = ", ".join(settlement_refs[:3])
+            if len(settlement_refs) > 3:
+                settlement_summary = _("%(settlements)s + %(extra)s more") % {
+                    "settlements": settlement_summary,
+                    "extra": len(settlement_refs) - 3,
+                }
+
+            custody_state = rec.cash_custody_state or "with_salesperson"
+            custody_label = custody_labels.get(custody_state, custody_state)
+            rec.cash_custody_is_primary = bool(rec.id and primary and rec.id == primary.id)
+            rec.cash_custody_total_amount = sum(group_records.mapped("amount")) or rec.amount or 0.0
+            rec.cash_custody_collection_count = len(group_records)
+            if custody_state == "with_salesperson":
+                rec.cash_custody_display_ref = _("Cash in Hand")
+            elif custody_state == "handed_to_accounting":
+                rec.cash_custody_display_ref = _("Cash Handed to Accounting")
+            elif custody_state == "received_by_accounting":
+                rec.cash_custody_display_ref = _("Cash Received by Accounting")
+            else:
+                rec.cash_custody_display_ref = custody_label or _("Cash Custody")
+            rec.cash_custody_source_summary = source_summary or rec.source_document_ref or ""
+            rec.cash_custody_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
+
+    def _route_custody_primary_ids_sql(self, accounting_visible=False):
+        primary_ids = []
+        primary_ids.extend(self._route_cash_primary_ids_sql(accounting_visible=accounting_visible))
+
+        cheque_where_extra = ""
+        cheque_params = []
+        if accounting_visible:
+            cheque_where_extra = " AND cheque_custody_state IN %s"
+            cheque_params.append(("handed_to_accounting", "received_by_accounting"))
+        self.env.cr.execute(
+            f"""
+            SELECT id
+              FROM (
+                    SELECT id,
+                           row_number() OVER (
+                               PARTITION BY cheque_physical_group_key
+                               ORDER BY CASE
+                                            WHEN settlement_visit_id IS NOT NULL
+                                             AND visit_id IS NOT NULL
+                                             AND visit_id = settlement_visit_id THEN 0
+                                            ELSE 1
+                                        END,
+                                        id
+                           ) AS rn
+                      FROM route_visit_payment
+                     WHERE payment_mode = 'cheque'
+                       AND state = 'confirmed'
+                       AND cheque_physical_group_key IS NOT NULL
+                       AND cheque_physical_group_key != ''
+                       {cheque_where_extra}
+                   ) ranked
+             WHERE rn = 1
+            UNION
+            SELECT id
+              FROM route_visit_payment
+             WHERE payment_mode = 'cheque'
+               AND state = 'confirmed'
+               AND (cheque_physical_group_key IS NULL OR cheque_physical_group_key = '')
+               {cheque_where_extra}
+            """,
+            cheque_params * 2 if accounting_visible else [],
+        )
+        primary_ids.extend([row[0] for row in self.env.cr.fetchall()])
+        return primary_ids
+
+    def _search_route_custody_is_primary(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Primary Custody Card."))
+        value = bool(value)
+        wants_primary = (operator == "=" and value) or (operator == "!=" and not value)
+        primary_ids = self._route_custody_primary_ids_sql()
+        if not primary_ids:
+            primary_ids = [0]
+        return [("id", "in" if wants_primary else "not in", primary_ids)]
+
+    def _search_route_custody_accounting_visible(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Route Accounting Custody visibility."))
+        value = bool(value)
+        wants_visible = (operator == "=" and value) or (operator == "!=" and not value)
+        visible_ids = self._route_custody_primary_ids_sql(accounting_visible=True)
+        if not visible_ids:
+            visible_ids = [0]
+        return [("id", "in" if wants_visible else "not in", visible_ids)]
+
+    @api.depends(
+        "payment_mode",
+        "cash_custody_is_primary",
+        "cheque_physical_is_primary",
+        "cash_custody_state",
+        "cheque_custody_state",
+    )
+    def _compute_route_custody_flags(self):
+        for rec in self:
+            is_cash_primary = rec.payment_mode == "cash" and rec.cash_custody_is_primary
+            is_cheque_primary = rec.payment_mode == "cheque" and rec.cheque_physical_is_primary
+            rec.route_custody_is_primary = bool(is_cash_primary or is_cheque_primary)
+            if rec.payment_mode == "cash":
+                rec.route_custody_accounting_visible = bool(is_cash_primary and rec.cash_custody_state in ("handed_to_accounting", "received_by_accounting"))
+            elif rec.payment_mode == "cheque":
+                rec.route_custody_accounting_visible = bool(is_cheque_primary and rec.cheque_custody_state in ("handed_to_accounting", "received_by_accounting"))
+            else:
+                rec.route_custody_accounting_visible = False
+
+    def action_open_custody_details(self):
+        self.ensure_one()
+        if self.payment_mode == "cash":
+            records = self._route_cash_custody_group_records()
+            title = _("Cash Custody Details")
+        elif self.payment_mode == "cheque":
+            records = self._get_cheque_followup_batch_records()
+            title = _("Cheque Allocation Details")
+        else:
+            records = self
+            title = _("Custody Details")
+        return {
+            "type": "ir.actions.act_window",
+            "name": title,
+            "res_model": "route.visit.payment",
+            "view_mode": "list,form",
+            "domain": [("id", "in", records.ids)],
+            "context": {"create": 0, "edit": 0, "delete": 0},
+            "target": "current",
+        }
 
     def _route_cheque_physical_anchor(self):
         self.ensure_one()
@@ -1534,7 +1875,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         )
 
     def _write_cash_custody_state(self, state, date_field=None, user_field=None):
-        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        records = self._get_cash_custody_batch_records()
         if not records:
             raise ValidationError(_("Cash handover actions are available only for cash payments."))
         invalid_records = records.filtered(lambda rec: rec.state != "confirmed")
@@ -1551,7 +1892,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def action_cash_handover_to_accounting(self):
         self._check_route_cash_salesperson_user()
-        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        records = self._get_cash_custody_batch_records()
         invalid_records = records.filtered(lambda payment: (payment.cash_custody_state or "with_salesperson") != "with_salesperson")
         if invalid_records:
             raise ValidationError(_("Only cash that is still with the salesperson can be handed over to Accounting."))
@@ -1559,7 +1900,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     def action_cash_accounting_receive(self):
         self._check_route_cash_accounting_user()
-        records = self.filtered(lambda rec: rec.payment_mode == "cash")
+        records = self._get_cash_custody_batch_records()
         invalid_records = records.filtered(lambda payment: (payment.cash_custody_state or "with_salesperson") != "handed_to_accounting")
         if invalid_records:
             raise ValidationError(_("This cash collection must be handed over by the salesperson before Accounting can confirm receipt."))
