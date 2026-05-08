@@ -6452,35 +6452,41 @@
     }
 }
 
-/* Route Cheque Control - final fix for clean curved side accent line */
+/* Route Cheque Control - clean Visit History style side accent */
 .route_cheque_control_card {
     position: relative !important;
     border: 1px solid #e5e7eb !important;
-    border-inline-start: 0 !important;
-    padding-inline-start: 20px !important;
-    background: linear-gradient(to right, #0ea5a8 0, #0ea5a8 5px, #ffffff 5px, #ffffff 100%) !important;
+    border-left: 6px solid #0ea5a8 !important;
+    border-inline-start: 6px solid #0ea5a8 !important;
+    border-radius: 22px !important;
+    padding: 18px 18px 18px 24px !important;
+    background: #ffffff !important;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
     overflow: hidden !important;
 }
 
+/* Remove the old overlay line that was covering letters */
 .route_cheque_control_card::before {
+    display: none !important;
     content: none !important;
 }
 
 html[dir="rtl"] .route_cheque_control_card {
-    border-inline-start: 1px solid #e5e7eb !important;
-    border-inline-end: 0 !important;
-    padding-inline-start: 16px !important;
-    padding-inline-end: 20px !important;
-    background: linear-gradient(to left, #0ea5a8 0, #0ea5a8 5px, #ffffff 5px, #ffffff 100%) !important;
+    border-left: 1px solid #e5e7eb !important;
+    border-right: 6px solid #0ea5a8 !important;
+    border-inline-start: 6px solid #0ea5a8 !important;
+    border-inline-end: 1px solid #e5e7eb !important;
+    padding: 18px 24px 18px 18px !important;
 }
 
+/* Keep card content away from the accent line */
+.route_cheque_control_card .route_pda_payment_header,
 .route_cheque_control_card .route_pda_payment_title,
 .route_cheque_control_card .route_pda_payment_subtitle,
 .route_cheque_control_card .route_pda_payment_date,
 .route_cheque_control_card .route_pda_payment_badges_primary,
 .route_cheque_control_card .route_pda_payment_metrics,
 .route_cheque_control_card .route_cheque_control_actions {
-    position: relative;
-    z-index: 1;
+    position: relative !important;
+    z-index: 1 !important;
 }
