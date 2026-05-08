@@ -288,7 +288,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cheque_physical_allocation_count" readonly="1" nolabel="1"/>
 </div>
 </div>
-<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card" invisible="cheque_physical_allocation_count <= 1">
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card" invisible="cheque_physical_allocation_count &lt;= 1"
 <div class="route_pda_info_label">Allocation Sources</div>
 <div class="route_pda_info_value route_pda_info_value_left">
 <field name="cheque_physical_source_summary" readonly="1" nolabel="1"/>
