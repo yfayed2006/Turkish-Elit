@@ -6354,45 +6354,12 @@
 .route_cheque_control_card {
     position: relative !important;
     border: 1px solid #e5e7eb !important;
-    border-left: 5px solid #0ea5a8 !important;
     border-inline-start: 5px solid #0ea5a8 !important;
     border-radius: 20px !important;
     padding: 16px !important;
     background: #ffffff !important;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
     margin: 10px 0 !important;
-    overflow: hidden !important;
-}
-
-.route_cheque_control_card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 5px;
-    background: #0ea5a8;
-    border-top-left-radius: 20px;
-    border-bottom-left-radius: 20px;
-}
-
-html[dir="rtl"] .route_cheque_control_card {
-    border-left: 1px solid #e5e7eb !important;
-    border-right: 5px solid #0ea5a8 !important;
-}
-
-html[dir="rtl"] .route_cheque_control_card::before {
-    left: auto;
-    right: 0;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    border-top-right-radius: 20px;
-    border-bottom-right-radius: 20px;
-}
-
-.route_cheque_control_card > * {
-    position: relative;
-    z-index: 1;
 }
 
 .route_cheque_control_card .route_pda_payment_title {
@@ -6483,4 +6450,33 @@ html[dir="rtl"] .route_cheque_control_card::before {
     .route_cheque_control_actions .btn {
         width: 100% !important;
     }
+}
+
+/* Route Cheque Control - final fix for continuous side accent line */
+.route_cheque_control_card {
+    position: relative !important;
+    border-left: 5px solid #0ea5a8 !important;
+    border-inline-start: 5px solid #0ea5a8 !important;
+    box-shadow: inset 5px 0 0 #0ea5a8, 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+    overflow: hidden !important;
+}
+.route_cheque_control_card::before {
+    content: "";
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 5px !important;
+    background: #0ea5a8 !important;
+    z-index: 5 !important;
+    pointer-events: none !important;
+}
+html[dir="rtl"] .route_cheque_control_card {
+    border-left: 1px solid #e5e7eb !important;
+    border-right: 5px solid #0ea5a8 !important;
+    box-shadow: inset -5px 0 0 #0ea5a8, 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+}
+html[dir="rtl"] .route_cheque_control_card::before {
+    left: auto !important;
+    right: 0 !important;
 }
