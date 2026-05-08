@@ -101,6 +101,8 @@ access_route_direct_return_management,access.route.direct.return.management,mode
 access_route_direct_return_line_salesperson,access.route.direct.return.line.salesperson,model_route_direct_return_line,route_core.group_route_salesperson,1,1,1,0
 access_route_direct_return_line_supervisor,access.route.direct.return.line.supervisor,model_route_direct_return_line,route_core.group_route_supervisor,1,1,1,1
 access_route_direct_return_line_management,access.route.direct.return.line.management,model_route_direct_return_line,route_core.group_route_management,1,1,1,1
+access_route_direct_return_cheque_accountant,access.route.direct.return.cheque.accountant,model_route_direct_return,route_core.group_route_cheque_accountant,1,0,0,0
+access_route_direct_return_line_cheque_accountant,access.route.direct.return.line.cheque.accountant,model_route_direct_return_line,route_core.group_route_cheque_accountant,1,0,0,0
 access_route_visit_finish_summary_wizard_salesperson,access.route.visit.finish.summary.wizard.salesperson,model_route_visit_finish_summary_wizard,route_core.group_route_salesperson,1,1,1,1
 access_route_visit_finish_summary_wizard_supervisor,access.route.visit.finish.summary.wizard.supervisor,model_route_visit_finish_summary_wizard,route_core.group_route_supervisor,1,1,1,1
 access_route_visit_finish_summary_wizard_management,access.route.visit.finish.summary.wizard.management,model_route_visit_finish_summary_wizard,route_core.group_route_management,1,1,1,1
@@ -190,4 +192,3 @@ access_route_outlet_cheque_accountant,access.route.outlet.cheque.accountant,mode
 access_route_area_cheque_accountant,access.route.area.cheque.accountant,model_route_area,route_core.group_route_cheque_accountant,1,0,0,0
 access_route_city_cheque_accountant,access.route.city.cheque.accountant,model_route_city,route_core.group_route_cheque_accountant,1,0,0,0
 access_sale_order_route_cheque_accountant,access.sale.order.route.cheque.accountant,sale.model_sale_order,route_core.group_route_cheque_accountant,1,0,0,0
-
