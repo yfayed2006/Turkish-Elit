@@ -656,9 +656,9 @@
 <filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
 <filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
 <filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
-<filter name="filter_custody_with_salesperson" string="Custody: With Salesperson" domain="['|', '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', 'in', [False, 'with_salesperson']), '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', 'in', [False, 'with_salesperson'])]"/>
-<filter name="filter_custody_handed_accounting" string="Custody: Handed to Accounting" domain="['|', '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', '=', 'handed_to_accounting'), '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', '=', 'handed_to_accounting')]"/>
-<filter name="filter_custody_received_accounting" string="Custody: Received by Accounting" domain="['|', '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', '=', 'received_by_accounting'), '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', '=', 'received_by_accounting')]"/>
+<filter name="filter_custody_with_salesperson" string="Custody: With Salesperson" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', 'in', [False, 'with_salesperson']), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', 'in', [False, 'with_salesperson'])]"/>
+<filter name="filter_custody_handed_accounting" string="Custody: Handed to Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'handed_to_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'handed_to_accounting')]"/>
+<filter name="filter_custody_received_accounting" string="Custody: Received by Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'received_by_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'received_by_accounting')]"/>
 <filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
 <separator/>
 <filter name="filter_cheque_pending" string="Cheque Pending Bank Clearance" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'pending')]"/>
@@ -878,7 +878,7 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_collection_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_collection_search"/>
-<field name="domain">['&', ('state', '=', 'confirmed'), '|', '&', ('payment_mode', '=', 'cash'), ('cash_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting']), '&', ('payment_mode', '=', 'cheque'), ('cheque_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting'])]</field>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', 'in', ['handed_to_accounting', 'received_by_accounting'])]</field>
 <field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_custody_handed_accounting': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <menuitem id="menu_route_accounting_collections_custody" name="Route Collections Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
