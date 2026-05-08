@@ -1378,11 +1378,25 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_my_custody(self):
         self.ensure_one()
+        Payment = self.env["route.visit.payment"]
+        primary_ids = []
+        if hasattr(Payment, "_route_custody_primary_ids_sql"):
+            primary_ids = Payment._route_custody_primary_ids_sql()
         return self._prepare_action(
             "route_core.action_route_salesperson_custody",
             name="My Custody",
-            domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed"), ("payment_mode", "in", ["cash", "cheque"])],
-            context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
+            domain=[
+                ("id", "in", primary_ids or [0]),
+                ("salesperson_id", "=", self.env.user.id),
+                ("state", "=", "confirmed"),
+                ("payment_mode", "in", ["cash", "cheque"]),
+            ],
+            context={
+                "search_default_filter_custody_with_salesperson": 1,
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+            },
         )
 
     def action_open_visit_collections(self):
