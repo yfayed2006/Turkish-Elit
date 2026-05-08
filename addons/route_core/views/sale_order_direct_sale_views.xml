@@ -54,11 +54,11 @@
 <field name="route_enable_direct_return" invisible="1"/>
 <field name="route_show_no_direct_return" invisible="1"/>
 </xpath>
-<!--      Keep lot/expiry fields inside the Route mobile/PDA direct-sale view only.
+<!--       Keep lot/expiry fields inside the Route mobile/PDA direct-sale view only.
      Showing route_lot_id inside the inherited standard Sales form can make
      sale.order web_read fail after confirmation for users that do not have the
      exact stock.lot lookup context/access used by the PDA flow. The actual lot
-     restriction is still applied during confirmation and delivery creation.      -->
+     restriction is still applied during confirmation and delivery creation.       -->
 </field>
 </record>
 <record id="view_sale_order_line_form_route_direct_sale" model="ir.ui.view">
@@ -74,6 +74,9 @@
 <field name="route_source_available_qty" invisible="1"/>
 <field name="route_product_image_128" invisible="1"/>
 <field name="display_type" invisible="1"/>
+<div class="route_mobile_line_toolbar" invisible="not id or order_id.state not in ('draft', 'sent')">
+<button name="action_route_direct_sale_remove_line" type="object" string="Remove Product" icon="fa-trash" class="btn-secondary route_mobile_line_remove_button"/>
+</div>
 <div class="route_mobile_product_image_preview" invisible="display_type or not product_id">
 <field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
 </div>
@@ -301,6 +304,7 @@
 <field name="order_line" class="route_mobile_direct_products_field" context="{'default_display_type': False, 'route_only_source_available_products': route_order_mode == 'direct_sale', 'route_source_location_id': route_source_location_id}">
 <list string="Products" editable="bottom" create="1" delete="1" class="route_mobile_sale_line_list">
 <field name="display_type" column_invisible="1"/>
+<button name="action_route_direct_sale_remove_line" type="object" string="Remove" icon="fa-trash" class="btn-link text-danger" invisible="parent.state not in ('draft', 'sent')"/>
 <field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
 <field name="product_id" string="Product" domain="parent.route_order_mode != 'direct_sale' and [] or [('id', 'in', parent.route_available_product_ids)]" context="{'route_only_source_available_products': parent.route_order_mode == 'direct_sale', 'route_source_location_id': parent.route_source_location_id}" options="{'no_create': True, 'no_open': True}" required="not display_type" readonly="parent.state not in ('draft', 'sent')"/>
 <field name="route_product_barcode" string="Barcode" optional="show" readonly="1"/>
@@ -323,6 +327,9 @@
 <field name="route_source_available_qty" invisible="1"/>
 <field name="route_product_image_128" invisible="1"/>
 <field name="display_type" invisible="1"/>
+<div class="route_mobile_line_toolbar" invisible="not id or order_id.state not in ('draft', 'sent')">
+<button name="action_route_direct_sale_remove_line" type="object" string="Remove Product" icon="fa-trash" class="btn-secondary route_mobile_line_remove_button"/>
+</div>
 <div class="route_mobile_product_image_preview" invisible="not product_id">
 <field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
 </div>
