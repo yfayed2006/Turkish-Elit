@@ -394,6 +394,46 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         store=False,
     )
 
+    route_cash_receipt_move_id = fields.Many2one(
+        "account.move",
+        string="Cash Receipt Voucher Entry",
+        readonly=True,
+        copy=False,
+    )
+    route_cash_accounting_state = fields.Selection(
+        [
+            ("disabled", "Accounting Disabled"),
+            ("waiting_receipt", "Waiting Accounting Receipt"),
+            ("not_posted", "Cash Not Posted"),
+            ("posted", "Cash Receipt Entry Posted"),
+        ],
+        string="Cash Accounting State",
+        compute="_compute_route_cash_accounting_state",
+        store=False,
+    )
+    route_cash_accounting_state_label = fields.Char(
+        string="Cash Accounting State Label",
+        compute="_compute_route_cash_accounting_state",
+        store=False,
+    )
+    route_cash_accounting_move_count = fields.Integer(
+        string="Cash Accounting Entries",
+        compute="_compute_route_cash_accounting_state",
+        store=False,
+    )
+    route_cash_can_post_receipt = fields.Boolean(
+        string="Can Post Cash Receipt Voucher",
+        compute="_compute_route_cash_access_flags",
+        store=False,
+    )
+    route_custody_accounting_todo_visible = fields.Boolean(
+        string="Visible in Accounting Custody Work Queue",
+        compute="_compute_route_custody_flags",
+        search="_search_route_custody_accounting_todo_visible",
+        store=False,
+        help="Shows cash/cheque custody items that still need accounting receipt or cash receipt voucher posting.",
+    )
+
     def _route_user_is_route_salesperson_or_manager(self):
         user = self.env.user
         return bool(
@@ -481,7 +521,13 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.route_cheque_can_accountant_receive = bool(is_confirmed_cheque and is_accounting and custody_state == "handed_to_accounting")
             rec.route_cheque_can_accountant_work = bool(is_confirmed_cheque and is_accounting and custody_state == "received_by_accounting" and lifecycle_state in (False, "received", "deposited", "cleared", "bounced", "cancelled"))
 
-    @api.depends("payment_mode", "state", "cash_custody_state")
+    @api.depends(
+        "payment_mode",
+        "state",
+        "cash_custody_state",
+        "route_cash_accounting_state",
+        "route_cash_accounting_move_count",
+    )
     def _compute_route_cash_access_flags(self):
         is_accounting = self._route_user_is_route_cheque_accountant_or_manager()
         for rec in self:
@@ -492,6 +538,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.route_cash_is_accounting_user = is_accounting
             rec.route_cash_can_handover_accounting = bool(is_confirmed_cash and can_salesperson_handover and custody_state in (False, "with_salesperson"))
             rec.route_cash_can_accountant_receive = bool(is_confirmed_cash and is_accounting and custody_state == "handed_to_accounting")
+            rec.route_cash_can_post_receipt = bool(
+                is_confirmed_cash
+                and is_accounting
+                and custody_state == "received_by_accounting"
+                and rec.route_cash_accounting_state == "not_posted"
+            )
 
     @api.depends("payment_mode", "cash_custody_state")
     def _compute_cash_custody_label(self):
@@ -515,6 +567,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         "state",
         "salesperson_id",
         "cash_custody_state",
+        "route_cash_receipt_move_id",
     )
     def _compute_cash_custody_group_key(self):
         for rec in self:
@@ -528,6 +581,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                     str(rec.currency_id.id or 0),
                     str(rec.salesperson_id.id or 0),
                     custody_state,
+                    str(rec.route_cash_receipt_move_id.id or 0),
                 ]
             )
 
@@ -547,6 +601,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             domain.extend(["|", ("cash_custody_state", "=", False), ("cash_custody_state", "=", "with_salesperson")])
         else:
             domain.append(("cash_custody_state", "=", custody_state))
+            if custody_state == "received_by_accounting":
+                domain.append(("route_cash_receipt_move_id", "=", self.route_cash_receipt_move_id.id or False))
         return domain
 
     def _route_cash_custody_group_records(self):
@@ -587,7 +643,8 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                                    company_id,
                                    currency_id,
                                    salesperson_id,
-                                   COALESCE(cash_custody_state, 'with_salesperson')
+                                   COALESCE(cash_custody_state, 'with_salesperson'),
+                                   COALESCE(route_cash_receipt_move_id, 0)
                                ORDER BY payment_date DESC NULLS LAST, id DESC
                            ) AS rn
                       FROM route_visit_payment
@@ -622,6 +679,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         "settlement_document_ref",
         "salesperson_id",
         "cash_custody_state",
+        "route_cash_receipt_move_id",
         "area_id",
         "visit_id",
         "settlement_visit_id",
@@ -769,6 +827,19 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             visible_ids = [0]
         return [("id", "in" if wants_visible else "not in", visible_ids)]
 
+    def _search_route_custody_accounting_todo_visible(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Route Accounting Custody work queue visibility."))
+        value = bool(value)
+        wants_visible = (operator == "=" and value) or (operator == "!=" and not value)
+        visible_ids = self._route_custody_primary_ids_sql(custody_states=("handed_to_accounting",))
+        received_cash_ids = self._route_cash_primary_ids_sql(custody_states=("received_by_accounting",))
+        received_cash_records = self.browse(received_cash_ids).filtered(lambda rec: rec.route_cash_accounting_state == "not_posted")
+        visible_ids = list(set(visible_ids + received_cash_records.ids))
+        if not visible_ids:
+            visible_ids = [0]
+        return [("id", "in" if wants_visible else "not in", visible_ids)]
+
     def _search_route_custody_with_salesperson_visible(self, operator, value):
         if operator not in ("=", "!="):
             raise ValidationError(_("Unsupported search operator for Salesperson Custody visibility."))
@@ -785,6 +856,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         "cheque_physical_is_primary",
         "cash_custody_state",
         "cheque_custody_state",
+        "route_cash_accounting_state",
     )
     def _compute_route_custody_flags(self):
         for rec in self:
@@ -792,14 +864,25 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             is_cheque_primary = rec.payment_mode == "cheque" and rec.cheque_physical_is_primary
             rec.route_custody_is_primary = bool(is_cash_primary or is_cheque_primary)
             if rec.payment_mode == "cash":
-                rec.route_custody_accounting_visible = bool(is_cash_primary and rec.cash_custody_state in ("handed_to_accounting", "received_by_accounting"))
-                rec.route_custody_with_salesperson_visible = bool(is_cash_primary and (rec.cash_custody_state or "with_salesperson") == "with_salesperson")
+                cash_state = rec.cash_custody_state or "with_salesperson"
+                rec.route_custody_accounting_visible = bool(is_cash_primary and cash_state in ("handed_to_accounting", "received_by_accounting"))
+                rec.route_custody_with_salesperson_visible = bool(is_cash_primary and cash_state == "with_salesperson")
+                rec.route_custody_accounting_todo_visible = bool(
+                    is_cash_primary
+                    and (
+                        cash_state == "handed_to_accounting"
+                        or (cash_state == "received_by_accounting" and rec.route_cash_accounting_state == "not_posted")
+                    )
+                )
             elif rec.payment_mode == "cheque":
-                rec.route_custody_accounting_visible = bool(is_cheque_primary and rec.cheque_custody_state in ("handed_to_accounting", "received_by_accounting"))
-                rec.route_custody_with_salesperson_visible = bool(is_cheque_primary and (rec.cheque_custody_state or "with_salesperson") == "with_salesperson")
+                cheque_state = rec.cheque_custody_state or "with_salesperson"
+                rec.route_custody_accounting_visible = bool(is_cheque_primary and cheque_state in ("handed_to_accounting", "received_by_accounting"))
+                rec.route_custody_with_salesperson_visible = bool(is_cheque_primary and cheque_state == "with_salesperson")
+                rec.route_custody_accounting_todo_visible = bool(is_cheque_primary and cheque_state == "handed_to_accounting")
             else:
                 rec.route_custody_accounting_visible = False
                 rec.route_custody_with_salesperson_visible = False
+                rec.route_custody_accounting_todo_visible = False
 
     def action_open_custody_details(self):
         self.ensure_one()
@@ -1013,6 +1096,190 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.cheque_physical_source_summary = source_summary or rec.source_document_ref or ""
             rec.cheque_physical_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
             rec.cheque_physical_open_due_amount = sum(group_records.mapped("cheque_open_due_amount")) or 0.0
+
+    @api.depends(
+        "route_cheque_accounting_enabled",
+        "payment_mode",
+        "state",
+        "cash_custody_state",
+        "route_cash_receipt_move_id.state",
+    )
+    def _compute_route_cash_accounting_state(self):
+        state_labels = dict(self._fields["route_cash_accounting_state"].selection)
+        for rec in self:
+            moves = rec._route_cash_accounting_moves() if rec.payment_mode == "cash" else self.env["account.move"]
+            rec.route_cash_accounting_move_count = len(moves)
+
+            if not rec.route_cheque_accounting_enabled or rec.payment_mode != "cash" or rec.state != "confirmed":
+                rec.route_cash_accounting_state = "disabled"
+                rec.route_cash_accounting_state_label = False
+                continue
+
+            custody_state = rec.cash_custody_state or "with_salesperson"
+            receipt_posted = bool(rec.route_cash_receipt_move_id and rec.route_cash_receipt_move_id.state == "posted")
+            if receipt_posted:
+                rec.route_cash_accounting_state = "posted"
+            elif custody_state == "received_by_accounting":
+                rec.route_cash_accounting_state = "not_posted"
+            elif custody_state == "handed_to_accounting":
+                rec.route_cash_accounting_state = "waiting_receipt"
+            else:
+                rec.route_cash_accounting_state = "disabled"
+
+            if rec.route_cash_accounting_state in ("waiting_receipt", "not_posted", "posted"):
+                rec.route_cash_accounting_state_label = state_labels.get(rec.route_cash_accounting_state, rec.route_cash_accounting_state or "")
+            else:
+                rec.route_cash_accounting_state_label = False
+
+    def _route_cash_accounting_moves(self):
+        self.ensure_one()
+        moves = self.env["account.move"]
+        if self.route_cash_receipt_move_id:
+            moves |= self.route_cash_receipt_move_id
+        return moves.exists()
+
+    def _route_cash_validate_accounting_settings(self):
+        self.ensure_one()
+        company = self.company_id
+        if not company.route_cheque_accounting_enabled:
+            raise ValidationError(_("Enable Route Collection Accounting in Route Settings first."))
+        if not company.route_cheque_receivable_account_id:
+            raise ValidationError(_("Configure Route Receivable / Open Due Account in Route Settings."))
+        if not company.route_cheque_bank_journal_id:
+            raise ValidationError(_("Configure a cash/bank journal in Cleared Cheque Bank Journal. It is also used for route cash receipt voucher entries."))
+        if not company.route_cheque_bank_journal_id.default_account_id:
+            raise ValidationError(_("The selected cash/bank journal has no default account."))
+        return company
+
+    def _route_cash_get_partner(self):
+        self.ensure_one()
+        outlet = self.outlet_id or (self.visit_id.outlet_id if self.visit_id else False) or (self.settlement_visit_id.outlet_id if self.settlement_visit_id else False)
+        return outlet.partner_id if outlet and outlet.partner_id else False
+
+    def _route_cash_batch_amount(self):
+        return sum(self.mapped("amount")) or 0.0
+
+    def _route_cash_batch_date(self):
+        records = self.sorted(lambda rec: (rec.cash_accounting_received_at or rec.payment_date or fields.Datetime.now(), rec.id))
+        value = next((rec.cash_accounting_received_at for rec in records if rec.cash_accounting_received_at), False)
+        if not value:
+            value = next((rec.payment_date for rec in records if rec.payment_date), False)
+        return fields.Date.to_date(value) if value else fields.Date.context_today(self)
+
+    def _route_cash_batch_move_ref(self):
+        records = self.sorted(lambda rec: (rec.payment_date or fields.Datetime.now(), rec.id))
+        first = records[:1]
+        parts = [_("Route Cash Receipt")]
+        if first.salesperson_id:
+            parts.append(first.salesperson_id.display_name)
+        parts.append(_("%(count)s collections") % {"count": len(records)})
+        return " - ".join(parts)
+
+    def _route_cash_get_shared_accounting_move(self):
+        moves = self.mapped("route_cash_receipt_move_id").exists()
+        if not moves:
+            return False
+        if len(moves) > 1:
+            raise ValidationError(_("This cash custody batch already has multiple receipt voucher entries. Review the entries before posting again."))
+        move = moves[:1]
+        if move.state != "posted":
+            move.action_post()
+        missing_records = self.filtered(lambda rec: not rec.route_cash_receipt_move_id)
+        if missing_records:
+            missing_records.sudo().write({"route_cash_receipt_move_id": move.id})
+        return move
+
+    def _route_cash_ensure_receipt_accounting_entry(self):
+        if not self:
+            return False
+        existing_move = self._route_cash_get_shared_accounting_move()
+        if existing_move:
+            return existing_move
+
+        records = self.sorted(lambda rec: rec.id)
+        first = records[:1]
+        company = first._route_cash_validate_accounting_settings()
+        journal = company.route_cheque_bank_journal_id
+        cash_account = journal.default_account_id
+        receivable_account = company.route_cheque_receivable_account_id
+        amount = records._route_cash_batch_amount()
+        if (amount or 0.0) <= 0.0:
+            raise ValidationError(_("Cash receipt voucher amount must be greater than zero."))
+
+        ref = records._route_cash_batch_move_ref()
+        credit_groups = {}
+        for payment in records:
+            payment_amount = payment.amount or 0.0
+            if payment_amount <= 0.0:
+                continue
+            partner = payment._route_cash_get_partner()
+            key = partner.id if partner else 0
+            credit_groups.setdefault(key, {"partner": partner, "amount": 0.0})
+            credit_groups[key]["amount"] += payment_amount
+
+        line_vals = [
+            (0, 0, {
+                "name": ref,
+                "account_id": cash_account.id,
+                "partner_id": False,
+                "debit": amount,
+                "credit": 0.0,
+            })
+        ]
+        for group in credit_groups.values():
+            credit_amount = group["amount"] or 0.0
+            if credit_amount <= 0.0:
+                continue
+            partner = group["partner"]
+            line_vals.append(
+                (0, 0, {
+                    "name": ref,
+                    "account_id": receivable_account.id,
+                    "partner_id": partner.id if partner else False,
+                    "debit": 0.0,
+                    "credit": credit_amount,
+                })
+            )
+
+        move_vals = {
+            "move_type": "entry",
+            "company_id": first.company_id.id,
+            "journal_id": journal.id,
+            "date": records._route_cash_batch_date(),
+            "ref": ref,
+            "line_ids": line_vals,
+        }
+        move = self.env["account.move"].sudo().with_company(first.company_id).create(move_vals)
+        move.action_post()
+        records.sudo().write({"route_cash_receipt_move_id": move.id})
+        return move
+
+    def action_route_post_cash_receipt_accounting(self):
+        self._check_route_cash_accounting_user()
+        records = self._get_cash_custody_batch_records()
+        invalid_records = records.filtered(lambda payment: (payment.cash_custody_state or "with_salesperson") != "received_by_accounting")
+        if invalid_records:
+            raise ValidationError(_("Accounting must confirm physical cash receipt before posting the cash receipt voucher entry."))
+        records._route_cash_ensure_receipt_accounting_entry()
+        return self._cheque_followup_reload_action()
+
+    def action_route_open_cash_accounting_moves(self):
+        records = self._get_cash_custody_batch_records() if self else self
+        moves = self.env["account.move"]
+        for rec in records:
+            moves |= rec._route_cash_accounting_moves()
+        moves = moves.exists()
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Cash Receipt Voucher Entries"),
+            "res_model": "account.move",
+            "view_mode": "list,form",
+            "domain": [("id", "in", moves.ids)],
+            "context": {"create": False},
+        }
+        if len(moves) == 1:
+            action.update({"view_mode": "form", "res_id": moves.id})
+        return action
 
     @api.depends(
         "route_cheque_accounting_enabled",
@@ -2058,7 +2325,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 }
             )
         if values.get("payment_mode") and values.get("payment_mode") != "cash":
-            values.update({"cash_custody_state": False, "cash_handed_to_accounting_at": False, "cash_handed_to_accounting_by_id": False, "cash_accounting_received_at": False, "cash_accounting_received_by_id": False, "cash_handover_note": False})
+            values.update({"cash_custody_state": False, "cash_handed_to_accounting_at": False, "cash_handed_to_accounting_by_id": False, "cash_accounting_received_at": False, "cash_accounting_received_by_id": False, "cash_handover_note": False, "route_cash_receipt_move_id": False})
         return super().write(values)
 
 
