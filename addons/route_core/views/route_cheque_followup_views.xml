@@ -527,6 +527,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <separator/>
 <filter name="filter_my_cheques" string="My Cheques" domain="[('salesperson_id', '=', uid)]"/>
 <filter name="filter_confirmed" string="Confirmed Payments" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_open_followup" string="Open Follow-up" domain="[('route_custody_monitor_open_visible', '=', True)]"/>
 <separator/>
 <filter name="filter_received" string="Registered / Received" domain="['|', ('cheque_followup_state', '=', False), ('cheque_followup_state', '=', 'received')]"/>
 <filter name="filter_deposited" string="Under Bank Collection" domain="[('cheque_followup_state', '=', 'deposited')]"/>
@@ -833,6 +834,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cheque_number" string="Cheque Number"/>
 <field name="bank_name" string="Bank"/>
 <filter name="filter_confirmed" string="Confirmed Payments" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_open_followup" string="Open Follow-up" domain="[('route_custody_monitor_open_visible', '=', True)]"/>
 <separator/>
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
@@ -872,7 +874,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="view_id" ref="route_core.view_route_custody_monitor_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_custody_monitor_search"/>
 <field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_is_primary', '=', True)]</field>
-<field name="context">{'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+<field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_open_followup': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_cheque_control_kanban_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
