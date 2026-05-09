@@ -198,7 +198,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="Cheque amount that is finally cleared by the bank and can be treated as cash/bank collected for accounting integration.",
     )
     cheque_open_due_amount = fields.Monetary(
-        string="Cheque Open Due",
+        string="Open Due From Cheque Allocation",
         currency_field="currency_id",
         compute="_compute_cheque_financial_policy",
         store=False,
@@ -231,7 +231,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="True only on the representative line used by Cheque Control to display one card per physical cheque.",
     )
     cheque_physical_total_amount = fields.Monetary(
-        string="Physical Cheque Amount",
+        string="Physical Cheque Total",
         currency_field="currency_id",
         compute="_compute_cheque_physical_summary",
         store=False,
@@ -258,7 +258,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         store=False,
     )
     cheque_physical_open_due_amount = fields.Monetary(
-        string="Physical Cheque Open Due",
+        string="Physical Cheque Open Due Total",
         currency_field="currency_id",
         compute="_compute_cheque_physical_summary",
         store=False,
