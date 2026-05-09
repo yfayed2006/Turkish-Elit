@@ -1,5 +1,5 @@
 <odoo>
-<!--                                   Admin / all payments                                   -->
+<!--                                    Admin / all payments                                    -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -43,7 +43,7 @@
 </list>
 </field>
 </record>
-<!--                                   Tailored visit list                                   -->
+<!--                                    Tailored visit list                                    -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -72,7 +72,7 @@
 </list>
 </field>
 </record>
-<!--                                   Tailored direct sale list                                   -->
+<!--                                    Tailored direct sale list                                    -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -387,8 +387,8 @@
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
 <button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue')"/>
 <button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or not promise_review_followup_date"/>
-<button name="action_cheque_handover_to_accounting" string="Hand Over Cheque" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting"/>
-<button name="action_cash_handover_to_accounting" string="Hand Over Cash" type="object" class="btn-primary" invisible="not route_cash_can_handover_accounting"/>
+<button name="action_cheque_handover_to_accounting" string="Hand Over Cheque" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting or not route_custody_show_salesperson_handover"/>
+<button name="action_cash_handover_to_accounting" string="Hand Over Cash" type="object" class="btn-primary" invisible="not route_cash_can_handover_accounting or not route_custody_show_salesperson_handover"/>
 <button name="action_cheque_accounting_receive" string="Confirm Cheque Receipt" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_receive"/>
 <button name="action_cash_accounting_receive" string="Confirm Cash Receipt" type="object" class="btn-secondary" invisible="not route_cash_can_accountant_receive"/>
 <button name="action_route_post_cash_receipt_accounting" string="Post Cash Receipt Voucher Entry" type="object" class="btn-primary" invisible="not route_cash_can_post_receipt"/>
@@ -422,6 +422,7 @@
 <field name="route_cash_can_handover_accounting" invisible="1"/>
 <field name="route_cash_can_accountant_receive" invisible="1"/>
 <field name="route_cash_can_post_receipt" invisible="1"/>
+<field name="route_custody_show_salesperson_handover" invisible="1"/>
 <field name="route_cash_accounting_state" invisible="1"/>
 <field name="route_cash_accounting_state_label" invisible="1"/>
 <field name="route_cash_accounting_move_count" invisible="1"/>
@@ -625,7 +626,7 @@
 </form>
 </field>
 </record>
-<!--                                   Admin / all payments search                                   -->
+<!--                                    Admin / all payments search                                    -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -712,7 +713,7 @@
 </search>
 </field>
 </record>
-<!--                                   Visit collections search                                   -->
+<!--                                    Visit collections search                                    -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -801,7 +802,7 @@
 </search>
 </field>
 </record>
-<!--                                   Direct sale payments search                                   -->
+<!--                                    Direct sale payments search                                    -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -1104,8 +1105,8 @@
 </t>
 </div>
 <div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions">
-<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over Cheque</button>
-<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
+<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cheque</button>
+<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cash</button>
 <button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
 <button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
 <button name="action_route_post_cash_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_post_receipt">Post Cash Receipt Voucher Entry</button>
