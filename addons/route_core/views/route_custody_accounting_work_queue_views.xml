@@ -5,7 +5,6 @@
 <field name="arch" type="xml">
 <kanban class="route_pda_payment_kanban route_cheque_control_kanban route_custody_work_queue_kanban" create="0" edit="0" delete="0" sample="0">
 <field name="name"/>
-<field name="is_company_summary"/>
 <field name="salesperson_id"/>
 <field name="company_id"/>
 <field name="currency_id"/>
@@ -38,131 +37,6 @@
 <field name="total_work_count"/>
 <templates>
 <t t-name="card">
-<t t-if="record.is_company_summary.raw_value">
-<div class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card route_custody_work_queue_summary_card">
-<div class="route_pda_payment_head route_cheque_control_head">
-<div>
-<div class="route_pda_payment_title">Accounting Work Queue</div>
-<div class="route_pda_payment_subtitle"> Company custody overview across all salespeople </div>
-</div>
-<div class="route_pda_payment_date">
-<field name="last_activity_at"/>
-</div>
-</div>
-<div class="route_pda_payment_badges route_pda_payment_badges_primary route_custody_monitor_badges">
-<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
-<t>Open Work: </t>
-<t t-esc="record.total_work_count.value or 0"/>
-</span>
-<t t-if="record.cash_with_salesperson_count.raw_value or record.cheque_with_salesperson_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_pending">With Salespeople</span>
-</t>
-<t t-if="record.cash_waiting_receipt_count.raw_value or record.cheque_waiting_receipt_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Waiting Receipt</span>
-</t>
-<t t-if="record.cash_received_not_posted_count.raw_value or record.cheque_received_not_posted_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_pending">Received Not Posted</span>
-</t>
-<t t-if="record.bank_pending_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Bank Pending</span>
-</t>
-<t t-if="record.open_followup_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_balance">Follow-up</span>
-</t>
-</div>
-<div class="route_pda_payment_metrics route_cheque_control_metrics route_custody_work_queue_summary_metrics">
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cash With Salespeople</span>
-<span class="route_pda_payment_metric_value">
-<field name="cash_with_salesperson_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cash_with_salesperson_count.value or 0"/>
-lines
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheques With Salespeople</span>
-<span class="route_pda_payment_metric_value">
-<field name="cheque_with_salesperson_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cheque_with_salesperson_count.value or 0"/>
-cheques
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cash Waiting Receipt</span>
-<span class="route_pda_payment_metric_value">
-<field name="cash_waiting_receipt_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cash_waiting_receipt_count.value or 0"/>
-lines
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheques Waiting Receipt</span>
-<span class="route_pda_payment_metric_value">
-<field name="cheque_waiting_receipt_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cheque_waiting_receipt_count.value or 0"/>
-cheques
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Received Not Posted</span>
-<span class="route_pda_payment_metric_value">
-<field name="total_received_not_posted_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="(record.cash_received_not_posted_count.raw_value || 0) + (record.cheque_received_not_posted_count.raw_value || 0)"/>
-items
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Bank Pending</span>
-<span class="route_pda_payment_metric_value">
-<field name="bank_pending_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.bank_pending_count.value or 0"/>
-cheques
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Bounced / Follow-up</span>
-<span class="route_pda_payment_metric_value">
-<field name="bounced_followup_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.bounced_followup_count.value or 0"/>
-cheques
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cancelled / Open Due</span>
-<span class="route_pda_payment_metric_value">
-<field name="cancelled_followup_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cancelled_followup_count.value or 0"/>
-cheques
-</span>
-</div>
-</div>
-<div class="route_custody_work_queue_actions">
-<button name="action_open_all_work" type="object" class="btn btn-sm btn-primary">Open Work</button>
-<button name="action_open_with_salesperson" type="object" class="btn btn-sm btn-light">With Salespeople</button>
-<button name="action_open_waiting_receipt" type="object" class="btn btn-sm btn-secondary">Waiting Receipt</button>
-<button name="action_open_received_not_posted" type="object" class="btn btn-sm btn-secondary">Received Not Posted</button>
-<button name="action_open_bank_pending" type="object" class="btn btn-sm btn-light">Bank Pending</button>
-<button name="action_open_followup" type="object" class="btn btn-sm btn-warning">Follow-up</button>
-</div>
-</div>
-</t>
-<t t-else="">
 <div class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card route_custody_work_queue_card">
 <div class="route_pda_payment_head route_cheque_control_head">
 <div>
@@ -202,7 +76,7 @@ cheques
 <span class="route_pda_payment_badge route_pda_payment_badge_balance">Follow-up</span>
 </t>
 </div>
-<div class="route_pda_payment_metrics route_cheque_control_metrics route_custody_work_queue_person_metrics">
+<div class="route_pda_payment_metrics route_cheque_control_metrics route_custody_monitor_metrics">
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Cash With Salespeople</span>
 <span class="route_pda_payment_metric_value">
@@ -264,7 +138,7 @@ cheques
 </span>
 </div>
 </div>
-<div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions route_custody_work_queue_actions">
+<div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions">
 <button name="action_open_all_work" type="object" class="btn btn-sm btn-primary">Open Work</button>
 <button name="action_open_with_salesperson" type="object" class="btn btn-sm btn-light" invisible="not cash_with_salesperson_count and not cheque_with_salesperson_count">With Salespeople</button>
 <button name="action_open_waiting_receipt" type="object" class="btn btn-sm btn-secondary" invisible="not cash_waiting_receipt_count and not cheque_waiting_receipt_count">Waiting Receipt</button>
@@ -273,7 +147,6 @@ cheques
 <button name="action_open_followup" type="object" class="btn btn-sm btn-warning" invisible="not open_followup_count">Follow-up</button>
 </div>
 </div>
-</t>
 </t>
 </templates>
 </kanban>
@@ -284,7 +157,6 @@ cheques
 <field name="model">route.custody.accounting.work.queue</field>
 <field name="arch" type="xml">
 <list string="Accounting Work Queue" create="0" edit="0" delete="0">
-<field name="is_company_summary" optional="hide"/>
 <field name="salesperson_id"/>
 <field name="workflow_state" widget="badge"/>
 <field name="total_work_count"/>
@@ -315,7 +187,6 @@ cheques
 </header>
 <sheet class="route_pda_payment_sheet route_cheque_control_sheet">
 <field name="currency_id" invisible="1"/>
-<field name="is_company_summary" invisible="1"/>
 <div class="route_pda_group route_cheque_control_section">
 <div class="route_pda_group_title">Salesperson Work Summary</div>
 <div class="route_pda_payment_summary_grid">
@@ -369,23 +240,9 @@ cheques
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cash Waiting Receipt</div>
+<div class="route_pda_info_label">Waiting Accounting Receipt</div>
 <div class="route_pda_info_value route_pda_money_value">
-<field name="cash_waiting_receipt_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cash_waiting_receipt_count" readonly="1" nolabel="1"/>
-lines
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cheques Waiting Receipt</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="cheque_waiting_receipt_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cheque_waiting_receipt_count" readonly="1" nolabel="1"/>
-cheques
+<field name="total_waiting_receipt_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
@@ -405,22 +262,12 @@ cheques
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Bounced / Follow-up</div>
+<div class="route_pda_info_label">Open Follow-up</div>
 <div class="route_pda_info_value route_pda_money_value">
-<field name="bounced_followup_amount" readonly="1" nolabel="1"/>
+<field name="open_followup_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_info_hint">
-<field name="bounced_followup_count" readonly="1" nolabel="1"/>
-cheques
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cancelled / Open Due</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="cancelled_followup_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cancelled_followup_count" readonly="1" nolabel="1"/>
+<field name="open_followup_count" readonly="1" nolabel="1"/>
 cheques
 </div>
 </div>
@@ -461,7 +308,7 @@ cheques
 <field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_custody_accounting_work_queue_search"/>
 <field name="domain">[('total_work_count', '>', 0)]</field>
-<field name="context">{'search_default_filter_open_work': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_accounting_custody_monitor_mode': True}</field>
+<field name="context">{'search_default_filter_open_work': 1, 'search_default_group_by_priority': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_accounting_custody_monitor_mode': True}</field>
 <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face">No route custody work is waiting for Accounting.</p>
 <p>When salespeople collect cash or cheques, this queue groups the required accounting work by salesperson.</p>
