@@ -6,9 +6,10 @@ class RouteCustodyAccountingWorkQueue(models.Model):
     _description = "Route Accounting Work Queue"
     _auto = False
     _rec_name = "name"
-    _order = "total_work_count desc, last_activity_at desc, salesperson_id"
+    _order = "is_company_summary desc, total_work_count desc, last_activity_at desc, salesperson_id"
 
     name = fields.Char(string="Salesperson", compute="_compute_name", store=False)
+    is_company_summary = fields.Boolean(string="Company Summary", readonly=True)
     salesperson_id = fields.Many2one("res.users", string="Salesperson", readonly=True)
     company_id = fields.Many2one("res.company", string="Company", readonly=True)
     currency_id = fields.Many2one("res.currency", string="Currency", readonly=True)
@@ -56,10 +57,13 @@ class RouteCustodyAccountingWorkQueue(models.Model):
     total_work_amount = fields.Monetary(string="Total Work Amount", currency_field="currency_id", readonly=True)
     total_work_count = fields.Integer(string="Open Work Items", readonly=True)
 
-    @api.depends("salesperson_id")
+    @api.depends("salesperson_id", "is_company_summary")
     def _compute_name(self):
         for rec in self:
-            rec.name = rec.salesperson_id.display_name if rec.salesperson_id else _("Unassigned Salesperson")
+            if rec.is_company_summary:
+                rec.name = _("Accounting Overview")
+            else:
+                rec.name = rec.salesperson_id.display_name if rec.salesperson_id else _("Unassigned Salesperson")
 
     def init(self):
         tools.drop_view_if_exists(self.env.cr, self._table)
@@ -159,9 +163,70 @@ class RouteCustodyAccountingWorkQueue(models.Model):
                       ON q.company_id = c.company_id
                      AND q.currency_id = c.currency_id
                      AND COALESCE(q.salesperson_id, 0) = COALESCE(c.salesperson_id, 0)
+                ),
+                raw_rows AS (
+                    SELECT
+                        id,
+                        FALSE AS is_company_summary,
+                        company_id,
+                        currency_id,
+                        salesperson_id,
+                        last_activity_at,
+                        cash_with_salesperson_amount,
+                        cash_with_salesperson_count,
+                        cheque_with_salesperson_amount,
+                        cheque_with_salesperson_count,
+                        cash_waiting_receipt_amount,
+                        cash_waiting_receipt_count,
+                        cheque_waiting_receipt_amount,
+                        cheque_waiting_receipt_count,
+                        cash_received_not_posted_amount,
+                        cash_received_not_posted_count,
+                        cheque_received_not_posted_amount,
+                        cheque_received_not_posted_count,
+                        bank_pending_amount,
+                        bank_pending_count,
+                        bounced_followup_amount,
+                        bounced_followup_count,
+                        cancelled_followup_amount,
+                        cancelled_followup_count
+                    FROM combined
+                    WHERE id IS NOT NULL
+
+                    UNION ALL
+
+                    SELECT
+                        -company_id AS id,
+                        TRUE AS is_company_summary,
+                        company_id,
+                        currency_id,
+                        NULL::integer AS salesperson_id,
+                        MAX(last_activity_at) AS last_activity_at,
+                        COALESCE(SUM(cash_with_salesperson_amount), 0) AS cash_with_salesperson_amount,
+                        COALESCE(SUM(cash_with_salesperson_count), 0) AS cash_with_salesperson_count,
+                        COALESCE(SUM(cheque_with_salesperson_amount), 0) AS cheque_with_salesperson_amount,
+                        COALESCE(SUM(cheque_with_salesperson_count), 0) AS cheque_with_salesperson_count,
+                        COALESCE(SUM(cash_waiting_receipt_amount), 0) AS cash_waiting_receipt_amount,
+                        COALESCE(SUM(cash_waiting_receipt_count), 0) AS cash_waiting_receipt_count,
+                        COALESCE(SUM(cheque_waiting_receipt_amount), 0) AS cheque_waiting_receipt_amount,
+                        COALESCE(SUM(cheque_waiting_receipt_count), 0) AS cheque_waiting_receipt_count,
+                        COALESCE(SUM(cash_received_not_posted_amount), 0) AS cash_received_not_posted_amount,
+                        COALESCE(SUM(cash_received_not_posted_count), 0) AS cash_received_not_posted_count,
+                        COALESCE(SUM(cheque_received_not_posted_amount), 0) AS cheque_received_not_posted_amount,
+                        COALESCE(SUM(cheque_received_not_posted_count), 0) AS cheque_received_not_posted_count,
+                        COALESCE(SUM(bank_pending_amount), 0) AS bank_pending_amount,
+                        COALESCE(SUM(bank_pending_count), 0) AS bank_pending_count,
+                        COALESCE(SUM(bounced_followup_amount), 0) AS bounced_followup_amount,
+                        COALESCE(SUM(bounced_followup_count), 0) AS bounced_followup_count,
+                        COALESCE(SUM(cancelled_followup_amount), 0) AS cancelled_followup_amount,
+                        COALESCE(SUM(cancelled_followup_count), 0) AS cancelled_followup_count
+                    FROM combined
+                    WHERE id IS NOT NULL
+                    GROUP BY company_id, currency_id
                 )
                 SELECT
                     id,
+                    is_company_summary,
                     company_id,
                     currency_id,
                     salesperson_id,
@@ -209,7 +274,7 @@ class RouteCustodyAccountingWorkQueue(models.Model):
                         WHEN (cash_with_salesperson_count + cheque_with_salesperson_count) > 0 THEN 'with_salesperson'
                         ELSE 'clear'
                     END AS workflow_state
-                FROM combined
+                FROM raw_rows
                 WHERE id IS NOT NULL
             )
             """
@@ -222,9 +287,9 @@ class RouteCustodyAccountingWorkQueue(models.Model):
             ("payment_mode", "in", ["cash", "cheque"]),
             ("route_custody_is_primary", "=", True),
         ]
-        if self.salesperson_id:
+        if self.salesperson_id and not self.is_company_summary:
             domain.append(("salesperson_id", "=", self.salesperson_id.id))
-        else:
+        elif not self.is_company_summary:
             domain.append(("salesperson_id", "=", False))
         if self.company_id:
             domain.append(("company_id", "=", self.company_id.id))
