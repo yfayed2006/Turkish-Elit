@@ -6902,9 +6902,9 @@ html[dir="rtl"] .route_custody_card {
 }
 
 /* --------------------------------------------------------------------------
-   Route Core - Custody / Cheque card continuous side accent
-   Final visual pass: one unbroken side line for Accounting Work Queue,
-   Route Collections Custody, My Custody, and Route Cheques cards.
+   Route Core - Custody / Cheque card side accent safe fix
+   Use an inset card shadow instead of an overlay pseudo-line.
+   This keeps the accent continuous without covering the first letters.
    -------------------------------------------------------------------------- */
 .route_pda_payment_card_collection,
 .route_cheque_control_card,
@@ -6919,38 +6919,27 @@ html[dir="rtl"] .route_custody_card {
     border: 1px solid #dbe5ef !important;
     border-inline-start: 1px solid #dbe5ef !important;
     border-radius: 22px !important;
-    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.10) !important;
+    padding-left: 32px !important;
+    padding-inline-start: 32px !important;
+    box-shadow: inset 6px 0 0 #0ea5a8, 0 14px 32px rgba(15, 23, 42, 0.10) !important;
 }
 
+/* Disable all previous pseudo accent lines so no overlay can sit above text. */
 .route_pda_payment_card_collection::before,
-.route_cheque_control_card::before,
-.route_custody_card::before,
-.route_custody_work_queue_card::before,
-.o_kanban_record.route_pda_payment_card.route_cheque_control_card::before,
-.o_kanban_record.route_pda_payment_card.route_pda_payment_card_collection::before,
-.o_kanban_record.route_pda_payment_card.route_custody_card::before,
-.o_kanban_record.route_pda_payment_card.route_custody_work_queue_card::before {
-    content: "" !important;
-    display: block !important;
-    position: absolute !important;
-    inset-block-start: 0 !important;
-    inset-block-end: 0 !important;
-    inset-inline-start: 0 !important;
-    width: 7px !important;
-    background: #0ea5a8 !important;
-    border-start-start-radius: 22px !important;
-    border-end-start-radius: 22px !important;
-    z-index: 30 !important;
-    pointer-events: none !important;
-}
-
 .route_pda_payment_card_collection::after,
+.route_cheque_control_card::before,
 .route_cheque_control_card::after,
+.route_custody_card::before,
 .route_custody_card::after,
+.route_custody_work_queue_card::before,
 .route_custody_work_queue_card::after,
+.o_kanban_record.route_pda_payment_card.route_cheque_control_card::before,
 .o_kanban_record.route_pda_payment_card.route_cheque_control_card::after,
+.o_kanban_record.route_pda_payment_card.route_pda_payment_card_collection::before,
 .o_kanban_record.route_pda_payment_card.route_pda_payment_card_collection::after,
+.o_kanban_record.route_pda_payment_card.route_custody_card::before,
 .o_kanban_record.route_pda_payment_card.route_custody_card::after,
+.o_kanban_record.route_pda_payment_card.route_custody_work_queue_card::before,
 .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card::after {
     display: none !important;
     content: none !important;
@@ -6964,60 +6953,28 @@ html[dir="rtl"] .route_custody_card {
     z-index: 1 !important;
 }
 
-.route_pda_payment_card_collection,
-.route_cheque_control_card,
-.route_custody_card {
-    padding-inline-start: max(30px, 1.35rem) !important;
-}
-
-.o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card {
-    padding-inline-start: 30px !important;
-}
-
-html[dir="rtl"] .route_pda_payment_card_collection::before,
-html[dir="rtl"] .route_cheque_control_card::before,
-html[dir="rtl"] .route_custody_card::before,
-html[dir="rtl"] .route_custody_work_queue_card::before,
-html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_cheque_control_card::before,
-html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_pda_payment_card_collection::before,
-html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_custody_card::before,
-html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card::before {
-    inset-inline-start: auto !important;
-    inset-inline-end: 0 !important;
-    border-start-start-radius: 0 !important;
-    border-end-start-radius: 0 !important;
-    border-start-end-radius: 22px !important;
-    border-end-end-radius: 22px !important;
+.o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card,
+.o_kanban_view.route_custody_accounting_work_queue_wide .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card {
+    padding-left: 32px !important;
+    padding-inline-start: 32px !important;
+    border-inline-start: 1px solid #dbe5ef !important;
+    box-shadow: inset 6px 0 0 #0ea5a8, 0 14px 32px rgba(15, 23, 42, 0.10) !important;
 }
 
 html[dir="rtl"] .route_pda_payment_card_collection,
 html[dir="rtl"] .route_cheque_control_card,
 html[dir="rtl"] .route_custody_card,
-html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card {
-    padding-inline-start: 30px !important;
+html[dir="rtl"] .route_custody_work_queue_card,
+html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_cheque_control_card,
+html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_pda_payment_card_collection,
+html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_custody_card,
+html[dir="rtl"] .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card,
+html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card,
+html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card {
+    padding-left: 18px !important;
+    padding-right: 32px !important;
+    padding-inline-start: 32px !important;
     padding-inline-end: 18px !important;
-}
-
-/* High-specificity safety for the wide Accounting Work Queue card. */
-.o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card,
-.o_kanban_view.route_custody_accounting_work_queue_wide .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card {
-    border-inline-start: 1px solid #dbe5ef !important;
-    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.10) !important;
-}
-
-.o_kanban_view.route_custody_accounting_work_queue_wide .route_custody_work_queue_card::before,
-.o_kanban_view.route_custody_accounting_work_queue_wide .o_kanban_record.route_pda_payment_card.route_custody_work_queue_card::before {
-    content: "" !important;
-    display: block !important;
-    position: absolute !important;
-    inset-block-start: 0 !important;
-    inset-block-end: 0 !important;
-    inset-inline-start: 0 !important;
-    width: 7px !important;
-    background: #0ea5a8 !important;
-    border-start-start-radius: 22px !important;
-    border-end-start-radius: 22px !important;
-    z-index: 30 !important;
-    pointer-events: none !important;
+    box-shadow: inset -6px 0 0 #0ea5a8, 0 14px 32px rgba(15, 23, 42, 0.10) !important;
 }
 
