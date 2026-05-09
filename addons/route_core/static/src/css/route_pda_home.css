@@ -6665,3 +6665,95 @@ html[dir="rtl"] .route_custody_card {
         width: 100% !important;
     }
 }
+
+/* Accounting Work Queue: company summary counters + salesperson work cards */
+.o_kanban_view.route_custody_work_queue_kanban .o_kanban_renderer.o_kanban_ungrouped {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)) !important;
+    gap: 18px !important;
+    padding: 14px !important;
+    background: #f3f6fa !important;
+    align-items: stretch !important;
+}
+
+.o_kanban_view.route_custody_work_queue_kanban .o_kanban_renderer.o_kanban_ungrouped .o_kanban_record {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.o_kanban_view.route_custody_work_queue_kanban .route_custody_work_queue_summary_card {
+    grid-column: 1 / -1 !important;
+}
+
+.route_custody_work_queue_card .route_pda_payment_title,
+.route_custody_work_queue_summary_card .route_pda_payment_title {
+    color: #0f766e !important;
+    font-weight: 900 !important;
+}
+
+.route_custody_work_queue_summary_card .route_pda_payment_title {
+    font-size: 1.35rem !important;
+}
+
+.route_custody_work_queue_summary_metrics,
+.route_custody_work_queue_person_metrics {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.route_custody_work_queue_person_metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.route_custody_work_queue_summary_metrics .route_pda_payment_metric,
+.route_custody_work_queue_person_metrics .route_pda_payment_metric {
+    min-height: 82px !important;
+    border-radius: 16px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e5edf5 !important;
+    padding: 12px !important;
+}
+
+.route_custody_work_queue_actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 12px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #eef2f7 !important;
+}
+
+.route_custody_work_queue_actions .btn {
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    min-height: 38px !important;
+}
+
+@media (max-width: 991.98px) {
+    .route_custody_work_queue_summary_metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .o_kanban_view.route_custody_work_queue_kanban .o_kanban_renderer.o_kanban_ungrouped {
+        grid-template-columns: 1fr !important;
+        padding: 10px !important;
+        gap: 16px !important;
+    }
+
+    .route_custody_work_queue_summary_metrics,
+    .route_custody_work_queue_person_metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .route_custody_work_queue_actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .route_custody_work_queue_actions .btn {
+        width: 100% !important;
+    }
+}
