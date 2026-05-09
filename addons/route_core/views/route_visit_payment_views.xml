@@ -1,5 +1,5 @@
 <odoo>
-<!--                                 Admin / all payments                                 -->
+<!--                                  Admin / all payments                                  -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -36,14 +36,14 @@
 <field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
-<field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
 <field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
 <field name="cash_custody_state" string="Cash Custody" optional="hide"/>
 <field name="state" optional="hide"/>
 </list>
 </field>
 </record>
-<!--                                 Tailored visit list                                 -->
+<!--                                  Tailored visit list                                  -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -66,13 +66,13 @@
 <field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
-<field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
 <field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
 <field name="cash_custody_state" string="Cash Custody" optional="hide"/>
 </list>
 </field>
 </record>
-<!--                                 Tailored direct sale list                                 -->
+<!--                                  Tailored direct sale list                                  -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -103,7 +103,7 @@
 <field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
 <field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
 <field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
-<field name="cheque_open_due_amount" string="Cheque Open Due" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
 <field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
 <field name="cash_custody_state" string="Cash Custody" optional="hide"/>
 <field name="state" string="Status" optional="hide"/>
@@ -259,7 +259,7 @@
 <div class="route_pda_payment_metrics">
 <t t-if="record.cheque_needs_followup.raw_value">
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Original Cheque Amount</span>
+<span class="route_pda_payment_metric_label">Allocated Cheque Amount</span>
 <span class="route_pda_payment_metric_value">
 <field name="amount"/>
 </span>
@@ -271,7 +271,7 @@
 </span>
 </div>
 <div class="route_pda_payment_metric route_pda_payment_metric_cheque_open_due">
-<span class="route_pda_payment_metric_label">Open Due From Cheque</span>
+<span class="route_pda_payment_metric_label">Open Due From This Allocation</span>
 <span class="route_pda_payment_metric_value">
 <field name="cheque_open_due_amount"/>
 </span>
@@ -458,7 +458,7 @@
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
-<div class="route_pda_info_label">Original Cheque Amount</div>
+<div class="route_pda_info_label">Allocated Cheque Amount</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="amount" readonly="1" nolabel="1"/>
 </div>
@@ -470,7 +470,7 @@
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
-<div class="route_pda_info_label">Open Due From Cheque</div>
+<div class="route_pda_info_label">Open Due From This Allocation</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
@@ -542,7 +542,7 @@
 <field name="cheque_financially_cleared_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
-<span class="route_pda_payment_meta_label">Open Due From Cheque</span>
+<span class="route_pda_payment_meta_label">Open Due From This Allocation</span>
 <field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
@@ -558,15 +558,15 @@
 <field name="amount" readonly="state != 'draft'" string="Collected Now" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
-<span class="route_pda_payment_meta_label">Original Cheque Amount</span>
-<field name="amount" readonly="1" string="Original Cheque Amount" nolabel="1"/>
+<span class="route_pda_payment_meta_label">Allocated Cheque Amount</span>
+<field name="amount" readonly="1" string="Allocated Cheque Amount" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
 <span class="route_pda_payment_meta_label">Effective Collected</span>
 <field name="cheque_effective_collected_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
-<span class="route_pda_payment_meta_label">Open Due From Cheque</span>
+<span class="route_pda_payment_meta_label">Open Due From This Allocation</span>
 <field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="collection_type != 'defer_date'">
@@ -670,7 +670,7 @@
 </form>
 </field>
 </record>
-<!--                                 Admin / all payments search                                 -->
+<!--                                  Admin / all payments search                                  -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -757,7 +757,7 @@
 </search>
 </field>
 </record>
-<!--                                 Visit collections search                                 -->
+<!--                                  Visit collections search                                  -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -846,7 +846,7 @@
 </search>
 </field>
 </record>
-<!--                                 Direct sale payments search                                 -->
+<!--                                  Direct sale payments search                                  -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -1062,7 +1062,7 @@
 </t>
 <t t-if="record.payment_mode.raw_value == 'cheque'">
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheque Amount</span>
+<span class="route_pda_payment_metric_label">Physical Cheque Total</span>
 <span class="route_pda_payment_metric_value">
 <field name="cheque_physical_total_amount"/>
 </span>
