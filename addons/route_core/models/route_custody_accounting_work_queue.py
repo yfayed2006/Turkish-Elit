@@ -328,3 +328,4 @@ class RouteCustodyAccountingWorkQueue(models.Model):
             ],
             {"search_default_filter_cheque": 1},
         )
+
