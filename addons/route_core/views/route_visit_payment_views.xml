@@ -1,5 +1,5 @@
 <odoo>
-<!--                                    Admin / all payments                                    -->
+<!--                                 Admin / all payments                                 -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -43,7 +43,7 @@
 </list>
 </field>
 </record>
-<!--                                    Tailored visit list                                    -->
+<!--                                 Tailored visit list                                 -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -72,7 +72,7 @@
 </list>
 </field>
 </record>
-<!--                                    Tailored direct sale list                                    -->
+<!--                                 Tailored direct sale list                                 -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -133,6 +133,7 @@
 <field name="state"/>
 <field name="due_date"/>
 <field name="amount"/>
+<field name="remaining_due_amount"/>
 <field name="effective_promise_amount"/>
 <field name="promise_status"/>
 <field name="bank_name"/>
@@ -161,7 +162,8 @@
 <field name="cash_custody_state_label"/>
 <field name="route_cash_can_handover_accounting"/>
 <field name="route_cash_can_accountant_receive"/>
-<field name="route_custody_show_salesperson_handover"/>
+<field name="route_cheque_accounting_state_label"/>
+<field name="route_cheque_accounting_move_count"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_collection">
@@ -247,9 +249,21 @@
 <t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_financially_cleared_amount.raw_value">
 <span class="route_pda_payment_badge route_pda_payment_badge_status">Bank: Cleared</span>
 </t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.route_cheque_accounting_state_label.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t>Accounting: </t>
+<t t-esc="record.route_cheque_accounting_state_label.value"/>
+</span>
+</t>
 </div>
 <div class="route_pda_payment_metrics">
 <t t-if="record.cheque_needs_followup.raw_value">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Original Cheque Amount</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Effective Collected</span>
 <span class="route_pda_payment_metric_value">
@@ -257,7 +271,7 @@
 </span>
 </div>
 <div class="route_pda_payment_metric route_pda_payment_metric_cheque_open_due">
-<span class="route_pda_payment_metric_label">Cheque Open Due</span>
+<span class="route_pda_payment_metric_label">Open Due From Cheque</span>
 <span class="route_pda_payment_metric_value">
 <field name="cheque_open_due_amount"/>
 </span>
@@ -272,7 +286,9 @@
 </div>
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Uncovered Due</span>
-<span class="route_pda_payment_metric_value"> </span>
+<span class="route_pda_payment_metric_value">
+<field name="remaining_due_amount"/>
+</span>
 </div>
 </t>
 <t t-if="record.effective_promise_amount.raw_value">
@@ -367,8 +383,8 @@
 </t>
 </div>
 <div class="route_cheque_control_actions route_collection_custody_actions">
-<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cheque</button>
-<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cash</button>
+<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over Cheque</button>
+<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
 <button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
 <button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
 </div>
@@ -387,12 +403,10 @@
 <button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
 <button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue')"/>
 <button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or not promise_review_followup_date"/>
-<button name="action_cheque_handover_to_accounting" string="Hand Over Cheque" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting or not route_custody_show_salesperson_handover"/>
-<button name="action_cash_handover_to_accounting" string="Hand Over Cash" type="object" class="btn-primary" invisible="not route_cash_can_handover_accounting or not route_custody_show_salesperson_handover"/>
+<button name="action_cheque_handover_to_accounting" string="Hand Over Cheque" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting"/>
+<button name="action_cash_handover_to_accounting" string="Hand Over Cash" type="object" class="btn-primary" invisible="not route_cash_can_handover_accounting"/>
 <button name="action_cheque_accounting_receive" string="Confirm Cheque Receipt" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_receive"/>
 <button name="action_cash_accounting_receive" string="Confirm Cash Receipt" type="object" class="btn-secondary" invisible="not route_cash_can_accountant_receive"/>
-<button name="action_route_post_cash_receipt_accounting" string="Post Cash Receipt Voucher Entry" type="object" class="btn-primary" invisible="not route_cash_can_post_receipt"/>
-<button name="action_route_open_cash_accounting_moves" string="Cash Entries" type="object" class="btn-secondary" invisible="payment_mode != 'cash' or route_cash_accounting_move_count == 0"/>
 <button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
 <button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
 <button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
@@ -412,7 +426,16 @@
 <field name="promise_reviewed_by_id" invisible="1"/>
 <field name="promise_review_note" invisible="1"/>
 <field name="cheque_needs_followup" invisible="1"/>
+<field name="cheque_followup_state" invisible="1"/>
+<field name="cheque_followup_state_label" invisible="1"/>
+<field name="cheque_financial_state_label" invisible="1"/>
 <field name="cheque_effective_collected_amount" invisible="1"/>
+<field name="cheque_route_coverage_amount" invisible="1"/>
+<field name="cheque_pending_clearance_amount" invisible="1"/>
+<field name="cheque_financially_cleared_amount" invisible="1"/>
+<field name="cheque_open_due_amount" invisible="1"/>
+<field name="route_cheque_accounting_state_label" invisible="1"/>
+<field name="route_cheque_accounting_move_count" invisible="1"/>
 <field name="cheque_custody_state" invisible="1"/>
 <field name="cheque_custody_state_label" invisible="1"/>
 <field name="route_cheque_can_handover_accounting" invisible="1"/>
@@ -421,11 +444,6 @@
 <field name="cash_custody_state_label" invisible="1"/>
 <field name="route_cash_can_handover_accounting" invisible="1"/>
 <field name="route_cash_can_accountant_receive" invisible="1"/>
-<field name="route_cash_can_post_receipt" invisible="1"/>
-<field name="route_custody_show_salesperson_handover" invisible="1"/>
-<field name="route_cash_accounting_state" invisible="1"/>
-<field name="route_cash_accounting_state_label" invisible="1"/>
-<field name="route_cash_accounting_move_count" invisible="1"/>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="cheque_needs_followup">
 <div class="route_pda_info_label">Collected</div>
@@ -439,6 +457,12 @@
 <field name="remaining_due_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<div class="route_pda_info_label">Original Cheque Amount</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="amount" readonly="1" nolabel="1"/>
+</div>
+</div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
 <div class="route_pda_info_label">Effective Collected</div>
 <div class="route_pda_info_value route_pda_money_value">
@@ -446,7 +470,7 @@
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
-<div class="route_pda_info_label">Cheque Open Due</div>
+<div class="route_pda_info_label">Open Due From Cheque</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
@@ -494,8 +518,16 @@
 <field name="payment_mode" readonly="state != 'draft'" string="Mode" widget="badge" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Status</span>
+<field name="cheque_followup_state_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
 <span class="route_pda_payment_meta_label">Cheque Financial Effect</span>
 <field name="cheque_financial_state_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not route_cheque_accounting_state_label">
+<span class="route_pda_payment_meta_label">Accounting Status</span>
+<field name="route_cheque_accounting_state_label" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
 <span class="route_pda_payment_meta_label">Route Coverage</span>
@@ -521,9 +553,21 @@
 <span class="route_pda_payment_meta_label">Scenario</span>
 <field name="collection_type" readonly="state != 'draft'" string="Scenario" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_item" invisible="collection_type in ('defer_date', 'next_visit')">
+<div class="route_pda_payment_meta_item" invisible="collection_type in ('defer_date', 'next_visit') or (payment_mode == 'cheque' and cheque_needs_followup)">
 <span class="route_pda_payment_meta_label">Collected Now</span>
 <field name="amount" readonly="state != 'draft'" string="Collected Now" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Original Cheque Amount</span>
+<field name="amount" readonly="1" string="Original Cheque Amount" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Effective Collected</span>
+<field name="cheque_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Open Due From Cheque</span>
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="collection_type != 'defer_date'">
 <span class="route_pda_payment_meta_label">Deferred To</span>
@@ -626,7 +670,7 @@
 </form>
 </field>
 </record>
-<!--                                    Admin / all payments search                                    -->
+<!--                                 Admin / all payments search                                 -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -713,7 +757,7 @@
 </search>
 </field>
 </record>
-<!--                                    Visit collections search                                    -->
+<!--                                 Visit collections search                                 -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -802,7 +846,7 @@
 </search>
 </field>
 </record>
-<!--                                    Direct sale payments search                                    -->
+<!--                                 Direct sale payments search                                 -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -884,24 +928,18 @@
 <field name="area_id"/>
 <field name="salesperson_id"/>
 <field name="amount"/>
+<field name="remaining_due_amount"/>
 <field name="currency_id"/>
 <field name="cash_custody_state"/>
 <field name="cash_custody_state_label"/>
 <field name="cash_custody_is_primary"/>
 <field name="cash_custody_total_amount"/>
 <field name="cash_custody_collection_count"/>
-<field name="cash_custody_visit_count"/>
-<field name="cash_custody_area_summary"/>
 <field name="cash_custody_display_ref"/>
 <field name="cash_custody_source_summary"/>
 <field name="cash_custody_settlement_summary"/>
 <field name="route_cash_can_handover_accounting"/>
 <field name="route_cash_can_accountant_receive"/>
-<field name="route_cash_can_post_receipt"/>
-<field name="route_custody_show_salesperson_handover"/>
-<field name="route_cash_accounting_state"/>
-<field name="route_cash_accounting_state_label"/>
-<field name="route_cash_accounting_move_count"/>
 <field name="cheque_number"/>
 <field name="bank_name"/>
 <field name="cheque_date"/>
@@ -972,11 +1010,6 @@
 <t> Lines</t>
 </span>
 </t>
-<t t-if="record.route_cash_accounting_state_label.raw_value">
-<span t-attf-class="route_pda_payment_badge #{record.route_cash_accounting_state.raw_value == 'not_posted' ? 'route_pda_payment_badge_pending' : 'route_pda_payment_badge_confirmed'}">
-<t t-esc="record.route_cash_accounting_state_label.value"/>
-</span>
-</t>
 </t>
 <t t-if="record.payment_mode.raw_value == 'cheque'">
 <span class="route_pda_payment_badge route_pda_payment_mode_cheque">Cheque</span>
@@ -1018,14 +1051,6 @@
 <field name="cash_custody_collection_count"/>
 </span>
 </div>
-<t t-if="record.cash_custody_visit_count.raw_value">
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Covered Visits</span>
-<span class="route_pda_payment_metric_value">
-<field name="cash_custody_visit_count"/>
-</span>
-</div>
-</t>
 <t t-if="record.cash_custody_settlement_summary.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single">
 <span class="route_pda_payment_metric_label">Settlement Batch</span>
@@ -1087,15 +1112,7 @@
 </span>
 </div>
 </t>
-<t t-if="record.payment_mode.raw_value == 'cash' and record.cash_custody_area_summary.raw_value">
-<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
-<span class="route_pda_payment_footer_label">Areas</span>
-<span class="route_pda_payment_footer_value">
-<field name="cash_custody_area_summary"/>
-</span>
-</div>
-</t>
-<t t-elif="record.payment_mode.raw_value == 'cheque' and record.area_id.raw_value">
+<t t-if="record.area_id.raw_value">
 <div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
 <span class="route_pda_payment_footer_label">Area</span>
 <span class="route_pda_payment_footer_value">
@@ -1105,13 +1122,11 @@
 </t>
 </div>
 <div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions">
-<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cheque</button>
-<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting or not route_custody_show_salesperson_handover">Hand Over Cash</button>
+<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over Cheque</button>
+<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
 <button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
 <button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
-<button name="action_route_post_cash_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_post_receipt">Post Cash Receipt Voucher Entry</button>
 <button name="action_open_custody_details" type="object" class="btn btn-sm btn-light">Details</button>
-<button name="action_route_open_cash_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode != 'cash' or route_cash_accounting_move_count == 0">Entries</button>
 <button name="action_route_open_cheque_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode != 'cheque' or route_cheque_accounting_move_count == 0">Entries</button>
 </div>
 </div>
@@ -1137,8 +1152,7 @@
 <filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
 <filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
 <separator/>
-<filter name="filter_custody_with_salesperson" string="With Salesperson" domain="[('route_custody_with_salesperson_visible', '=', True)]"/>
-<filter name="filter_accounting_todo" string="Accounting Work Queue" domain="[('route_custody_accounting_todo_visible', '=', True)]"/>
+<filter name="filter_custody_with_salesperson" string="With Salesperson" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', 'in', [False, 'with_salesperson']), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', 'in', [False, 'with_salesperson'])]"/>
 <filter name="filter_custody_handed_accounting" string="Handed to Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'handed_to_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'handed_to_accounting')]"/>
 <filter name="filter_custody_received_accounting" string="Received by Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'received_by_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'received_by_accounting')]"/>
 <separator/>
@@ -1151,8 +1165,6 @@
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <searchpanel>
 <field name="payment_mode" string="Payment Mode"/>
-<field name="cash_custody_state" string="Cash Custody"/>
-<field name="cheque_custody_state" string="Cheque Custody"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="cheque_followup_state" string="Cheque Lifecycle"/>
@@ -1166,19 +1178,19 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
-<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('salesperson_id', '=', uid), ('route_custody_with_salesperson_visible', '=', True)]</field>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('salesperson_id', '=', uid), ('route_custody_is_primary', '=', True)]</field>
 <field name="context">{'search_default_filter_custody_with_salesperson': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
 <record id="action_route_accounting_collections_custody" model="ir.actions.act_window">
-<field name="name">Route Custody</field>
+<field name="name">Route Collections Custody</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
-<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_is_primary', '=', True)]</field>
-<field name="context">{'search_default_filter_confirmed': 1, 'search_default_filter_accounting_todo': 1, 'route_accounting_custody_monitor_mode': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_accounting_visible', '=', True)]</field>
+<field name="context">{'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
 </record>
-<menuitem id="menu_route_accounting_collections_custody" name="Route Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
+<menuitem id="menu_route_accounting_collections_custody" name="Route Collections Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
 <record id="action_route_visit_payment" model="ir.actions.act_window">
 <field name="name">All Payments</field>
 <field name="res_model">route.visit.payment</field>
