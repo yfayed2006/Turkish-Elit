@@ -1677,23 +1677,94 @@ class RouteVisit(models.Model):
         )
 
         total_due = getattr(self, "direct_stop_grand_due_amount", 0.0) or 0.0
-        collected_now = getattr(self, "direct_stop_settlement_paid_amount", 0.0) or _sum(confirmed, "amount")
-        remaining_now = getattr(self, "direct_stop_immediate_remaining_amount", 0.0) or max(total_due - collected_now, 0.0)
+        cheque_payments = visible_payments.filtered(lambda p: p.payment_mode == "cheque")
+        confirmed_cheques = cheque_payments.filtered(lambda p: p.state == "confirmed")
+        cheque_needs_followup_payments = cheque_payments.filtered(
+            lambda p: (getattr(p, "cheque_needs_followup", False) or (p.cheque_followup_state or "received") in ("bounced", "cancelled"))
+        )
+        has_cheque = bool(cheque_payments)
+        has_open_due_cheque = bool(cheque_needs_followup_payments)
+
+        def _covered_amount(payment):
+            if hasattr(payment, "_get_route_collection_covered_amount"):
+                return payment._get_route_collection_covered_amount()
+            if payment.payment_mode == "cheque" and (payment.cheque_followup_state or "received") in ("bounced", "cancelled"):
+                return 0.0
+            return payment.amount or 0.0
+
+        def _sum_covered(records):
+            return sum(_covered_amount(payment) for payment in records if payment.state == "confirmed")
+
+        original_collected_amount = _sum(confirmed, "amount")
+        effective_collected_amount = _sum_covered(confirmed)
+        collected_now = effective_collected_amount if has_cheque else (getattr(self, "direct_stop_settlement_paid_amount", 0.0) or original_collected_amount)
+        remaining_snapshot = getattr(self, "direct_stop_immediate_remaining_amount", 0.0) or 0.0
+        remaining_now = remaining_snapshot if has_open_due_cheque and remaining_snapshot else max(total_due - collected_now, 0.0)
         promise_amount = getattr(self, "direct_stop_open_promise_amount", 0.0) or _sum(visible_payments, "promise_amount")
-        previous_paid = _sum(previous_due_payments.filtered(lambda p: p.state == "confirmed"), "amount")
-        current_paid = _sum(current_stop_payments.filtered(lambda p: p.state == "confirmed"), "amount")
+        previous_paid = _sum_covered(previous_due_payments)
+        current_paid = _sum_covered(current_stop_payments)
         draft_amount = _sum(draft, "amount")
 
-        metrics = [
-            ("Total Due Now", total_due),
-            ("Collected Now", collected_now),
-            ("Remaining", remaining_now),
-        ]
+        cheque_original_amount = _sum(confirmed_cheques or cheque_payments, "amount")
+        cheque_effective_collected = _sum(cheque_payments, "cheque_effective_collected_amount")
+        cheque_pending_clearance = _sum(cheque_payments, "cheque_pending_clearance_amount")
+        cheque_financially_cleared = _sum(cheque_payments, "cheque_financially_cleared_amount")
+        cheque_open_due = _sum(cheque_payments, "cheque_open_due_amount")
+
+        if has_cheque:
+            cheque_status_labels = []
+            cheque_status_keys = []
+            accounting_labels = []
+            for cheque in cheque_payments:
+                status_key = cheque.cheque_followup_state or "received"
+                status_label = getattr(cheque, "cheque_followup_state_label", False) or dict(cheque._fields["cheque_followup_state"].selection).get(status_key, status_key)
+                if status_key and status_key not in cheque_status_keys:
+                    cheque_status_keys.append(status_key)
+                if status_label and status_label not in cheque_status_labels:
+                    cheque_status_labels.append(status_label)
+                accounting_label = getattr(cheque, "route_cheque_accounting_state_label", False)
+                if accounting_label and accounting_label not in accounting_labels:
+                    accounting_labels.append(accounting_label)
+            if cheque_status_labels:
+                cheque_status_label = _("Mixed Cheque Status") if len(cheque_status_labels) > 1 else cheque_status_labels[0]
+                cheque_status_key = "mixed" if len(cheque_status_keys) > 1 else (cheque_status_keys[0] if cheque_status_keys else "received")
+                badges.append(
+                    "<span class='route_pda_payment_badge route_pda_payment_badge_cheque_highlight route_cheque_status_%s'>Cheque: %s</span>"
+                    % (escape(cheque_status_key), escape(cheque_status_label))
+                )
+            if has_open_due_cheque:
+                badges.append(
+                    "<span class='route_pda_payment_badge route_pda_payment_badge_balance'>%s</span>"
+                    % escape(_("Open Due Restored"))
+                )
+            if accounting_labels:
+                accounting_label = _("Mixed Accounting Status") if len(accounting_labels) > 1 else accounting_labels[0]
+                badges.append(
+                    "<span class='route_pda_payment_badge route_pda_payment_footer_token_subtle'>Accounting: %s</span>"
+                    % escape(accounting_label)
+                )
+
+        metrics = [("Total Due Now", total_due)]
+        if has_cheque:
+            metrics.append(("Original Cheque Amount", cheque_original_amount))
+            metrics.append(("Effective Collected", cheque_effective_collected))
+            if cheque_open_due:
+                metrics.append(("Open Due From Cheque", cheque_open_due))
+            if cheque_pending_clearance and not cheque_open_due:
+                metrics.append(("Pending Bank Clearance", cheque_pending_clearance))
+            if cheque_financially_cleared:
+                metrics.append(("Bank Cleared", cheque_financially_cleared))
+            metrics.append(("Remaining", remaining_now))
+        else:
+            metrics.extend([
+                ("Collected Now", collected_now),
+                ("Remaining", remaining_now),
+            ])
         if promise_amount:
             metrics.append(("Promise Amount", promise_amount))
-        if previous_paid:
+        if previous_paid and not has_open_due_cheque:
             metrics.append(("Paid Previous Due", previous_paid))
-        if current_paid:
+        if current_paid and not has_open_due_cheque:
             metrics.append(("Paid Current Stop", current_paid))
         if draft_amount:
             metrics.append(("Draft To Confirm", draft_amount))
@@ -1757,14 +1828,19 @@ class RouteVisit(models.Model):
             )
         footer_html = "<div class='route_pda_payment_footer'>%s</div>" % "".join(footer_items) if footer_items else ""
 
-        note_html = ""
-        if len(payments) > 1:
-            note_html = (
-                "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
-                "%s"
-                "</div>"
-                % escape(_("Detailed allocation across previous due visits is kept in the system and receipt report. The salesperson screen shows only the settlement summary."))
+        note_items = []
+        if has_open_due_cheque:
+            note_items.append(
+                _("This cheque no longer counts as collected because it was bounced or cancelled. The amount is restored as open due for follow-up.")
             )
+        if len(payments) > 1:
+            note_items.append(
+                _("Detailed allocation across previous due visits is kept in the system and receipt report. The salesperson screen shows only the settlement summary.")
+            )
+        note_html = "".join(
+            "<div class='route_pda_multilingual_note route_pda_payment_card_note'>%s</div>" % escape(note)
+            for note in note_items
+        )
 
         return (
             "<div class='route_pda_payment_cards_html'>"
@@ -1805,6 +1881,13 @@ class RouteVisit(models.Model):
         "payment_ids.cheque_date",
         "payment_ids.cheque_holder_name",
         "payment_ids.cheque_note",
+        "payment_ids.cheque_followup_state",
+        "payment_ids.cheque_effective_collected_amount",
+        "payment_ids.cheque_pending_clearance_amount",
+        "payment_ids.cheque_financially_cleared_amount",
+        "payment_ids.cheque_open_due_amount",
+        "payment_ids.cheque_needs_followup",
+        "payment_ids.route_cheque_accounting_state_label",
         "payment_ids.note",
         "payment_ids.source_document_ref",
         "payment_ids.settlement_document_ref",
@@ -1823,6 +1906,13 @@ class RouteVisit(models.Model):
         "settlement_payment_ids.cheque_date",
         "settlement_payment_ids.cheque_holder_name",
         "settlement_payment_ids.cheque_note",
+        "settlement_payment_ids.cheque_followup_state",
+        "settlement_payment_ids.cheque_effective_collected_amount",
+        "settlement_payment_ids.cheque_pending_clearance_amount",
+        "settlement_payment_ids.cheque_financially_cleared_amount",
+        "settlement_payment_ids.cheque_open_due_amount",
+        "settlement_payment_ids.cheque_needs_followup",
+        "settlement_payment_ids.route_cheque_accounting_state_label",
         "settlement_payment_ids.note",
         "settlement_payment_ids.source_document_ref",
         "settlement_payment_ids.settlement_document_ref",
