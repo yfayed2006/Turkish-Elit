@@ -3,10 +3,9 @@
 <field name="name">route.custody.accounting.work.queue.kanban</field>
 <field name="model">route.custody.accounting.work.queue</field>
 <field name="arch" type="xml">
-<kanban class="route_pda_payment_kanban route_cheque_control_kanban route_custody_work_queue_kanban route_custody_work_queue_dashboard_kanban" create="0" edit="0" delete="0" sample="0" default_order="salesperson_id asc, last_activity_at desc">
+<kanban class="route_pda_payment_kanban route_cheque_control_kanban route_custody_work_queue_kanban" create="0" edit="0" delete="0" sample="0">
 <field name="name"/>
 <field name="salesperson_id"/>
-<field name="is_company_summary"/>
 <field name="company_id"/>
 <field name="currency_id"/>
 <field name="last_activity_at"/>
@@ -38,21 +37,18 @@
 <field name="total_work_count"/>
 <templates>
 <t t-name="card">
-<div t-attf-class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card route_custody_work_queue_card #{record.salesperson_id.raw_value ? 'route_custody_work_queue_salesperson_card' : 'route_custody_work_queue_overview_card'}">
+<div class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card route_custody_work_queue_card">
 <div class="route_pda_payment_head route_cheque_control_head">
 <div>
 <div class="route_pda_payment_title">
 <field name="name"/>
 </div>
 <div class="route_pda_payment_subtitle">
-<t t-if="!record.salesperson_id.raw_value"> Company custody overview across all salespeople </t>
-<t t-if="record.salesperson_id.raw_value">
 <t t-if="record.total_work_count.raw_value">
 <t t-esc="record.total_work_count.value"/>
 <t> open work items</t>
 </t>
 <t t-if="!record.total_work_count.raw_value">No open work</t>
-</t>
 </div>
 </div>
 <div class="route_pda_payment_date">
@@ -80,7 +76,7 @@
 <span class="route_pda_payment_badge route_pda_payment_badge_balance">Follow-up</span>
 </t>
 </div>
-<div t-attf-class="route_pda_payment_metrics route_cheque_control_metrics route_custody_monitor_metrics #{record.salesperson_id.raw_value ? 'route_custody_work_queue_person_metrics' : 'route_custody_work_queue_summary_metrics'}">
+<div class="route_pda_payment_metrics route_cheque_control_metrics route_custody_monitor_metrics">
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Cash With Salespeople</span>
 <span class="route_pda_payment_metric_value">
@@ -102,23 +98,13 @@ cheques
 </span>
 </div>
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cash Waiting Receipt</span>
+<span class="route_pda_payment_metric_label">Waiting Accounting Receipt</span>
 <span class="route_pda_payment_metric_value">
-<field name="cash_waiting_receipt_amount"/>
+<field name="total_waiting_receipt_amount"/>
 </span>
 <span class="route_pda_payment_metric_note">
-<t t-esc="record.cash_waiting_receipt_count.value or 0"/>
-lines
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheques Waiting Receipt</span>
-<span class="route_pda_payment_metric_value">
-<field name="cheque_waiting_receipt_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cheque_waiting_receipt_count.value or 0"/>
-cheques
+<t t-esc="(record.cash_waiting_receipt_count.raw_value || 0) + (record.cheque_waiting_receipt_count.raw_value || 0)"/>
+items
 </span>
 </div>
 <div class="route_pda_payment_metric">
@@ -142,27 +128,17 @@ cheques
 </span>
 </div>
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Bounced / Follow-up</span>
+<span class="route_pda_payment_metric_label">Open Follow-up</span>
 <span class="route_pda_payment_metric_value">
-<field name="bounced_followup_amount"/>
+<field name="open_followup_amount"/>
 </span>
 <span class="route_pda_payment_metric_note">
-<t t-esc="record.bounced_followup_count.value or 0"/>
-cheques
-</span>
-</div>
-<div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cancelled / Open Due</span>
-<span class="route_pda_payment_metric_value">
-<field name="cancelled_followup_amount"/>
-</span>
-<span class="route_pda_payment_metric_note">
-<t t-esc="record.cancelled_followup_count.value or 0"/>
+<t t-esc="record.open_followup_count.value or 0"/>
 cheques
 </span>
 </div>
 </div>
-<div t-attf-class="route_cheque_control_actions route_collection_custody_actions route_custody_actions route_custody_work_queue_actions #{record.salesperson_id.raw_value ? 'route_custody_work_queue_person_actions' : 'route_custody_work_queue_summary_actions'}">
+<div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions">
 <button name="action_open_all_work" type="object" class="btn btn-sm btn-primary">Open Work</button>
 <button name="action_open_with_salesperson" type="object" class="btn btn-sm btn-light" invisible="not cash_with_salesperson_count and not cheque_with_salesperson_count">With Salespeople</button>
 <button name="action_open_waiting_receipt" type="object" class="btn btn-sm btn-secondary" invisible="not cash_waiting_receipt_count and not cheque_waiting_receipt_count">Waiting Receipt</button>
@@ -181,7 +157,6 @@ cheques
 <field name="model">route.custody.accounting.work.queue</field>
 <field name="arch" type="xml">
 <list string="Accounting Work Queue" create="0" edit="0" delete="0">
-<field name="is_company_summary" optional="hide"/>
 <field name="salesperson_id"/>
 <field name="workflow_state" widget="badge"/>
 <field name="total_work_count"/>
@@ -265,23 +240,9 @@ cheques
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cash Waiting Receipt</div>
+<div class="route_pda_info_label">Waiting Accounting Receipt</div>
 <div class="route_pda_info_value route_pda_money_value">
-<field name="cash_waiting_receipt_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cash_waiting_receipt_count" readonly="1" nolabel="1"/>
-lines
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cheques Waiting Receipt</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="cheque_waiting_receipt_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cheque_waiting_receipt_count" readonly="1" nolabel="1"/>
-cheques
+<field name="total_waiting_receipt_amount" readonly="1" nolabel="1"/>
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
@@ -301,22 +262,12 @@ cheques
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Bounced / Follow-up</div>
+<div class="route_pda_info_label">Open Follow-up</div>
 <div class="route_pda_info_value route_pda_money_value">
-<field name="bounced_followup_amount" readonly="1" nolabel="1"/>
+<field name="open_followup_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_info_hint">
-<field name="bounced_followup_count" readonly="1" nolabel="1"/>
-cheques
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Cancelled / Open Due</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="cancelled_followup_amount" readonly="1" nolabel="1"/>
-</div>
-<div class="route_pda_info_hint">
-<field name="cancelled_followup_count" readonly="1" nolabel="1"/>
+<field name="open_followup_count" readonly="1" nolabel="1"/>
 cheques
 </div>
 </div>
@@ -335,11 +286,18 @@ cheques
 <field name="workflow_state"/>
 <separator/>
 <filter name="filter_open_work" string="Open Work" domain="[('total_work_count', '>', 0)]"/>
-<filter name="filter_with_salesperson" string="With Salespeople" domain="['|', ('cash_with_salesperson_count', '>', 0), ('cheque_with_salesperson_count', '>', 0)]"/>
+<filter name="filter_with_salesperson" string="With Salesperson" domain="['|', ('cash_with_salesperson_count', '>', 0), ('cheque_with_salesperson_count', '>', 0)]"/>
 <filter name="filter_waiting_receipt" string="Waiting Receipt" domain="['|', ('cash_waiting_receipt_count', '>', 0), ('cheque_waiting_receipt_count', '>', 0)]"/>
 <filter name="filter_received_not_posted" string="Received Not Posted" domain="['|', ('cash_received_not_posted_count', '>', 0), ('cheque_received_not_posted_count', '>', 0)]"/>
 <filter name="filter_bank_pending" string="Bank Pending" domain="[('bank_pending_count', '>', 0)]"/>
 <filter name="filter_followup" string="Follow-up" domain="[('open_followup_count', '>', 0)]"/>
+<separator/>
+<filter name="group_by_priority" string="Work Priority" domain="[]" context="{'group_by': 'workflow_state'}"/>
+<filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
+<searchpanel>
+<field name="workflow_state" string="Work Priority"/>
+<field name="salesperson_id" string="Salesperson"/>
+</searchpanel>
 </search>
 </field>
 </record>
@@ -349,8 +307,8 @@ cheques
 <field name="view_mode">kanban,list,form</field>
 <field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_kanban"/>
 <field name="search_view_id" ref="route_core.view_route_custody_accounting_work_queue_search"/>
-<field name="domain">[('is_company_summary', '=', True), ('total_work_count', '>', 0)]</field>
-<field name="context">{'search_default_filter_open_work': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_accounting_custody_monitor_mode': True, 'group_by': []}</field>
+<field name="domain">[('total_work_count', '>', 0)]</field>
+<field name="context">{'search_default_filter_open_work': 1, 'search_default_group_by_priority': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_accounting_custody_monitor_mode': True}</field>
 <field name="help" type="html">
 <p class="o_view_nocontent_smiling_face">No route custody work is waiting for Accounting.</p>
 <p>When salespeople collect cash or cheques, this queue groups the required accounting work by salesperson.</p>
@@ -374,36 +332,5 @@ cheques
 <field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_form"/>
 <field name="act_window_id" ref="route_core.action_route_custody_accounting_work_queue"/>
 </record>
-<record id="action_route_custody_accounting_work_queue_dashboard" model="ir.actions.act_window">
-<field name="name">Accounting Work Queue</field>
-<field name="res_model">route.custody.accounting.work.queue</field>
-<field name="view_mode">kanban,list,form</field>
-<field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_kanban"/>
-<field name="search_view_id" ref="route_core.view_route_custody_accounting_work_queue_search"/>
-<field name="domain">[('is_company_summary', '=', True), ('total_work_count', '>', 0)]</field>
-<field name="context">{'search_default_filter_open_work': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_accounting_custody_monitor_mode': True, 'group_by': []}</field>
-<field name="help" type="html">
-<p class="o_view_nocontent_smiling_face">No route custody work is waiting for Accounting.</p>
-<p>This dashboard summarizes custody work across all salespeople and opens exact work lists from the buttons.</p>
-</field>
-</record>
-<record id="action_route_custody_accounting_work_queue_dashboard_kanban_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="1"/>
-<field name="view_mode">kanban</field>
-<field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_kanban"/>
-<field name="act_window_id" ref="route_core.action_route_custody_accounting_work_queue_dashboard"/>
-</record>
-<record id="action_route_custody_accounting_work_queue_dashboard_list_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="2"/>
-<field name="view_mode">list</field>
-<field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_list"/>
-<field name="act_window_id" ref="route_core.action_route_custody_accounting_work_queue_dashboard"/>
-</record>
-<record id="action_route_custody_accounting_work_queue_dashboard_form_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="3"/>
-<field name="view_mode">form</field>
-<field name="view_id" ref="route_core.view_route_custody_accounting_work_queue_form"/>
-<field name="act_window_id" ref="route_core.action_route_custody_accounting_work_queue_dashboard"/>
-</record>
-<menuitem id="menu_route_custody_accounting_work_queue" name="Accounting Work Queue" parent="account.menu_finance_entries" action="route_core.action_route_custody_accounting_work_queue_dashboard" sequence="83" groups="route_core.group_route_cheque_accountant"/>
+<menuitem id="menu_route_custody_accounting_work_queue" name="Accounting Work Queue" parent="account.menu_finance_entries" action="route_core.action_route_custody_accounting_work_queue" sequence="83" groups="route_core.group_route_cheque_accountant"/>
 </odoo>
