@@ -43,6 +43,9 @@
 <field name="route_cheque_accounting_state"/>
 <field name="route_cheque_accounting_state_label"/>
 <field name="route_cheque_accounting_move_count"/>
+<field name="route_cash_accounting_state"/>
+<field name="route_cash_accounting_state_label"/>
+<field name="route_cash_accounting_move_count"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_cheque_control_card">
@@ -600,6 +603,9 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="route_cheque_accounting_state"/>
 <field name="route_cheque_accounting_state_label"/>
 <field name="route_cheque_accounting_move_count"/>
+<field name="route_cash_accounting_state"/>
+<field name="route_cash_accounting_state_label"/>
+<field name="route_cash_accounting_move_count"/>
 <templates>
 <t t-name="card">
 <div class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card">
@@ -643,6 +649,12 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
 <t t-esc="record.cash_custody_collection_count.value"/>
 <t> Lines</t>
+</span>
+</t>
+<t t-if="record.route_cash_accounting_state_label.raw_value">
+<span t-attf-class="route_pda_payment_badge #{record.route_cash_accounting_state.raw_value == 'not_posted' ? 'route_pda_payment_badge_pending' : 'route_pda_payment_badge_confirmed'}">
+<t>Accounting: </t>
+<t t-esc="record.route_cash_accounting_state_label.value"/>
 </span>
 </t>
 </t>
@@ -797,6 +809,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cash_custody_total_amount" string="Cash Amount" optional="show"/>
 <field name="cash_custody_collection_count" string="Cash Lines" optional="show"/>
 <field name="cash_custody_state" string="Cash Custody" widget="badge" optional="show"/>
+<field name="route_cash_accounting_state" string="Cash Accounting" widget="badge" optional="show"/>
 <field name="cheque_physical_total_amount" string="Cheque Amount" optional="show"/>
 <field name="cheque_number" string="Cheque" optional="show"/>
 <field name="bank_name" string="Bank" optional="show"/>
