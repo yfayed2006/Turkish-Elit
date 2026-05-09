@@ -1746,7 +1746,7 @@ class RouteVisit(models.Model):
 
         metrics = [("Total Due Now", total_due)]
         if has_cheque:
-            metrics.append(("Original Cheque Amount", cheque_original_amount))
+            metrics.append(("Allocated Cheque Amount", cheque_original_amount))
             metrics.append(("Effective Collected", cheque_effective_collected))
             if cheque_open_due:
                 metrics.append(("Open Due From Cheque", cheque_open_due))
