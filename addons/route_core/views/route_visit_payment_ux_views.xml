@@ -20,6 +20,11 @@
 <field name="reference"/>
 <field name="cheque_number"/>
 <field name="cheque_date"/>
+<field name="cheque_followup_state" string="Cheque Status" optional="show"/>
+<field name="cheque_financial_state_label" string="Cheque Financial Effect" optional="show"/>
+<field name="cheque_effective_collected_amount" string="Effective Collected" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
+<field name="route_cheque_accounting_state_label" string="Accounting Status" optional="hide"/>
 <field name="state"/>
 </list>
 <form>
@@ -45,6 +50,11 @@
 <field name="cheque_date" readonly="1"/>
 <field name="cheque_holder_name" readonly="1"/>
 <field name="cheque_note" readonly="1"/>
+<field name="cheque_followup_state_label" string="Cheque Status" readonly="1"/>
+<field name="cheque_financial_state_label" string="Cheque Financial Effect" readonly="1"/>
+<field name="cheque_effective_collected_amount" string="Effective Collected" readonly="1"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" readonly="1"/>
+<field name="route_cheque_accounting_state_label" string="Accounting Status" readonly="1"/>
 <field name="state" readonly="1"/>
 </group>
 </group>
