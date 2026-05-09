@@ -54,7 +54,7 @@
 <field name="outlet_id"/>
 <field name="payment_date"/>
 <field name="collection_time_bucket" string="Collection Time" optional="hide"/>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="collection_type" string="Collection"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -85,7 +85,7 @@
 <field name="salesperson_id" optional="hide"/>
 <field name="payment_date"/>
 <field name="collection_time_bucket" string="Collection Time" optional="hide"/>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="collection_type" string="Collection"/>
 <field name="source_document_ref" string="Source Document" optional="show"/>
 <field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
@@ -748,7 +748,7 @@
 <field name="outlet_id" string="Outlet"/>
 <field name="area_id" string="Area"/>
 <field name="salesperson_id" string="Salesperson"/>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="collection_due_bucket" string="Financial Status"/>
 <field name="collection_promise_bucket" string="Promise"/>
 <field name="collection_type" string="Collection Scenario"/>
@@ -836,7 +836,7 @@
 <field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="cheque_collection_effect_bucket" string="Customer Balance Effect"/>
 <field name="cheque_followup_state" string="Cheque Lifecycle Status"/>
 <field name="collection_due_bucket" string="Collection Balance"/>
@@ -904,7 +904,7 @@
 <field name="collection_time_bucket" string="Collection Time"/>
 <field name="payment_business_flow" string="Flow"/>
 <field name="outlet_id" string="Outlet"/>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="collection_due_bucket" string="Collection Balance"/>
 <field name="collection_promise_bucket" string="Promise"/>
 <field name="state" string="Status"/>
@@ -1164,7 +1164,7 @@
 <filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
 <filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
 <searchpanel>
-<field name="payment_mode" string="Payment Mode"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="outlet_id" string="Outlet"/>
 <field name="cheque_followup_state" string="Cheque Lifecycle"/>
