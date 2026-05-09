@@ -97,7 +97,7 @@
 </div>
 <div class="route_pda_payment_metrics route_cheque_control_metrics">
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheque Amount</span>
+<span class="route_pda_payment_metric_label">Physical Cheque Total</span>
 <span class="route_pda_payment_metric_value">
 <field name="cheque_physical_total_amount"/>
 </span>
@@ -141,11 +141,11 @@
 <button name="action_cheque_receive_from_salesperson" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_supervisor_receive">Receive From Salesperson</button>
 <button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over to Accounting</button>
 <button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_accountant_receive">Confirm Accounting Receipt</button>
-<button name="action_cheque_mark_deposited" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']">Send To Bank</button>
-<button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Cleared</button>
+<button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received', 'deposited'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Cheque Receipt Entry</button>
+<button name="action_cheque_mark_deposited" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']">Send to Bank Collection</button>
+<button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Bank Cleared</button>
 <button name="action_cheque_mark_bounced" type="object" class="btn btn-sm btn-warning" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Bounced</button>
 <button name="action_cheque_mark_cancelled" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Cancel Cheque</button>
-<button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received', 'deposited'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Receipt Voucher Entry</button>
 <button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'cleared' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Bank Clearance Entry</button>
 <button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in ['bounced', 'cancelled'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'">Post Open Due Entry</button>
 <button name="action_route_open_cheque_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="route_cheque_accounting_move_count == 0">Entries</button>
@@ -169,7 +169,7 @@
 <field name="outlet_id"/>
 <field name="salesperson_id"/>
 <field name="payment_date"/>
-<field name="cheque_physical_total_amount" string="Cheque Amount"/>
+<field name="cheque_physical_total_amount" string="Physical Cheque Total"/>
 <field name="cheque_physical_allocation_count" string="Allocations" optional="show"/>
 <field name="cheque_physical_source_summary" string="Allocation Sources" optional="show"/>
 <field name="cheque_physical_settlement_summary" string="Settlement Visits" optional="hide"/>
@@ -190,11 +190,13 @@
 <button name="action_cheque_receive_from_salesperson" type="object" string="Receive From Salesperson" invisible="not route_cheque_can_supervisor_receive"/>
 <button name="action_cheque_handover_to_accounting" type="object" string="Hand Over to Accounting" invisible="not route_cheque_can_handover_accounting"/>
 <button name="action_cheque_accounting_receive" type="object" string="Confirm Accounting Receipt" invisible="not route_cheque_can_accountant_receive"/>
-<button name="action_cheque_mark_deposited" type="object" string="Send To Bank" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']"/>
-<button name="action_cheque_mark_cleared" type="object" string="Mark Cleared" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
+<button name="action_route_post_cheque_accounting" type="object" string="Post Cheque Receipt Entry" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received', 'deposited'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
+<button name="action_cheque_mark_deposited" type="object" string="Send to Bank Collection" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']"/>
+<button name="action_cheque_mark_cleared" type="object" string="Mark Bank Cleared" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
 <button name="action_cheque_mark_bounced" type="object" string="Mark Bounced" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
 <button name="action_cheque_mark_cancelled" type="object" string="Cancel Cheque" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
-<button name="action_route_post_cheque_accounting" type="object" string="Post Accounting Entry" invisible="not route_cheque_can_accountant_work or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
+<button name="action_route_post_cheque_accounting" type="object" string="Post Bank Clearance Entry" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'cleared' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
+<button name="action_route_post_cheque_accounting" type="object" string="Post Open Due Entry" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in ['bounced', 'cancelled'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_open_cheque_accounting_moves" type="object" string="Entries" invisible="route_cheque_accounting_move_count == 0"/>
 </list>
 </field>
@@ -209,11 +211,11 @@
 <button name="action_cheque_receive_from_salesperson" string="Receive From Salesperson" type="object" class="btn-secondary" invisible="not route_cheque_can_supervisor_receive"/>
 <button name="action_cheque_handover_to_accounting" string="Hand Over to Accounting" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting"/>
 <button name="action_cheque_accounting_receive" string="Confirm Accounting Receipt" type="object" class="btn-primary" invisible="not route_cheque_can_accountant_receive"/>
-<button name="action_cheque_mark_deposited" string="Send To Bank" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']"/>
-<button name="action_cheque_mark_cleared" string="Mark Cleared" type="object" class="btn-success" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
+<button name="action_route_post_cheque_accounting" string="Post Cheque Receipt Entry" type="object" class="btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received', 'deposited'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
+<button name="action_cheque_mark_deposited" string="Send to Bank Collection" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received']"/>
+<button name="action_cheque_mark_cleared" string="Mark Bank Cleared" type="object" class="btn-success" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
 <button name="action_cheque_mark_bounced" string="Mark Bounced" type="object" class="btn-warning" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
 <button name="action_cheque_mark_cancelled" string="Cancel Cheque" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'"/>
-<button name="action_route_post_cheque_accounting" string="Post Receipt Voucher Entry" type="object" class="btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in [False, 'received', 'deposited'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_post_cheque_accounting" string="Post Bank Clearance Entry" type="object" class="btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state != 'cleared' or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_post_cheque_accounting" string="Post Open Due Entry" type="object" class="btn-primary" invisible="not route_cheque_can_accountant_work or cheque_followup_state not in ['bounced', 'cancelled'] or route_cheque_accounting_enabled == False or route_cheque_accounting_state != 'not_posted'"/>
 <button name="action_route_open_cheque_accounting_moves" string="Accounting Entries" type="object" class="btn-secondary" invisible="route_cheque_accounting_move_count == 0"/>
@@ -252,7 +254,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 </div>
 <div class="route_pda_payment_summary_grid">
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Physical Cheque Amount</div>
+<div class="route_pda_info_label">Physical Cheque Total</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="cheque_physical_total_amount" readonly="1" nolabel="1"/>
 </div>
@@ -740,7 +742,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 </t>
 <t t-else="">
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Cheque Amount</span>
+<span class="route_pda_payment_metric_label">Physical Cheque Total</span>
 <span class="route_pda_payment_metric_value">
 <field name="cheque_physical_total_amount"/>
 </span>
@@ -811,7 +813,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cash_custody_collection_count" string="Cash Lines" optional="show"/>
 <field name="cash_custody_state" string="Cash Custody" widget="badge" optional="show"/>
 <field name="route_cash_accounting_state" string="Cash Accounting" widget="badge" optional="show"/>
-<field name="cheque_physical_total_amount" string="Cheque Amount" optional="show"/>
+<field name="cheque_physical_total_amount" string="Physical Cheque Total" optional="show"/>
 <field name="cheque_number" string="Cheque" optional="show"/>
 <field name="bank_name" string="Bank" optional="show"/>
 <field name="cheque_date" string="Cheque Date" optional="show"/>
