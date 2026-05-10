@@ -124,8 +124,8 @@ class RouteCustodyAccountingWorkQueue(models.Model):
                         COUNT(*) FILTER (WHERE cheque_custody_state = 'handed_to_accounting') AS cheque_waiting_receipt_count,
                         COALESCE(SUM(amount) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND NOT received_posted), 0) AS cheque_received_not_posted_amount,
                         COUNT(*) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND NOT received_posted) AS cheque_received_not_posted_count,
-                        COALESCE(SUM(amount) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND cheque_followup_state IN ('received', 'deposited')), 0) AS bank_pending_amount,
-                        COUNT(*) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND cheque_followup_state IN ('received', 'deposited')) AS bank_pending_count,
+                        COALESCE(SUM(amount) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND cheque_followup_state = 'deposited'), 0) AS bank_pending_amount,
+                        COUNT(*) FILTER (WHERE cheque_custody_state = 'received_by_accounting' AND cheque_followup_state = 'deposited') AS bank_pending_count,
                         COALESCE(SUM(amount) FILTER (WHERE cheque_followup_state = 'bounced'), 0) AS bounced_followup_amount,
                         COUNT(*) FILTER (WHERE cheque_followup_state = 'bounced') AS bounced_followup_count,
                         COALESCE(SUM(amount) FILTER (WHERE cheque_followup_state = 'cancelled'), 0) AS cancelled_followup_amount,
@@ -377,9 +377,9 @@ class RouteCustodyAccountingWorkQueue(models.Model):
             + [
                 ("payment_mode", "=", "cheque"),
                 ("cheque_custody_state", "=", "received_by_accounting"),
-                ("cheque_followup_state", "in", [False, "received", "deposited"]),
+                ("cheque_followup_state", "=", "deposited"),
             ],
-            {"search_default_filter_cheque": 1},
+            {"search_default_filter_cheque": 1, "search_default_filter_cheque_under_bank": 1},
         )
 
     def action_open_followup(self):
@@ -389,8 +389,10 @@ class RouteCustodyAccountingWorkQueue(models.Model):
             self._base_payment_domain()
             + [
                 ("payment_mode", "=", "cheque"),
+                "|",
                 ("cheque_followup_state", "in", ["bounced", "cancelled"]),
+                ("cheque_collection_effect_bucket", "=", "open_due"),
             ],
-            {"search_default_filter_cheque": 1},
+            {"search_default_filter_cheque": 1, "search_default_filter_cheque_open_due": 1},
         )
 
