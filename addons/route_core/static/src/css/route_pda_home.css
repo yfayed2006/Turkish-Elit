@@ -6978,3 +6978,142 @@ html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .o_kanba
     box-shadow: inset -6px 0 0 #0ea5a8, 0 14px 32px rgba(15, 23, 42, 0.10) !important;
 }
 
+
+/* Split Payment Lines: keep desktop list behavior, but render the editable one2many as cards on mobile. */
+@media (max-width: 768px) {
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines {
+        display: block;
+        width: 100%;
+        overflow: visible !important;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines .o_list_renderer,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines .o_list_view,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines .table-responsive {
+        overflow: visible !important;
+        width: 100%;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table {
+        display: block;
+        width: 100% !important;
+        min-width: 0 !important;
+        border: 0;
+        background: transparent;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table thead,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tfoot {
+        display: none;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        margin: 0 0 10px 0;
+        padding: 10px 10px 12px 12px;
+        border: 1px solid #e5e7eb;
+        border-left: 4px solid #0ea5a4;
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        min-height: 58px;
+        min-width: 0;
+        padding: 9px 10px !important;
+        border: 1px solid #eef2f7 !important;
+        border-radius: 12px;
+        background: #f8fafc;
+        white-space: normal !important;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.o_list_record_selector,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.o_handle_cell,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="currency_id"] {
+        display: none !important;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="reference"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="bank_name"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="pos_terminal"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_number"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_date"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_holder_name"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_note"] {
+        grid-column: 1 / -1;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name]::before {
+        display: block;
+        color: #6b7280;
+        font-size: 0.72rem;
+        font-weight: 800;
+        line-height: 1.15;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="payment_mode"]::before { content: "Payment Mode"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="amount"]::before { content: "Amount"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="payment_date"]::before { content: "Payment Date"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="reference"]::before { content: "Reference"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="bank_name"]::before { content: "Bank Name"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="pos_terminal"]::before { content: "POS Terminal"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_number"]::before { content: "Cheque Number"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_date"]::before { content: "Cheque Date"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_holder_name"]::before { content: "Cheque Holder"; }
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="cheque_note"]::before { content: "Cheque Details"; }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td .o_field_widget,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td .o_input,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td input,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td select,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td textarea {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        font-weight: 700;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.o_list_record_remove,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.o_list_record_delete {
+        grid-column: 1 / -1;
+        min-height: 42px;
+        align-items: center;
+        background: #fff7ed;
+        border-color: #fed7aa !important;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_field_x2many_list_row_add {
+        display: block;
+        width: 100%;
+        margin: 4px 0 10px 0;
+    }
+
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_field_x2many_list_row_add > td {
+        display: block;
+        width: 100%;
+        padding: 10px 4px !important;
+        border: 0 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row {
+        grid-template-columns: 1fr;
+    }
+}
+
