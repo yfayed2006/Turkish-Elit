@@ -57,7 +57,32 @@ class RouteVisitCollectPaymentWizardLine(models.TransientModel):
     cheque_holder_name = fields.Char(string="Cheque Holder")
     cheque_note = fields.Text(string="Cheque Details")
 
-    @api.onchange("payment_mode")
+    def _get_remaining_amount_excluding_self(self):
+        self.ensure_one()
+        wizard = self.wizard_id
+        if not wizard:
+            return 0.0
+
+        due = wizard._get_effective_due_amount() if wizard.visit_id else 0.0
+        other_total = 0.0
+        for line in wizard.payment_line_ids:
+            if line == self:
+                continue
+            other_total += line.amount or 0.0
+
+        remaining = max((due or 0.0) - (other_total or 0.0), 0.0)
+        currency = wizard.currency_id or self.currency_id
+        return currency.round(remaining) if currency else remaining
+
+    def _auto_fill_remaining_amount(self):
+        for rec in self:
+            wizard = rec.wizard_id
+            if not wizard or wizard.settlement_mode != "split" or wizard.collection_type != "full":
+                continue
+            if (rec.amount or 0.0) <= 0.0:
+                rec.amount = rec._get_remaining_amount_excluding_self()
+
+    @api.onchange("payment_mode", "wizard_id")
     def _onchange_payment_mode(self):
         for rec in self:
             if rec.payment_mode == "cash":
@@ -84,6 +109,13 @@ class RouteVisitCollectPaymentWizardLine(models.TransientModel):
                 rec.pos_terminal = False
                 if rec.cheque_number and not rec.reference:
                     rec.reference = rec.cheque_number
+
+            rec._auto_fill_remaining_amount()
+
+    @api.onchange("amount")
+    def _onchange_amount(self):
+        for rec in self:
+            rec._auto_fill_remaining_amount()
 
     @api.onchange("cheque_number")
     def _onchange_cheque_number(self):
@@ -459,6 +491,7 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     @api.depends(
         "settlement_mode",
         "amount",
+        "payment_line_ids",
         "payment_line_ids.amount",
         "direct_stop_settlement_remaining_amount",
         "visit_remaining_due",
@@ -666,6 +699,25 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 rec.payment_line_ids = [(0, 0, {"payment_mode": "cash", "payment_date": rec.payment_date or fields.Datetime.now(), "amount": due})]
             rec._sync_promise_fields()
 
+    def _auto_fill_zero_split_payment_lines(self):
+        for rec in self:
+            if rec.settlement_mode != "split" or rec.collection_type != "full":
+                continue
+
+            due = rec._get_effective_due_amount()
+            if due <= 0.0 or not rec.payment_line_ids:
+                continue
+
+            running_total = 0.0
+            currency = rec.currency_id
+            for line in rec.payment_line_ids:
+                line_amount = line.amount or 0.0
+                if line_amount <= 0.0:
+                    remaining = max((due or 0.0) - (running_total or 0.0), 0.0)
+                    line.amount = currency.round(remaining) if currency else remaining
+                    line_amount = line.amount or 0.0
+                running_total += line_amount
+
     @api.onchange("settlement_mode")
     def _onchange_settlement_mode(self):
         for rec in self:
@@ -674,10 +726,12 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 rec.settlement_mode = "single"
             elif rec.settlement_mode == "split" and not rec.payment_line_ids and due > 0.0:
                 rec.payment_line_ids = [(0, 0, {"payment_mode": "cash", "payment_date": rec.payment_date or fields.Datetime.now(), "amount": due})]
+            rec._auto_fill_zero_split_payment_lines()
             rec._sync_promise_fields()
 
-    @api.onchange("payment_line_ids", "payment_line_ids.amount")
+    @api.onchange("payment_line_ids", "payment_line_ids.amount", "payment_line_ids.payment_mode")
     def _onchange_payment_lines(self):
+        self._auto_fill_zero_split_payment_lines()
         self._sync_promise_fields()
 
     @api.onchange("payment_mode")
