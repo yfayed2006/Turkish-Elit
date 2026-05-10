@@ -431,6 +431,18 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_route_custody_ui_context_flags",
         store=False,
     )
+    route_custody_show_accounting_actions = fields.Boolean(
+        string="Show Accounting Custody Actions",
+        compute="_compute_route_custody_ui_context_flags",
+        store=False,
+    )
+    route_custody_salesperson_open_visible = fields.Boolean(
+        string="Visible in Salesperson Custody Until Accounting Receipt",
+        compute="_compute_route_custody_flags",
+        search="_search_route_custody_salesperson_open_visible",
+        store=False,
+        help="Shows salesperson custody cards that are still with the salesperson or handed to Accounting but not yet confirmed by Accounting.",
+    )
     route_custody_accounting_todo_visible = fields.Boolean(
         string="Visible in Accounting Custody Work Queue",
         compute="_compute_route_custody_flags",
@@ -448,9 +460,10 @@ class RouteVisitPaymentChequeFollowup(models.Model):
 
     @api.depends_context("route_accounting_custody_monitor_mode")
     def _compute_route_custody_ui_context_flags(self):
-        show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode"))
+        accounting_mode = bool(self.env.context.get("route_accounting_custody_monitor_mode"))
         for rec in self:
-            rec.route_custody_show_salesperson_handover = show_handover
+            rec.route_custody_show_salesperson_handover = not accounting_mode
+            rec.route_custody_show_accounting_actions = accounting_mode
 
     def _route_user_is_route_salesperson_or_manager(self):
         user = self.env.user
@@ -878,6 +891,16 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             visible_ids = [0]
         return [("id", "in" if wants_visible else "not in", visible_ids)]
 
+    def _search_route_custody_salesperson_open_visible(self, operator, value):
+        if operator not in ("=", "!="):
+            raise ValidationError(_("Unsupported search operator for Salesperson Open Custody visibility."))
+        value = bool(value)
+        wants_visible = (operator == "=" and value) or (operator == "!=" and not value)
+        visible_ids = self._route_custody_primary_ids_sql(custody_states=("with_salesperson", "handed_to_accounting"))
+        if not visible_ids:
+            visible_ids = [0]
+        return [("id", "in" if wants_visible else "not in", visible_ids)]
+
     @api.depends(
         "payment_mode",
         "cash_custody_is_primary",
@@ -897,6 +920,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 cash_state = rec.cash_custody_state or "with_salesperson"
                 rec.route_custody_accounting_visible = bool(is_cash_primary and cash_state in ("handed_to_accounting", "received_by_accounting"))
                 rec.route_custody_with_salesperson_visible = bool(is_cash_primary and cash_state == "with_salesperson")
+                rec.route_custody_salesperson_open_visible = bool(is_cash_primary and cash_state in ("with_salesperson", "handed_to_accounting"))
                 rec.route_custody_accounting_todo_visible = bool(
                     is_cash_primary
                     and (
@@ -920,6 +944,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 )
                 rec.route_custody_accounting_visible = bool(is_cheque_primary and cheque_state in ("handed_to_accounting", "received_by_accounting"))
                 rec.route_custody_with_salesperson_visible = bool(is_cheque_primary and cheque_state == "with_salesperson")
+                rec.route_custody_salesperson_open_visible = bool(is_cheque_primary and cheque_state in ("with_salesperson", "handed_to_accounting"))
                 rec.route_custody_accounting_todo_visible = bool(is_cheque_primary and cheque_state in ("with_salesperson", "handed_to_accounting"))
                 rec.route_custody_monitor_open_visible = bool(
                     is_cheque_primary
@@ -931,6 +956,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             else:
                 rec.route_custody_accounting_visible = False
                 rec.route_custody_with_salesperson_visible = False
+                rec.route_custody_salesperson_open_visible = False
                 rec.route_custody_accounting_todo_visible = False
                 rec.route_custody_monitor_open_visible = False
 
@@ -945,13 +971,15 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         else:
             records = self
             title = _("Custody Details")
+        action_context = dict(self.env.context or {})
+        action_context.update({"create": 0, "edit": 0, "delete": 0})
         return {
             "type": "ir.actions.act_window",
             "name": title,
             "res_model": "route.visit.payment",
             "view_mode": "list,form",
             "domain": [("id", "in", records.ids)],
-            "context": {"create": 0, "edit": 0, "delete": 0},
+            "context": action_context,
             "target": "current",
         }
 
