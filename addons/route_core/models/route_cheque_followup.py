@@ -2286,9 +2286,13 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             values[date_field] = now
         batch_records.write(values)
 
+        auto_post_bank_clearance = (
+            state == "cleared"
+            and self.env.context.get("route_auto_post_bank_clearance_after_mark_cleared")
+        )
         auto_records = batch_records.filtered(
             lambda payment: payment.company_id.route_cheque_accounting_enabled
-            and payment.company_id.route_cheque_accounting_auto_post
+            and (payment.company_id.route_cheque_accounting_auto_post or auto_post_bank_clearance)
         )
         if auto_records:
             auto_records._route_post_cheque_accounting_for_current_state()
