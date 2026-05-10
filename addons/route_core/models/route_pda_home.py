@@ -931,14 +931,14 @@ class RoutePdaHome(models.TransientModel):
             custody_primary_payments = Payment.browse()
             if hasattr(Payment, "_route_custody_primary_ids_sql"):
                 custody_primary_payments = Payment.browse(Payment._route_custody_primary_ids_sql(
-                    custody_states=("with_salesperson",),
+                    custody_states=("with_salesperson", "handed_to_accounting"),
                     salesperson_id=user.id,
                 )).exists()
             else:
                 custody_primary_payments = all_confirmed_payments.filtered(
                     lambda p: (
-                        (rec._get_payment_snapshot_mode(p) == "cash" and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson")
-                        or (rec._get_payment_snapshot_mode(p) == "cheque" and (getattr(p, "cheque_custody_state", False) or "with_salesperson") == "with_salesperson")
+                        (rec._get_payment_snapshot_mode(p) == "cash" and (getattr(p, "cash_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
+                        or (rec._get_payment_snapshot_mode(p) == "cheque" and (getattr(p, "cheque_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
                     )
                 )
             custody_cash_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) == "cash")
@@ -1419,7 +1419,7 @@ class RoutePdaHome(models.TransientModel):
         primary_ids = []
         if hasattr(Payment, "_route_custody_primary_ids_sql"):
             primary_ids = Payment._route_custody_primary_ids_sql(
-                custody_states=("with_salesperson",),
+                custody_states=("with_salesperson", "handed_to_accounting"),
                 salesperson_id=self.env.user.id,
             )
         return self._prepare_action(
@@ -1430,12 +1430,9 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", self.env.user.id),
                 ("state", "=", "confirmed"),
                 ("payment_mode", "in", ["cash", "cheque"]),
-                "|",
-                    "&", ("payment_mode", "=", "cash"), ("cash_custody_state", "in", [False, "with_salesperson"]),
-                    "&", ("payment_mode", "=", "cheque"), ("cheque_custody_state", "in", [False, "with_salesperson"]),
+                ("route_custody_salesperson_open_visible", "=", True),
             ],
             context={
-                "search_default_filter_custody_with_salesperson": 1,
                 "create": 0,
                 "edit": 0,
                 "delete": 0,
