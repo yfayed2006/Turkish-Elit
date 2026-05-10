@@ -7046,6 +7046,12 @@ html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .o_kanba
         display: none !important;
     }
 
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.o_invisible_modifier,
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[style*="display: none"],
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td:has(.o_invisible_modifier) {
+        display: none !important;
+    }
+
     .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="reference"],
     .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="bank_name"],
     .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td[name="pos_terminal"],
