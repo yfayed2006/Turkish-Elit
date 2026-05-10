@@ -3,10 +3,13 @@
 /*
  * Route Core - Split Payment mobile line cleanup.
  *
- * The split payment one2many remains an editable Odoo list. On mobile, CSS renders every
- * row as a card, but Odoo list views do not consistently remove per-row invisible cells
- * for selection-dependent fields. This small helper reads the payment mode of every row
- * and hides fields that do not belong to that mode.
+ * The split payment one2many remains an editable Odoo list. This helper keeps the
+ * Route Core collect-payment wizard readable by forcing the split lines into payment
+ * cards and hiding fields that do not belong to the selected payment mode.
+ *
+ * Important: we intentionally do not depend on the browser width. Salespeople often use
+ * PDA/tablet/desktop browser windows where the modal is wide enough to bypass mobile
+ * media queries, but the workflow still needs the same simplified card behavior.
  */
 
 const FIELD_SETS = {
@@ -30,8 +33,8 @@ const HIDDEN_CLASS = "route_split_payment_runtime_hidden";
 const ROW_MODE_PREFIX = "route_split_payment_mode_";
 const MODE_CLASSES = Object.keys(FIELD_SETS).map((mode) => `${ROW_MODE_PREFIX}${mode}`);
 
-function isMobileSplitPaymentLayout() {
-    return window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
+function isSplitPaymentLayoutEnabled() {
+    return Boolean(document.querySelector(".route_pda_collect_payment_sheet .route_pda_split_payment_lines"));
 }
 
 function normalizeMode(value) {
@@ -71,11 +74,12 @@ function getPaymentModeFromRow(row) {
     }
 
     const fieldValue = cell.querySelector(".o_field_widget");
-    return normalizeMode((fieldValue || cell).textContent || "");
+    const title = cell.getAttribute("title") || cell.querySelector("[title]")?.getAttribute("title") || "";
+    return normalizeMode((fieldValue || cell).textContent || title || "");
 }
 
 function cellName(cell) {
-    return cell.getAttribute("name") || "";
+    return cell.getAttribute("name") || cell.dataset?.name || cell.dataset?.field || "";
 }
 
 function clearRuntimeVisibility(row) {
@@ -89,7 +93,7 @@ function clearRuntimeVisibility(row) {
 function applyRowVisibility(row) {
     clearRuntimeVisibility(row);
 
-    if (!isMobileSplitPaymentLayout()) {
+    if (!isSplitPaymentLayoutEnabled()) {
         return;
     }
 
@@ -114,7 +118,11 @@ function applyRowVisibility(row) {
 
 function applyAllSplitPaymentRows() {
     document
-        .querySelectorAll(".route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row")
+        .querySelectorAll(".route_pda_collect_payment_sheet .route_pda_split_payment_lines")
+        .forEach((container) => container.classList.add("route_split_payment_cards_enabled"));
+
+    document
+        .querySelectorAll(".route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row")
         .forEach(applyRowVisibility);
 }
 
@@ -148,6 +156,29 @@ function startObserver() {
         (ev) => {
             if (ev.target && ev.target.closest && ev.target.closest(".route_pda_split_payment_lines")) {
                 scheduleApply();
+            }
+        },
+        true
+    );
+
+
+    document.addEventListener(
+        "click",
+        (ev) => {
+            if (ev.target && ev.target.closest && (ev.target.closest(".route_pda_split_payment_lines") || ev.target.closest(".o-autocomplete--dropdown-menu, .o-dropdown--menu, .dropdown-menu"))) {
+                window.setTimeout(scheduleApply, 0);
+                window.setTimeout(scheduleApply, 120);
+            }
+        },
+        true
+    );
+
+    document.addEventListener(
+        "focusout",
+        (ev) => {
+            if (ev.target && ev.target.closest && ev.target.closest(".route_pda_split_payment_lines")) {
+                window.setTimeout(scheduleApply, 0);
+                window.setTimeout(scheduleApply, 120);
             }
         },
         true
