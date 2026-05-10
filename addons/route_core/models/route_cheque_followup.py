@@ -2573,4 +2573,3 @@ class SaleOrderChequeFinancialPolicy(models.Model):
             order.direct_sale_payment_count = len(active_payments)
             order.direct_sale_collected_amount = collected_amount
             order.direct_sale_remaining_due = order._get_route_payment_remaining_due()
-
