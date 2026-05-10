@@ -1666,6 +1666,143 @@ class RouteVisit(models.Model):
         self.ensure_one()
         return self._get_direct_stop_settlement_payments(states=["confirmed"])
 
+    def _route_receipt_payment_group_key(self, payment):
+        mode = payment.payment_mode or "cash"
+        if mode == "cheque":
+            return (
+                mode,
+                payment.cheque_number or payment.reference or "",
+                payment.bank_name or "",
+                fields.Date.to_string(payment.cheque_date) if payment.cheque_date else "",
+                payment.cheque_holder_name or "",
+                payment.cheque_note or "",
+            )
+        if mode == "bank":
+            return (mode, payment.reference or "", payment.bank_name or "")
+        if mode == "pos":
+            return (mode, payment.reference or "", payment.pos_terminal or "")
+        if mode == "deferred":
+            return (
+                mode,
+                fields.Date.to_string(payment.due_date) if payment.due_date else "",
+                fields.Date.to_string(payment.promise_date) if payment.promise_date else "",
+                payment.note or "",
+            )
+        return (mode,)
+
+    def _get_direct_stop_receipt_payment_instruments(self):
+        """Return customer-facing payment instruments, not allocation lines.
+
+        Direct-stop settlement can split one physical payment over many old-due
+        visits.  The receipt and WhatsApp message must show the actual payment
+        instruments once (one cash amount, one cheque number, one POS slip, etc.)
+        while still keeping the allocation count for audit visibility.
+        """
+        self.ensure_one()
+        payments = self._get_direct_stop_receipt_payments().filtered(
+            lambda p: (p.amount or 0.0) > 0.0 or (p.promise_amount or 0.0) > 0.0
+        )
+        if not payments:
+            return []
+
+        payment_mode_labels = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
+        collection_type_labels = dict(self.env["route.visit.payment"]._fields["collection_type"].selection)
+        grouped = {}
+        sequence = []
+
+        for payment in payments:
+            key = self._route_receipt_payment_group_key(payment)
+            mode = payment.payment_mode or "cash"
+            if key not in grouped:
+                grouped[key] = {
+                    "mode": mode,
+                    "mode_label": payment_mode_labels.get(mode, mode),
+                    "scenario_labels": [],
+                    "amount": 0.0,
+                    "promise_amount": 0.0,
+                    "payment_date": payment.payment_date,
+                    "payment_date_label": self._format_route_payment_datetime(payment.payment_date) if hasattr(self, "_format_route_payment_datetime") else (fields.Datetime.to_string(payment.payment_date) if payment.payment_date else "-"),
+                    "promise_date": payment.promise_date,
+                    "promise_date_label": self._format_route_payment_date(payment.promise_date) if payment.promise_date and hasattr(self, "_format_route_payment_date") else (fields.Date.to_string(payment.promise_date) if payment.promise_date else "-"),
+                    "reference": payment.reference or "",
+                    "bank_name": payment.bank_name or "",
+                    "pos_terminal": payment.pos_terminal or "",
+                    "cheque_number": payment.cheque_number or "",
+                    "cheque_date": payment.cheque_date,
+                    "cheque_date_label": self._format_route_payment_date(payment.cheque_date) if payment.cheque_date and hasattr(self, "_format_route_payment_date") else (fields.Date.to_string(payment.cheque_date) if payment.cheque_date else "-"),
+                    "cheque_holder_name": payment.cheque_holder_name or "",
+                    "cheque_note": payment.cheque_note or "",
+                    "source_refs": [],
+                    "allocation_count": 0,
+                    "details": "",
+                }
+                sequence.append(key)
+
+            entry = grouped[key]
+            entry["amount"] += payment.amount or 0.0
+            entry["promise_amount"] += (getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0)
+            entry["allocation_count"] += 1
+
+            scenario_label = collection_type_labels.get(payment.collection_type, payment.collection_type or "")
+            if scenario_label and scenario_label not in entry["scenario_labels"]:
+                entry["scenario_labels"].append(scenario_label)
+
+            source_ref = payment.source_document_ref or (payment.visit_id.name if payment.visit_id else "")
+            if source_ref and source_ref not in entry["source_refs"]:
+                entry["source_refs"].append(source_ref)
+
+            if payment.payment_date and (not entry["payment_date"] or payment.payment_date < entry["payment_date"]):
+                entry["payment_date"] = payment.payment_date
+                entry["payment_date_label"] = self._format_route_payment_datetime(payment.payment_date) if hasattr(self, "_format_route_payment_datetime") else fields.Datetime.to_string(payment.payment_date)
+
+            if payment.promise_date and (not entry["promise_date"] or payment.promise_date < entry["promise_date"]):
+                entry["promise_date"] = payment.promise_date
+                entry["promise_date_label"] = self._format_route_payment_date(payment.promise_date) if hasattr(self, "_format_route_payment_date") else fields.Date.to_string(payment.promise_date)
+
+        result = []
+        for key in sequence:
+            entry = grouped[key]
+            details = []
+            mode = entry["mode"]
+            if mode == "cheque":
+                if entry.get("cheque_number"):
+                    details.append(_("Cheque: %s") % entry["cheque_number"])
+                if entry.get("bank_name"):
+                    details.append(_("Bank: %s") % entry["bank_name"])
+                if entry.get("cheque_date"):
+                    details.append(_("Cheque Date: %s") % entry["cheque_date_label"])
+                if entry.get("cheque_holder_name"):
+                    details.append(_("Holder: %s") % entry["cheque_holder_name"])
+                if entry.get("cheque_note"):
+                    details.append(_("Details: %s") % entry["cheque_note"])
+            elif mode == "bank":
+                if entry.get("bank_name"):
+                    details.append(_("Bank: %s") % entry["bank_name"])
+                if entry.get("reference"):
+                    details.append(_("Reference: %s") % entry["reference"])
+            elif mode == "pos":
+                if entry.get("pos_terminal"):
+                    details.append(_("POS Terminal: %s") % entry["pos_terminal"])
+                if entry.get("reference"):
+                    details.append(_("Reference: %s") % entry["reference"])
+            elif mode == "deferred":
+                if entry.get("promise_date"):
+                    details.append(_("Promise Date: %s") % entry["promise_date_label"])
+
+            if entry["allocation_count"] > 1:
+                details.append(_("Allocation Lines: %s") % entry["allocation_count"])
+            if entry["source_refs"]:
+                source_preview = ", ".join(entry["source_refs"][:4])
+                if len(entry["source_refs"]) > 4:
+                    source_preview = _("%s + %s more") % (source_preview, len(entry["source_refs"]) - 4)
+                details.append(_("Covers: %s") % source_preview)
+
+            entry["scenario_label"] = ", ".join(entry["scenario_labels"]) or "-"
+            entry["details"] = "\n".join(details) if details else "-"
+            result.append(entry)
+
+        return result
+
     def _get_direct_stop_receipt_summary(self):
         self.ensure_one()
         promise_payments = self._get_direct_stop_receipt_payments().filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
@@ -2006,29 +2143,49 @@ class RouteVisit(models.Model):
         if not payments:
             return []
 
-        mode_labels = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
+        instruments = self._get_direct_stop_receipt_payment_instruments() if self._is_direct_sales_stop() else []
+        if not instruments:
+            mode_labels = dict(self.env["route.visit.payment"]._fields["payment_mode"].selection)
+            mode_order = ["cash", "bank", "pos", "cheque", "deferred"]
+            used_modes = []
+            for mode in mode_order:
+                if any((p.payment_mode or "cash") == mode for p in payments):
+                    used_modes.append(mode_labels.get(mode, mode))
+
+            lines = []
+            if used_modes:
+                lines.append(_("Payment Mode: %s") % ", ".join(used_modes))
+            cheque_payments = payments.filtered(lambda p: p.payment_mode == "cheque")
+            if cheque_payments:
+                lines.append(_("Cheques: %s") % len(cheque_payments))
+            return lines
+
         mode_order = ["cash", "bank", "pos", "cheque", "deferred"]
         used_modes = []
         for mode in mode_order:
-            if any((p.payment_mode or "cash") == mode for p in payments):
-                used_modes.append(mode_labels.get(mode, mode))
+            label = next((instrument["mode_label"] for instrument in instruments if instrument["mode"] == mode), False)
+            if label:
+                used_modes.append(label)
 
         lines = []
         if used_modes:
             lines.append(_("Payment Mode: %s") % ", ".join(used_modes))
 
-        cheque_payments = payments.filtered(lambda p: p.payment_mode == "cheque")
-        if cheque_payments:
-            if len(cheque_payments) == 1:
-                cheque = cheque_payments[0]
-                if cheque.cheque_number:
-                    lines.append(_("Cheque Ref: %s") % cheque.cheque_number)
-                if cheque.bank_name:
-                    lines.append(_("Cheque Bank: %s") % cheque.bank_name)
-                if cheque.cheque_date:
-                    lines.append(_("Cheque Date: %s") % self._format_route_payment_date(cheque.cheque_date))
+        cheque_instruments = [instrument for instrument in instruments if instrument["mode"] == "cheque"]
+        if cheque_instruments:
+            if len(cheque_instruments) == 1:
+                cheque = cheque_instruments[0]
+                lines.append(_("Cheque Amount: %s") % self._format_route_currency_amount(cheque.get("amount", 0.0)))
+                if cheque.get("cheque_number"):
+                    lines.append(_("Cheque Ref: %s") % cheque["cheque_number"])
+                if cheque.get("bank_name"):
+                    lines.append(_("Cheque Bank: %s") % cheque["bank_name"])
+                if cheque.get("cheque_date"):
+                    lines.append(_("Cheque Date: %s") % cheque["cheque_date_label"])
             else:
-                lines.append(_("Cheques: %s") % len(cheque_payments))
+                total_cheque_amount = sum(instrument.get("amount", 0.0) for instrument in cheque_instruments)
+                lines.append(_("Cheques: %s") % len(cheque_instruments))
+                lines.append(_("Cheques Total: %s") % self._format_route_currency_amount(total_cheque_amount))
 
         return lines
 
