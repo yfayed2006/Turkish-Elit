@@ -34,6 +34,7 @@
 <t t-set="returns" t-value="doc._get_direct_stop_receipt_returns()"/>
 <t t-set="return_lines" t-value="doc._get_direct_stop_receipt_return_lines()"/>
 <t t-set="payments" t-value="doc._get_direct_stop_receipt_payments()"/>
+<t t-set="payment_instruments" t-value="doc._get_direct_stop_receipt_payment_instruments()"/>
 <t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
 <t t-set="sale_total" t-value="sum(line['subtotal'] for line in sale_lines) if sale_lines else 0.0"/>
 <t t-set="sale_tax_total" t-value="max((summary.get('current_sale', 0.0) or 0.0) - (sale_total or 0.0), 0.0)"/>
@@ -41,7 +42,7 @@
 <t t-set="return_untaxed_total" t-value="sum(line.get('untaxed', line.get('subtotal', 0.0)) for line in return_lines) if return_lines else 0.0"/>
 <t t-set="return_tax_total" t-value="sum(line.get('tax_amount', 0.0) for line in return_lines) if return_lines else 0.0"/>
 <t t-set="return_total" t-value="sum(line.get('total', line.get('subtotal', 0.0)) for line in return_lines) if return_lines else 0.0"/>
-<t t-set="payment_total" t-value="sum(payment.amount or 0.0 for payment in payments) if payments else 0.0"/>
+<t t-set="payment_total" t-value="sum(instrument.get('amount', 0.0) for instrument in payment_instruments) if payment_instruments else 0.0"/>
 <t t-set="credit_policy_label" t-value="dict(doc._fields['direct_stop_credit_policy'].selection).get(doc.direct_stop_credit_policy) if doc.direct_stop_credit_policy else 'Not required'"/>
 <div style="border:1px solid #cbd5e1; background:#ffffff; margin-bottom:14px;">
 <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
@@ -478,64 +479,50 @@ Policy:
 </table>
 </div>
 <div style="margin-top:10px; border:1px solid #dbe3ec; margin-bottom:16px;">
-<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Confirmed Settlement Payments</div>
+<div style="padding:8px 10px; background:#f8fafc; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Confirmed Settlement Payment Instruments</div>
 <table style="width:100%; border-collapse:collapse;">
 <thead>
 <tr>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Payment Date</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Mode</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Scenario</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Amount</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Date</th>
-<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Promise Amount</th>
-<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd;">Reference</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:18%;">Payment Date</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:13%;">Mode</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:16%;">Scenario</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:13%;">Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:14%;">Promise Date</th>
+<th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:13%;">Promise Amount</th>
+<th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:13%;">Details</th>
 </tr>
 </thead>
 <tbody>
-<tr t-if="not payments">
+<tr t-if="not payment_instruments">
 <td colspan="7" style="padding:10px; color:#64748b;">No confirmed settlement payments.</td>
 </tr>
-<tr t-foreach="payments" t-as="payment">
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-field="payment.payment_date"/>
+<tr t-foreach="payment_instruments" t-as="instrument" style="page-break-inside:avoid; break-inside:avoid;">
+<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<span t-esc="instrument.get('payment_date_label') or '-'"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-esc="dict(payment._fields['payment_mode'].selection).get(payment.payment_mode)"/>
+<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<span t-esc="instrument.get('mode_label') or '-'"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-esc="dict(payment._fields['collection_type'].selection).get(payment.collection_type)"/>
+<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<span t-esc="instrument.get('scenario_label') or '-'"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;">
-<span t-field="payment.amount"/>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top; font-weight:700;">
+<span t-esc="'%.2f %s' % (instrument.get('amount', 0.0), currency_label or '')"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-field="payment.promise_date"/>
+<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<span t-esc="instrument.get('promise_date_label') or '-'"/>
 </td>
-<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9;">
-<span t-esc="'%.2f %s' % ((payment.effective_promise_amount or payment.promise_amount or 0.0), currency_label or '')"/>
+<td style="padding:8px 10px; text-align:right; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<span t-esc="'%.2f %s' % (instrument.get('promise_amount', 0.0), currency_label or '')"/>
 </td>
-<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9;">
-<span t-field="payment.reference"/>
-<t t-if="payment.payment_mode == 'cheque'">
-<br/>
-<strong>Cheque:</strong>
-<span t-esc="payment.cheque_number or '-'"/>
-<br/>
-<strong>Bank:</strong>
-<span t-esc="payment.bank_name or '-'"/>
-<br/>
-<strong>Date:</strong>
-<span t-esc="payment.cheque_date or '-'"/>
-<t t-if="payment.cheque_holder_name">
-<br/>
-<strong>Holder:</strong>
-<span t-esc="payment.cheque_holder_name"/>
-</t>
+<td style="padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top; line-height:1.45; white-space:normal; word-break:break-word;">
+<t t-foreach="(instrument.get('details') or '-').splitlines()" t-as="detail">
+<div t-esc="detail"/>
 </t>
 </td>
 </tr>
 </tbody>
-<tfoot t-if="payments">
+<tfoot t-if="payment_instruments">
 <tr>
 <td colspan="3" style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;">Total Confirmed Payments</td>
 <td style="padding:8px 10px; text-align:right; font-weight:700; background:#f8fafc; border-top:1px solid #dbe3ec;" t-esc="'%.2f %s' % (payment_total, currency_label)"/>
