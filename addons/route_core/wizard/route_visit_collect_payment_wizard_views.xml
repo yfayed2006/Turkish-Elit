@@ -17,6 +17,10 @@
 <field name="show_no_payment_due_help" invisible="1"/>
 <field name="show_close_settlement_button" invisible="1"/>
 <field name="show_save_draft_button" invisible="1"/>
+<field name="show_single_payment_fields" invisible="1"/>
+<field name="show_split_payment_lines" invisible="1"/>
+<field name="payment_line_total" invisible="1"/>
+<field name="payment_line_remaining" invisible="1"/>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
 <div class="route_pda_group_title route_pda_payment_section_title">Visit Financial Summary</div>
 <div class="route_pda_statement_grid route_pda_statement_grid_summary">
@@ -112,7 +116,13 @@
 <div class="route_pda_payment_radio_wrap">
 <field name="collection_type" widget="radio" nolabel="1"/>
 </div>
-<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid">
+<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid" invisible="collection_type != 'full'">
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide">
+<span class="route_pda_payment_meta_label">Payment Structure</span>
+<field name="settlement_mode" widget="radio" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid" invisible="not show_single_payment_fields">
 <div class="route_pda_payment_meta_item">
 <span class="route_pda_payment_meta_label">Payment Mode</span>
 <field name="payment_mode" nolabel="1"/>
@@ -169,6 +179,62 @@
 <span class="route_pda_payment_meta_label">Cheque Details</span>
 <field name="cheque_note" widget="text" nolabel="1" placeholder="Optional cheque details, branch, or remarks..."/>
 </div>
+</div>
+<div invisible="not show_split_payment_lines">
+<div class="route_pda_group_title route_pda_payment_section_title">Split Payment Lines</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Total Due Now</span>
+<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1" invisible="not is_direct_sales_stop"/>
+<field name="visit_remaining_due" readonly="1" nolabel="1" invisible="is_direct_sales_stop"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Payment Lines Total</span>
+<field name="payment_line_total" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Remaining To Allocate</span>
+<field name="payment_line_remaining" readonly="1" nolabel="1"/>
+</div>
+</div>
+<field name="payment_line_ids" nolabel="1" context="{'default_payment_date': payment_date}">
+<list editable="bottom" create="1" delete="1">
+<field name="currency_id" column_invisible="1"/>
+<field name="payment_mode"/>
+<field name="amount"/>
+<field name="payment_date"/>
+<field name="reference" optional="show"/>
+<field name="bank_name" optional="show"/>
+<field name="pos_terminal" optional="hide"/>
+<field name="cheque_number" optional="show"/>
+<field name="cheque_date" optional="show"/>
+<field name="cheque_holder_name" optional="hide"/>
+<field name="cheque_note" optional="hide"/>
+</list>
+<form string="Payment Line">
+<sheet>
+<group>
+<group>
+<field name="payment_mode"/>
+<field name="amount"/>
+<field name="payment_date"/>
+<field name="reference" invisible="payment_mode == 'cash'"/>
+</group>
+<group>
+<field name="bank_name" invisible="payment_mode not in ('bank', 'cheque')"/>
+<field name="pos_terminal" invisible="payment_mode != 'pos'"/>
+<field name="cheque_number" invisible="payment_mode != 'cheque'"/>
+<field name="cheque_date" invisible="payment_mode != 'cheque'"/>
+<field name="cheque_holder_name" invisible="payment_mode != 'cheque'"/>
+</group>
+</group>
+<group invisible="payment_mode != 'cheque'">
+<field name="cheque_note"/>
+</group>
+</sheet>
+</form>
+</field>
+<div class="route_pda_statement_info" role="alert"> Split Payment is for full settlements paid by more than one instrument, such as Cash + Cheque, POS + Cash, or multiple cheques. Each cheque will become an independent custody card after payment confirmation. </div>
 </div>
 </div>
 <div class="route_pda_payment_section" invisible="not show_note_field">
