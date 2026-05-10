@@ -197,7 +197,7 @@
 <field name="payment_line_remaining" readonly="1" nolabel="1"/>
 </div>
 </div>
-<field name="payment_line_ids" nolabel="1" context="{'default_payment_date': payment_date}">
+<field name="payment_line_ids" nolabel="1" class="route_pda_split_payment_lines" context="{'default_payment_date': payment_date, 'default_amount': payment_line_remaining}">
 <list editable="bottom" create="1" delete="1">
 <field name="currency_id" column_invisible="1"/>
 <field name="payment_mode"/>
