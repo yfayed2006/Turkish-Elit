@@ -7123,3 +7123,20 @@ html[dir="rtl"] .o_kanban_view.route_custody_accounting_work_queue_wide .o_kanba
     }
 }
 
+
+/* Runtime Split Payment line visibility
+   Odoo editable x2many list views do not reliably remove per-row optional cells after CSS converts
+   each row to a mobile card. The JS helper adds this class to non-relevant cells per payment mode. */
+@media (max-width: 768px) {
+    .route_pda_collect_payment_sheet .route_pda_split_payment_lines table.o_list_table tbody tr.o_data_row > td.route_split_payment_runtime_hidden {
+        display: none !important;
+        visibility: hidden !important;
+        min-height: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+}
+
