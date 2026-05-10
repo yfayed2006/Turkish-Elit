@@ -203,13 +203,13 @@
 <field name="payment_mode"/>
 <field name="amount"/>
 <field name="payment_date"/>
-<field name="reference" optional="show"/>
-<field name="bank_name" optional="show"/>
-<field name="pos_terminal" optional="hide"/>
-<field name="cheque_number" optional="show"/>
-<field name="cheque_date" optional="show"/>
-<field name="cheque_holder_name" optional="hide"/>
-<field name="cheque_note" optional="hide"/>
+<field name="reference" optional="show" invisible="payment_mode not in ('bank', 'pos')"/>
+<field name="bank_name" optional="show" invisible="payment_mode not in ('bank', 'cheque')"/>
+<field name="pos_terminal" optional="show" invisible="payment_mode != 'pos'"/>
+<field name="cheque_number" optional="show" invisible="payment_mode != 'cheque'"/>
+<field name="cheque_date" optional="show" invisible="payment_mode != 'cheque'"/>
+<field name="cheque_holder_name" optional="show" invisible="payment_mode != 'cheque'"/>
+<field name="cheque_note" optional="show" invisible="payment_mode != 'cheque'"/>
 </list>
 <form string="Payment Line">
 <sheet>
