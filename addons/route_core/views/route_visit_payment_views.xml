@@ -1,5 +1,5 @@
 <odoo>
-<!--                                  Admin / all payments                                  -->
+<!--                                   Admin / all payments                                   -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -43,7 +43,7 @@
 </list>
 </field>
 </record>
-<!--                                  Tailored visit list                                  -->
+<!--                                   Tailored visit list                                   -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -72,7 +72,7 @@
 </list>
 </field>
 </record>
-<!--                                  Tailored direct sale list                                  -->
+<!--                                   Tailored direct sale list                                   -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -670,7 +670,7 @@
 </form>
 </field>
 </record>
-<!--                                  Admin / all payments search                                  -->
+<!--                                   Admin / all payments search                                   -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -757,7 +757,7 @@
 </search>
 </field>
 </record>
-<!--                                  Visit collections search                                  -->
+<!--                                   Visit collections search                                   -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -846,7 +846,7 @@
 </search>
 </field>
 </record>
-<!--                                  Direct sale payments search                                  -->
+<!--                                   Direct sale payments search                                   -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -940,6 +940,10 @@
 <field name="cash_custody_settlement_summary"/>
 <field name="route_cash_can_handover_accounting"/>
 <field name="route_cash_can_accountant_receive"/>
+<field name="route_cash_can_post_receipt"/>
+<field name="route_cash_accounting_state"/>
+<field name="route_cash_accounting_state_label"/>
+<field name="route_cash_accounting_move_count"/>
 <field name="cheque_number"/>
 <field name="bank_name"/>
 <field name="cheque_date"/>
@@ -956,9 +960,11 @@
 <field name="cheque_physical_source_summary"/>
 <field name="cheque_physical_settlement_summary"/>
 <field name="cheque_physical_open_due_amount"/>
+<field name="route_cheque_accounting_state"/>
 <field name="route_cheque_accounting_state_label"/>
 <field name="route_cheque_accounting_move_count"/>
 <field name="route_cheque_can_handover_accounting"/>
+<field name="route_cheque_can_accountant_work"/>
 <field name="route_cheque_can_accountant_receive"/>
 <templates>
 <t t-name="card">
@@ -1126,6 +1132,11 @@
 <button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
 <button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
 <button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
+<button name="action_route_post_cash_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_post_receipt">Post Receipt Voucher Entry</button>
+<button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or route_cheque_accounting_state != 'not_posted'">Post Receipt Voucher Entry</button>
+<button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Cleared</button>
+<button name="action_cheque_mark_bounced" type="object" class="btn btn-sm btn-warning" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Bounced</button>
+<button name="action_cheque_mark_cancelled" type="object" class="btn btn-sm btn-secondary" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Cancel Cheque</button>
 <button name="action_open_custody_details" type="object" class="btn btn-sm btn-light">Details</button>
 <button name="action_route_open_cheque_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode != 'cheque' or route_cheque_accounting_move_count == 0">Entries</button>
 </div>
@@ -1156,8 +1167,10 @@
 <filter name="filter_custody_handed_accounting" string="Handed to Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'handed_to_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'handed_to_accounting')]"/>
 <filter name="filter_custody_received_accounting" string="Received by Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'received_by_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'received_by_accounting')]"/>
 <separator/>
+<filter name="filter_cheque_under_bank" string="Under Bank Collection" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'deposited')]"/>
 <filter name="filter_bounced_cheques" string="Bounced Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
 <filter name="filter_cancelled_cheques" string="Cancelled Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'cancelled')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
 <filter name="filter_cleared_cheques" string="Cleared Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'cleared')]"/>
 <separator/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
