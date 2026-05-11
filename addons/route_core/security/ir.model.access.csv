@@ -28,6 +28,7 @@ access_route_plan_add_area_outlets_wizard_management,access.route.plan.add.area.
 access_route_visit_line_salesperson,access.route.visit.line.salesperson,model_route_visit_line,route_core.group_route_salesperson,1,1,1,0
 access_route_visit_line_supervisor,access.route.visit.line.supervisor,model_route_visit_line,route_core.group_route_supervisor,1,1,1,1
 access_route_visit_line_management,access.route.visit.line.management,model_route_visit_line,route_core.group_route_management,1,1,1,1
+access_route_visit_line_cheque_accountant,access.route.visit.line.cheque.accountant,model_route_visit_line,route_core.group_route_cheque_accountant,1,0,0,0
 access_route_visit_payment_salesperson,access.route.visit.payment.salesperson,model_route_visit_payment,route_core.group_route_salesperson,1,1,1,0
 access_route_visit_payment_supervisor,access.route.visit.payment.supervisor,model_route_visit_payment,route_core.group_route_supervisor,1,1,1,1
 access_route_visit_payment_management,access.route.visit.payment.management,model_route_visit_payment,route_core.group_route_management,1,1,1,1
