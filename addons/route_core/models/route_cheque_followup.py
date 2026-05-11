@@ -544,6 +544,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_route_custody_ui_context_flags",
         store=False,
     )
+    route_custody_show_accounting_actions = fields.Boolean(
+        string="Show Accounting Action Buttons",
+        compute="_compute_route_custody_ui_context_flags",
+        store=False,
+        help="Technical UI flag. Accounting action buttons are shown only from Accounting Work Queue actions, not from salesperson My Custody or supervisor monitor screens.",
+    )
     route_custody_accounting_todo_visible = fields.Boolean(
         string="Visible in Accounting Custody Work Queue",
         compute="_compute_route_custody_flags",
@@ -559,11 +565,13 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="Supervisor monitor helper that hides fully posted/closed history by default while keeping it available when filters are cleared.",
     )
 
-    @api.depends_context("route_accounting_custody_monitor_mode")
+    @api.depends_context("route_accounting_custody_monitor_mode", "route_accounting_custody_actions_mode")
     def _compute_route_custody_ui_context_flags(self):
         show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode"))
+        show_accounting_actions = bool(self.env.context.get("route_accounting_custody_actions_mode"))
         for rec in self:
             rec.route_custody_show_salesperson_handover = show_handover
+            rec.route_custody_show_accounting_actions = show_accounting_actions
 
     def _route_user_is_route_salesperson_or_manager(self):
         user = self.env.user
@@ -1082,7 +1090,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             if "with_salesperson" in custody_states:
                 primary_ids.extend(
                     self._route_electronic_primary_ids_sql(
-                        verification_states=("reported",),
+                        verification_states=("reported", "rejected"),
                         salesperson_id=salesperson_id,
                     )
                 )
@@ -1253,7 +1261,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 electronic_state = rec.electronic_verification_state or "reported"
                 electronic_is_posted = rec.route_electronic_accounting_state == "posted"
                 rec.route_custody_accounting_visible = bool(is_electronic_primary and not electronic_is_posted)
-                rec.route_custody_with_salesperson_visible = bool(is_electronic_primary and electronic_state == "reported")
+                rec.route_custody_with_salesperson_visible = bool(is_electronic_primary and electronic_state in ("reported", "rejected"))
                 rec.route_custody_accounting_todo_visible = bool(is_electronic_primary and not electronic_is_posted)
                 rec.route_custody_monitor_open_visible = bool(is_electronic_primary and not electronic_is_posted)
             else:
@@ -1272,7 +1280,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             title = _("Cheque Allocation Details")
         elif self.payment_mode in ("bank", "pos"):
             records = self._route_electronic_group_records()
-            title = _("Electronic Payment Details")
+            title = _("Bank/POS Payment Details")
         else:
             records = self
             title = _("Custody Details")
