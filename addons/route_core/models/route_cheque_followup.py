@@ -425,28 +425,28 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     electronic_verification_state = fields.Selection(
         [
             ("reported", "Reported by Salesperson"),
-            ("verified", "Verified by Accounting"),
+            ("verified", "Confirmed by Accounting"),
             ("rejected", "Needs Follow-up"),
         ],
-        string="Electronic Verification",
+        string="Bank/POS Confirmation",
         default=False,
         index=True,
         copy=False,
         help="Used for Bank Transfer and POS payments. Reported payments are visible to Accounting for verification before receipt voucher posting.",
     )
     electronic_verification_state_label = fields.Char(
-        string="Electronic Verification Label",
+        string="Bank/POS Confirmation Label",
         compute="_compute_electronic_verification_state_label",
         store=False,
     )
-    electronic_verification_note = fields.Text(string="Electronic Verification Note", copy=False)
-    electronic_verified_at = fields.Datetime(string="Electronic Verified At", copy=False)
-    electronic_verified_by_id = fields.Many2one("res.users", string="Electronic Verified By", readonly=True, copy=False)
-    electronic_rejected_at = fields.Datetime(string="Electronic Follow-up At", copy=False)
-    electronic_rejected_by_id = fields.Many2one("res.users", string="Electronic Follow-up By", readonly=True, copy=False)
+    electronic_verification_note = fields.Text(string="Bank/POS Confirmation Note", copy=False)
+    electronic_verified_at = fields.Datetime(string="Bank/POS Confirmed At", copy=False)
+    electronic_verified_by_id = fields.Many2one("res.users", string="Bank/POS Confirmed By", readonly=True, copy=False)
+    electronic_rejected_at = fields.Datetime(string="Bank/POS Follow-up At", copy=False)
+    electronic_rejected_by_id = fields.Many2one("res.users", string="Bank/POS Follow-up By", readonly=True, copy=False)
 
     electronic_group_key = fields.Char(
-        string="Electronic Payment Group Key",
+        string="Bank/POS Payment Group Key",
         compute="_compute_electronic_group_key",
         store=True,
         index=True,
@@ -454,83 +454,83 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="Technical key used to show one Bank/POS card for one reported electronic payment while preserving allocation lines.",
     )
     electronic_is_primary = fields.Boolean(
-        string="Primary Electronic Payment Line",
+        string="Primary Bank/POS Payment Line",
         compute="_compute_electronic_summary",
         search="_search_electronic_is_primary",
         store=False,
     )
     electronic_total_amount = fields.Monetary(
-        string="Electronic Payment Amount",
+        string="Bank/POS Payment Amount",
         currency_field="currency_id",
         compute="_compute_electronic_summary",
         store=False,
     )
     electronic_allocation_count = fields.Integer(
-        string="Electronic Allocation Lines",
+        string="Bank/POS Allocation Lines",
         compute="_compute_electronic_summary",
         store=False,
     )
     electronic_display_ref = fields.Char(
-        string="Electronic Payment Reference",
+        string="Bank/POS Payment Reference",
         compute="_compute_electronic_summary",
         store=False,
     )
     electronic_source_summary = fields.Char(
-        string="Electronic Payment Covers",
+        string="Bank/POS Payment Covers",
         compute="_compute_electronic_summary",
         store=False,
     )
     electronic_settlement_summary = fields.Char(
-        string="Electronic Settlement Visits",
+        string="Bank/POS Settlement Visits",
         compute="_compute_electronic_summary",
         store=False,
     )
     electronic_area_summary = fields.Char(
-        string="Electronic Areas",
+        string="Bank/POS Areas",
         compute="_compute_electronic_summary",
         store=False,
     )
 
     route_electronic_receipt_move_id = fields.Many2one(
         "account.move",
-        string="Electronic Receipt Voucher Entry",
+        string="Bank/POS Receipt Voucher Entry",
         readonly=True,
         copy=False,
     )
     route_electronic_accounting_state = fields.Selection(
         [
             ("disabled", "Accounting Disabled"),
-            ("pending_verification", "Pending Verification"),
-            ("verified_not_posted", "Verified Not Posted"),
+            ("pending_verification", "Pending Bank/POS Confirmation"),
+            ("verified_not_posted", "Bank/POS Confirmed Not Posted"),
             ("followup", "Needs Follow-up"),
             ("posted", "Receipt Entry Posted"),
         ],
-        string="Electronic Accounting State",
+        string="Bank/POS Accounting State",
         compute="_compute_route_electronic_accounting_state",
         store=False,
     )
     route_electronic_accounting_state_label = fields.Char(
-        string="Electronic Accounting State Label",
+        string="Bank/POS Accounting State Label",
         compute="_compute_route_electronic_accounting_state",
         store=False,
     )
     route_electronic_accounting_move_count = fields.Integer(
-        string="Electronic Accounting Entries",
+        string="Bank/POS Accounting Entries",
         compute="_compute_route_electronic_accounting_state",
         store=False,
     )
     route_electronic_can_accountant_verify = fields.Boolean(
-        string="Can Verify Electronic Payment",
+        string="Can Confirm Bank/POS Payment",
         compute="_compute_route_electronic_access_flags",
         store=False,
     )
     route_electronic_can_accountant_reject = fields.Boolean(
-        string="Can Mark Electronic Payment for Follow-up",
+        string="Can Mark Bank/POS Payment for Follow-up",
         compute="_compute_route_electronic_access_flags",
         store=False,
     )
     route_electronic_can_post_receipt = fields.Boolean(
-        string="Can Post Electronic Receipt Voucher",
+        string="Can Post Bank/POS Receipt Voucher",
         compute="_compute_route_electronic_access_flags",
         store=False,
     )
@@ -958,9 +958,9 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         batch_records = self.browse()
         for rec in self:
             if rec.payment_mode not in ("bank", "pos"):
-                raise ValidationError(_("Electronic payment actions are available only for Bank Transfer or POS payments."))
+                raise ValidationError(_("Bank/POS payment actions are available only for Bank Transfer or POS payments."))
             if rec.state != "confirmed":
-                raise ValidationError(_("Confirm the electronic payment before Accounting verification."))
+                raise ValidationError(_("Confirm the Bank/POS payment record before Accounting confirmation."))
             batch_records |= rec._route_electronic_group_records()
         return batch_records
 
@@ -1673,7 +1673,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         records = self._get_electronic_batch_records()
         for payment in records:
             if payment.route_electronic_receipt_move_id and payment.route_electronic_receipt_move_id.state == "posted":
-                raise ValidationError(_("This electronic payment already has a posted receipt voucher entry. Reverse or correct the entry before marking it for follow-up."))
+                raise ValidationError(_("This Bank/POS payment already has a posted receipt voucher entry. Reverse or correct the entry before marking it for follow-up."))
         records.write(
             {
                 "electronic_verification_state": "rejected",
@@ -1688,7 +1688,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         records = self._get_electronic_batch_records()
         invalid_records = records.filtered(lambda payment: (payment.electronic_verification_state or "reported") != "verified")
         if invalid_records:
-            raise ValidationError(_("Accounting must verify this Bank/POS payment before posting the receipt voucher entry."))
+            raise ValidationError(_("Accounting must confirm this Bank/POS payment before posting the receipt voucher entry."))
         records._route_electronic_ensure_receipt_accounting_entry()
         return self._cheque_followup_reload_action()
 
@@ -1700,7 +1700,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         moves = moves.exists()
         action = {
             "type": "ir.actions.act_window",
-            "name": _("Electronic Receipt Voucher Entries"),
+            "name": _("Bank/POS Receipt Voucher Entries"),
             "res_model": "account.move",
             "view_mode": "list,form",
             "domain": [("id", "in", moves.ids)],
