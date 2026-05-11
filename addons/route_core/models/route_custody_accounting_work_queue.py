@@ -17,7 +17,7 @@ class RouteCustodyAccountingWorkQueue(models.Model):
     workflow_state = fields.Selection(
         [
             ("followup", "Open Follow-up"),
-            ("electronic_pending", "Electronic Pending Verification"),
+            ("electronic_pending", "Bank/POS Pending Confirmation"),
             ("waiting_receipt", "Waiting Accounting Receipt"),
             ("received_not_posted", "Received / Verified Not Posted"),
             ("bank_pending", "Bank Pending"),
@@ -43,12 +43,12 @@ class RouteCustodyAccountingWorkQueue(models.Model):
     cheque_received_not_posted_amount = fields.Monetary(string="Cheques Received Not Posted", currency_field="currency_id", readonly=True)
     cheque_received_not_posted_count = fields.Integer(string="Cheques Received Not Posted", readonly=True)
 
-    electronic_pending_amount = fields.Monetary(string="Electronic Pending Verification", currency_field="currency_id", readonly=True)
-    electronic_pending_count = fields.Integer(string="Electronic Pending Verification", readonly=True)
-    electronic_verified_not_posted_amount = fields.Monetary(string="Electronic Verified Not Posted", currency_field="currency_id", readonly=True)
-    electronic_verified_not_posted_count = fields.Integer(string="Electronic Verified Not Posted", readonly=True)
-    electronic_rejected_amount = fields.Monetary(string="Electronic Follow-up", currency_field="currency_id", readonly=True)
-    electronic_rejected_count = fields.Integer(string="Electronic Follow-up", readonly=True)
+    electronic_pending_amount = fields.Monetary(string="Bank/POS Pending Confirmation", currency_field="currency_id", readonly=True)
+    electronic_pending_count = fields.Integer(string="Bank/POS Pending Confirmation", readonly=True)
+    electronic_verified_not_posted_amount = fields.Monetary(string="Bank/POS Confirmed Not Posted", currency_field="currency_id", readonly=True)
+    electronic_verified_not_posted_count = fields.Integer(string="Bank/POS Confirmed Not Posted", readonly=True)
+    electronic_rejected_amount = fields.Monetary(string="Bank/POS Follow-up", currency_field="currency_id", readonly=True)
+    electronic_rejected_count = fields.Integer(string="Bank/POS Follow-up", readonly=True)
 
     bank_pending_amount = fields.Monetary(string="Bank Pending Cheques", currency_field="currency_id", readonly=True)
     bank_pending_count = fields.Integer(string="Bank Pending Cheques", readonly=True)
@@ -416,14 +416,17 @@ class RouteCustodyAccountingWorkQueue(models.Model):
 
     def action_open_electronic_verification(self):
         self.ensure_one()
-        return self._open_payment_action(
-            _("Electronic Pending Verification - %s") % (self.name,),
-            self._base_payment_domain()
-            + [
-                ("payment_mode", "in", ["bank", "pos"]),
-                ("electronic_verification_state", "in", [False, "reported"]),
-            ],
-            {"search_default_filter_electronic_pending": 1},
+        payments = self._work_payments().filtered(
+            lambda payment: (
+                payment.payment_mode in ("bank", "pos")
+                and (payment.electronic_verification_state or "reported") == "reported"
+                and payment.electronic_is_primary
+            )
+        )
+        return self._open_payment_records(
+            _("Bank/POS Payments Pending Confirmation - %s") % (self.name,),
+            payments,
+            {"search_default_filter_bank_pos_pending_confirmation": 1},
         )
 
     def action_open_waiting_receipt(self):
