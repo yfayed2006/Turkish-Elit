@@ -97,7 +97,7 @@
 </button>
 <button type="object" name="action_open_my_custody" class="btn route_pda_app_btn route_pda_app_btn_info route_pda_app_btn_collections_no_icon">
 <span class="route_pda_app_label route_pda_app_label_no_icon">My Custody</span>
-<span class="route_pda_app_hint">Cash, Cheques and Electronic Payments</span>
+<span class="route_pda_app_hint">Cash, Cheques and Bank/POS</span>
 <span class="route_pda_app_hint_value route_pda_app_hint_value_wrap">
 <field name="custody_summary_label" readonly="1" nolabel="1"/>
 </span>
