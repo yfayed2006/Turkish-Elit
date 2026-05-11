@@ -156,10 +156,10 @@
 </record>
 <!--     Route cheque accountants should only access confirmed cheque payment records from the accounting cheque screen.     -->
 <record id="rule_route_visit_payment_cheque_accountant_confirmed_cheques" model="ir.rule">
-<field name="name">Route Visit Payment - collections accountant confirmed cash and cheques</field>
+<field name="name">Route Visit Payment - collections accountant confirmed route payments</field>
 <field name="model_id" ref="model_route_visit_payment"/>
 <field name="groups" eval="[(4, ref('route_core.group_route_cheque_accountant'))]"/>
-<field name="domain_force">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cheque', 'cash'])]</field>
+<field name="domain_force">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cheque', 'cash', 'bank', 'pos'])]</field>
 <field name="perm_read" eval="True"/>
 <field name="perm_write" eval="True"/>
 <field name="perm_create" eval="False"/>
