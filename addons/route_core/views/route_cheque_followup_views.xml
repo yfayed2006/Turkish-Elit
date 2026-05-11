@@ -858,7 +858,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 </t>
 <t t-if="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Electronic Payment Amount</span>
+<span class="route_pda_payment_metric_label">Bank/POS Payment Amount</span>
 <span class="route_pda_payment_metric_value">
 <field name="electronic_total_amount"/>
 </span>
@@ -910,7 +910,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 </t>
 </div>
 <div class="route_cheque_control_actions">
-<button name="action_electronic_mark_verified" type="object" class="btn btn-sm btn-success" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_accountant_verify">Confirm Electronic Payment</button>
+<button name="action_electronic_mark_verified" type="object" class="btn btn-sm btn-success" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_accountant_verify">Confirm Bank/POS Payment</button>
 <button name="action_electronic_mark_rejected" type="object" class="btn btn-sm btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_accountant_reject">Needs Follow-up</button>
 <button name="action_route_post_electronic_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_post_receipt">Post Receipt Voucher Entry</button>
 <button name="action_route_open_electronic_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode not in ['bank', 'pos'] or route_electronic_accounting_move_count == 0">Entries</button>
@@ -947,8 +947,8 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="route_cheque_accounting_state" string="Accounting" widget="badge" optional="hide"/>
 <field name="reference" string="Reference" optional="show"/>
 <field name="pos_terminal" string="POS Terminal" optional="show"/>
-<field name="electronic_verification_state" string="Electronic Verification" widget="badge" optional="show"/>
-<field name="route_electronic_accounting_state" string="Electronic Accounting" widget="badge" optional="show"/>
+<field name="electronic_verification_state" string="Bank/POS Confirmation" widget="badge" optional="show"/>
+<field name="route_electronic_accounting_state" string="Bank/POS Accounting" widget="badge" optional="show"/>
 </list>
 </field>
 </record>
@@ -965,7 +965,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="bank_name" string="Bank"/>
 <field name="reference" string="Reference"/>
 <field name="pos_terminal" string="POS Terminal"/>
-<field name="electronic_verification_state" string="Electronic Verification"/>
+<field name="electronic_verification_state" string="Bank/POS Confirmation"/>
 <filter name="filter_confirmed" string="Confirmed Payments" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_open_followup" string="Open Follow-up" domain="[('route_custody_monitor_open_visible', '=', True)]"/>
 <separator/>
@@ -984,9 +984,9 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <filter name="filter_bounced" string="Cheque Bounced" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
 <filter name="filter_cancelled" string="Cheque Cancelled" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'cancelled')]"/>
 <filter name="filter_needs_followup" string="Needs Follow-up" domain="[('payment_mode', '=', 'cheque'), ('cheque_needs_followup', '=', True)]"/>
-<filter name="filter_electronic_pending" string="Electronic Pending Verification" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', 'in', [False, 'reported'])]"/>
-<filter name="filter_electronic_verified" string="Electronic Verified" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', '=', 'verified')]"/>
-<filter name="filter_electronic_followup" string="Electronic Follow-up" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', '=', 'rejected')]"/>
+<filter name="filter_electronic_pending" string="Bank/POS Pending Confirmation" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', 'in', [False, 'reported'])]"/>
+<filter name="filter_electronic_verified" string="Bank/POS Confirmed" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', '=', 'verified')]"/>
+<filter name="filter_electronic_followup" string="Bank/POS Follow-up" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', '=', 'rejected')]"/>
 <separator/>
 <filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
@@ -999,7 +999,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="cash_custody_state" string="Cash Custody"/>
 <field name="cheque_custody_state" string="Cheque Custody"/>
 <field name="cheque_followup_state" string="Cheque Lifecycle"/>
-<field name="electronic_verification_state" string="Electronic Verification"/>
+<field name="electronic_verification_state" string="Bank/POS Confirmation"/>
 <field name="salesperson_id" string="Salesperson"/>
 <field name="outlet_id" string="Outlet"/>
 </searchpanel>
