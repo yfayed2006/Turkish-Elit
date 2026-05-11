@@ -385,6 +385,7 @@ class RouteCustodyAccountingWorkQueue(models.Model):
                     "edit": 0,
                     "delete": 0,
                     "route_accounting_custody_monitor_mode": True,
+                    "route_accounting_custody_actions_mode": True,
                     **(extra_context or {}),
                 },
             }
@@ -414,19 +415,31 @@ class RouteCustodyAccountingWorkQueue(models.Model):
             {"search_default_filter_custody_with_salesperson": 1},
         )
 
+    def _base_bank_pos_domain(self, verification_state=None):
+        self.ensure_one()
+        domain = [
+            ("state", "=", "confirmed"),
+            ("payment_mode", "in", ["bank", "pos"]),
+            ("electronic_is_primary", "=", True),
+        ]
+        if verification_state == "reported":
+            domain += ["|", ("electronic_verification_state", "=", False), ("electronic_verification_state", "=", "reported")]
+        elif verification_state:
+            domain.append(("electronic_verification_state", "=", verification_state))
+        if self.salesperson_id and not self.is_company_summary:
+            domain.append(("salesperson_id", "=", self.salesperson_id.id))
+        elif not self.is_company_summary:
+            domain.append(("salesperson_id", "=", False))
+        if self.company_id:
+            domain.append(("company_id", "=", self.company_id.id))
+        return domain
+
     def action_open_electronic_verification(self):
         self.ensure_one()
-        payments = self._work_payments().filtered(
-            lambda payment: (
-                payment.payment_mode in ("bank", "pos")
-                and (payment.electronic_verification_state or "reported") == "reported"
-                and payment.electronic_is_primary
-            )
-        )
-        return self._open_payment_records(
+        return self._open_payment_action(
             _("Bank/POS Payments Pending Confirmation - %s") % (self.name,),
-            payments,
-            {"search_default_filter_bank_pos_pending_confirmation": 1},
+            self._base_bank_pos_domain("reported"),
+            {"search_default_filter_electronic_pending": 1},
         )
 
     def action_open_waiting_receipt(self):
