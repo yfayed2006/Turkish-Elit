@@ -95,8 +95,8 @@ class RoutePdaHome(models.TransientModel):
     cheque_today_amount = fields.Monetary(string="Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
     custody_cash_amount = fields.Monetary(string="Custody Cash", currency_field="currency_id", compute="_compute_dashboard")
     custody_cheque_count = fields.Integer(string="Custody Cheques", compute="_compute_dashboard")
-    custody_electronic_amount = fields.Monetary(string="Electronic Payments Pending Verification", currency_field="currency_id", compute="_compute_dashboard")
-    custody_electronic_count = fields.Integer(string="Electronic Payments Pending Verification", compute="_compute_dashboard")
+    custody_electronic_amount = fields.Monetary(string="Bank/POS Payments Pending Confirmation", currency_field="currency_id", compute="_compute_dashboard")
+    custody_electronic_count = fields.Integer(string="Bank/POS Payments Pending Confirmation", compute="_compute_dashboard")
     custody_summary_label = fields.Char(string="Custody Summary", compute="_compute_dashboard")
     cheque_pending_clearance_amount = fields.Monetary(string="Pending Cheque Clearance", currency_field="currency_id", compute="_compute_dashboard")
     cheque_cleared_today_amount = fields.Monetary(string="Cleared Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
@@ -957,7 +957,7 @@ class RoutePdaHome(models.TransientModel):
             if currency and currency.symbol:
                 cash_text = f"{currency.symbol}{cash_text}" if currency.position == "before" else f"{cash_text} {currency.symbol}"
                 electronic_text = f"{currency.symbol}{electronic_text}" if currency.position == "before" else f"{electronic_text} {currency.symbol}"
-            rec.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s • Electronic: %(electronic)s") % {
+            rec.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s • Bank/POS: %(electronic)s") % {
                 "cash": cash_text,
                 "cheques": rec.custody_cheque_count,
                 "electronic": rec.custody_electronic_count,
@@ -1439,7 +1439,7 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", self.env.user.id),
                 ("state", "=", "confirmed"),
                 ("payment_mode", "in", ["cash", "cheque", "bank", "pos"]),
-                ("route_custody_salesperson_open_visible", "=", True),
+                ("route_custody_with_salesperson_visible", "=", True),
             ],
             context={
                 "create": 0,
