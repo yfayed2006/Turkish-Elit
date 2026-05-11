@@ -95,6 +95,8 @@ class RoutePdaHome(models.TransientModel):
     cheque_today_amount = fields.Monetary(string="Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
     custody_cash_amount = fields.Monetary(string="Custody Cash", currency_field="currency_id", compute="_compute_dashboard")
     custody_cheque_count = fields.Integer(string="Custody Cheques", compute="_compute_dashboard")
+    custody_electronic_amount = fields.Monetary(string="Electronic Payments Pending Verification", currency_field="currency_id", compute="_compute_dashboard")
+    custody_electronic_count = fields.Integer(string="Electronic Payments Pending Verification", compute="_compute_dashboard")
     custody_summary_label = fields.Char(string="Custody Summary", compute="_compute_dashboard")
     cheque_pending_clearance_amount = fields.Monetary(string="Pending Cheque Clearance", currency_field="currency_id", compute="_compute_dashboard")
     cheque_cleared_today_amount = fields.Monetary(string="Cleared Cheques Today", currency_field="currency_id", compute="_compute_dashboard")
@@ -939,19 +941,26 @@ class RoutePdaHome(models.TransientModel):
                     lambda p: (
                         (rec._get_payment_snapshot_mode(p) == "cash" and (getattr(p, "cash_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
                         or (rec._get_payment_snapshot_mode(p) == "cheque" and (getattr(p, "cheque_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
+                        or (rec._get_payment_snapshot_mode(p) in ("bank", "pos") and (getattr(p, "electronic_verification_state", False) or "reported") in ("reported", "rejected"))
                     )
                 )
             custody_cash_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) == "cash")
             custody_cheque_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) == "cheque")
+            custody_electronic_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) in ("bank", "pos"))
             rec.custody_cash_amount = sum((getattr(p, "cash_custody_total_amount", 0.0) or rec._get_payment_snapshot_amount(p)) for p in custody_cash_payments)
             rec.custody_cheque_count = len(custody_cheque_payments)
+            rec.custody_electronic_amount = sum(rec._get_payment_snapshot_amount(p) for p in custody_electronic_payments)
+            rec.custody_electronic_count = len(custody_electronic_payments)
             currency = rec.currency_id or rec.company_id.currency_id or self.env.company.currency_id
             cash_text = f"{rec.custody_cash_amount:,.2f}"
+            electronic_text = f"{rec.custody_electronic_amount:,.2f}"
             if currency and currency.symbol:
                 cash_text = f"{currency.symbol}{cash_text}" if currency.position == "before" else f"{cash_text} {currency.symbol}"
-            rec.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s") % {
+                electronic_text = f"{currency.symbol}{electronic_text}" if currency.position == "before" else f"{electronic_text} {currency.symbol}"
+            rec.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s • Electronic: %(electronic)s") % {
                 "cash": cash_text,
                 "cheques": rec.custody_cheque_count,
+                "electronic": rec.custody_electronic_count,
             }
             rec.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
             rec.deferred_payment_count = len(deferred_entries)
@@ -1429,7 +1438,7 @@ class RoutePdaHome(models.TransientModel):
                 ("id", "in", primary_ids or [0]),
                 ("salesperson_id", "=", self.env.user.id),
                 ("state", "=", "confirmed"),
-                ("payment_mode", "in", ["cash", "cheque"]),
+                ("payment_mode", "in", ["cash", "cheque", "bank", "pos"]),
                 ("route_custody_salesperson_open_visible", "=", True),
             ],
             context={
