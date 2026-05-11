@@ -565,10 +565,11 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="Supervisor monitor helper that hides fully posted/closed history by default while keeping it available when filters are cleared.",
     )
 
-    @api.depends_context("route_accounting_custody_monitor_mode", "route_accounting_custody_actions_mode")
+    @api.depends_context("route_accounting_custody_monitor_mode", "route_accounting_custody_actions_mode", "route_supervisor_custody_monitor_mode")
     def _compute_route_custody_ui_context_flags(self):
-        show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode"))
-        show_accounting_actions = bool(self.env.context.get("route_accounting_custody_actions_mode"))
+        supervisor_monitor_mode = bool(self.env.context.get("route_supervisor_custody_monitor_mode"))
+        show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode")) and not supervisor_monitor_mode
+        show_accounting_actions = bool(self.env.context.get("route_accounting_custody_actions_mode")) and not supervisor_monitor_mode
         for rec in self:
             rec.route_custody_show_salesperson_handover = show_handover
             rec.route_custody_show_accounting_actions = show_accounting_actions
