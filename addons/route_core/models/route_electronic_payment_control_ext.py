@@ -473,6 +473,82 @@ class RouteVisitPaymentElectronicControl(models.Model):
             action.update({"view_mode": "form", "res_id": moves.id})
         return action
 
+
+    def _route_custody_primary_ids_sql(self, accounting_visible=False, custody_states=None, salesperson_id=False):
+        """Include Bank Transfer/POS cards in the same custody helpers used by menus.
+
+        Cash and cheque keep their physical custody behavior from route_cheque_followup.py.
+        Bank/POS payments are not physical custody, but they are still salesperson-reported
+        values that Accounting must confirm and post, so they need to appear in My Custody,
+        Custody Monitor, and Accounting Work Queue until their workflow is complete.
+        """
+        primary_ids = []
+        super_method = getattr(super(), "_route_custody_primary_ids_sql", False)
+        if super_method:
+            primary_ids.extend(
+                super_method(
+                    accounting_visible=accounting_visible,
+                    custody_states=custody_states,
+                    salesperson_id=salesperson_id,
+                )
+            )
+
+        electronic_ids = []
+        if custody_states:
+            if "with_salesperson" in custody_states:
+                electronic_ids = self._route_electronic_primary_ids_sql(
+                    verification_states=("reported", "rejected"),
+                    salesperson_id=salesperson_id,
+                )
+        elif accounting_visible:
+            electronic_ids = self._route_electronic_primary_ids_sql(
+                accounting_visible=True,
+                salesperson_id=salesperson_id,
+            )
+        else:
+            electronic_ids = self._route_electronic_primary_ids_sql(salesperson_id=salesperson_id)
+
+        primary_ids.extend(electronic_ids or [])
+        return list(dict.fromkeys(primary_ids))
+
+    @api.depends(
+        "payment_mode",
+        "state",
+        "cash_custody_is_primary",
+        "cheque_physical_is_primary",
+        "cash_custody_state",
+        "cheque_custody_state",
+        "cheque_followup_state",
+        "route_cash_accounting_state",
+        "route_cheque_accounting_state",
+        "electronic_is_primary",
+        "electronic_verification_state",
+        "route_electronic_accounting_state",
+        "route_electronic_receipt_move_id.state",
+    )
+    def _compute_route_custody_flags(self):
+        super()._compute_route_custody_flags()
+        for rec in self:
+            if rec.payment_mode not in ("bank", "pos"):
+                continue
+            verification_state = rec.electronic_verification_state or "reported"
+            accounting_state = rec.route_electronic_accounting_state or "pending_verification"
+            is_primary = bool(rec.electronic_is_primary and rec.state == "confirmed")
+            is_posted = accounting_state == "posted"
+            rec.route_custody_is_primary = is_primary
+            rec.route_custody_with_salesperson_visible = bool(
+                is_primary
+                and not is_posted
+                and verification_state in ("reported", "rejected")
+            )
+            rec.route_custody_accounting_visible = bool(
+                is_primary
+                and not is_posted
+                and verification_state in ("reported", "verified", "rejected")
+            )
+            rec.route_custody_accounting_todo_visible = rec.route_custody_accounting_visible
+            rec.route_custody_monitor_open_visible = rec.route_custody_accounting_visible
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
