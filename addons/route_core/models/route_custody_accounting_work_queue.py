@@ -389,11 +389,135 @@ class RouteCustodyAccountingWorkQueue(models.Model):
         )
         return action
 
+    def _accounting_open_work_domain(self):
+        self.ensure_one()
+
+        cash_with_salesperson_domain = [
+            ("payment_mode", "=", "cash"),
+            "|",
+            ("cash_custody_state", "=", False),
+            ("cash_custody_state", "=", "with_salesperson"),
+        ]
+        cheque_with_salesperson_domain = [
+            ("payment_mode", "=", "cheque"),
+            "|",
+            ("cheque_custody_state", "=", False),
+            ("cheque_custody_state", "=", "with_salesperson"),
+        ]
+        cash_waiting_receipt_domain = [
+            ("payment_mode", "=", "cash"),
+            ("cash_custody_state", "=", "handed_to_accounting"),
+        ]
+        cheque_waiting_receipt_domain = [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_custody_state", "=", "handed_to_accounting"),
+        ]
+        cash_received_not_posted_domain = expression.AND(
+            [
+                [
+                    ("payment_mode", "=", "cash"),
+                    ("cash_custody_state", "=", "received_by_accounting"),
+                ],
+                [
+                    "|",
+                    ("route_cash_receipt_move_id", "=", False),
+                    ("route_cash_receipt_move_id.state", "!=", "posted"),
+                ],
+            ]
+        )
+        cheque_received_not_posted_domain = expression.AND(
+            [
+                [
+                    ("payment_mode", "=", "cheque"),
+                    ("cheque_custody_state", "=", "received_by_accounting"),
+                ],
+                [
+                    "|",
+                    ("route_cheque_received_move_id", "=", False),
+                    ("route_cheque_received_move_id.state", "!=", "posted"),
+                ],
+            ]
+        )
+        electronic_pending_domain = expression.AND(
+            [
+                [
+                    ("payment_mode", "in", ["bank", "pos"]),
+                    ("electronic_verification_state", "in", [False, "reported"]),
+                ],
+                [
+                    "|",
+                    ("route_electronic_receipt_move_id", "=", False),
+                    ("route_electronic_receipt_move_id.state", "!=", "posted"),
+                ],
+            ]
+        )
+        electronic_verified_not_posted_domain = expression.AND(
+            [
+                [
+                    ("payment_mode", "in", ["bank", "pos"]),
+                    ("electronic_verification_state", "=", "verified"),
+                ],
+                [
+                    "|",
+                    ("route_electronic_receipt_move_id", "=", False),
+                    ("route_electronic_receipt_move_id.state", "!=", "posted"),
+                ],
+            ]
+        )
+        electronic_followup_domain = expression.AND(
+            [
+                [
+                    ("payment_mode", "in", ["bank", "pos"]),
+                    ("electronic_verification_state", "=", "rejected"),
+                ],
+                [
+                    "|",
+                    ("route_electronic_receipt_move_id", "=", False),
+                    ("route_electronic_receipt_move_id.state", "!=", "posted"),
+                ],
+            ]
+        )
+        bank_pending_domain = [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_custody_state", "=", "received_by_accounting"),
+            ("cheque_followup_state", "=", "deposited"),
+        ]
+        bounced_followup_domain = [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_followup_state", "=", "bounced"),
+        ]
+        cancelled_followup_domain = [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_followup_state", "=", "cancelled"),
+        ]
+
+        return expression.AND(
+            [
+                self._base_payment_domain(),
+                expression.OR(
+                    [
+                        cash_with_salesperson_domain,
+                        cheque_with_salesperson_domain,
+                        cash_waiting_receipt_domain,
+                        cheque_waiting_receipt_domain,
+                        cash_received_not_posted_domain,
+                        cheque_received_not_posted_domain,
+                        electronic_pending_domain,
+                        electronic_verified_not_posted_domain,
+                        electronic_followup_domain,
+                        bank_pending_domain,
+                        bounced_followup_domain,
+                        cancelled_followup_domain,
+                    ]
+                ),
+            ]
+        )
+
     def action_open_all_work(self):
         self.ensure_one()
         return self._open_payment_action(
             _("Accounting Work Queue - %s") % (self.name,),
-            self._base_payment_domain() + [("route_custody_monitor_open_visible", "=", True)],
+            self._accounting_open_work_domain(),
         )
 
     def action_open_with_salesperson(self):
