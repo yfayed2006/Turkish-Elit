@@ -57,6 +57,13 @@
 <field name="route_electronic_can_accountant_verify"/>
 <field name="route_electronic_can_accountant_reject"/>
 <field name="route_electronic_can_post_receipt"/>
+<field name="route_electronic_show_accounting_actions"/>
+<field name="electronic_payment_total_amount"/>
+<field name="electronic_payment_allocation_count"/>
+<field name="electronic_payment_display_ref"/>
+<field name="electronic_payment_source_summary"/>
+<field name="electronic_payment_settlement_summary"/>
+<field name="electronic_payment_area_summary"/>
 <templates>
 <t t-name="card">
 <div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_cheque_control_card">
@@ -631,6 +638,13 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="route_electronic_can_accountant_verify"/>
 <field name="route_electronic_can_accountant_reject"/>
 <field name="route_electronic_can_post_receipt"/>
+<field name="route_electronic_show_accounting_actions"/>
+<field name="electronic_payment_total_amount"/>
+<field name="electronic_payment_allocation_count"/>
+<field name="electronic_payment_display_ref"/>
+<field name="electronic_payment_source_summary"/>
+<field name="electronic_payment_settlement_summary"/>
+<field name="electronic_payment_area_summary"/>
 <templates>
 <t t-name="card">
 <div class="o_kanban_record route_pda_payment_card route_cheque_control_card route_custody_monitor_card">
@@ -643,13 +657,8 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <t t-elif="record.payment_mode.raw_value == 'cheque'">
 <t t-esc="record.cheque_physical_display_ref.value or record.settlement_document_ref.value or record.source_document_ref.value or 'Cheque'"/>
 </t>
-<t t-elif="record.payment_mode.raw_value == 'bank'">
-<span>Bank Transfer </span>
-<t t-esc="record.reference.value or record.source_document_ref.value or ''"/>
-</t>
-<t t-elif="record.payment_mode.raw_value == 'pos'">
-<span>POS Payment </span>
-<t t-esc="record.reference.value or record.source_document_ref.value or ''"/>
+<t t-elif="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
+<t t-esc="record.electronic_payment_display_ref.value or record.source_document_ref.value or 'Bank/POS Payment'"/>
 </t>
 <t t-else="">
 <t t-esc="record.source_document_ref.value or 'Payment'"/>
@@ -741,6 +750,12 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <t>Accounting: </t>
 <t t-esc="record.route_electronic_accounting_state_label.value or 'Not Posted'"/>
 </span>
+<t t-if="record.electronic_payment_allocation_count.raw_value > 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
+<t t-esc="record.electronic_payment_allocation_count.value"/>
+<t> Allocations</t>
+</span>
+</t>
 </t>
 </div>
 <div class="route_pda_payment_metrics route_cheque_control_metrics route_custody_monitor_metrics">
@@ -844,7 +859,7 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">Electronic Payment Amount</span>
 <span class="route_pda_payment_metric_value">
-<field name="amount"/>
+<field name="electronic_payment_total_amount"/>
 </span>
 </div>
 <div class="route_pda_payment_metric">
@@ -872,14 +887,14 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <div class="route_pda_payment_metric route_pda_payment_metric_single">
 <span class="route_pda_payment_metric_label">Payment Covers</span>
 <span class="route_pda_payment_metric_value">
-<field name="source_document_ref"/>
+<field name="electronic_payment_source_summary"/>
 </span>
 </div>
-<t t-if="record.settlement_document_ref.raw_value">
+<t t-if="record.electronic_payment_settlement_summary.raw_value">
 <div class="route_pda_payment_metric route_pda_payment_metric_single">
-<span class="route_pda_payment_metric_label">Settlement Visit</span>
+<span class="route_pda_payment_metric_label">Settlement Visits</span>
 <span class="route_pda_payment_metric_value">
-<field name="settlement_document_ref"/>
+<field name="electronic_payment_settlement_summary"/>
 </span>
 </div>
 </t>
@@ -894,10 +909,10 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 </t>
 </div>
 <div class="route_cheque_control_actions">
-<button name="action_electronic_mark_verified" type="object" class="btn btn-sm btn-success" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_accountant_verify">Confirm Electronic Payment</button>
-<button name="action_electronic_mark_rejected" type="object" class="btn btn-sm btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_accountant_reject">Needs Follow-up</button>
-<button name="action_route_post_electronic_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_can_post_receipt">Post Receipt Voucher Entry</button>
-<button name="action_route_open_electronic_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode not in ['bank', 'pos'] or route_electronic_accounting_move_count == 0">Entries</button>
+<button name="action_electronic_mark_verified" type="object" class="btn btn-sm btn-success" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_verify">Confirm Electronic Payment</button>
+<button name="action_electronic_mark_rejected" type="object" class="btn btn-sm btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_reject">Needs Follow-up</button>
+<button name="action_route_post_electronic_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_post_receipt">Post Receipt Voucher Entry</button>
+<button name="action_route_open_electronic_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or route_electronic_accounting_move_count == 0">Entries</button>
 </div>
 </div>
 </t>
@@ -931,6 +946,8 @@ This cheque no longer covers the collection amount, so its amount is treated as 
 <field name="route_cheque_accounting_state" string="Accounting" widget="badge" optional="hide"/>
 <field name="reference" string="Reference" optional="show"/>
 <field name="pos_terminal" string="POS Terminal" optional="show"/>
+<field name="electronic_payment_total_amount" string="Bank/POS Amount" optional="show"/>
+<field name="electronic_payment_allocation_count" string="Bank/POS Allocations" optional="hide"/>
 <field name="electronic_verification_state" string="Electronic Verification" widget="badge" optional="show"/>
 <field name="route_electronic_accounting_state" string="Electronic Accounting" widget="badge" optional="show"/>
 </list>
