@@ -421,119 +421,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         compute="_compute_route_cash_accounting_state",
         store=False,
     )
-
-    electronic_verification_state = fields.Selection(
-        [
-            ("reported", "Reported by Salesperson"),
-            ("verified", "Confirmed by Accounting"),
-            ("rejected", "Needs Follow-up"),
-        ],
-        string="Bank/POS Confirmation",
-        default=False,
-        index=True,
-        copy=False,
-        help="Used for Bank Transfer and POS payments. Reported payments are visible to Accounting for verification before receipt voucher posting.",
-    )
-    electronic_verification_state_label = fields.Char(
-        string="Bank/POS Confirmation Label",
-        compute="_compute_electronic_verification_state_label",
-        store=False,
-    )
-    electronic_verification_note = fields.Text(string="Bank/POS Confirmation Note", copy=False)
-    electronic_verified_at = fields.Datetime(string="Bank/POS Confirmed At", copy=False)
-    electronic_verified_by_id = fields.Many2one("res.users", string="Bank/POS Confirmed By", readonly=True, copy=False)
-    electronic_rejected_at = fields.Datetime(string="Bank/POS Follow-up At", copy=False)
-    electronic_rejected_by_id = fields.Many2one("res.users", string="Bank/POS Follow-up By", readonly=True, copy=False)
-
-    electronic_group_key = fields.Char(
-        string="Bank/POS Payment Group Key",
-        compute="_compute_electronic_group_key",
-        store=True,
-        index=True,
-        copy=False,
-        help="Technical key used to show one Bank/POS card for one reported electronic payment while preserving allocation lines.",
-    )
-    electronic_is_primary = fields.Boolean(
-        string="Primary Bank/POS Payment Line",
-        compute="_compute_electronic_summary",
-        search="_search_electronic_is_primary",
-        store=False,
-    )
-    electronic_total_amount = fields.Monetary(
-        string="Bank/POS Payment Amount",
-        currency_field="currency_id",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-    electronic_allocation_count = fields.Integer(
-        string="Bank/POS Allocation Lines",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-    electronic_display_ref = fields.Char(
-        string="Bank/POS Payment Reference",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-    electronic_source_summary = fields.Char(
-        string="Bank/POS Payment Covers",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-    electronic_settlement_summary = fields.Char(
-        string="Bank/POS Settlement Visits",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-    electronic_area_summary = fields.Char(
-        string="Bank/POS Areas",
-        compute="_compute_electronic_summary",
-        store=False,
-    )
-
-    route_electronic_receipt_move_id = fields.Many2one(
-        "account.move",
-        string="Bank/POS Receipt Voucher Entry",
-        readonly=True,
-        copy=False,
-    )
-    route_electronic_accounting_state = fields.Selection(
-        [
-            ("disabled", "Accounting Disabled"),
-            ("pending_verification", "Pending Bank/POS Confirmation"),
-            ("verified_not_posted", "Bank/POS Confirmed Not Posted"),
-            ("followup", "Needs Follow-up"),
-            ("posted", "Receipt Entry Posted"),
-        ],
-        string="Bank/POS Accounting State",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_accounting_state_label = fields.Char(
-        string="Bank/POS Accounting State Label",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_accounting_move_count = fields.Integer(
-        string="Bank/POS Accounting Entries",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_can_accountant_verify = fields.Boolean(
-        string="Can Confirm Bank/POS Payment",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
-    route_electronic_can_accountant_reject = fields.Boolean(
-        string="Can Mark Bank/POS Payment for Follow-up",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
-    route_electronic_can_post_receipt = fields.Boolean(
-        string="Can Post Bank/POS Receipt Voucher",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
     route_cash_can_post_receipt = fields.Boolean(
         string="Can Post Cash Receipt Voucher",
         compute="_compute_route_cash_access_flags",
@@ -543,12 +430,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         string="Show Salesperson Handover Actions",
         compute="_compute_route_custody_ui_context_flags",
         store=False,
-    )
-    route_custody_show_accounting_actions = fields.Boolean(
-        string="Show Accounting Action Buttons",
-        compute="_compute_route_custody_ui_context_flags",
-        store=False,
-        help="Technical UI flag. Accounting action buttons are shown only from Accounting Work Queue actions, not from salesperson My Custody or supervisor monitor screens.",
     )
     route_custody_accounting_todo_visible = fields.Boolean(
         string="Visible in Accounting Custody Work Queue",
@@ -565,14 +446,11 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         help="Supervisor monitor helper that hides fully posted/closed history by default while keeping it available when filters are cleared.",
     )
 
-    @api.depends_context("route_accounting_custody_monitor_mode", "route_accounting_custody_actions_mode", "route_supervisor_custody_monitor_mode")
+    @api.depends_context("route_accounting_custody_monitor_mode")
     def _compute_route_custody_ui_context_flags(self):
-        supervisor_monitor_mode = bool(self.env.context.get("route_supervisor_custody_monitor_mode"))
-        show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode")) and not supervisor_monitor_mode
-        show_accounting_actions = bool(self.env.context.get("route_accounting_custody_actions_mode")) and not supervisor_monitor_mode
+        show_handover = not bool(self.env.context.get("route_accounting_custody_monitor_mode"))
         for rec in self:
             rec.route_custody_show_salesperson_handover = show_handover
-            rec.route_custody_show_accounting_actions = show_accounting_actions
 
     def _route_user_is_route_salesperson_or_manager(self):
         user = self.env.user
@@ -890,194 +768,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.cash_custody_source_summary = source_summary or rec.source_document_ref or ""
             rec.cash_custody_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
 
-    @api.depends("payment_mode", "electronic_verification_state")
-    def _compute_electronic_verification_state_label(self):
-        labels = dict(self._fields["electronic_verification_state"].selection)
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos"):
-                rec.electronic_verification_state_label = False
-                continue
-            state = rec.electronic_verification_state or "reported"
-            rec.electronic_verification_state_label = labels.get(state, state)
-
-    @api.depends(
-        "company_id",
-        "currency_id",
-        "payment_mode",
-        "state",
-        "reference",
-        "bank_name",
-        "pos_terminal",
-        "payment_date",
-        "settlement_visit_id",
-        "visit_id",
-        "sale_order_id",
-        "salesperson_id",
-    )
-    def _compute_electronic_group_key(self):
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos") or rec.state != "confirmed":
-                rec.electronic_group_key = False
-                continue
-            if rec.settlement_visit_id:
-                anchor_type = "settlement"
-                anchor_id = rec.settlement_visit_id.id
-            elif rec.visit_id:
-                anchor_type = "visit"
-                anchor_id = rec.visit_id.id
-            elif rec.sale_order_id:
-                anchor_type = "sale_order"
-                anchor_id = rec.sale_order_id.id
-            else:
-                anchor_type = "payment"
-                anchor_id = rec.id or 0
-            rec.electronic_group_key = "|".join(
-                [
-                    str(rec.company_id.id or 0),
-                    str(rec.currency_id.id or 0),
-                    rec.payment_mode or "",
-                    str(rec.salesperson_id.id or 0),
-                    rec._route_cheque_normalize_group_value(rec.reference),
-                    rec._route_cheque_normalize_group_value(rec.bank_name),
-                    rec._route_cheque_normalize_group_value(rec.pos_terminal),
-                    anchor_type,
-                    str(anchor_id or 0),
-                    fields.Datetime.to_string(rec.payment_date) if rec.payment_date else "",
-                ]
-            )
-
-    def _route_electronic_group_domain(self):
-        self.ensure_one()
-        if self.payment_mode not in ("bank", "pos") or self.state != "confirmed":
-            return [("id", "=", self.id)]
-        if self.electronic_group_key:
-            return [
-                ("payment_mode", "in", ["bank", "pos"]),
-                ("state", "=", "confirmed"),
-                ("company_id", "=", self.company_id.id),
-                ("electronic_group_key", "=", self.electronic_group_key),
-            ]
-        return [("id", "=", self.id)]
-
-    def _route_electronic_group_records(self):
-        self.ensure_one()
-        return self.search(self._route_electronic_group_domain())
-
-    def _get_electronic_batch_records(self):
-        batch_records = self.browse()
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos"):
-                raise ValidationError(_("Bank/POS payment actions are available only for Bank Transfer or POS payments."))
-            if rec.state != "confirmed":
-                raise ValidationError(_("Confirm the Bank/POS payment record before Accounting confirmation."))
-            batch_records |= rec._route_electronic_group_records()
-        return batch_records
-
-    def _route_electronic_primary_ids_sql(self, accounting_visible=False, verification_states=None, salesperson_id=False):
-        where_extra = ""
-        params = []
-        if verification_states:
-            where_extra += " AND COALESCE(p.electronic_verification_state, 'reported') IN %s"
-            params.append(tuple(verification_states))
-        elif accounting_visible:
-            where_extra += """
-                AND COALESCE(p.electronic_verification_state, 'reported') IN ('reported', 'verified', 'rejected')
-                AND (
-                    p.route_electronic_receipt_move_id IS NULL
-                    OR COALESCE(electronic_move.state, '') != 'posted'
-                    OR COALESCE(p.electronic_verification_state, 'reported') = 'rejected'
-                )
-            """
-        if salesperson_id:
-            where_extra += " AND p.salesperson_id = %s"
-            params.append(salesperson_id)
-        self.env.cr.execute(
-            f"""
-            SELECT id
-              FROM (
-                    SELECT p.id,
-                           row_number() OVER (
-                               PARTITION BY COALESCE(NULLIF(p.electronic_group_key, ''), 'payment:' || p.id::varchar)
-                               ORDER BY p.payment_date DESC NULLS LAST, p.id DESC
-                           ) AS rn
-                      FROM route_visit_payment p
-                 LEFT JOIN account_move electronic_move ON electronic_move.id = p.route_electronic_receipt_move_id
-                     WHERE p.payment_mode IN ('bank', 'pos')
-                       AND p.state = 'confirmed'
-                       {where_extra}
-                   ) ranked
-             WHERE rn = 1
-            """,
-            params,
-        )
-        return [row[0] for row in self.env.cr.fetchall()]
-
-    def _search_electronic_is_primary(self, operator, value):
-        if operator not in ("=", "!="):
-            raise ValidationError(_("Unsupported search operator for Primary Electronic Payment Line."))
-        value = bool(value)
-        wants_primary = (operator == "=" and value) or (operator == "!=" and not value)
-        primary_ids = self._route_electronic_primary_ids_sql()
-        if not primary_ids:
-            primary_ids = [0]
-        return [("id", "in" if wants_primary else "not in", primary_ids)]
-
-    @api.depends(
-        "electronic_group_key",
-        "payment_mode",
-        "state",
-        "amount",
-        "payment_date",
-        "reference",
-        "bank_name",
-        "pos_terminal",
-        "source_document_ref",
-        "settlement_document_ref",
-        "area_id",
-        "salesperson_id",
-        "route_electronic_receipt_move_id",
-    )
-    def _compute_electronic_summary(self):
-        for rec in self:
-            if rec.payment_mode in ("bank", "pos") and rec.state == "confirmed":
-                group_records = rec._route_electronic_group_records()
-            else:
-                group_records = rec
-            group_records = group_records.sorted(lambda payment: (payment.payment_date or fields.Datetime.now(), payment.id or 0), reverse=True)
-            primary = group_records[:1]
-            source_refs = []
-            settlement_refs = []
-            area_names = []
-            for payment in group_records:
-                if payment.source_document_ref and payment.source_document_ref not in source_refs:
-                    source_refs.append(payment.source_document_ref)
-                if payment.settlement_document_ref and payment.settlement_document_ref not in settlement_refs:
-                    settlement_refs.append(payment.settlement_document_ref)
-                if payment.area_id and payment.area_id.display_name not in area_names:
-                    area_names.append(payment.area_id.display_name)
-
-            source_summary = ", ".join(source_refs[:4])
-            if len(source_refs) > 4:
-                source_summary = _("%(sources)s + %(extra)s more") % {"sources": source_summary, "extra": len(source_refs) - 4}
-
-            settlement_summary = ", ".join(settlement_refs[:3])
-            if len(settlement_refs) > 3:
-                settlement_summary = _("%(settlements)s + %(extra)s more") % {"settlements": settlement_summary, "extra": len(settlement_refs) - 3}
-
-            area_summary = ", ".join(area_names[:3])
-            if len(area_names) > 3:
-                area_summary = _("%(areas)s + %(extra)s more") % {"areas": area_summary, "extra": len(area_names) - 3}
-
-            payment_label = _("Bank Transfer") if rec.payment_mode == "bank" else _("POS Payment")
-            primary_ref = (primary.reference if primary else False) or rec.reference or rec.source_document_ref or rec.settlement_document_ref or ""
-            rec.electronic_is_primary = bool(rec.id and primary and rec.id == primary.id)
-            rec.electronic_total_amount = sum(group_records.mapped("amount")) or rec.amount or 0.0
-            rec.electronic_allocation_count = len(group_records)
-            rec.electronic_display_ref = ("%s %s" % (payment_label, primary_ref)).strip()
-            rec.electronic_source_summary = source_summary or rec.source_document_ref or ""
-            rec.electronic_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
-            rec.electronic_area_summary = area_summary or (rec.area_id.display_name if rec.area_id else "")
-
     def _route_custody_primary_ids_sql(self, accounting_visible=False, custody_states=None, salesperson_id=False):
         primary_ids = []
         primary_ids.extend(
@@ -1087,21 +777,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 salesperson_id=salesperson_id,
             )
         )
-        if custody_states:
-            if "with_salesperson" in custody_states:
-                primary_ids.extend(
-                    self._route_electronic_primary_ids_sql(
-                        verification_states=("reported", "rejected"),
-                        salesperson_id=salesperson_id,
-                    )
-                )
-        else:
-            primary_ids.extend(
-                self._route_electronic_primary_ids_sql(
-                    accounting_visible=accounting_visible,
-                    salesperson_id=salesperson_id,
-                )
-            )
 
         cheque_where_extra = ""
         cheque_params = []
@@ -1178,8 +853,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         visible_ids = self._route_custody_primary_ids_sql(custody_states=("with_salesperson", "handed_to_accounting"))
         received_cash_ids = self._route_cash_primary_ids_sql(custody_states=("received_by_accounting",))
         received_cash_records = self.browse(received_cash_ids).filtered(lambda rec: rec.route_cash_accounting_state == "not_posted")
-        electronic_ids = self._route_electronic_primary_ids_sql(accounting_visible=True)
-        visible_ids = list(set(visible_ids + received_cash_records.ids + electronic_ids))
+        visible_ids = list(set(visible_ids + received_cash_records.ids))
         if not visible_ids:
             visible_ids = [0]
         return [("id", "in" if wants_visible else "not in", visible_ids)]
@@ -1213,16 +887,12 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         "cheque_followup_state",
         "route_cash_accounting_state",
         "route_cheque_accounting_state",
-        "electronic_is_primary",
-        "electronic_verification_state",
-        "route_electronic_accounting_state",
     )
     def _compute_route_custody_flags(self):
         for rec in self:
             is_cash_primary = rec.payment_mode == "cash" and rec.cash_custody_is_primary
             is_cheque_primary = rec.payment_mode == "cheque" and rec.cheque_physical_is_primary
-            is_electronic_primary = rec.payment_mode in ("bank", "pos") and rec.electronic_is_primary
-            rec.route_custody_is_primary = bool(is_cash_primary or is_cheque_primary or is_electronic_primary)
+            rec.route_custody_is_primary = bool(is_cash_primary or is_cheque_primary)
             if rec.payment_mode == "cash":
                 cash_state = rec.cash_custody_state or "with_salesperson"
                 rec.route_custody_accounting_visible = bool(is_cash_primary and cash_state in ("handed_to_accounting", "received_by_accounting"))
@@ -1258,13 +928,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                         or (cheque_state == "received_by_accounting" and not cheque_is_fully_closed)
                     )
                 )
-            elif rec.payment_mode in ("bank", "pos"):
-                electronic_state = rec.electronic_verification_state or "reported"
-                electronic_is_posted = rec.route_electronic_accounting_state == "posted"
-                rec.route_custody_accounting_visible = bool(is_electronic_primary and not electronic_is_posted)
-                rec.route_custody_with_salesperson_visible = bool(is_electronic_primary and electronic_state in ("reported", "rejected"))
-                rec.route_custody_accounting_todo_visible = bool(is_electronic_primary and not electronic_is_posted)
-                rec.route_custody_monitor_open_visible = bool(is_electronic_primary and not electronic_is_posted)
             else:
                 rec.route_custody_accounting_visible = False
                 rec.route_custody_with_salesperson_visible = False
@@ -1279,9 +942,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         elif self.payment_mode == "cheque":
             records = self._get_cheque_followup_batch_records()
             title = _("Cheque Allocation Details")
-        elif self.payment_mode in ("bank", "pos"):
-            records = self._route_electronic_group_records()
-            title = _("Bank/POS Payment Details")
         else:
             records = self
             title = _("Custody Details")
@@ -1486,238 +1146,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             rec.cheque_physical_source_summary = source_summary or rec.source_document_ref or ""
             rec.cheque_physical_settlement_summary = settlement_summary or rec.settlement_document_ref or ""
             rec.cheque_physical_open_due_amount = sum(group_records.mapped("cheque_open_due_amount")) or 0.0
-
-    @api.depends(
-        "route_cheque_accounting_enabled",
-        "payment_mode",
-        "state",
-        "electronic_verification_state",
-        "route_electronic_receipt_move_id.state",
-    )
-    def _compute_route_electronic_accounting_state(self):
-        state_labels = dict(self._fields["route_electronic_accounting_state"].selection)
-        for rec in self:
-            moves = rec._route_electronic_accounting_moves() if rec.payment_mode in ("bank", "pos") else self.env["account.move"]
-            rec.route_electronic_accounting_move_count = len(moves)
-
-            if not rec.route_cheque_accounting_enabled or rec.payment_mode not in ("bank", "pos") or rec.state != "confirmed":
-                rec.route_electronic_accounting_state = "disabled"
-                rec.route_electronic_accounting_state_label = False
-                continue
-
-            verification_state = rec.electronic_verification_state or "reported"
-            receipt_posted = bool(rec.route_electronic_receipt_move_id and rec.route_electronic_receipt_move_id.state == "posted")
-            if receipt_posted:
-                rec.route_electronic_accounting_state = "posted"
-            elif verification_state == "verified":
-                rec.route_electronic_accounting_state = "verified_not_posted"
-            elif verification_state == "rejected":
-                rec.route_electronic_accounting_state = "followup"
-            else:
-                rec.route_electronic_accounting_state = "pending_verification"
-
-            if rec.route_electronic_accounting_state != "disabled":
-                rec.route_electronic_accounting_state_label = state_labels.get(rec.route_electronic_accounting_state, rec.route_electronic_accounting_state or "")
-            else:
-                rec.route_electronic_accounting_state_label = False
-
-    @api.depends(
-        "payment_mode",
-        "state",
-        "electronic_verification_state",
-        "route_electronic_accounting_state",
-        "route_electronic_accounting_move_count",
-    )
-    def _compute_route_electronic_access_flags(self):
-        is_accounting = self._route_user_is_route_cheque_accountant_or_manager()
-        for rec in self:
-            is_electronic = rec.payment_mode in ("bank", "pos") and rec.state == "confirmed"
-            verification_state = rec.electronic_verification_state or "reported"
-            posted = rec.route_electronic_accounting_state == "posted"
-            rec.route_electronic_can_accountant_verify = bool(is_electronic and is_accounting and not posted and verification_state in (False, "reported", "rejected"))
-            rec.route_electronic_can_accountant_reject = bool(is_electronic and is_accounting and not posted and verification_state != "rejected")
-            rec.route_electronic_can_post_receipt = bool(is_electronic and is_accounting and not posted and verification_state == "verified")
-
-    def _route_electronic_accounting_moves(self):
-        self.ensure_one()
-        moves = self.env["account.move"]
-        if self.route_electronic_receipt_move_id:
-            moves |= self.route_electronic_receipt_move_id
-        return moves.exists()
-
-    def _route_electronic_validate_accounting_settings(self):
-        self.ensure_one()
-        company = self.company_id
-        if not company.route_cheque_accounting_enabled:
-            raise ValidationError(_("Enable Route Collection Accounting in Route Settings first."))
-        if not company.route_cheque_receivable_account_id:
-            raise ValidationError(_("Configure Route Receivable / Open Due Account in Route Settings."))
-        if not company.route_cheque_bank_journal_id:
-            raise ValidationError(_("Configure a bank/cash journal in Cleared Cheque Bank Journal. It is also used for Bank Transfer and POS receipt voucher entries."))
-        if not company.route_cheque_bank_journal_id.default_account_id:
-            raise ValidationError(_("The selected bank/cash journal has no default account."))
-        return company
-
-    def _route_electronic_get_partner(self):
-        self.ensure_one()
-        outlet = self.outlet_id or (self.visit_id.outlet_id if self.visit_id else False) or (self.settlement_visit_id.outlet_id if self.settlement_visit_id else False)
-        return outlet.partner_id if outlet and outlet.partner_id else False
-
-    def _route_electronic_batch_amount(self):
-        return sum(self.mapped("amount")) or 0.0
-
-    def _route_electronic_batch_date(self):
-        records = self.sorted(lambda rec: (rec.electronic_verified_at or rec.payment_date or fields.Datetime.now(), rec.id))
-        value = next((rec.electronic_verified_at for rec in records if rec.electronic_verified_at), False)
-        if not value:
-            value = next((rec.payment_date for rec in records if rec.payment_date), False)
-        return fields.Date.to_date(value) if value else fields.Date.context_today(self)
-
-    def _route_electronic_batch_move_ref(self):
-        records = self.sorted(lambda rec: (rec.payment_date or fields.Datetime.now(), rec.id))
-        first = records[:1]
-        mode_label = _("Bank Transfer") if first.payment_mode == "bank" else _("POS")
-        parts = [_("Route Electronic Receipt"), mode_label]
-        if first.reference:
-            parts.append(first.reference)
-        if first.settlement_document_ref:
-            parts.append(first.settlement_document_ref)
-        if len(records) > 1:
-            parts.append(_("%(count)s allocations") % {"count": len(records)})
-        return " - ".join(parts)
-
-    def _route_electronic_get_shared_accounting_move(self):
-        moves = self.mapped("route_electronic_receipt_move_id").exists()
-        if not moves:
-            return False
-        if len(moves) > 1:
-            raise ValidationError(_("This electronic payment batch already has multiple receipt voucher entries. Review the entries before posting again."))
-        move = moves[:1]
-        if move.state != "posted":
-            move.action_post()
-        missing_records = self.filtered(lambda rec: not rec.route_electronic_receipt_move_id)
-        if missing_records:
-            missing_records.sudo().write({"route_electronic_receipt_move_id": move.id})
-        return move
-
-    def _route_electronic_ensure_receipt_accounting_entry(self):
-        if not self:
-            return False
-        existing_move = self._route_electronic_get_shared_accounting_move()
-        if existing_move:
-            return existing_move
-
-        records = self.sorted(lambda rec: rec.id)
-        first = records[:1]
-        company = first._route_electronic_validate_accounting_settings()
-        journal = company.route_cheque_bank_journal_id
-        bank_account = journal.default_account_id
-        receivable_account = company.route_cheque_receivable_account_id
-        amount = records._route_electronic_batch_amount()
-        if (amount or 0.0) <= 0.0:
-            raise ValidationError(_("Electronic receipt voucher amount must be greater than zero."))
-
-        ref = records._route_electronic_batch_move_ref()
-        credit_groups = {}
-        for payment in records:
-            payment_amount = payment.amount or 0.0
-            if payment_amount <= 0.0:
-                continue
-            partner = payment._route_electronic_get_partner()
-            key = partner.id if partner else 0
-            credit_groups.setdefault(key, {"partner": partner, "amount": 0.0})
-            credit_groups[key]["amount"] += payment_amount
-
-        line_vals = [
-            (0, 0, {
-                "name": ref,
-                "account_id": bank_account.id,
-                "partner_id": False,
-                "debit": amount,
-                "credit": 0.0,
-            })
-        ]
-        for group in credit_groups.values():
-            credit_amount = group["amount"] or 0.0
-            if credit_amount <= 0.0:
-                continue
-            partner = group["partner"]
-            line_vals.append(
-                (0, 0, {
-                    "name": ref,
-                    "account_id": receivable_account.id,
-                    "partner_id": partner.id if partner else False,
-                    "debit": 0.0,
-                    "credit": credit_amount,
-                })
-            )
-
-        move_vals = {
-            "move_type": "entry",
-            "company_id": first.company_id.id,
-            "journal_id": journal.id,
-            "date": records._route_electronic_batch_date(),
-            "ref": ref,
-            "line_ids": line_vals,
-        }
-        move = self.env["account.move"].sudo().with_company(first.company_id).create(move_vals)
-        move.action_post()
-        records.sudo().write({"route_electronic_receipt_move_id": move.id})
-        return move
-
-    def action_electronic_mark_verified(self):
-        self._check_route_cash_accounting_user()
-        records = self._get_electronic_batch_records()
-        records.write(
-            {
-                "electronic_verification_state": "verified",
-                "electronic_verified_at": fields.Datetime.now(),
-                "electronic_verified_by_id": self.env.user.id,
-            }
-        )
-        return self._cheque_followup_reload_action()
-
-    def action_electronic_mark_rejected(self):
-        self._check_route_cash_accounting_user()
-        records = self._get_electronic_batch_records()
-        for payment in records:
-            if payment.route_electronic_receipt_move_id and payment.route_electronic_receipt_move_id.state == "posted":
-                raise ValidationError(_("This Bank/POS payment already has a posted receipt voucher entry. Reverse or correct the entry before marking it for follow-up."))
-        records.write(
-            {
-                "electronic_verification_state": "rejected",
-                "electronic_rejected_at": fields.Datetime.now(),
-                "electronic_rejected_by_id": self.env.user.id,
-            }
-        )
-        return self._cheque_followup_reload_action()
-
-    def action_route_post_electronic_receipt_accounting(self):
-        self._check_route_cash_accounting_user()
-        records = self._get_electronic_batch_records()
-        invalid_records = records.filtered(lambda payment: (payment.electronic_verification_state or "reported") != "verified")
-        if invalid_records:
-            raise ValidationError(_("Accounting must confirm this Bank/POS payment before posting the receipt voucher entry."))
-        records._route_electronic_ensure_receipt_accounting_entry()
-        return self._cheque_followup_reload_action()
-
-    def action_route_open_electronic_accounting_moves(self):
-        records = self._get_electronic_batch_records() if self else self
-        moves = self.env["account.move"]
-        for rec in records:
-            moves |= rec._route_electronic_accounting_moves()
-        moves = moves.exists()
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Bank/POS Receipt Voucher Entries"),
-            "res_model": "account.move",
-            "view_mode": "list,form",
-            "domain": [("id", "in", moves.ids)],
-            "context": {"create": False},
-        }
-        if len(moves) == 1:
-            action.update({"view_mode": "form", "res_id": moves.id})
-        return action
 
     @api.depends(
         "route_cheque_accounting_enabled",
@@ -2635,14 +2063,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                    AND (cheque_custody_state IS NULL OR cheque_custody_state = '')
                 """
             )
-            self.env.cr.execute(
-                """
-                UPDATE route_visit_payment
-                   SET electronic_verification_state = 'reported'
-                 WHERE payment_mode IN ('bank', 'pos')
-                   AND (electronic_verification_state IS NULL OR electronic_verification_state = '')
-                """
-            )
         except Exception:
             # Keep module upgrade safe even if the column is not ready in an unusual registry phase.
             pass
@@ -2918,9 +2338,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
                 vals["cheque_custody_state"] = "with_salesperson"
             if vals.get("payment_mode") == "cash" and not vals.get("cash_custody_state"):
                 vals["cash_custody_state"] = "with_salesperson"
-            if vals.get("payment_mode") in ("bank", "pos") and not vals.get("electronic_verification_state"):
-                vals["electronic_verification_state"] = "reported"
-            if vals.get("payment_mode") and vals.get("payment_mode") != "cheque":
+            elif vals.get("payment_mode") and vals.get("payment_mode") != "cheque":
                 vals["cheque_followup_state"] = False
         records = super().create(vals_list)
         records.filtered(lambda rec: rec.payment_mode == "cheque" and not rec.cheque_followup_state).with_context(
@@ -2932,9 +2350,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
         records.filtered(lambda rec: rec.payment_mode == "cash" and not rec.cash_custody_state).with_context(
             bypass_cheque_followup_post_create=True
         ).write({"cash_custody_state": "with_salesperson"})
-        records.filtered(lambda rec: rec.payment_mode in ("bank", "pos") and not rec.electronic_verification_state).with_context(
-            bypass_cheque_followup_post_create=True
-        ).write({"electronic_verification_state": "reported"})
         return records
 
     def write(self, vals):
@@ -2945,9 +2360,7 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             values["cheque_custody_state"] = "with_salesperson"
         if values.get("payment_mode") == "cash" and not values.get("cash_custody_state"):
             values["cash_custody_state"] = "with_salesperson"
-        if values.get("payment_mode") in ("bank", "pos") and not values.get("electronic_verification_state"):
-            values["electronic_verification_state"] = "reported"
-        if values.get("payment_mode") and values.get("payment_mode") != "cheque":
+        elif values.get("payment_mode") and values.get("payment_mode") != "cheque":
             values.update(
                 {
                     "cheque_followup_state": False,
@@ -2967,8 +2380,6 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             )
         if values.get("payment_mode") and values.get("payment_mode") != "cash":
             values.update({"cash_custody_state": False, "cash_handed_to_accounting_at": False, "cash_handed_to_accounting_by_id": False, "cash_accounting_received_at": False, "cash_accounting_received_by_id": False, "cash_handover_note": False, "route_cash_receipt_move_id": False})
-        if values.get("payment_mode") and values.get("payment_mode") not in ("bank", "pos"):
-            values.update({"electronic_verification_state": False, "electronic_verification_note": False, "electronic_verified_at": False, "electronic_verified_by_id": False, "electronic_rejected_at": False, "electronic_rejected_by_id": False, "route_electronic_receipt_move_id": False})
         return super().write(values)
 
 
