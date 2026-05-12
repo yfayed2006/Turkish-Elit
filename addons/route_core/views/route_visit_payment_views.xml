@@ -275,7 +275,7 @@
 <t t-if="record.electronic_verification_state.raw_value == 'rejected'">
 <span class="route_pda_payment_badge route_pda_payment_badge_balance">Bank/POS: Follow-up</span>
 </t>
-<t t-if="not record.electronic_verification_state.raw_value or record.electronic_verification_state.raw_value == 'reported'">
+<t t-if="!record.electronic_verification_state.raw_value or record.electronic_verification_state.raw_value == 'reported'">
 <span class="route_pda_payment_badge route_pda_payment_badge_pending">Bank/POS: Pending Verification</span>
 </t>
 <t t-if="record.route_electronic_accounting_state.raw_value == 'posted'">
@@ -287,7 +287,7 @@
 <t t-if="record.route_electronic_accounting_state.raw_value == 'followup'">
 <span class="route_pda_payment_badge route_pda_payment_badge_balance">Receipt: Follow-up</span>
 </t>
-<t t-if="not record.route_electronic_accounting_state.raw_value or record.route_electronic_accounting_state.raw_value == 'pending_verification'">
+<t t-if="!record.route_electronic_accounting_state.raw_value or record.route_electronic_accounting_state.raw_value == 'pending_verification'">
 <span class="route_pda_payment_badge route_pda_payment_badge_pending">Receipt: Pending Verification</span>
 </t>
 </t>
