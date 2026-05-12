@@ -80,7 +80,7 @@
 <span class="route_pda_payment_badge route_pda_payment_badge_pending">Received / Verified Not Posted</span>
 </t>
 <t t-if="record.electronic_pending_count.raw_value">
-<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Bank/POS Pending Confirmation</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Electronic Pending Verification</span>
 </t>
 <t t-if="record.bank_pending_count.raw_value">
 <span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">Bank Pending</span>
@@ -111,7 +111,7 @@ cheques
 </span>
 </div>
 <div class="route_pda_payment_metric">
-<span class="route_pda_payment_metric_label">Bank/POS Pending Confirmation</span>
+<span class="route_pda_payment_metric_label">Electronic Pending Verification</span>
 <span class="route_pda_payment_metric_value">
 <field name="electronic_pending_amount"/>
 </span>
@@ -204,7 +204,7 @@ cheques
 <div t-attf-class="route_cheque_control_actions route_collection_custody_actions route_custody_actions route_custody_work_queue_actions #{record.is_company_summary.raw_value ? 'route_custody_work_queue_summary_actions' : 'route_custody_work_queue_person_actions'}">
 <button name="action_open_all_work" type="object" class="btn btn-sm btn-primary">Open Work</button>
 <button name="action_open_with_salesperson" type="object" class="btn btn-sm btn-light" invisible="not cash_with_salesperson_count and not cheque_with_salesperson_count">With Salespeople</button>
-<button name="action_open_electronic_verification" type="object" class="btn btn-sm btn-secondary" invisible="not electronic_pending_count">Confirm Bank/POS</button>
+<button name="action_open_electronic_verification" type="object" class="btn btn-sm btn-secondary" invisible="not electronic_pending_count">Verify Electronic</button>
 <button name="action_open_waiting_receipt" type="object" class="btn btn-sm btn-secondary" invisible="not cash_waiting_receipt_count and not cheque_waiting_receipt_count">Waiting Receipt</button>
 <button name="action_open_received_not_posted" type="object" class="btn btn-sm btn-secondary" invisible="not cash_received_not_posted_count and not cheque_received_not_posted_count and not electronic_verified_not_posted_count">Received / Verified Not Posted</button>
 <button name="action_open_bank_pending" type="object" class="btn btn-sm btn-light" invisible="not bank_pending_count">Bank Pending</button>
@@ -249,7 +249,7 @@ cheques
 <header>
 <button name="action_open_all_work" string="Open Work" type="object" class="btn-primary"/>
 <button name="action_open_with_salesperson" string="With Salespeople" type="object" class="btn-secondary" invisible="not cash_with_salesperson_count and not cheque_with_salesperson_count"/>
-<button name="action_open_electronic_verification" string="Confirm Bank/POS" type="object" class="btn-secondary" invisible="not electronic_pending_count"/>
+<button name="action_open_electronic_verification" string="Verify Electronic" type="object" class="btn-secondary" invisible="not electronic_pending_count"/>
 <button name="action_open_waiting_receipt" string="Waiting Receipt" type="object" class="btn-secondary" invisible="not cash_waiting_receipt_count and not cheque_waiting_receipt_count"/>
 <button name="action_open_received_not_posted" string="Received / Verified Not Posted" type="object" class="btn-secondary" invisible="not cash_received_not_posted_count and not cheque_received_not_posted_count and not electronic_verified_not_posted_count"/>
 <button name="action_open_bank_pending" string="Bank Pending" type="object" class="btn-secondary" invisible="not bank_pending_count"/>
@@ -310,7 +310,7 @@ cheques
 </div>
 </div>
 <div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Bank/POS Pending Confirmation</div>
+<div class="route_pda_info_label">Electronic Pending Verification</div>
 <div class="route_pda_info_value route_pda_money_value">
 <field name="electronic_pending_amount" readonly="1" nolabel="1"/>
 </div>
@@ -412,11 +412,11 @@ cheques
 <filter name="filter_open_work" string="Open Work" domain="[('total_work_count', '>', 0)]"/>
 <filter name="filter_cash_work" string="Cash Work" domain="['|', '|', ('cash_with_salesperson_count', '>', 0), ('cash_waiting_receipt_count', '>', 0), ('cash_received_not_posted_count', '>', 0)]"/>
 <filter name="filter_cheque_work" string="Cheque Work" domain="['|', '|', '|', '|', '|', ('cheque_with_salesperson_count', '>', 0), ('cheque_waiting_receipt_count', '>', 0), ('cheque_received_not_posted_count', '>', 0), ('bank_pending_count', '>', 0), ('bounced_followup_count', '>', 0), ('cancelled_followup_count', '>', 0)]"/>
-<filter name="filter_electronic_work" string="Bank/POS Work" domain="['|', '|', ('electronic_pending_count', '>', 0), ('electronic_verified_not_posted_count', '>', 0), ('electronic_rejected_count', '>', 0)]"/>
+<filter name="filter_electronic_work" string="Electronic Work" domain="['|', '|', ('electronic_pending_count', '>', 0), ('electronic_verified_not_posted_count', '>', 0), ('electronic_rejected_count', '>', 0)]"/>
 <filter name="filter_with_salesperson" string="With Salespeople" domain="['|', ('cash_with_salesperson_count', '>', 0), ('cheque_with_salesperson_count', '>', 0)]"/>
 <filter name="filter_waiting_receipt" string="Waiting Receipt" domain="['|', ('cash_waiting_receipt_count', '>', 0), ('cheque_waiting_receipt_count', '>', 0)]"/>
 <filter name="filter_received_not_posted" string="Received / Verified Not Posted" domain="['|', '|', ('cash_received_not_posted_count', '>', 0), ('cheque_received_not_posted_count', '>', 0), ('electronic_verified_not_posted_count', '>', 0)]"/>
-<filter name="filter_electronic_pending" string="Bank/POS Pending Confirmation" domain="[('electronic_pending_count', '>', 0)]"/>
+<filter name="filter_electronic_pending" string="Electronic Pending Verification" domain="[('electronic_pending_count', '>', 0)]"/>
 <filter name="filter_bank_pending" string="Bank Pending" domain="[('bank_pending_count', '>', 0)]"/>
 <filter name="filter_followup" string="Follow-up" domain="[('open_followup_count', '>', 0)]"/>
 </search>
