@@ -66,5 +66,3 @@ from . import route_direct_return_pricelist_policy
 
 from . import route_cheque_followup
 from . import route_custody_accounting_work_queue
-
-
