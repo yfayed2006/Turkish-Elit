@@ -699,3 +699,4 @@ class RouteVisitPaymentElectronicControl(models.Model):
                 }
             )
         return super().write(values)
+
