@@ -1,0 +1,248 @@
+<odoo>
+<!-- 
+        Path in module:
+        addons/route_core/views/route_bank_pos_payment_detail_override_views.xml
+
+        Purpose:
+        Force the active route.visit.payment detail form to show Bank/POS details
+        when payment_mode is Bank Transfer or POS, even when Odoo opens the
+        shared cheque follow-up form through a kanban global click.
+     -->
+<record id="view_route_cheque_followup_form_bank_pos_override" model="ir.ui.view">
+<field name="name">route.cheque.followup.form.bank.pos.override</field>
+<field name="model">route.visit.payment</field>
+<field name="inherit_id" ref="route_core.view_route_cheque_followup_form"/>
+<field name="priority" eval="99"/>
+<field name="arch" type="xml">
+<xpath expr="(//header/button)[1]" position="before">
+<button name="action_electronic_mark_verified" string="Confirm Electronic Payment" type="object" class="btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_verify"/>
+<button name="action_electronic_mark_rejected" string="Needs Follow-up" type="object" class="btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_reject"/>
+<button name="action_route_post_electronic_receipt_accounting" string="Post Receipt Voucher Entry" type="object" class="btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_post_receipt"/>
+<button name="action_route_open_electronic_accounting_moves" string="Accounting Entries" type="object" class="btn-secondary" invisible="payment_mode not in ['bank', 'pos'] or route_electronic_accounting_move_count == 0"/>
+</xpath>
+<xpath expr="//header/field[@name='cheque_followup_state']" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+<xpath expr="(//sheet/field[@name='route_cheque_accounting_move_count'])[1]" position="after">
+<field name="electronic_payment_total_amount" invisible="1"/>
+<field name="electronic_payment_allocation_count" invisible="1"/>
+<field name="electronic_payment_display_ref" invisible="1"/>
+<field name="electronic_payment_source_summary" invisible="1"/>
+<field name="electronic_payment_settlement_summary" invisible="1"/>
+<field name="electronic_payment_area_summary" invisible="1"/>
+<field name="electronic_verification_state" invisible="1"/>
+<field name="electronic_verification_state_label" invisible="1"/>
+<field name="route_electronic_accounting_state" invisible="1"/>
+<field name="route_electronic_accounting_state_label" invisible="1"/>
+<field name="route_electronic_accounting_move_count" invisible="1"/>
+<field name="route_electronic_can_accountant_verify" invisible="1"/>
+<field name="route_electronic_can_accountant_reject" invisible="1"/>
+<field name="route_electronic_can_post_receipt" invisible="1"/>
+<field name="route_electronic_show_accounting_actions" invisible="1"/>
+<field name="electronic_verified_at" invisible="1"/>
+<field name="electronic_verified_by_id" invisible="1"/>
+<field name="electronic_rejected_at" invisible="1"/>
+<field name="electronic_rejected_by_id" invisible="1"/>
+<field name="route_electronic_receipt_move_id" invisible="1"/>
+</xpath>
+<xpath expr="(//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_pda_payment_summary_grid ')])[1]" position="before">
+<div class="route_bank_pos_detail_wrapper" invisible="payment_mode not in ['bank', 'pos']">
+<div class="route_pda_payment_head route_cheque_control_head">
+<div>
+<div class="route_pda_payment_title">
+<field name="electronic_payment_display_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_subtitle">
+<field name="outlet_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+<span> • </span>
+<field name="salesperson_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+<span invisible="electronic_payment_allocation_count == 0"> • </span>
+<span invisible="electronic_payment_allocation_count == 0">
+<field name="electronic_payment_allocation_count" readonly="1" nolabel="1"/>
+<span> allocation lines</span>
+</span>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<field name="payment_mode" readonly="1" widget="badge" nolabel="1"/>
+<span class="route_pda_payment_badge route_pda_payment_badge_pending">
+<span>Verification: </span>
+<field name="electronic_verification_state_label" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_pending">
+<span>Accounting: </span>
+<field name="route_electronic_accounting_state_label" readonly="1" nolabel="1"/>
+</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed" invisible="electronic_payment_allocation_count <= 1">
+<field name="electronic_payment_allocation_count" readonly="1" nolabel="1"/>
+<span> Allocations</span>
+</span>
+</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Electronic Payment Amount</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="electronic_payment_total_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Reference</div>
+<div class="route_pda_info_value">
+<field name="reference" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="payment_mode != 'pos'">
+<div class="route_pda_info_label">POS Terminal</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="pos_terminal" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="payment_mode != 'bank'">
+<div class="route_pda_info_label">Bank Name</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="bank_name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Payment Status</div>
+<div>
+<field name="state" readonly="1" widget="badge" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Verification Status</div>
+<div class="route_pda_info_value">
+<field name="electronic_verification_state_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Accounting Status</div>
+<div class="route_pda_info_value">
+<field name="route_electronic_accounting_state_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Allocation Lines</div>
+<div class="route_pda_info_value">
+<field name="electronic_payment_allocation_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Payment Covers</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="electronic_payment_source_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Settlement Visits</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="electronic_payment_settlement_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Source Document</div>
+<div class="route_pda_info_value">
+<field name="source_document_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Settlement Visit</div>
+<div class="route_pda_info_value">
+<field name="settlement_document_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Outlet</div>
+<div class="route_pda_info_value">
+<field name="outlet_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Salesperson</div>
+<div class="route_pda_info_value">
+<field name="salesperson_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="electronic_payment_area_summary" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_cheque_control_section route_bank_pos_review_trail">
+<div class="route_pda_group_title">Bank/POS Review Trail</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_trail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Confirmed At</div>
+<div class="route_pda_info_value">
+<field name="electronic_verified_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Confirmed By</div>
+<div class="route_pda_info_value">
+<field name="electronic_verified_by_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Follow-up At</div>
+<div class="route_pda_info_value">
+<field name="electronic_rejected_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Follow-up By</div>
+<div class="route_pda_info_value">
+<field name="electronic_rejected_by_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Internal Follow-up Note</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="electronic_verification_note" placeholder="Add Bank/POS follow-up note..." nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_cheque_control_section route_bank_pos_accounting_entries" groups="route_core.group_route_cheque_accountant,route_core.group_route_management" invisible="route_electronic_accounting_move_count == 0">
+<div class="route_pda_group_title">Accounting Entries</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_accounting_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Accounting State</div>
+<div class="route_pda_info_value">
+<field name="route_electronic_accounting_state_label" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Entries Count</div>
+<div class="route_pda_info_value">
+<field name="route_electronic_accounting_move_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Receipt Voucher Entry</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="route_electronic_receipt_move_id" readonly="1" nolabel="1" options="{'no_create': True}"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</xpath>
+<xpath expr="(//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' alert ')])[1]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos'] or not cheque_needs_followup</attribute>
+</xpath>
+<xpath expr="(//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_pda_payment_summary_grid ')])[1]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+<xpath expr="//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_cheque_control_section ')]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+</field>
+</record>
+</odoo>
