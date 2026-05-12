@@ -36,6 +36,7 @@
         "views/route_visit_payment_views.xml",
         "views/route_cheque_followup_views.xml",
         "views/route_bank_pos_payment_review_views.xml",
+        "views/route_bank_pos_payment_detail_override_views.xml",
         "views/route_custody_accounting_work_queue_views.xml",
         "views/route_visit_workflow_ux_views.xml",
         "views/route_visit_payment_ux_views.xml",
