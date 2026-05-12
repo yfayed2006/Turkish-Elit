@@ -1,575 +1,1335 @@
-# -*- coding: utf-8 -*-
-"""Compatibility extension for Route Core Bank/POS custody flow.
-
-This file intentionally keeps the Bank/POS verification fields separate from
-route_cheque_followup.py so upgrades do not fail when XML views already refer to
-these fields. It extends route.visit.payment only and is safe for generic use.
-"""
-
-from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
-
-
-class RouteVisitPaymentElectronicControl(models.Model):
-    _inherit = "route.visit.payment"
-
-    electronic_verification_state = fields.Selection(
-        [
-            ("reported", "Reported by Salesperson"),
-            ("verified", "Verified by Accounting"),
-            ("rejected", "Needs Follow-up"),
-        ],
-        string="Bank/POS Verification",
-        default=False,
-        index=True,
-        copy=False,
-        help="Used for Bank Transfer and POS payments. Reported payments are visible to Accounting for verification before receipt voucher posting.",
-    )
-    electronic_verification_state_label = fields.Char(
-        string="Bank/POS Verification Label",
-        compute="_compute_electronic_verification_state_label",
-        store=False,
-    )
-    electronic_verification_note = fields.Text(string="Bank/POS Confirmation Note", copy=False)
-    electronic_verified_at = fields.Datetime(string="Bank/POS Confirmed At", copy=False)
-    electronic_verified_by_id = fields.Many2one("res.users", string="Bank/POS Confirmed By", readonly=True, copy=False)
-    electronic_rejected_at = fields.Datetime(string="Bank/POS Follow-up At", copy=False)
-    electronic_rejected_by_id = fields.Many2one("res.users", string="Bank/POS Follow-up By", readonly=True, copy=False)
-
-    electronic_group_key = fields.Char(
-        string="Bank/POS Group Key",
-        compute="_compute_electronic_group_key",
-        store=True,
-        index=True,
-        copy=False,
-        help="Technical key used to show one Bank/POS card for one reported electronic payment while preserving allocation lines.",
-    )
-    electronic_is_primary = fields.Boolean(
-        string="Primary Bank/POS Payment Line",
-        compute="_compute_electronic_is_primary",
-        search="_search_electronic_is_primary",
-        store=False,
-    )
-
-    route_electronic_receipt_move_id = fields.Many2one(
-        "account.move",
-        string="Bank/POS Receipt Voucher Entry",
-        readonly=True,
-        copy=False,
-    )
-    route_electronic_accounting_state = fields.Selection(
-        [
-            ("disabled", "Accounting Disabled"),
-            ("pending_verification", "Pending Bank/POS Confirmation"),
-            ("verified_not_posted", "Bank/POS Confirmed Not Posted"),
-            ("followup", "Bank/POS Follow-up"),
-            ("posted", "Receipt Entry Posted"),
-        ],
-        string="Bank/POS Accounting State",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_accounting_state_label = fields.Char(
-        string="Bank/POS Accounting State Label",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_accounting_move_count = fields.Integer(
-        string="Bank/POS Accounting Entries",
-        compute="_compute_route_electronic_accounting_state",
-        store=False,
-    )
-    route_electronic_can_accountant_verify = fields.Boolean(
-        string="Can Confirm Bank/POS Payment",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
-    route_electronic_can_accountant_reject = fields.Boolean(
-        string="Can Mark Bank/POS for Follow-up",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
-    route_electronic_can_post_receipt = fields.Boolean(
-        string="Can Post Bank/POS Receipt Voucher",
-        compute="_compute_route_electronic_access_flags",
-        store=False,
-    )
-
-    @api.depends("payment_mode", "electronic_verification_state")
-    def _compute_electronic_verification_state_label(self):
-        labels = dict(self._fields["electronic_verification_state"].selection)
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos"):
-                rec.electronic_verification_state_label = False
-                continue
-            state = rec.electronic_verification_state or "reported"
-            rec.electronic_verification_state_label = labels.get(state, state)
-
-    def _route_electronic_normalize_group_value(self, value):
-        normalizer = getattr(self, "_route_cheque_normalize_group_value", False)
-        if normalizer:
-            return normalizer(value)
-        return (value or "").strip().lower()
-
-    @api.depends(
-        "company_id",
-        "currency_id",
-        "payment_mode",
-        "state",
-        "reference",
-        "bank_name",
-        "pos_terminal",
-        "payment_date",
-        "settlement_visit_id",
-        "visit_id",
-        "sale_order_id",
-        "salesperson_id",
-    )
-    def _compute_electronic_group_key(self):
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos") or rec.state != "confirmed":
-                rec.electronic_group_key = False
-                continue
-            if rec.settlement_visit_id:
-                anchor_type = "settlement"
-                anchor_id = rec.settlement_visit_id.id
-            elif rec.visit_id:
-                anchor_type = "visit"
-                anchor_id = rec.visit_id.id
-            elif rec.sale_order_id:
-                anchor_type = "sale_order"
-                anchor_id = rec.sale_order_id.id
-            else:
-                anchor_type = "payment"
-                anchor_id = rec.id or 0
-            rec.electronic_group_key = "|".join(
-                [
-                    str(rec.company_id.id or 0),
-                    str(rec.currency_id.id or 0),
-                    rec.payment_mode or "",
-                    str(rec.salesperson_id.id or 0),
-                    rec._route_electronic_normalize_group_value(rec.reference),
-                    rec._route_electronic_normalize_group_value(rec.bank_name),
-                    rec._route_electronic_normalize_group_value(rec.pos_terminal),
-                    anchor_type,
-                    str(anchor_id or 0),
-                    fields.Datetime.to_string(rec.payment_date) if rec.payment_date else "",
-                ]
-            )
-
-    def _route_electronic_group_domain(self):
-        self.ensure_one()
-        if self.payment_mode not in ("bank", "pos") or self.state != "confirmed":
-            return [("id", "=", self.id)]
-        if self.electronic_group_key:
-            return [
-                ("payment_mode", "in", ["bank", "pos"]),
-                ("state", "=", "confirmed"),
-                ("company_id", "=", self.company_id.id),
-                ("electronic_group_key", "=", self.electronic_group_key),
-            ]
-        return [("id", "=", self.id)]
-
-    def _route_electronic_group_records(self):
-        self.ensure_one()
-        return self.search(self._route_electronic_group_domain())
-
-    def _get_electronic_batch_records(self):
-        batch_records = self.env["route.visit.payment"]
-        for rec in self:
-            if rec.payment_mode in ("bank", "pos"):
-                batch_records |= rec._route_electronic_group_records()
-            else:
-                batch_records |= rec
-        return batch_records.exists()
-
-    def _route_electronic_primary_ids_sql(self, accounting_visible=False, verification_states=None, salesperson_id=False):
-        params = []
-        where_extra = ""
-        if verification_states:
-            where_extra += " AND COALESCE(p.electronic_verification_state, 'reported') IN %s"
-            params.append(tuple(verification_states))
-        if salesperson_id:
-            where_extra += " AND p.salesperson_id = %s"
-            params.append(salesperson_id)
-        if accounting_visible:
-            where_extra += """
-                AND COALESCE(p.electronic_verification_state, 'reported') IN ('reported', 'verified', 'rejected')
-                AND (
-                    p.route_electronic_receipt_move_id IS NULL
-                    OR COALESCE(electronic_move.state, '') != 'posted'
-                    OR COALESCE(p.electronic_verification_state, 'reported') = 'rejected'
-                )
-            """
-        self.env.cr.execute(
-            """
-            SELECT id
-              FROM (
-                    SELECT p.id,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY COALESCE(NULLIF(p.electronic_group_key, ''), 'payment:' || p.id::varchar)
-                               ORDER BY p.payment_date DESC NULLS LAST, p.id DESC
-                           ) AS rn
-                      FROM route_visit_payment p
-                      LEFT JOIN account_move electronic_move ON electronic_move.id = p.route_electronic_receipt_move_id
-                     WHERE p.state = 'confirmed'
-                       AND p.payment_mode IN ('bank', 'pos')
-                       {where_extra}
-                   ) ranked
-             WHERE rn = 1
-            """.format(where_extra=where_extra),
-            params,
-        )
-        return [row[0] for row in self.env.cr.fetchall()]
-
-    def _search_electronic_is_primary(self, operator, value):
-        if operator not in ("=", "!="):
-            raise ValidationError(_("Unsupported search operator for Bank/POS primary payment."))
-        primary_ids = self._route_electronic_primary_ids_sql()
-        truthy = bool(value)
-        if (operator == "=" and truthy) or (operator == "!=" and not truthy):
-            return [("id", "in", primary_ids or [0])]
-        return ["!", ("id", "in", primary_ids or [0])]
-
-    @api.depends("payment_mode", "state", "electronic_group_key")
-    def _compute_electronic_is_primary(self):
-        primary_ids = set(self._route_electronic_primary_ids_sql()) if self else set()
-        for rec in self:
-            rec.electronic_is_primary = bool(rec.id and rec.id in primary_ids)
-
-    def _route_electronic_accounting_moves(self):
-        self.ensure_one()
-        moves = self.env["account.move"]
-        if self.route_electronic_receipt_move_id:
-            moves |= self.route_electronic_receipt_move_id
-        return moves.exists()
-
-    @api.depends(
-        "route_cheque_accounting_enabled",
-        "payment_mode",
-        "state",
-        "electronic_verification_state",
-        "route_electronic_receipt_move_id.state",
-    )
-    def _compute_route_electronic_accounting_state(self):
-        state_labels = dict(self._fields["route_electronic_accounting_state"].selection)
-        for rec in self:
-            moves = rec._route_electronic_accounting_moves() if rec.payment_mode in ("bank", "pos") else self.env["account.move"]
-            rec.route_electronic_accounting_move_count = len(moves)
-            if not rec.route_cheque_accounting_enabled or rec.payment_mode not in ("bank", "pos") or rec.state != "confirmed":
-                rec.route_electronic_accounting_state = "disabled"
-                rec.route_electronic_accounting_state_label = False
-                continue
-            verification_state = rec.electronic_verification_state or "reported"
-            receipt_posted = bool(rec.route_electronic_receipt_move_id and rec.route_electronic_receipt_move_id.state == "posted")
-            if receipt_posted:
-                rec.route_electronic_accounting_state = "posted"
-            elif verification_state == "verified":
-                rec.route_electronic_accounting_state = "verified_not_posted"
-            elif verification_state == "rejected":
-                rec.route_electronic_accounting_state = "followup"
-            else:
-                rec.route_electronic_accounting_state = "pending_verification"
-            rec.route_electronic_accounting_state_label = state_labels.get(
-                rec.route_electronic_accounting_state,
-                rec.route_electronic_accounting_state or "",
-            )
-
-    @api.depends(
-        "payment_mode",
-        "state",
-        "electronic_verification_state",
-        "route_electronic_accounting_state",
-        "route_electronic_accounting_move_count",
-    )
-    def _compute_route_electronic_access_flags(self):
-        checker = getattr(self, "_route_user_is_route_cheque_accountant_or_manager", False)
-        is_accounting = checker() if checker else self.env.user.has_group("account.group_account_user")
-        for rec in self:
-            is_electronic = rec.payment_mode in ("bank", "pos") and rec.state == "confirmed"
-            verification_state = rec.electronic_verification_state or "reported"
-            posted = rec.route_electronic_accounting_state == "posted"
-            rec.route_electronic_can_accountant_verify = bool(is_electronic and is_accounting and not posted and verification_state in (False, "reported", "rejected"))
-            rec.route_electronic_can_accountant_reject = bool(is_electronic and is_accounting and not posted and verification_state != "rejected")
-            rec.route_electronic_can_post_receipt = bool(is_electronic and is_accounting and not posted and verification_state == "verified")
-
-    def _route_electronic_validate_accounting_settings(self):
-        self.ensure_one()
-        company = self.company_id
-        if not company.route_cheque_accounting_enabled:
-            raise ValidationError(_("Enable Route Collection Accounting in Route Settings first."))
-        if not company.route_cheque_receivable_account_id:
-            raise ValidationError(_("Configure Route Receivable / Open Due Account in Route Settings."))
-        if not company.route_cheque_bank_journal_id:
-            raise ValidationError(_("Configure a bank/cash journal in Cleared Cheque Bank Journal. It is also used for Bank Transfer and POS receipt voucher entries."))
-        if not company.route_cheque_bank_journal_id.default_account_id:
-            raise ValidationError(_("The selected bank/cash journal has no default account."))
-        return company
-
-    def _route_electronic_get_partner(self):
-        self.ensure_one()
-        outlet = self.outlet_id or (self.visit_id.outlet_id if self.visit_id else False) or (self.settlement_visit_id.outlet_id if self.settlement_visit_id else False)
-        return outlet.partner_id if outlet and outlet.partner_id else False
-
-    def _route_electronic_batch_amount(self):
-        return sum(self.mapped("amount")) or 0.0
-
-    def _route_electronic_batch_date(self):
-        records = self.sorted(lambda rec: (rec.electronic_verified_at or rec.payment_date or fields.Datetime.now(), rec.id))
-        value = next((rec.electronic_verified_at for rec in records if rec.electronic_verified_at), False)
-        if not value:
-            value = next((rec.payment_date for rec in records if rec.payment_date), False)
-        return fields.Date.to_date(value) if value else fields.Date.context_today(self)
-
-    def _route_electronic_batch_move_ref(self):
-        records = self.sorted(lambda rec: (rec.payment_date or fields.Datetime.now(), rec.id))
-        first = records[:1]
-        mode_label = _("Bank Transfer") if first.payment_mode == "bank" else _("POS")
-        parts = [_("Route Bank/POS Receipt"), mode_label]
-        if first.reference:
-            parts.append(first.reference)
-        if first.settlement_document_ref:
-            parts.append(first.settlement_document_ref)
-        if len(records) > 1:
-            parts.append(_("%(count)s allocations") % {"count": len(records)})
-        return " - ".join(parts)
-
-    def _route_electronic_get_shared_accounting_move(self):
-        moves = self.mapped("route_electronic_receipt_move_id").exists()
-        if not moves:
-            return False
-        if len(moves) > 1:
-            raise ValidationError(_("This Bank/POS payment batch already has multiple receipt voucher entries. Review the entries before posting again."))
-        move = moves[:1]
-        if move.state != "posted":
-            move.action_post()
-        missing_records = self.filtered(lambda rec: not rec.route_electronic_receipt_move_id)
-        if missing_records:
-            missing_records.sudo().write({"route_electronic_receipt_move_id": move.id})
-        return move
-
-    def _route_electronic_ensure_receipt_accounting_entry(self):
-        if not self:
-            return False
-        existing_move = self._route_electronic_get_shared_accounting_move()
-        if existing_move:
-            return existing_move
-        records = self.sorted(lambda rec: rec.id)
-        first = records[:1]
-        company = first._route_electronic_validate_accounting_settings()
-        journal = company.route_cheque_bank_journal_id
-        bank_account = journal.default_account_id
-        receivable_account = company.route_cheque_receivable_account_id
-        amount = records._route_electronic_batch_amount()
-        if (amount or 0.0) <= 0.0:
-            raise ValidationError(_("Bank/POS receipt voucher amount must be greater than zero."))
-        ref = records._route_electronic_batch_move_ref()
-        credit_groups = {}
-        for payment in records:
-            payment_amount = payment.amount or 0.0
-            if payment_amount <= 0.0:
-                continue
-            partner = payment._route_electronic_get_partner()
-            key = partner.id if partner else 0
-            credit_groups.setdefault(key, {"partner": partner, "amount": 0.0})
-            credit_groups[key]["amount"] += payment_amount
-        line_vals = [
-            (0, 0, {
-                "name": ref,
-                "account_id": bank_account.id,
-                "partner_id": False,
-                "debit": amount,
-                "credit": 0.0,
-            })
-        ]
-        for group in credit_groups.values():
-            credit_amount = group["amount"] or 0.0
-            if credit_amount <= 0.0:
-                continue
-            partner = group["partner"]
-            line_vals.append(
-                (0, 0, {
-                    "name": ref,
-                    "account_id": receivable_account.id,
-                    "partner_id": partner.id if partner else False,
-                    "debit": 0.0,
-                    "credit": credit_amount,
-                })
-            )
-        move = self.env["account.move"].sudo().with_company(first.company_id).create(
-            {
-                "move_type": "entry",
-                "company_id": first.company_id.id,
-                "journal_id": journal.id,
-                "date": records._route_electronic_batch_date(),
-                "ref": ref,
-                "line_ids": line_vals,
-            }
-        )
-        move.action_post()
-        records.sudo().write({"route_electronic_receipt_move_id": move.id})
-        return move
-
-    def action_electronic_mark_verified(self):
-        checker = getattr(self, "_check_route_cash_accounting_user", False)
-        if checker:
-            checker()
-        records = self._get_electronic_batch_records()
-        records.write(
-            {
-                "electronic_verification_state": "verified",
-                "electronic_verified_at": fields.Datetime.now(),
-                "electronic_verified_by_id": self.env.user.id,
-            }
-        )
-        reloader = getattr(self, "_cheque_followup_reload_action", False)
-        return reloader() if reloader else {"type": "ir.actions.client", "tag": "reload"}
-
-    def action_electronic_mark_rejected(self):
-        checker = getattr(self, "_check_route_cash_accounting_user", False)
-        if checker:
-            checker()
-        records = self._get_electronic_batch_records()
-        for payment in records:
-            if payment.route_electronic_receipt_move_id and payment.route_electronic_receipt_move_id.state == "posted":
-                raise ValidationError(_("This Bank/POS payment already has a posted receipt voucher entry. Reverse or correct the entry before marking it for follow-up."))
-        records.write(
-            {
-                "electronic_verification_state": "rejected",
-                "electronic_rejected_at": fields.Datetime.now(),
-                "electronic_rejected_by_id": self.env.user.id,
-            }
-        )
-        reloader = getattr(self, "_cheque_followup_reload_action", False)
-        return reloader() if reloader else {"type": "ir.actions.client", "tag": "reload"}
-
-    def action_route_post_electronic_receipt_accounting(self):
-        checker = getattr(self, "_check_route_cash_accounting_user", False)
-        if checker:
-            checker()
-        records = self._get_electronic_batch_records()
-        invalid_records = records.filtered(lambda payment: (payment.electronic_verification_state or "reported") != "verified")
-        if invalid_records:
-            raise ValidationError(_("Accounting must confirm this Bank/POS payment before posting the receipt voucher entry."))
-        records._route_electronic_ensure_receipt_accounting_entry()
-        reloader = getattr(self, "_cheque_followup_reload_action", False)
-        return reloader() if reloader else {"type": "ir.actions.client", "tag": "reload"}
-
-    def action_route_open_electronic_accounting_moves(self):
-        records = self._get_electronic_batch_records() if self else self
-        moves = self.env["account.move"]
-        for rec in records:
-            moves |= rec._route_electronic_accounting_moves()
-        moves = moves.exists()
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("Bank/POS Receipt Voucher Entries"),
-            "res_model": "account.move",
-            "view_mode": "list,form",
-            "domain": [("id", "in", moves.ids)],
-            "context": {"create": False},
-        }
-        if len(moves) == 1:
-            action.update({"view_mode": "form", "res_id": moves.id})
-        return action
-
-
-    def _route_custody_primary_ids_sql(self, accounting_visible=False, custody_states=None, salesperson_id=False):
-        """Include Bank Transfer/POS cards in the same custody helpers used by menus.
-
-        Cash and cheque keep their physical custody behavior from route_cheque_followup.py.
-        Bank/POS payments are not physical custody, but they are still salesperson-reported
-        values that Accounting must confirm and post, so they need to appear in My Custody,
-        Custody Monitor, and Accounting Work Queue until their workflow is complete.
-        """
-        primary_ids = []
-        super_method = getattr(super(), "_route_custody_primary_ids_sql", False)
-        if super_method:
-            primary_ids.extend(
-                super_method(
-                    accounting_visible=accounting_visible,
-                    custody_states=custody_states,
-                    salesperson_id=salesperson_id,
-                )
-            )
-
-        electronic_ids = []
-        if custody_states:
-            if "with_salesperson" in custody_states:
-                electronic_ids = self._route_electronic_primary_ids_sql(
-                    verification_states=("reported", "rejected"),
-                    salesperson_id=salesperson_id,
-                )
-        elif accounting_visible:
-            electronic_ids = self._route_electronic_primary_ids_sql(
-                accounting_visible=True,
-                salesperson_id=salesperson_id,
-            )
-        else:
-            electronic_ids = self._route_electronic_primary_ids_sql(salesperson_id=salesperson_id)
-
-        primary_ids.extend(electronic_ids or [])
-        return list(dict.fromkeys(primary_ids))
-
-    @api.depends(
-        "payment_mode",
-        "state",
-        "cash_custody_is_primary",
-        "cheque_physical_is_primary",
-        "cash_custody_state",
-        "cheque_custody_state",
-        "cheque_followup_state",
-        "route_cash_accounting_state",
-        "route_cheque_accounting_state",
-        "electronic_is_primary",
-        "electronic_verification_state",
-        "route_electronic_accounting_state",
-        "route_electronic_receipt_move_id.state",
-    )
-    def _compute_route_custody_flags(self):
-        super()._compute_route_custody_flags()
-        for rec in self:
-            if rec.payment_mode not in ("bank", "pos"):
-                continue
-            verification_state = rec.electronic_verification_state or "reported"
-            accounting_state = rec.route_electronic_accounting_state or "pending_verification"
-            is_primary = bool(rec.electronic_is_primary and rec.state == "confirmed")
-            is_posted = accounting_state == "posted"
-            rec.route_custody_is_primary = is_primary
-            rec.route_custody_with_salesperson_visible = bool(
-                is_primary
-                and not is_posted
-                and verification_state in ("reported", "rejected")
-            )
-            rec.route_custody_accounting_visible = bool(
-                is_primary
-                and not is_posted
-                and verification_state in ("reported", "verified", "rejected")
-            )
-            rec.route_custody_accounting_todo_visible = rec.route_custody_accounting_visible
-            rec.route_custody_monitor_open_visible = rec.route_custody_accounting_visible
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get("payment_mode") in ("bank", "pos") and not vals.get("electronic_verification_state"):
-                vals["electronic_verification_state"] = "reported"
-        return super().create(vals_list)
-
-    def write(self, vals):
-        values = dict(vals)
-        if values.get("payment_mode") in ("bank", "pos") and not values.get("electronic_verification_state"):
-            values["electronic_verification_state"] = "reported"
-        if values.get("payment_mode") and values.get("payment_mode") not in ("bank", "pos"):
-            values.update(
-                {
-                    "electronic_verification_state": False,
-                    "electronic_verification_note": False,
-                    "electronic_verified_at": False,
-                    "electronic_verified_by_id": False,
-                    "electronic_rejected_at": False,
-                    "electronic_rejected_by_id": False,
-                    "route_electronic_receipt_move_id": False,
-                }
-            )
-        return super().write(values)
+<odoo>
+<!--                                    Admin / all payments                                    -->
+<record id="view_route_visit_payment_list" model="ir.ui.view">
+<field name="name">route.visit.payment.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list>
+<field name="payment_business_flow" widget="badge"/>
+<field name="source_type" widget="badge" optional="hide"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
+<field name="source_document_ref" string="Source Document"/>
+<field name="visit_id" optional="hide"/>
+<field name="sale_order_id" optional="hide"/>
+<field name="outlet_id"/>
+<field name="area_id" optional="hide"/>
+<field name="salesperson_id"/>
+<field name="payment_date"/>
+<field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
+<field name="collection_due_bucket" string="Financial Status" optional="hide"/>
+<field name="collection_promise_bucket" string="Promise Filter" optional="hide"/>
+<field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="due_date" optional="hide"/>
+<field name="promise_date" optional="hide"/>
+<field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
+<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="reference" optional="hide"/>
+<field name="cheque_number" optional="hide"/>
+<field name="cheque_date" optional="hide"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle Status" optional="hide"/>
+<field name="cheque_financial_state" string="Detailed Cheque Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
+<field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
+<field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
+<field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
+<field name="cash_custody_state" string="Cash Custody" optional="hide"/>
+<field name="state" optional="hide"/>
+</list>
+</field>
+</record>
+<!--                                    Tailored visit list                                    -->
+<record id="view_route_visit_collection_list" model="ir.ui.view">
+<field name="name">route.visit.collection.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list string="My Visit Collections" create="0" edit="0" delete="0">
+<field name="payment_business_flow" string="Flow" widget="badge"/>
+<field name="source_document_ref" string="Document"/>
+<field name="outlet_id"/>
+<field name="payment_date"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="collection_type" string="Collection"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle Status" optional="hide"/>
+<field name="cheque_financial_state" string="Detailed Cheque Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
+<field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
+<field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
+<field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
+<field name="cash_custody_state" string="Cash Custody" optional="hide"/>
+</list>
+</field>
+</record>
+<!--                                    Tailored direct sale list                                    -->
+<record id="view_route_direct_sale_payment_list" model="ir.ui.view">
+<field name="name">route.direct.sale.payment.list</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<list>
+<field name="settlement_document_ref" string="Settlement Visit" optional="hide"/>
+<field name="source_document_ref" string="Target Visit / Order"/>
+<field name="outlet_id"/>
+<field name="area_id" optional="hide"/>
+<field name="salesperson_id" optional="hide"/>
+<field name="payment_date"/>
+<field name="collection_time_bucket" string="Collection Time" optional="hide"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="collection_type" string="Collection"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="amount" string="Collected"/>
+<field name="remaining_due_amount" string="Uncovered Due" widget="badge" decoration-danger="remaining_due_amount > 0"/>
+<field name="due_date" string="Due Date" optional="hide"/>
+<field name="promise_date" string="Next Promise" optional="hide"/>
+<field name="effective_promise_amount" string="Promise Amount" optional="hide"/>
+<field name="promise_status" string="Promise" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
+<field name="reference" string="Reference" optional="hide"/>
+<field name="cheque_number" string="Cheque No." optional="hide"/>
+<field name="cheque_date" string="Cheque Date" optional="hide"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle Status" optional="hide"/>
+<field name="cheque_financial_state" string="Detailed Cheque Effect" optional="hide"/>
+<field name="cheque_collection_effect_bucket" string="Customer Balance Effect" optional="hide"/>
+<field name="cheque_pending_clearance_amount" string="Pending Clearance" optional="hide"/>
+<field name="cheque_financially_cleared_amount" string="Bank Cleared" optional="hide"/>
+<field name="cheque_open_due_amount" string="Open Due From Cheque" optional="hide"/>
+<field name="cheque_custody_state" string="Cheque Custody" optional="hide"/>
+<field name="cash_custody_state" string="Cash Custody" optional="hide"/>
+<field name="state" string="Status" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="view_route_visit_collection_kanban" model="ir.ui.view">
+<field name="name">route.visit.collection.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<field name="payment_date"/>
+<field name="collection_time_bucket"/>
+<field name="collection_due_bucket"/>
+<field name="collection_promise_bucket"/>
+<field name="payment_business_flow"/>
+<field name="payment_business_flow_short"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="collection_type_short"/>
+<field name="promise_date"/>
+<field name="source_document_ref"/>
+<field name="settlement_document_ref"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="state"/>
+<field name="due_date"/>
+<field name="amount"/>
+<field name="remaining_due_amount"/>
+<field name="effective_promise_amount"/>
+<field name="promise_status"/>
+<field name="bank_name"/>
+<field name="cheque_number"/>
+<field name="cheque_date"/>
+<field name="cheque_followup_state"/>
+<field name="cheque_followup_state_label"/>
+<field name="cheque_financial_state_label"/>
+<field name="cheque_collection_effect_bucket"/>
+<field name="cheque_effective_collected_amount"/>
+<field name="cheque_route_coverage_amount"/>
+<field name="cheque_pending_clearance_amount"/>
+<field name="cheque_financially_cleared_amount"/>
+<field name="cheque_open_due_amount"/>
+<field name="cheque_needs_followup"/>
+<field name="cheque_physical_total_amount"/>
+<field name="cheque_physical_allocation_count"/>
+<field name="cheque_physical_source_summary"/>
+<field name="cheque_physical_settlement_summary"/>
+<field name="cheque_physical_open_due_amount"/>
+<field name="cheque_custody_state"/>
+<field name="cheque_custody_state_label"/>
+<field name="route_cheque_can_handover_accounting"/>
+<field name="route_cheque_can_accountant_receive"/>
+<field name="cash_custody_state"/>
+<field name="cash_custody_state_label"/>
+<field name="route_cash_can_handover_accounting"/>
+<field name="route_cash_can_accountant_receive"/>
+<field name="route_cheque_accounting_state_label"/>
+<field name="route_cheque_accounting_move_count"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_collection">
+<div class="route_pda_payment_head">
+<div>
+<div class="route_pda_payment_title">
+<t t-if="record.source_document_ref.raw_value">
+<span>Source: </span>
+<t t-esc="record.source_document_ref.value"/>
+</t>
+<t t-if="!record.source_document_ref.raw_value">Collection</t>
+</div>
+<div class="route_pda_payment_subtitle" t-if="record.settlement_document_ref.raw_value and record.settlement_document_ref.raw_value != record.source_document_ref.raw_value">
+<span>Settlement: </span>
+<t t-esc="record.settlement_document_ref.value"/>
+</div>
+<div class="route_pda_payment_subtitle" t-if="record.outlet_id.raw_value or record.salesperson_id.raw_value">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.salesperson_id.raw_value"> • </t>
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<span class="route_pda_payment_badge route_pda_payment_badge_flow">
+<t t-esc="record.payment_business_flow_short.value or record.payment_business_flow.value or ''"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
+<t t-esc="record.payment_mode.value or ''"/>
+</span>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_custody_state_label.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
+<t>Custody: </t>
+<t t-esc="record.cheque_custody_state_label.value"/>
+</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cash' and record.cash_custody_state_label.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
+<t>Custody: </t>
+<t t-esc="record.cash_custody_state_label.value"/>
+</span>
+</t>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_secondary">
+<span class="route_pda_payment_badge route_pda_payment_badge_collection">
+<t t-esc="record.collection_type_short.value or record.collection_type.value or ''"/>
+</span>
+<t t-if="record.promise_status.raw_value">
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
+<t t-esc="record.promise_status.value"/>
+</span>
+</t>
+<t t-if="record.state.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t t-esc="record.state.value"/>
+</span>
+</t>
+<t t-if="record.collection_due_bucket.raw_value == 'remaining_due'">
+<span class="route_pda_payment_badge route_pda_payment_badge_balance">Remaining Due</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque'">
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight route_cheque_status_#{record.cheque_followup_state.raw_value or 'received'}">
+<t>Cheque: </t>
+<t t-esc="record.cheque_followup_state_label.value or 'Received'"/>
+</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_physical_allocation_count.raw_value > 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
+<t>Physical Cheque: </t>
+<t t-esc="record.cheque_physical_allocation_count.value"/>
+<t> Allocations</t>
+</span>
+</t>
+<t t-if="record.cheque_needs_followup.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_balance">Balance: Open Due</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_pending_clearance_amount.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_status">Bank: Pending</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_financially_cleared_amount.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_status">Bank: Cleared</span>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.route_cheque_accounting_state_label.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t>Accounting: </t>
+<t t-esc="record.route_cheque_accounting_state_label.value"/>
+</span>
+</t>
+</div>
+<div class="route_pda_payment_metrics">
+<t t-if="record.cheque_needs_followup.raw_value">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Allocated Cheque Amount</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Effective Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_effective_collected_amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric route_pda_payment_metric_cheque_open_due">
+<span class="route_pda_payment_metric_label">Open Due From This Allocation</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_open_due_amount"/>
+</span>
+</div>
+</t>
+<t t-else="">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Uncovered Due</span>
+<span class="route_pda_payment_metric_value">
+<field name="remaining_due_amount"/>
+</span>
+</div>
+</t>
+<t t-if="record.effective_promise_amount.raw_value">
+<div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
+<span class="route_pda_payment_metric_label">Promise / Deferred</span>
+<span class="route_pda_payment_metric_value">
+<field name="effective_promise_amount"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_physical_allocation_count.raw_value > 1">
+<div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_cheque_open_due">
+<span class="route_pda_payment_metric_label">Physical Cheque Total</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_physical_total_amount"/>
+</span>
+</div>
+</t>
+</div>
+<div class="route_pda_payment_footer" t-if="record.source_document_ref.raw_value or record.settlement_document_ref.raw_value or record.area_id.raw_value or record.promise_date.raw_value or record.due_date.raw_value or record.cheque_number.raw_value or record.cheque_date.raw_value or record.bank_name.raw_value or record.cheque_physical_allocation_count.raw_value > 1">
+<t t-if="record.source_document_ref.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Source Visit</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.source_document_ref.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.settlement_document_ref.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Settlement Visit</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.settlement_document_ref.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.area_id.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Area</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.area_id.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_number.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Cheque No.</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.cheque_number.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.bank_name.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Bank</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.bank_name.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Cheque Date</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_date"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_physical_allocation_count.raw_value > 1 and record.cheque_physical_source_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Cheque Covers</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_physical_source_summary"/>
+</span>
+</div>
+</t>
+<t t-if="record.due_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Due</span>
+<span class="route_pda_payment_footer_value">
+<field name="due_date"/>
+</span>
+</div>
+</t>
+<t t-if="record.promise_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Promise On</span>
+<span class="route_pda_payment_footer_value">
+<field name="promise_date"/>
+</span>
+</div>
+</t>
+</div>
+<div class="route_cheque_control_actions route_collection_custody_actions">
+<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over Cheque</button>
+<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
+<button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
+<button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_visit_payment_form" model="ir.ui.view">
+<field name="name">route.visit.payment.form</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<form class="route_pda_payment_form">
+<header>
+<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="not can_open_statement"/>
+<button name="action_open_supervisor_promise_review" string="Review Promise" type="object" class="btn-warning" invisible="state != 'confirmed' or promise_status not in ('due_today', 'overdue')"/>
+<button name="action_open_supervisor_promise_review" string="Promise Reviewed" type="object" class="btn-success" invisible="state != 'confirmed' or not promise_review_followup_date"/>
+<button name="action_cheque_handover_to_accounting" string="Hand Over Cheque" type="object" class="btn-primary" invisible="not route_cheque_can_handover_accounting"/>
+<button name="action_cash_handover_to_accounting" string="Hand Over Cash" type="object" class="btn-primary" invisible="not route_cash_can_handover_accounting"/>
+<button name="action_cheque_accounting_receive" string="Confirm Cheque Receipt" type="object" class="btn-secondary" invisible="not route_cheque_can_accountant_receive"/>
+<button name="action_cash_accounting_receive" string="Confirm Cash Receipt" type="object" class="btn-secondary" invisible="not route_cash_can_accountant_receive"/>
+<button name="action_confirm" string="Confirm" type="object" class="btn-primary" invisible="state != 'draft'"/>
+<button name="action_reset_to_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state != 'cancelled'"/>
+<button name="action_cancel" string="Cancel" type="object" class="btn-secondary" invisible="state != 'draft'"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancelled"/>
+</header>
+<sheet class="route_pda_payment_sheet">
+<field name="source_type" invisible="1"/>
+<field name="collection_due_bucket" invisible="1"/>
+<field name="collection_promise_bucket" invisible="1"/>
+<field name="can_open_statement" invisible="1"/>
+<field name="statement_visit_id" invisible="1"/>
+<field name="show_settlement_reference" invisible="1"/>
+<field name="note_display_html" invisible="1"/>
+<field name="promise_review_decision" invisible="1"/>
+<field name="promise_review_for_closing_date" invisible="1"/>
+<field name="promise_review_followup_date" invisible="1"/>
+<field name="promise_reviewed_by_id" invisible="1"/>
+<field name="promise_review_note" invisible="1"/>
+<field name="cheque_needs_followup" invisible="1"/>
+<field name="cheque_followup_state" invisible="1"/>
+<field name="cheque_followup_state_label" invisible="1"/>
+<field name="cheque_financial_state_label" invisible="1"/>
+<field name="cheque_effective_collected_amount" invisible="1"/>
+<field name="cheque_route_coverage_amount" invisible="1"/>
+<field name="cheque_pending_clearance_amount" invisible="1"/>
+<field name="cheque_financially_cleared_amount" invisible="1"/>
+<field name="cheque_open_due_amount" invisible="1"/>
+<field name="route_cheque_accounting_state_label" invisible="1"/>
+<field name="route_cheque_accounting_move_count" invisible="1"/>
+<field name="cheque_custody_state" invisible="1"/>
+<field name="cheque_custody_state_label" invisible="1"/>
+<field name="route_cheque_can_handover_accounting" invisible="1"/>
+<field name="route_cheque_can_accountant_receive" invisible="1"/>
+<field name="cash_custody_state" invisible="1"/>
+<field name="cash_custody_state_label" invisible="1"/>
+<field name="route_cash_can_handover_accounting" invisible="1"/>
+<field name="route_cash_can_accountant_receive" invisible="1"/>
+<div class="route_pda_payment_summary_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="cheque_needs_followup">
+<div class="route_pda_info_label">Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="cheque_needs_followup">
+<div class="route_pda_info_label">Uncovered Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="remaining_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<div class="route_pda_info_label">Allocated Cheque Amount</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
+<div class="route_pda_info_label">Effective Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not cheque_needs_followup">
+<div class="route_pda_info_label">Open Due From This Allocation</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not effective_promise_amount or effective_promise_amount == 0">
+<div class="route_pda_info_label">Promise / Deferred</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="effective_promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not promise_status">
+<div class="route_pda_info_label">Promise Status</div>
+<div>
+<field name="promise_status" readonly="1" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_meta_grid">
+<div class="route_pda_payment_meta_item" invisible="source_type != 'visit'">
+<span class="route_pda_payment_meta_label">Visit</span>
+<field name="visit_id" readonly="state != 'draft'" invisible="source_type != 'visit'" required="source_type == 'visit'" string="Visit" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="source_type != 'direct_sale'">
+<span class="route_pda_payment_meta_label">Order</span>
+<field name="sale_order_id" readonly="state != 'draft'" invisible="source_type != 'direct_sale'" required="source_type == 'direct_sale'" string="Order" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="not show_settlement_reference">
+<span class="route_pda_payment_meta_label">Settlement</span>
+<field name="settlement_document_ref" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Outlet</span>
+<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Flow</span>
+<field name="payment_business_flow" readonly="1" widget="badge" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Payment Date</span>
+<field name="payment_date" readonly="state != 'draft'" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Mode</span>
+<field name="payment_mode" readonly="state != 'draft'" string="Mode" widget="badge" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Status</span>
+<field name="cheque_followup_state_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Financial Effect</span>
+<field name="cheque_financial_state_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not route_cheque_accounting_state_label">
+<span class="route_pda_payment_meta_label">Accounting Status</span>
+<field name="route_cheque_accounting_state_label" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Route Coverage</span>
+<field name="cheque_route_coverage_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_pending_clearance_amount or cheque_pending_clearance_amount == 0">
+<span class="route_pda_payment_meta_label">Pending Clearance</span>
+<field name="cheque_pending_clearance_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_financially_cleared_amount or cheque_financially_cleared_amount == 0">
+<span class="route_pda_payment_meta_label">Bank Cleared</span>
+<field name="cheque_financially_cleared_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Open Due From This Allocation</span>
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_payment_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Collection Decision</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Scenario</span>
+<field name="collection_type" readonly="state != 'draft'" string="Scenario" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="collection_type in ('defer_date', 'next_visit') or (payment_mode == 'cheque' and cheque_needs_followup)">
+<span class="route_pda_payment_meta_label">Collected Now</span>
+<field name="amount" readonly="state != 'draft'" string="Collected Now" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Allocated Cheque Amount</span>
+<field name="amount" readonly="1" string="Allocated Cheque Amount" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Effective Collected</span>
+<field name="cheque_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque' or not cheque_needs_followup">
+<span class="route_pda_payment_meta_label">Open Due From This Allocation</span>
+<field name="cheque_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="collection_type != 'defer_date'">
+<span class="route_pda_payment_meta_label">Deferred To</span>
+<field name="due_date" readonly="state != 'draft'" string="Deferred To" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_meta_label">Promise Date</span>
+<field name="promise_date" readonly="state != 'draft'" string="Promise Date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_meta_label">Promise Amount</span>
+<field name="promise_amount" readonly="state != 'draft'" string="Promise Amount" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="collection_type == 'full'">
+<span class="route_pda_payment_meta_label">Promise Status</span>
+<field name="promise_status" readonly="1" string="Promise Status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode not in ('bank', 'pos')">
+<span class="route_pda_payment_meta_label">Reference</span>
+<field name="reference" readonly="state != 'draft'" string="Reference" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'bank'">
+<span class="route_pda_payment_meta_label">Bank</span>
+<field name="bank_name" readonly="state != 'draft'" string="Bank" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'pos'">
+<span class="route_pda_payment_meta_label">POS Terminal</span>
+<field name="pos_terminal" readonly="state != 'draft'" string="POS Terminal" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Number</span>
+<field name="cheque_number" readonly="state != 'draft'" string="Cheque Number" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Bank</span>
+<field name="bank_name" readonly="state != 'draft'" string="Cheque Bank" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Date</span>
+<field name="cheque_date" readonly="state != 'draft'" string="Cheque Date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Holder</span>
+<field name="cheque_holder_name" readonly="state != 'draft'" string="Cheque Holder" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Cheque Details</span>
+<field name="cheque_note" readonly="state != 'draft'" widget="text" string="Cheque Details" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="not promise_review_followup_date and not promise_review_note">
+<div class="route_pda_group_title route_pda_payment_section_title">Supervisor Promise Review</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_reference_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Review Decision</span>
+<field name="promise_review_decision" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Reviewed For</span>
+<field name="promise_review_for_closing_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Next Follow-up</span>
+<field name="promise_review_followup_date" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Reviewed By</span>
+<field name="promise_reviewed_by_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_payment_note_wrap mt-2" invisible="not promise_review_note">
+<span class="route_pda_payment_meta_label">Review Note</span>
+<field name="promise_review_note" readonly="1" widget="text" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_payment_section">
+<div class="route_pda_group_title route_pda_payment_section_title">Reference Details</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_reference_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Area</span>
+<field name="area_id" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Salesperson</span>
+<field name="salesperson_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_payment_section" invisible="not note">
+<div class="route_pda_group_title route_pda_payment_section_title">Collection Note</div>
+<div class="route_pda_payment_note_wrap">
+<field name="note" readonly="state == 'confirmed' or state == 'cancelled'" invisible="state != 'draft'" placeholder="Add note" widget="text" nolabel="1"/>
+<div class="route_pda_multilingual_note" invisible="state == 'draft' or not note_display_html">
+<field name="note_display_html" readonly="1" widget="html" nolabel="1"/>
+</div>
+</div>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<!--                                    Admin / all payments search                                    -->
+<record id="view_route_visit_payment_search" model="ir.ui.view">
+<field name="name">route.visit.payment.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Route Payments">
+<field name="payment_business_flow"/>
+<field name="settlement_document_ref"/>
+<field name="source_type"/>
+<field name="visit_id"/>
+<field name="sale_order_id"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
+<field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="state"/>
+<field name="reference"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<field name="source_document_ref"/>
+<filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_visit_source" string="Visit" domain="[('payment_business_flow', '=', 'consignment_visit')]"/>
+<filter name="filter_direct_stop_source" string="Direct Stop" domain="[('payment_business_flow', '=', 'direct_stop')]"/>
+<filter name="filter_direct_sale_source" string="Direct Sale Order" domain="[('payment_business_flow', '=', 'direct_sale_order')]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
+<filter name="filter_custody_with_salesperson" string="Custody: With Salesperson" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', 'in', [False, 'with_salesperson']), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', 'in', [False, 'with_salesperson'])]"/>
+<filter name="filter_custody_handed_accounting" string="Custody: Handed to Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'handed_to_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'handed_to_accounting')]"/>
+<filter name="filter_custody_received_accounting" string="Custody: Received by Accounting" domain="[('payment_mode', 'in', ['cash', 'cheque']), '|', ('payment_mode', '!=', 'cheque'), ('cheque_custody_state', '=', 'received_by_accounting'), '|', ('payment_mode', '!=', 'cash'), ('cash_custody_state', '=', 'received_by_accounting')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_cheque_pending" string="Cheque Pending Bank Clearance" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'pending')]"/>
+<filter name="filter_cheque_cleared" string="Cheque Financially Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'cleared')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Returned to Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
+<filter name="filter_bounced_cheques" string="Cheque Status: Bounced" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_business_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_source_type" string="Source Type" domain="[]" context="{'group_by': 'source_type'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_collection_type" string="Collection Scenario" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<filter name="group_by_payment_date" string="Payment Date" domain="[]" context="{'group_by': 'payment_date'}"/>
+<searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="payment_business_flow" string="Flow"/>
+<field name="source_type" string="Source Type"/>
+<field name="outlet_id" string="Outlet"/>
+<field name="area_id" string="Area"/>
+<field name="salesperson_id" string="Salesperson"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise"/>
+<field name="collection_type" string="Collection Scenario"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<!--                                    Visit collections search                                    -->
+<record id="view_route_visit_collection_search" model="ir.ui.view">
+<field name="name">route.visit.collection.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Visit Collections">
+<field name="visit_id" string="Visit"/>
+<field name="payment_business_flow"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
+<field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle Status"/>
+<field name="cheque_collection_effect_bucket" string="Customer Balance Effect"/>
+<field name="cheque_custody_state" string="Cheque Custody"/>
+<field name="cash_custody_state" string="Cash Custody"/>
+<field name="state"/>
+<field name="source_document_ref" string="Visit"/>
+<filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
+<separator/>
+<filter name="filter_collection_today" string="Today" domain="[('collection_time_bucket', '=', 'today')]"/>
+<filter name="filter_collection_last_7_days" string="Last 7 Days" domain="[('collection_time_bucket', '=', 'last_7_days')]"/>
+<filter name="filter_collection_last_30_days" string="Last 30 Days" domain="[('collection_time_bucket', '=', 'last_30_days')]"/>
+<filter name="filter_collection_this_month" string="This Month" domain="[('collection_time_bucket', '=', 'this_month')]"/>
+<filter name="filter_collection_older" string="Older" domain="[('collection_time_bucket', '=', 'older')]"/>
+<separator/>
+<filter name="filter_consignment" string="Consignment" domain="[('payment_business_flow', '=', 'consignment_visit')]"/>
+<filter name="filter_direct_stop" string="Direct Stop" domain="[('payment_business_flow', '=', 'direct_stop')]"/>
+<filter name="filter_direct_sale_order" string="Direct Sale Order" domain="[('payment_business_flow', '=', 'direct_sale_order')]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_cheque_pending" string="Cheque Pending Bank Clearance" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'pending')]"/>
+<filter name="filter_cheque_cleared" string="Cheque Financially Cleared" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'cleared')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Returned to Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
+<filter name="filter_bounced_cheques" string="Cheque Status: Bounced" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_collection_time" string="Collection Time" domain="[]" context="{'group_by': 'collection_time_bucket'}"/>
+<filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_cheque_status" string="Cheque Lifecycle Status" domain="[]" context="{'group_by': 'cheque_followup_state'}"/>
+<filter name="group_by_cheque_effect" string="Customer Balance Effect" domain="[]" context="{'group_by': 'cheque_collection_effect_bucket'}"/>
+<filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="payment_business_flow" string="Flow"/>
+<field name="outlet_id" string="Outlet"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="cheque_collection_effect_bucket" string="Customer Balance Effect"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle Status"/>
+<field name="collection_due_bucket" string="Collection Balance"/>
+<field name="collection_promise_bucket" string="Promise"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<!--                                    Direct sale payments search                                    -->
+<record id="view_route_direct_sale_payment_search" model="ir.ui.view">
+<field name="name">route.direct.sale.payment.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Direct Sale Payments">
+<field name="sale_order_id" string="Order"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="payment_mode"/>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="collection_due_bucket" string="Financial Status"/>
+<field name="collection_promise_bucket" string="Promise Filter"/>
+<field name="collection_type"/>
+<field name="source_document_ref" string="Source Document" optional="show"/>
+<field name="settlement_document_ref" string="Settlement Visit" optional="show"/>
+<field name="state"/>
+<field name="reference"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<field name="source_document_ref" string="Order"/>
+<filter name="filter_my_payments" string="My Payments" domain="[('salesperson_id', '=', uid)]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
+<filter name="filter_deferred_mode" string="Deferred" domain="[('payment_mode', '=', 'deferred')]"/>
+<separator/>
+<filter name="filter_full" string="Full Payment" domain="[('collection_type', '=', 'full')]"/>
+<filter name="filter_partial" string="Partial Payment" domain="[('collection_type', '=', 'partial')]"/>
+<filter name="filter_defer_date" string="Deferred To Date" domain="[('collection_type', '=', 'defer_date')]"/>
+<filter name="filter_next_visit" string="Carry To Next Visit" domain="[('collection_type', '=', 'next_visit')]"/>
+<separator/>
+<filter name="filter_fully_collected" string="Fully Collected" domain="[('collection_due_bucket', '=', 'fully_collected')]"/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_promise_due_today" string="Promise Due Today" domain="[('collection_promise_bucket', '=', 'due_today')]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<filter name="filter_cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+<separator/>
+<filter name="group_by_collection_time" string="Collection Time" domain="[]" context="{'group_by': 'collection_time_bucket'}"/>
+<filter name="group_by_flow" string="Flow" domain="[]" context="{'group_by': 'payment_business_flow'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<filter name="group_by_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_collection_type" string="Collection" domain="[]" context="{'group_by': 'collection_type'}"/>
+<filter name="group_by_financial_status" string="Financial Status" domain="[]" context="{'group_by': 'collection_due_bucket'}"/>
+<filter name="group_by_promise_filter" string="Promise Filter" domain="[]" context="{'group_by': 'collection_promise_bucket'}"/>
+<filter name="group_by_status" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+<searchpanel>
+<field name="collection_time_bucket" string="Collection Time"/>
+<field name="payment_business_flow" string="Flow"/>
+<field name="outlet_id" string="Outlet"/>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="collection_due_bucket" string="Collection Balance"/>
+<field name="collection_promise_bucket" string="Promise"/>
+<field name="state" string="Status"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="view_route_visit_custody_kanban" model="ir.ui.view">
+<field name="name">route.visit.payment.custody.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban route_pda_custody_kanban" sample="0" create="false" edit="false">
+<field name="payment_business_flow_short"/>
+<field name="payment_mode"/>
+<field name="collection_type_short"/>
+<field name="state"/>
+<field name="payment_date"/>
+<field name="source_document_ref"/>
+<field name="settlement_document_ref"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="salesperson_id"/>
+<field name="amount"/>
+<field name="remaining_due_amount"/>
+<field name="currency_id"/>
+<field name="cash_custody_state"/>
+<field name="cash_custody_state_label"/>
+<field name="cash_custody_is_primary"/>
+<field name="cash_custody_total_amount"/>
+<field name="cash_custody_collection_count"/>
+<field name="cash_custody_display_ref"/>
+<field name="cash_custody_source_summary"/>
+<field name="cash_custody_settlement_summary"/>
+<field name="route_cash_can_handover_accounting"/>
+<field name="route_cash_can_accountant_receive"/>
+<field name="route_cash_can_post_receipt"/>
+<field name="route_cash_accounting_state"/>
+<field name="route_cash_accounting_state_label"/>
+<field name="route_cash_accounting_move_count"/>
+<field name="cheque_number"/>
+<field name="bank_name"/>
+<field name="cheque_date"/>
+<field name="cheque_followup_state"/>
+<field name="cheque_followup_state_label"/>
+<field name="cheque_custody_state"/>
+<field name="cheque_custody_state_label"/>
+<field name="cheque_financial_state_label"/>
+<field name="cheque_collection_effect_bucket"/>
+<field name="cheque_needs_followup"/>
+<field name="cheque_physical_display_ref"/>
+<field name="cheque_physical_total_amount"/>
+<field name="cheque_physical_allocation_count"/>
+<field name="cheque_physical_source_summary"/>
+<field name="cheque_physical_settlement_summary"/>
+<field name="cheque_physical_open_due_amount"/>
+<field name="route_cheque_accounting_state"/>
+<field name="route_cheque_accounting_state_label"/>
+<field name="route_cheque_accounting_move_count"/>
+<field name="route_cheque_can_handover_accounting"/>
+<field name="route_cheque_can_accountant_work"/>
+<field name="route_cheque_can_accountant_receive"/>
+<field name="reference"/>
+<field name="bank_name"/>
+<field name="pos_terminal"/>
+<field name="electronic_verification_state"/>
+<field name="electronic_verification_state_label"/>
+<field name="route_electronic_accounting_state"/>
+<field name="route_electronic_accounting_state_label"/>
+<field name="route_electronic_accounting_move_count"/>
+<field name="electronic_payment_total_amount"/>
+<field name="electronic_payment_allocation_count"/>
+<field name="electronic_payment_display_ref"/>
+<field name="electronic_payment_source_summary"/>
+<field name="electronic_payment_settlement_summary"/>
+<field name="electronic_payment_area_summary"/>
+<templates>
+<t t-name="card">
+<div t-attf-class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_collection route_custody_card route_custody_card_#{record.payment_mode.raw_value or 'none'}">
+<div class="route_pda_payment_head route_custody_card_head">
+<div>
+<div class="route_pda_payment_title route_custody_title">
+<t t-if="record.payment_mode.raw_value == 'cash'">
+<field name="cash_custody_display_ref"/>
+</t>
+<t t-elif="record.payment_mode.raw_value == 'cheque'">
+<span>Cheque </span>
+<t t-esc="record.cheque_number.value or record.cheque_physical_display_ref.value or record.source_document_ref.value or ''"/>
+</t>
+<t t-elif="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
+<t t-esc="record.electronic_payment_display_ref.value or record.source_document_ref.value or 'Bank/POS Payment'"/>
+</t>
+<t t-else="">
+<t t-esc="record.source_document_ref.value or 'Custody'"/>
+</t>
+</div>
+<div class="route_pda_payment_subtitle route_custody_subtitle">
+<t t-if="record.payment_mode.raw_value == 'cash'">
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
+<t t-if="record.cash_custody_collection_count.raw_value">
+<t> • </t>
+<t t-esc="record.cash_custody_collection_count.value"/>
+<t> collection lines</t>
+</t>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque'">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.salesperson_id.raw_value"> • </t>
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
+</t>
+<t t-if="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.salesperson_id.raw_value"> • </t>
+<t t-if="record.salesperson_id.raw_value" t-esc="record.salesperson_id.value"/>
+<t t-if="record.electronic_payment_allocation_count.raw_value">
+<t> • </t>
+<t t-esc="record.electronic_payment_allocation_count.value"/>
+<t> allocation line</t>
+<t t-if="record.electronic_payment_allocation_count.raw_value != 1">s</t>
+</t>
+</t>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary route_custody_badges">
+<t t-if="record.payment_mode.raw_value == 'cash'">
+<span class="route_pda_payment_badge route_pda_payment_mode_cash">Cash</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
+<t>Custody: </t>
+<t t-esc="record.cash_custody_state_label.value or 'With Salesperson'"/>
+</span>
+<t t-if="record.cash_custody_collection_count.raw_value > 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
+<t t-esc="record.cash_custody_collection_count.value"/>
+<t> Lines</t>
+</span>
+</t>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque'">
+<span class="route_pda_payment_badge route_pda_payment_mode_cheque">Cheque</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight">
+<t>Custody: </t>
+<t t-esc="record.cheque_custody_state_label.value or 'With Salesperson'"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_cheque_highlight route_cheque_status_#{record.cheque_followup_state.raw_value or 'received'}">
+<t>Cheque: </t>
+<t t-esc="record.cheque_followup_state_label.value or 'Received'"/>
+</span>
+<t t-if="record.cheque_needs_followup.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_badge_balance">Balance: Open Due</span>
+</t>
+<t t-if="record.cheque_physical_allocation_count.raw_value > 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
+<t t-esc="record.cheque_physical_allocation_count.value"/>
+<t> Allocations</t>
+</span>
+</t>
+<t t-if="record.route_cheque_accounting_state_label.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t t-esc="record.route_cheque_accounting_state_label.value"/>
+</span>
+</t>
+</t>
+<t t-if="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
+<span t-attf-class="route_pda_payment_badge #{record.payment_mode.raw_value == 'bank' ? 'route_pda_payment_mode_bank' : 'route_pda_payment_mode_pos'}">
+<t t-if="record.payment_mode.raw_value == 'bank'">Bank Transfer</t>
+<t t-if="record.payment_mode.raw_value == 'pos'">POS</t>
+</span>
+<span t-attf-class="route_pda_payment_badge #{record.electronic_verification_state.raw_value == 'rejected' ? 'route_pda_payment_badge_balance' : (record.electronic_verification_state.raw_value == 'verified' ? 'route_pda_payment_badge_confirmed' : 'route_pda_payment_badge_pending')}">
+<t>Verification: </t>
+<t t-esc="record.electronic_verification_state_label.value or 'Reported by Salesperson'"/>
+</span>
+<span t-attf-class="route_pda_payment_badge #{record.route_electronic_accounting_state.raw_value == 'posted' ? 'route_pda_payment_badge_confirmed' : 'route_pda_payment_badge_pending'}">
+<t>Accounting: </t>
+<t t-esc="record.route_electronic_accounting_state_label.value or 'Pending Bank/POS Confirmation'"/>
+</span>
+<t t-if="record.electronic_payment_allocation_count.raw_value > 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
+<t t-esc="record.electronic_payment_allocation_count.value"/>
+<t> Allocations</t>
+</span>
+</t>
+</t>
+</div>
+<div class="route_pda_payment_metrics route_custody_metrics">
+<t t-if="record.payment_mode.raw_value == 'cash'">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Cash Amount</span>
+<span class="route_pda_payment_metric_value">
+<field name="cash_custody_total_amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Collections</span>
+<span class="route_pda_payment_metric_value">
+<field name="cash_custody_collection_count"/>
+</span>
+</div>
+<t t-if="record.cash_custody_settlement_summary.raw_value">
+<div class="route_pda_payment_metric route_pda_payment_metric_single">
+<span class="route_pda_payment_metric_label">Settlement Batch</span>
+<span class="route_pda_payment_metric_value">
+<field name="cash_custody_settlement_summary"/>
+</span>
+</div>
+</t>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque'">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Physical Cheque Total</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_physical_total_amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Cheque</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_number"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Bank</span>
+<span class="route_pda_payment_metric_value">
+<field name="bank_name"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Cheque Date</span>
+<span class="route_pda_payment_metric_value">
+<field name="cheque_date"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos'">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Payment Amount</span>
+<span class="route_pda_payment_metric_value">
+<field name="electronic_payment_total_amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Reference</span>
+<span class="route_pda_payment_metric_value">
+<field name="reference"/>
+</span>
+</div>
+<t t-if="record.payment_mode.raw_value == 'bank'">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Bank Name</span>
+<span class="route_pda_payment_metric_value">
+<field name="bank_name"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'pos'">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">POS Terminal</span>
+<span class="route_pda_payment_metric_value">
+<field name="pos_terminal"/>
+</span>
+</div>
+</t>
+</t>
+</div>
+<div class="route_pda_payment_footer route_custody_footer">
+<t t-if="record.payment_mode.raw_value == 'cash' and record.cash_custody_source_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Cash Covers</span>
+<span class="route_pda_payment_footer_value">
+<field name="cash_custody_source_summary"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_physical_source_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Cheque Covers</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_physical_source_summary"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_physical_settlement_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Settlement Visits</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_physical_settlement_summary"/>
+</span>
+</div>
+</t>
+<t t-if="(record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos') and record.electronic_payment_source_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Payment Covers</span>
+<span class="route_pda_payment_footer_value">
+<field name="electronic_payment_source_summary"/>
+</span>
+</div>
+</t>
+<t t-if="(record.payment_mode.raw_value == 'bank' or record.payment_mode.raw_value == 'pos') and record.electronic_payment_settlement_summary.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Settlement Visits</span>
+<span class="route_pda_payment_footer_value">
+<field name="electronic_payment_settlement_summary"/>
+</span>
+</div>
+</t>
+<t t-if="record.area_id.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Area</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.area_id.value"/>
+</span>
+</div>
+</t>
+</div>
+<div class="route_cheque_control_actions route_collection_custody_actions route_custody_actions">
+<button name="action_cheque_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cheque_can_handover_accounting">Hand Over Cheque</button>
+<button name="action_cash_handover_to_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_handover_accounting">Hand Over Cash</button>
+<button name="action_cheque_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cheque_can_accountant_receive">Confirm Cheque Receipt</button>
+<button name="action_cash_accounting_receive" type="object" class="btn btn-sm btn-secondary" invisible="not route_cash_can_accountant_receive">Confirm Cash Receipt</button>
+<button name="action_route_post_cash_receipt_accounting" type="object" class="btn btn-sm btn-primary" invisible="not route_cash_can_post_receipt">Post Receipt Voucher Entry</button>
+<button name="action_route_post_cheque_accounting" type="object" class="btn btn-sm btn-primary" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or route_cheque_accounting_state != 'not_posted'">Post Receipt Voucher Entry</button>
+<button name="action_cheque_mark_cleared" type="object" class="btn btn-sm btn-success" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Cleared</button>
+<button name="action_cheque_mark_bounced" type="object" class="btn btn-sm btn-warning" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Mark Bounced</button>
+<button name="action_cheque_mark_cancelled" type="object" class="btn btn-sm btn-secondary" invisible="payment_mode != 'cheque' or not route_cheque_can_accountant_work or cheque_followup_state != 'deposited'">Cancel Cheque</button>
+<button name="action_open_custody_details" type="object" class="btn btn-sm btn-light">Details</button>
+<button name="action_route_open_cheque_accounting_moves" type="object" class="btn btn-sm btn-light" invisible="payment_mode != 'cheque' or route_cheque_accounting_move_count == 0">Entries</button>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_visit_custody_search" model="ir.ui.view">
+<field name="name">route.visit.payment.custody.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Custody">
+<field name="source_document_ref" string="Source"/>
+<field name="settlement_document_ref" string="Settlement"/>
+<field name="outlet_id"/>
+<field name="salesperson_id"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<field name="reference" string="Reference"/>
+<field name="pos_terminal" string="POS Terminal"/>
+<filter name="filter_my_payments" string="My Custody" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
+<separator/>
+<filter name="filter_custody_with_salesperson" string="With Salesperson" domain="[('route_custody_with_salesperson_visible', '=', True)]"/>
+<filter name="filter_custody_handed_accounting" string="Handed to Accounting" domain="[('route_custody_accounting_visible', '=', True), '|', ('cash_custody_state', '=', 'handed_to_accounting'), ('cheque_custody_state', '=', 'handed_to_accounting')]"/>
+<filter name="filter_custody_received_accounting" string="Received by Accounting" domain="[('route_custody_accounting_visible', '=', True), '|', ('cash_custody_state', '=', 'received_by_accounting'), ('cheque_custody_state', '=', 'received_by_accounting')]"/>
+<filter name="filter_electronic_pending" string="Bank/POS Pending Confirmation" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', 'in', [False, 'reported'])]"/>
+<filter name="filter_electronic_followup" string="Bank/POS Follow-up" domain="[('payment_mode', 'in', ['bank', 'pos']), ('electronic_verification_state', '=', 'rejected')]"/>
+<separator/>
+<filter name="filter_cheque_under_bank" string="Under Bank Collection" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'deposited')]"/>
+<filter name="filter_bounced_cheques" string="Bounced Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'bounced')]"/>
+<filter name="filter_cancelled_cheques" string="Cancelled Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'cancelled')]"/>
+<filter name="filter_cheque_open_due" string="Cheque Open Due" domain="[('payment_mode', '=', 'cheque'), ('cheque_collection_effect_bucket', '=', 'open_due')]"/>
+<filter name="filter_cleared_cheques" string="Cleared Cheques" domain="[('payment_mode', '=', 'cheque'), ('cheque_followup_state', '=', 'cleared')]"/>
+<separator/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'salesperson_id'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+<searchpanel>
+<field name="payment_mode" string="Payment Mode" expand="1" enable_counters="1"/>
+<field name="salesperson_id" string="Salesperson"/>
+<field name="outlet_id" string="Outlet"/>
+<field name="cheque_followup_state" string="Cheque Lifecycle"/>
+<field name="electronic_verification_state" string="Bank/POS Verification"/>
+</searchpanel>
+</search>
+</field>
+</record>
+<record id="action_route_salesperson_custody" model="ir.actions.act_window">
+<field name="name">My Custody</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
+<field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque', 'bank', 'pos']), ('salesperson_id', '=', uid), ('route_custody_is_primary', '=', True)]</field>
+<field name="context">{'search_default_filter_custody_with_salesperson': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<record id="action_route_accounting_collections_custody" model="ir.actions.act_window">
+<field name="name">Route Collections Custody</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="route_core.view_route_visit_custody_kanban"/>
+<field name="search_view_id" ref="route_core.view_route_visit_custody_search"/>
+<field name="domain">[('state', '=', 'confirmed'), ('payment_mode', 'in', ['cash', 'cheque']), ('route_custody_accounting_visible', '=', True)]</field>
+<field name="context">{'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0}</field>
+</record>
+<menuitem id="menu_route_accounting_collections_custody" name="Route Collections Custody" parent="account.menu_finance_entries" action="route_core.action_route_accounting_collections_custody" sequence="84" groups="route_core.group_route_cheque_accountant"/>
+<record id="action_route_visit_payment" model="ir.actions.act_window">
+<field name="name">All Payments</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="view_route_visit_collection_kanban"/>
+<field name="search_view_id" ref="view_route_visit_payment_search"/>
+<field name="context">{'search_default_filter_my_payments': 1}</field>
+</record>
+<record id="action_route_visit_collection" model="ir.actions.act_window">
+<field name="name">My Visit Collections</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="view_route_visit_collection_kanban"/>
+<field name="search_view_id" ref="view_route_visit_collection_search"/>
+<field name="domain">[('salesperson_id', '=', uid), ('state', '=', 'confirmed')]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1}</field>
+</record>
+<record id="action_route_direct_sale_payment" model="ir.actions.act_window">
+<field name="name">My Direct Sale Payments</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="view_route_visit_collection_kanban"/>
+<field name="search_view_id" ref="view_route_direct_sale_payment_search"/>
+<field name="domain">[('payment_business_flow', 'in', ['direct_stop', 'direct_sale_order'])]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'direct_sale'}</field>
+</record>
+<menuitem id="menu_route_visit_payment" name="All Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
+</odoo>
