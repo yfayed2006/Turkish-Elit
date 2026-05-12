@@ -4,7 +4,7 @@
         addons/route_core/views/route_bank_pos_payment_detail_override_views.xml
 
         Purpose:
-        Force the active route.visit.payment detail form to show Bank/POS details
+        SAFE NO-LESS-THAN VERSION - Force the active route.visit.payment detail form to show Bank/POS details
         when payment_mode is Bank Transfer or POS, even when Odoo opens the
         shared cheque follow-up form through a kanban global click.
      -->
@@ -16,7 +16,7 @@
 <field name="arch" type="xml">
 <xpath expr="(//header/button)[1]" position="before">
 <button name="action_electronic_mark_verified" string="Confirm Electronic Payment" type="object" class="btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_verify"/>
-<button name="action_electronic_mark_rejected" string="Needs Follow-up" type="object" class="btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_accountant_reject"/>
+<button name="action_electronic_mark_rejected" string="Needs Follow-up" type="object" class="btn-warning" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or electronic_verification_state not in [False, 'reported']"/>
 <button name="action_route_post_electronic_receipt_accounting" string="Post Receipt Voucher Entry" type="object" class="btn-primary" invisible="payment_mode not in ['bank', 'pos'] or not route_electronic_show_accounting_actions or not route_electronic_can_post_receipt"/>
 <button name="action_route_open_electronic_accounting_moves" string="Accounting Entries" type="object" class="btn-secondary" invisible="payment_mode not in ['bank', 'pos'] or route_electronic_accounting_move_count == 0"/>
 </xpath>
@@ -77,7 +77,7 @@
 <span>Accounting: </span>
 <field name="route_electronic_accounting_state_label" readonly="1" nolabel="1"/>
 </span>
-<span class="route_pda_payment_badge route_pda_payment_badge_confirmed" invisible="electronic_payment_allocation_count <= 1">
+<span class="route_pda_payment_badge route_pda_payment_badge_confirmed">
 <field name="electronic_payment_allocation_count" readonly="1" nolabel="1"/>
 <span> Allocations</span>
 </span>
@@ -241,6 +241,16 @@
 <attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
 </xpath>
 <xpath expr="//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_cheque_control_section ')]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+<!--  Hide cheque-only lower sections when the same shared form is opened for Bank Transfer / POS payments.  -->
+<xpath expr="//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_cheque_control_section ')][.//field[@name='cheque_supervisor_received_at']]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+<xpath expr="//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_cheque_control_section ')][.//field[@name='route_cheque_received_move_id']]" position="attributes">
+<attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
+</xpath>
+<xpath expr="//sheet/div[contains(concat(' ', normalize-space(@class), ' '), ' route_cheque_control_section ')][.//field[@name='cheque_followup_note']]" position="attributes">
 <attribute name="invisible">payment_mode in ['bank', 'pos']</attribute>
 </xpath>
 </field>
