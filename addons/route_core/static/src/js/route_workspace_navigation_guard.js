@@ -348,11 +348,45 @@ function isOutletVisitsPage() {
 }
 
 function isOutletPaymentsPage() {
-    return isOutletRelatedSubpage(["outlet payments", "payments", "all payments"], ["payment", "collected", "open due", "promise"], ["action_view_payments"]);
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasRecentOrigin = recentOutletSubpageIs(["action_view_payments"]);
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles"));
+    const titleLooksLikePaymentList = ["outlet payments", "payments", "all payments", "customer profile payments"].includes(title);
+    const titleLooksLikePaymentRecord = /^rv\/\d+/.test(title) || title.includes("payment");
+    const hasPaymentContent = (
+        rootText.includes("collected")
+        || rootText.includes("open due")
+        || rootText.includes("collection decision")
+        || rootText.includes("statement of account")
+        || rootText.includes("payment details")
+        || pageText.includes("collection decision")
+    );
+    return !!((hasOutletTrail || hasRecentOrigin) && (titleLooksLikePaymentList || titleLooksLikePaymentRecord || hasRecentOrigin) && hasPaymentContent);
 }
 
 function isOutletSaleOrdersPage() {
-    return isOutletRelatedSubpage(["outlet sales orders", "sale orders", "sales orders", "all sale orders"], ["invoice status", "order date", "salesperson", "customer", "order snapshot"], ["action_view_sale_orders"]);
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const breadcrumbText = getBreadcrumbText();
+    const hasRecentOrigin = recentOutletSubpageIs(["action_view_sale_orders"]);
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles"));
+    const titleLooksLikeOrderList = ["outlet sales orders", "sale orders", "sales orders", "all sale order", "all sale orders", "customer profile sales orders"].includes(title) || title.includes("sales order");
+    const titleLooksLikeOrderRecord = /^s\d+/.test(title) || title.includes("quotation") || title.includes("order");
+    const hasOrderContent = (
+        rootText.includes("invoice status")
+        || rootText.includes("order date")
+        || rootText.includes("order snapshot")
+        || rootText.includes("nothing to invoice")
+        || rootText.includes("to invoice")
+        || rootText.includes("fully invoiced")
+        || rootText.includes("total")
+        || pageText.includes("sales orders")
+    );
+    return !!((hasOutletTrail || hasRecentOrigin) && (titleLooksLikeOrderList || titleLooksLikeOrderRecord || hasRecentOrigin) && hasOrderContent);
 }
 
 function isOutletReturnsPage() {
@@ -370,7 +404,10 @@ function isOutletReturnsPage() {
     return (
         title.includes("return")
         || title.includes("returns")
+        || /^rdr\//.test(title)
         || rootText.includes("return date")
+        || rootText.includes("estimated value")
+        || rootText.includes("pickings")
         || rootText.includes("create return pickings")
         || pageText.includes("vehicle return")
         || pageText.includes("damaged return")
@@ -1598,11 +1635,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-
-
-
-
-
-
-
-
