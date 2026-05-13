@@ -197,16 +197,22 @@ class RouteDirectReturn(models.Model):
             outlet_id = self.env.context.get("route_outlet_back_id") or self.env.context.get("default_outlet_id")
             outlet = self.env["route.outlet"].browse(outlet_id).exists()
         if outlet:
-            return {
-                "type": "ir.actions.act_url",
-                "url": f"/route_core/pda/outlet/{outlet.id}",
-                "target": "self",
-            }
-        return {
-            "type": "ir.actions.act_url",
-            "url": "/route_core/pda/outlet_center",
-            "target": "self",
+            return outlet.action_open_pda_form()
+        home = self.env["route.pda.home"].create({})
+        home._refresh_dashboard_snapshot()
+        view = self.env.ref("route_core.view_route_pda_outlet_center_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Customer Profiles"),
+            "res_model": "route.pda.home",
+            "res_id": home.id,
+            "view_mode": "form",
+            "target": "main",
+            "context": {"create": 0, "edit": 0, "delete": 0},
         }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     def action_route_direct_return_back_to_visit(self):
         self.ensure_one()
