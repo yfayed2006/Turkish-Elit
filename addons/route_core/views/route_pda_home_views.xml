@@ -531,6 +531,14 @@
 <field name="active_outlet_count" readonly="1" nolabel="1"/>
 </span>
 </button>
+<button type="object" name="action_open_outlet_financial_profiles" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-credit-card route_pda_app_icon" title="Credit Card"/>
+<span class="route_pda_app_label">Financial Profiles</span>
+<span class="route_pda_app_hint">Outlet account status</span>
+<span class="route_pda_app_hint_value">
+<field name="active_outlet_count" readonly="1" nolabel="1"/>
+</span>
+</button>
 </div>
 </div>
 </sheet>
