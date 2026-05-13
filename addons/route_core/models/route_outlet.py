@@ -1829,7 +1829,7 @@ class RouteOutlet(models.Model):
         view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
-            "name": self.display_name,
+            "name": _("Customer Profile"),
             "res_model": "route.outlet",
             "res_id": self.id,
             "view_mode": "form",
@@ -1842,11 +1842,20 @@ class RouteOutlet(models.Model):
 
     def action_back_to_customer_and_outlets(self):
         self.ensure_one()
-        return {
-            "type": "ir.actions.act_url",
-            "url": "/route_core/pda/outlet_center",
-            "target": "self",
+        home = self._get_pda_home_record()
+        view = self.env.ref("route_core.view_route_pda_outlet_center_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Customer Profiles"),
+            "res_model": "route.pda.home",
+            "res_id": home.id,
+            "view_mode": "form",
+            "target": "main",
+            "context": {"create": 0, "edit": 0, "delete": 0},
         }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
 
     def action_view_visits(self):
         self.ensure_one()
