@@ -121,7 +121,7 @@
 <form string="Potential Customer" create="1" edit="1" delete="0">
 <header>
 <button name="action_submit" type="object" string="Submit for Approval" class="btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
-<button name="action_capture_location" type="object" string="Capture Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_capture_location" type="object" string="Capture Current Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
 <button name="action_open_captured_location_map" type="object" string="Open Location" class="btn-secondary" invisible="not location_captured"/>
 <button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
 <button name="action_request_correction" type="object" string="Request Correction" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
@@ -138,6 +138,9 @@
 </button>
 <h2 class="route_pda_detail_title">Potential Customer</h2>
 </div>
+<field name="salesperson_id" invisible="1"/>
+<field name="company_id" invisible="1"/>
+<field name="currency_id" invisible="1"/>
 <div class="oe_title">
 <label for="name"/>
 <h1>
@@ -149,72 +152,545 @@
 <field name="state" readonly="1" widget="badge" nolabel="1" decoration-success="state == 'approved'" decoration-warning="state in ('submitted', 'needs_correction')" decoration-danger="state == 'rejected'"/>
 <field name="outlet_operation_mode" readonly="state in ('approved', 'rejected', 'cancelled')" widget="badge" nolabel="1"/>
 </div>
-<group string="Sales Context" col="4">
-<field name="salesperson_id" readonly="state != 'draft'"/>
-<field name="company_id" readonly="1"/>
-<field name="submitted_at" readonly="1"/>
-<field name="reviewed_by_id" readonly="1"/>
-</group>
-<group string="Contact and Location" col="2">
-<group>
-<field name="contact_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="phone" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="mobile" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="email" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-<group>
-<field name="route_country_id" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="route_city_id" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="area_id" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="route_area_name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-</group>
-<group string="Address" col="2">
-<group>
-<field name="street" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="street2" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-<group>
-<field name="city" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="display_address" readonly="1"/>
-</group>
-</group>
-<group string="Store Specification" col="4">
-<field name="shop_area_sqm" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="frontage_width_m" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="street_width_m" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="entrance_width_m" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="visibility_level" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="traffic_level" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="refrigeration_available" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="parking_available" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="shelf_capacity_note" colspan="4" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-<group string="GPS Location" col="4">
-<field name="location_captured" readonly="1" widget="boolean_toggle"/>
+<div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state not in ('draft', 'needs_correction')"> Capture the shop identity, contact, location, photos, and business notes, then submit it for supervisor approval. </div>
+<div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state in ('draft', 'needs_correction')"> This potential customer has been submitted or reviewed. Supervisor approval will create the official customer and outlet. </div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Contact and Location</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Contact Person</div>
+<div class="route_pda_info_value">
+<field name="contact_name" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Phone</div>
+<div class="route_pda_info_value">
+<field name="phone" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Mobile</div>
+<div class="route_pda_info_value">
+<field name="mobile" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Email</div>
+<div class="route_pda_info_value">
+<field name="email" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Route Country</div>
+<div class="route_pda_info_value">
+<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Route City</div>
+<div class="route_pda_info_value">
+<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Area Name</div>
+<div class="route_pda_info_value">
+<field name="route_area_name" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Address</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street / Address Line 1</div>
+<div class="route_pda_info_value">
+<field name="street" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Address Line 2</div>
+<div class="route_pda_info_value">
+<field name="street2" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">City Text</div>
+<div class="route_pda_info_value">
+<field name="city" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Display Address</div>
+<div class="route_pda_info_value">
+<field name="display_address" nolabel="1" readonly="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Store Specification</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Approx. Shop Area (m²)</div>
+<div class="route_pda_info_value">
+<field name="shop_area_sqm" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Frontage Width (m)</div>
+<div class="route_pda_info_value">
+<field name="frontage_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Width (m)</div>
+<div class="route_pda_info_value">
+<field name="street_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Entrance Width (m)</div>
+<div class="route_pda_info_value">
+<field name="entrance_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Visibility</div>
+<div class="route_pda_info_value">
+<field name="visibility_level" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Traffic</div>
+<div class="route_pda_info_value">
+<field name="traffic_level" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Refrigeration Available</div>
+<div class="route_pda_info_value">
+<field name="refrigeration_available" nolabel="1" widget="boolean_toggle" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Parking Available</div>
+<div class="route_pda_info_value">
+<field name="parking_available" nolabel="1" widget="boolean_toggle" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Shelf / Display Capacity</div>
+<div class="route_pda_info_value">
+<field name="shelf_capacity_note" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">GPS Location</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Location Status</div>
+<div class="route_pda_info_value">
+<field name="location_captured" nolabel="1" readonly="1" widget="boolean_toggle"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">GPS Accuracy (m)</div>
+<div class="route_pda_info_value">
+<field name="location_accuracy_m" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Captured At</div>
+<div class="route_pda_info_value">
+<field name="location_captured_at" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_action">
+<div class="route_pda_info_label">Location Actions</div>
+<button name="action_capture_location" type="object" string="Capture Current Location" class="btn btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_open_captured_location_map" type="object" string="Open Map" class="btn btn-secondary" invisible="not location_captured"/>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Photos</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Exterior Photo</div>
+<div class="route_pda_info_value">
+<field name="exterior_image" widget="image" nolabel="1" options="{'size': [160, 160]}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Interior Photo</div>
+<div class="route_pda_info_value">
+<field name="interior_image" widget="image" nolabel="1" options="{'size': [160, 160]}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Business Notes</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Expected Monthly Sales</div>
+<div class="route_pda_info_value">
+<field name="expected_monthly_sales" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Suggested Products / Demand</div>
+<div class="route_pda_info_value">
+<field name="product_interest_text" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Nearby Competitors</div>
+<div class="route_pda_info_value">
+<field name="competitor_notes" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Salesperson Notes</div>
+<div class="route_pda_info_value">
+<field name="salesperson_note" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_outlet_prospect_review_form" model="ir.ui.view">
+<field name="name">route.outlet.prospect.review.form</field>
+<field name="model">route.outlet.prospect</field>
+<field name="arch" type="xml">
+<form string="Potential Customer" create="1" edit="1" delete="0">
+<header>
+<button name="action_submit" type="object" string="Submit for Approval" class="btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_capture_location" type="object" string="Capture Current Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_open_captured_location_map" type="object" string="Open Location" class="btn-secondary" invisible="not location_captured"/>
+<button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
+<button name="action_request_correction" type="object" string="Request Correction" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
+<button name="action_reject" type="object" string="Reject" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state not in ('submitted', 'needs_correction')"/>
+<button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state not in ('needs_correction', 'rejected', 'cancelled')"/>
+<button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,submitted,needs_correction,approved"/>
+</header>
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
+<div class="route_pda_detail_header">
+<button name="action_back_to_customer_profiles" type="object" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left" title="Arrow Left"/>
+<span>Back to Customer Profiles</span>
+</button>
+<h2 class="route_pda_detail_title">Potential Customer Approval</h2>
+</div>
+<field name="salesperson_id" invisible="1"/>
+<field name="company_id" invisible="1"/>
+<field name="currency_id" invisible="1"/>
+<div class="oe_title">
+<label for="name"/>
+<h1>
+<field name="name" placeholder="Outlet / shop name" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</h1>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<field name="reference" readonly="1" nolabel="1"/>
+<field name="state" readonly="1" widget="badge" nolabel="1" decoration-success="state == 'approved'" decoration-warning="state in ('submitted', 'needs_correction')" decoration-danger="state == 'rejected'"/>
+<field name="outlet_operation_mode" readonly="state in ('approved', 'rejected', 'cancelled')" widget="badge" nolabel="1"/>
+</div>
+<div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state not in ('draft', 'needs_correction')"> Capture the shop identity, contact, location, photos, and business notes, then submit it for supervisor approval. </div>
+<div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state in ('draft', 'needs_correction')"> This potential customer has been submitted or reviewed. Supervisor approval will create the official customer and outlet. </div>
+<div class="route_pda_group route_pda_group_operations" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<div class="route_pda_group_title">Supervisor Context</div>
+<div class="route_pda_card_grid route_pda_card_grid_4">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Salesperson</div>
+<div class="route_pda_info_value">
+<field name="salesperson_id" readonly="state not in ('draft', 'needs_correction')" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Company</div>
+<div class="route_pda_info_value">
+<field name="company_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Submitted At</div>
+<div class="route_pda_info_value">
+<field name="submitted_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Reviewed By</div>
+<div class="route_pda_info_value">
+<field name="reviewed_by_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Contact and Location</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Contact Person</div>
+<div class="route_pda_info_value">
+<field name="contact_name" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Phone</div>
+<div class="route_pda_info_value">
+<field name="phone" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Mobile</div>
+<div class="route_pda_info_value">
+<field name="mobile" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Email</div>
+<div class="route_pda_info_value">
+<field name="email" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Route Country</div>
+<div class="route_pda_info_value">
+<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Route City</div>
+<div class="route_pda_info_value">
+<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Area Name</div>
+<div class="route_pda_info_value">
+<field name="route_area_name" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Address</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street / Address Line 1</div>
+<div class="route_pda_info_value">
+<field name="street" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Address Line 2</div>
+<div class="route_pda_info_value">
+<field name="street2" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">City Text</div>
+<div class="route_pda_info_value">
+<field name="city" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Display Address</div>
+<div class="route_pda_info_value">
+<field name="display_address" nolabel="1" readonly="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Store Specification</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Approx. Shop Area (m²)</div>
+<div class="route_pda_info_value">
+<field name="shop_area_sqm" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Frontage Width (m)</div>
+<div class="route_pda_info_value">
+<field name="frontage_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Width (m)</div>
+<div class="route_pda_info_value">
+<field name="street_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Entrance Width (m)</div>
+<div class="route_pda_info_value">
+<field name="entrance_width_m" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Visibility</div>
+<div class="route_pda_info_value">
+<field name="visibility_level" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Street Traffic</div>
+<div class="route_pda_info_value">
+<field name="traffic_level" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Refrigeration Available</div>
+<div class="route_pda_info_value">
+<field name="refrigeration_available" nolabel="1" widget="boolean_toggle" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Parking Available</div>
+<div class="route_pda_info_value">
+<field name="parking_available" nolabel="1" widget="boolean_toggle" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Shelf / Display Capacity</div>
+<div class="route_pda_info_value">
+<field name="shelf_capacity_note" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">GPS Location</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Location Status</div>
+<div class="route_pda_info_value">
+<field name="location_captured" nolabel="1" readonly="1" widget="boolean_toggle"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">GPS Accuracy (m)</div>
+<div class="route_pda_info_value">
+<field name="location_accuracy_m" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Captured At</div>
+<div class="route_pda_info_value">
+<field name="location_captured_at" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_action">
+<div class="route_pda_info_label">Location Actions</div>
+<button name="action_capture_location" type="object" string="Capture Current Location" class="btn btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_open_captured_location_map" type="object" string="Open Map" class="btn btn-secondary" invisible="not location_captured"/>
+</div>
+</div>
+</div>
+<group string="Technical GPS Coordinates" groups="route_core.group_route_supervisor,route_core.group_route_management" col="4">
 <field name="latitude" readonly="1"/>
 <field name="longitude" readonly="1"/>
-<field name="location_accuracy_m" readonly="1"/>
-<field name="location_captured_at" readonly="1"/>
 </group>
-<group string="Photos" col="2">
-<field name="exterior_image" widget="image" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="interior_image" widget="image" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-<group string="Business Notes" col="2">
-<field name="expected_monthly_sales" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="product_interest_text" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="competitor_notes" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="salesperson_note" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-</group>
-<group string="Supervisor Review" col="2">
-<field name="supervisor_note" groups="route_core.group_route_supervisor,route_core.group_route_management" readonly="state in ('approved', 'rejected', 'cancelled')"/>
-<field name="reviewed_at" readonly="1"/>
-<field name="approved_partner_id" readonly="1"/>
-<field name="approved_outlet_id" readonly="1"/>
-</group>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Photos</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Exterior Photo</div>
+<div class="route_pda_info_value">
+<field name="exterior_image" widget="image" nolabel="1" options="{'size': [160, 160]}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Interior Photo</div>
+<div class="route_pda_info_value">
+<field name="interior_image" widget="image" nolabel="1" options="{'size': [160, 160]}" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations">
+<div class="route_pda_group_title">Business Notes</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Expected Monthly Sales</div>
+<div class="route_pda_info_value">
+<field name="expected_monthly_sales" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Suggested Products / Demand</div>
+<div class="route_pda_info_value">
+<field name="product_interest_text" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Nearby Competitors</div>
+<div class="route_pda_info_value">
+<field name="competitor_notes" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Salesperson Notes</div>
+<div class="route_pda_info_value">
+<field name="salesperson_note" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_group_operations" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<div class="route_pda_group_title">Supervisor Review</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card route_pda_info_card_full" style="grid-column: 1 / -1;">
+<div class="route_pda_info_label">Supervisor Note</div>
+<div class="route_pda_info_value">
+<field name="supervisor_note" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Reviewed At</div>
+<div class="route_pda_info_value">
+<field name="reviewed_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Created Customer</div>
+<div class="route_pda_info_value">
+<field name="approved_partner_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Created Outlet</div>
+<div class="route_pda_info_value">
+<field name="approved_outlet_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 </sheet>
-<chatter/>
 </form>
 </field>
 </record>
@@ -224,7 +700,7 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="search_view_id" ref="route_core.view_route_outlet_prospect_search"/>
 <field name="domain">[('salesperson_id', '=', uid), ('state', 'in', ['draft', 'submitted', 'needs_correction'])]</field>
-<field name="context">{'default_salesperson_id': uid, 'search_default_filter_my_leads': 1, 'create': 1, 'edit': 1, 'delete': 0}</field>
+<field name="context">{'default_salesperson_id': uid, 'search_default_filter_my_leads': 1, 'route_pda_salesperson_form': 1, 'create': 1, 'edit': 1, 'delete': 0}</field>
 </record>
 <record id="action_route_outlet_prospect_salesperson_kanban_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
@@ -250,7 +726,7 @@
 <field name="view_mode">kanban,list,form</field>
 <field name="search_view_id" ref="route_core.view_route_outlet_prospect_search"/>
 <field name="domain">[]</field>
-<field name="context">{'search_default_filter_submitted': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
+<field name="context">{'search_default_filter_submitted': 1, 'route_pda_supervisor_form': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
 </record>
 <record id="action_route_outlet_prospect_review_kanban_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="1"/>
@@ -267,7 +743,7 @@
 <record id="action_route_outlet_prospect_review_form_view" model="ir.actions.act_window.view">
 <field name="sequence" eval="3"/>
 <field name="view_mode">form</field>
-<field name="view_id" ref="route_core.view_route_outlet_prospect_form"/>
+<field name="view_id" ref="route_core.view_route_outlet_prospect_review_form"/>
 <field name="act_window_id" ref="route_core.action_route_outlet_prospect_review"/>
 </record>
 <menuitem id="menu_route_outlet_prospect_review" name="Potential Customers" parent="route_core.menu_route_control_workspace" action="route_core.action_route_outlet_prospect_review" sequence="18" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
