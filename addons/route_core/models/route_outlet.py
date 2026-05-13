@@ -1826,7 +1826,7 @@ class RouteOutlet(models.Model):
 
     def action_open_pda_form(self):
         self.ensure_one()
-        view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_route_outlet_financial_profile_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
             "name": _("Customer Profile"),
@@ -1860,7 +1860,8 @@ class RouteOutlet(models.Model):
     def action_view_visits(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit_pda").read()[0]
-        action["name"] = _("Outlet Visits")
+        action["name"] = _("Customer Profile Visits")
+        action["target"] = "main"
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = self._get_pda_clean_action_context(
             default_outlet_id=self.id,
@@ -1872,7 +1873,8 @@ class RouteOutlet(models.Model):
     def action_view_payments(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit_payment").read()[0]
-        action["name"] = _("Outlet Payments")
+        action["name"] = _("Customer Profile Payments")
+        action["target"] = "main"
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = self._get_pda_clean_action_context(
             default_outlet_id=self.id,
@@ -1894,14 +1896,15 @@ class RouteOutlet(models.Model):
                 action["views"].append((form_view.id, "form"))
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = search_view.id
+            action["search_view_id"] = (search_view.id, search_view.name)
         return action
 
     def action_view_stock_balances(self):
         self.ensure_one()
         self._sync_outlet_stock_balance_records()
         action = self.env.ref("route_core.action_outlet_stock_balance").read()[0]
-        action["name"] = _("Outlet Stock")
+        action["name"] = _("Customer Profile Stock")
+        action["target"] = "main"
         action["domain"] = [("outlet_id", "=", self.id)]
         action["context"] = self._get_pda_clean_action_context(
             default_outlet_id=self.id,
@@ -1926,7 +1929,8 @@ class RouteOutlet(models.Model):
         except Exception:
             pass
 
-        action["name"] = _("Outlet Sales Orders")
+        action["name"] = _("Customer Profile Sales Orders")
+        action["target"] = "main"
         action["domain"] = [("id", "in", sale_orders.ids)]
         action["context"] = self._get_pda_clean_action_context(
             default_partner_id=self.partner_id.id if self.partner_id else False,
@@ -1935,6 +1939,7 @@ class RouteOutlet(models.Model):
         kanban_view = self.env.ref("route_core.view_sale_order_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_sale_order_outlet_pda_list", raise_if_not_found=False)
         form_view = self.env.ref("route_core.view_sale_order_outlet_pda_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_sale_order_outlet_pda_search", raise_if_not_found=False)
         if kanban_view or list_view or form_view:
             action["views"] = []
             if kanban_view:
@@ -1944,6 +1949,8 @@ class RouteOutlet(models.Model):
             if form_view:
                 action["views"].append((form_view.id, "form"))
             action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = (search_view.id, search_view.name)
         return action
 
 
@@ -1951,13 +1958,14 @@ class RouteOutlet(models.Model):
         self.ensure_one()
         if self.outlet_operation_mode == "direct_sale":
             action = self.env.ref("route_core.action_route_direct_return").read()[0]
-            action["name"] = _("Return Orders")
+            action["name"] = _("Customer Profile Returns")
+            action["target"] = "main"
             action["domain"] = [("outlet_id", "=", self.id), ("state", "!=", "cancel")]
             action["context"] = self._get_pda_clean_action_context(
                 default_outlet_id=self.id,
                 route_outlet_back_id=self.id,
             )
-            search_view = self.env.ref("route_core.view_route_direct_return_pda_search", raise_if_not_found=False)
+            search_view = self.env.ref("route_core.view_route_direct_return_outlet_pda_search", raise_if_not_found=False)
             kanban_view = self.env.ref("route_core.view_route_direct_return_pda_kanban", raise_if_not_found=False)
             list_view = self.env.ref("route_core.view_route_direct_return_pda_list", raise_if_not_found=False)
             form_view = self.env.ref("route_core.view_route_direct_return_form", raise_if_not_found=False)
@@ -1972,14 +1980,15 @@ class RouteOutlet(models.Model):
                 action["views"] = views
                 action["view_mode"] = "kanban,list,form"
             if search_view:
-                action["search_view_id"] = search_view.id
+                action["search_view_id"] = (search_view.id, search_view.name)
             return action
 
         pickings = self._get_consignment_transfer_pickings()
         refill_ids = set(self.visit_ids.mapped("refill_picking_id").ids)
         pickings = pickings.filtered(lambda p: p.id not in refill_ids)
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
-        action["name"] = _("Return Orders")
+        action["name"] = _("Customer Profile Returns")
+        action["target"] = "main"
         action["domain"] = [("id", "in", pickings.ids)]
         action["context"] = self._get_pda_clean_action_context(route_outlet_back_id=self.id)
         kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
@@ -1997,13 +2006,14 @@ class RouteOutlet(models.Model):
             action["views"] = views
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = search_view.id
+            action["search_view_id"] = (search_view.id, search_view.name)
         return action
 
     def action_view_transfers(self):
         self.ensure_one()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
-        action["name"] = _("Transfers")
+        action["name"] = _("Customer Profile Transfers")
+        action["target"] = "main"
         if self.outlet_operation_mode == "consignment":
             pickings = self._get_consignment_transfer_pickings()
             action["domain"] = [("id", "in", pickings.ids)]
@@ -2025,7 +2035,7 @@ class RouteOutlet(models.Model):
             action["views"] = views
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = search_view.id
+            action["search_view_id"] = (search_view.id, search_view.name)
         return action
 
     def action_view_open_shortages(self):
@@ -2168,4 +2178,5 @@ class RouteOutlet(models.Model):
             create=0,
         )
         return action
+
 
