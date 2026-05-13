@@ -60,6 +60,7 @@
         "views/route_salesperson_route_map_views.xml",
         "views/sale_order_direct_sale_views.xml",
         "views/route_role_actions_menus.xml",
+        "views/route_outlet_prospect_views.xml",
         "views/route_geo_review_views.xml",
         "views/route_geo_control_center_views.xml",
         "views/route_supervisor_daily_control_views.xml",
@@ -91,6 +92,7 @@
         "web.assets_backend": [
             "route_core/static/src/js/route_visit_scan_focus.js",
             "route_core/static/src/js/route_workspace_navigation_guard.js",
+            "route_core/static/src/js/route_outlet_prospect_geo_capture.js",
             "route_core/static/src/js/route_visit_geo_capture.js",
             "route_core/static/src/js/route_split_payment_lines.js",
             "route_core/static/src/css/route_pda_home.css",
