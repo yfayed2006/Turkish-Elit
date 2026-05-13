@@ -146,6 +146,9 @@
 <button name="action_view_payments" type="object" class="oe_stat_button" icon="fa-money">
 <field name="payment_count" string="Payments" widget="statinfo"/>
 </button>
+<button name="action_open_financial_profile" type="object" class="oe_stat_button" icon="fa-credit-card">
+<field name="route_financial_open_item_count" string="Finance" widget="statinfo"/>
+</button>
 <button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
 <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
 </button>
@@ -527,6 +530,11 @@
 <sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
+<field name="geo_status" invisible="1"/>
+<field name="display_address" invisible="1"/>
+<field name="route_financial_profile_state" invisible="1"/>
+<field name="route_financial_profile_label" invisible="1"/>
+<field name="route_financial_open_item_count" invisible="1"/>
 <div class="route_workspace_inline_back_wrapper route_pda_mobile_only">
 <button name="action_back_to_customer_and_outlets" type="object" class="btn route_workspace_inline_back_btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
@@ -539,6 +547,9 @@
 </button>
 <button name="action_view_payments" type="object" class="oe_stat_button" icon="fa-money">
 <field name="payment_count" string="Payments" widget="statinfo"/>
+</button>
+<button name="action_open_financial_profile" type="object" class="oe_stat_button" icon="fa-credit-card">
+<field name="route_financial_open_item_count" string="Finance" widget="statinfo"/>
 </button>
 <button name="action_view_sale_orders" type="object" class="oe_stat_button" icon="fa-shopping-cart">
 <field name="sale_order_count" string="Sale Orders" widget="statinfo"/>
@@ -572,16 +583,55 @@
 <field name="last_visit_date" readonly="1"/>
 </group>
 </group>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Outlet Actions</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_3 route_pda_center_grid route_pda_product_center_grid">
+<button name="action_open_financial_profile" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-credit-card route_pda_app_icon" title="Credit Card"/>
+<span class="route_pda_app_label">Financial Profile</span>
+<span class="route_pda_app_hint">Due, payments, cheques</span>
+</button>
+<button name="action_open_outlet_navigation" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="geo_status == 'missing'">
+<i class="fa fa-location-arrow route_pda_app_icon" title="Navigate"/>
+<span class="route_pda_app_label">Navigate</span>
+<span class="route_pda_app_hint">Open map route</span>
+</button>
+<button name="action_view_sale_orders" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-shopping-cart route_pda_app_icon" title="Orders"/>
+<span class="route_pda_app_label">Orders</span>
+<span class="route_pda_app_hint">Sales history</span>
+</button>
+<button name="action_view_return_orders" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-undo route_pda_app_icon" title="Returns"/>
+<span class="route_pda_app_label">Returns</span>
+<span class="route_pda_app_hint">Return documents</span>
+</button>
+<button name="action_view_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-money route_pda_app_icon" title="Payments"/>
+<span class="route_pda_app_label">Payments</span>
+<span class="route_pda_app_hint">Collections timeline</span>
+</button>
+<button name="action_view_visits" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-map-marker route_pda_app_icon" title="Visits"/>
+<span class="route_pda_app_label">Visits</span>
+<span class="route_pda_app_hint">Route history</span>
+</button>
+</div>
+</div>
 <notebook class="route_pda_outlet_notebook">
 <page string="Summary">
 <group string="Outlet Summary" col="2">
 <group>
 <field name="code" readonly="1"/>
 <field name="partner_id" string="Customer" readonly="1" options="{'no_open': True, 'no_create': True}"/>
+<field name="phone" readonly="1"/>
+<field name="mobile" readonly="1"/>
 <field name="route_city_id" readonly="1"/>
 <field name="area_id" readonly="1"/>
 </group>
 <group>
+<field name="display_address" readonly="1"/>
+<field name="geo_status" readonly="1" widget="badge" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
 <field name="last_sale_order_id" readonly="1"/>
 <field name="visit_count" readonly="1"/>
 <field name="in_progress_visit_id" readonly="1"/>
@@ -601,16 +651,81 @@
 </group>
 </page>
 <page string="Finance">
-<group string="Financial Snapshot" col="2">
-<group>
-<field name="payment_count" readonly="1"/>
-<field name="unpaid_visit_count" readonly="1"/>
-<field name="last_payment_amount" readonly="1"/>
-</group>
-<group>
-<field name="sales_lifetime_total" readonly="1"/>
-</group>
-</group>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Financial Status</div>
+<div>
+<field name="route_financial_profile_state" readonly="1" widget="badge" nolabel="1" decoration-success="route_financial_profile_state == 'clear'" decoration-warning="route_financial_profile_state == 'watch'" decoration-danger="route_financial_profile_state == 'attention'"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Effective Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Open Promises</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_open_promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Bank/POS Pending</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_bank_pos_pending_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Bank/POS Confirmed Not Posted</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_bank_pos_verified_not_posted_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Pending</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_cheque_pending_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_cheque_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Financial Actions</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_3 route_pda_center_grid route_pda_product_center_grid">
+<button name="action_open_financial_profile" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-address-card route_pda_app_icon" title="Profile"/>
+<span class="route_pda_app_label">Full Profile</span>
+<span class="route_pda_app_hint">Account summary</span>
+</button>
+<button name="action_view_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-money route_pda_app_icon" title="Payments"/>
+<span class="route_pda_app_label">All Payments</span>
+<span class="route_pda_app_hint">Cash, bank, POS, cheques</span>
+</button>
+<button name="action_view_bank_pos_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-credit-card route_pda_app_icon" title="Bank/POS"/>
+<span class="route_pda_app_label">Bank/POS</span>
+<span class="route_pda_app_hint">Electronic payments</span>
+</button>
+<button name="action_view_cheque_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-file-text-o route_pda_app_icon" title="Cheques"/>
+<span class="route_pda_app_label">Cheques</span>
+<span class="route_pda_app_hint">Cheque payments</span>
+</button>
+</div>
+</div>
 </page>
 <page string="Stock" invisible="outlet_operation_mode != 'consignment'">
 <group string="Consignment Stock Snapshot" col="2">
@@ -629,6 +744,207 @@
 </group>
 </page>
 </notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_route_outlet_financial_profile_form" model="ir.ui.view">
+<field name="name">route.outlet.financial.profile.form</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<form string="Outlet Financial Profile" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet route_pda_visit_collections_sheet">
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
+<field name="geo_status" invisible="1"/>
+<field name="route_financial_profile_state" invisible="1"/>
+<field name="route_financial_profile_label" invisible="1"/>
+<div class="route_pda_detail_header">
+<button name="action_open_pda_form" type="object" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left" title="Arrow Left"/>
+<span>Back to Outlet</span>
+</button>
+<h2 class="route_pda_detail_title">Outlet Financial Profile</h2>
+</div>
+<div class="oe_title">
+<h1>
+<field name="name" readonly="1"/>
+</h1>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<field name="outlet_operation_mode" readonly="1" widget="badge" nolabel="1"/>
+<field name="route_financial_profile_state" readonly="1" widget="badge" nolabel="1" decoration-success="route_financial_profile_state == 'clear'" decoration-warning="route_financial_profile_state == 'watch'" decoration-danger="route_financial_profile_state == 'attention'"/>
+<field name="geo_status" readonly="1" widget="badge" nolabel="1" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Outlet Identity</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Customer</div>
+<div class="route_pda_info_value">
+<field name="partner_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Phone</div>
+<div class="route_pda_info_value">
+<field name="phone" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Mobile</div>
+<div class="route_pda_info_value">
+<field name="mobile" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="area_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Address</div>
+<div class="route_pda_info_value route_pda_info_value_left">
+<field name="display_address" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Current Financial Position</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Effective Collected</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_effective_collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Open Promise Amount</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_open_promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Payment</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="last_payment_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Bank/POS and Cheque Control</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Bank/POS Pending</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_bank_pos_pending_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Bank/POS Confirmed Not Posted</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_bank_pos_verified_not_posted_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Bank/POS Follow-up</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_bank_pos_followup_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Pending</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_cheque_pending_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Open Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_cheque_open_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Cheque Cleared</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_financial_cheque_cleared_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Sales and Visit Snapshot</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Lifetime Sales</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="sales_lifetime_total" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Lifetime Returns</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="returns_lifetime_total" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Visit</div>
+<div class="route_pda_info_value">
+<field name="last_visit_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Sale Order</div>
+<div class="route_pda_info_value">
+<field name="last_sale_order_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Quick Actions</div>
+<div class="route_pda_apps_grid route_pda_apps_grid_3 route_pda_center_grid route_pda_product_center_grid">
+<button name="action_view_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-money route_pda_app_icon" title="Payments"/>
+<span class="route_pda_app_label">All Payments</span>
+<span class="route_pda_app_hint">Collections timeline</span>
+</button>
+<button name="action_view_bank_pos_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-credit-card route_pda_app_icon" title="Bank/POS"/>
+<span class="route_pda_app_label">Bank/POS</span>
+<span class="route_pda_app_hint">Electronic payments</span>
+</button>
+<button name="action_view_cheque_payments" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-file-text-o route_pda_app_icon" title="Cheques"/>
+<span class="route_pda_app_label">Cheques</span>
+<span class="route_pda_app_hint">Cheque payments</span>
+</button>
+<button name="action_view_sale_orders" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-shopping-cart route_pda_app_icon" title="Orders"/>
+<span class="route_pda_app_label">Orders</span>
+<span class="route_pda_app_hint">Sales orders</span>
+</button>
+<button name="action_view_return_orders" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-undo route_pda_app_icon" title="Returns"/>
+<span class="route_pda_app_label">Returns</span>
+<span class="route_pda_app_hint">Return documents</span>
+</button>
+<button name="action_open_outlet_navigation" type="object" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="geo_status == 'missing'">
+<i class="fa fa-location-arrow route_pda_app_icon" title="Navigate"/>
+<span class="route_pda_app_label">Navigate</span>
+<span class="route_pda_app_hint">Open map route</span>
+</button>
+</div>
+</div>
 </sheet>
 </form>
 </field>
