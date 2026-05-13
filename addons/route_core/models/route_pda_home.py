@@ -59,6 +59,7 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
     consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
     active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
+    potential_customer_count = fields.Integer(string="Potential Customers", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
     direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
@@ -883,6 +884,10 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
             rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
             rec.active_outlet_count = len(active_outlets)
+            rec.potential_customer_count = self.env["route.outlet.prospect"].search_count([
+                ("salesperson_id", "=", rec.user_id.id or self.env.user.id),
+                ("state", "in", ["draft", "submitted", "needs_correction"]),
+            ])
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
             rec.direct_transfer_today_count = len(today_direct_transfers)
@@ -1681,6 +1686,25 @@ class RoutePdaHome(models.TransientModel):
     def action_open_customer_profiles(self):
         self.ensure_one()
         return self.action_open_all_outlets()
+
+    def action_open_potential_customers(self):
+        self.ensure_one()
+        action = self.env.ref("route_core.action_route_outlet_prospect_salesperson").read()[0]
+        action["name"] = _("Potential Customers")
+        action["target"] = "main"
+        action["domain"] = [
+            ("salesperson_id", "=", self.env.user.id),
+            ("state", "in", ["draft", "submitted", "needs_correction"]),
+        ]
+        action["context"] = {
+            "default_salesperson_id": self.env.user.id,
+            "default_company_id": self.env.company.id,
+            "search_default_filter_my_leads": 1,
+            "create": 1,
+            "edit": 1,
+            "delete": 0,
+        }
+        return action
 
     def action_open_all_outlets(self):
         self.ensure_one()
