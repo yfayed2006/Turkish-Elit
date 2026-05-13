@@ -35,7 +35,6 @@
 <field name="code" string="Outlet Code"/>
 <field name="partner_id" string="Customer"/>
 <field name="route_city_id" string="City"/>
-<field name="area_id" string="Area"/>
 <field name="phone"/>
 <field name="mobile"/>
 <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
@@ -43,7 +42,6 @@
 <filter name="filter_consignment" string="Consignment" domain="[('outlet_operation_mode', '=', 'consignment')]"/>
 <filter name="group_by_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
 <filter name="group_by_city" string="City" context="{'group_by': 'route_city_id'}"/>
-<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
 </search>
 </field>
 </record>
@@ -538,7 +536,7 @@
 <div class="route_workspace_inline_back_wrapper route_pda_mobile_only">
 <button name="action_back_to_customer_and_outlets" type="object" class="btn route_workspace_inline_back_btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Customer and Outlets</span>
+<span>Back to Customer Profiles</span>
 </button>
 </div>
 <div class="oe_button_box route_pda_outlet_button_box" name="button_box" invisible="not id">
@@ -752,7 +750,7 @@
 <field name="name">route.outlet.financial.profile.form</field>
 <field name="model">route.outlet</field>
 <field name="arch" type="xml">
-<form string="Outlet Financial Profile" create="0" edit="0" delete="0">
+<form string="Customer Profile" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet route_pda_visit_collections_sheet">
 <field name="route_enable_lot_serial_tracking" invisible="1"/>
 <field name="route_enable_expiry_tracking" invisible="1"/>
@@ -762,9 +760,9 @@
 <div class="route_pda_detail_header">
 <button name="action_open_pda_form" type="object" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left" title="Arrow Left"/>
-<span>Back to Outlet</span>
+<span>Back to Customer Profile</span>
 </button>
-<h2 class="route_pda_detail_title">Outlet Financial Profile</h2>
+<h2 class="route_pda_detail_title">Customer Profile</h2>
 </div>
 <div class="oe_title">
 <h1>
@@ -1013,8 +1011,6 @@
 <field name="arch" type="xml">
 <search string="Outlet Payments">
 <field name="payment_date" string="Payment Date"/>
-<field name="outlet_id" string="Outlet"/>
-<field name="area_id" string="Area"/>
 <field name="payment_mode" string="Mode"/>
 <field name="collection_type" string="Collection"/>
 <field name="source_document_ref" string="Document"/>
@@ -1028,8 +1024,6 @@
 <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
 <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
 <separator/>
-<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
-<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
 <filter name="group_by_mode" string="Payment Mode" context="{'group_by': 'payment_mode'}"/>
 <filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
 </search>
@@ -1091,6 +1085,24 @@
 </t>
 </templates>
 </kanban>
+</field>
+</record>
+<record id="view_sale_order_outlet_pda_search" model="ir.ui.view">
+<field name="name">sale.order.outlet.pda.search</field>
+<field name="model">sale.order</field>
+<field name="arch" type="xml">
+<search string="Customer Profile Sales Orders">
+<field name="name" string="Order"/>
+<field name="date_order" string="Order Date"/>
+<field name="invoice_status" string="Invoice Status"/>
+<field name="state" string="Status"/>
+<filter name="filter_to_invoice" string="To Invoice" domain="[('invoice_status', '=', 'to invoice')]"/>
+<filter name="filter_invoiced" string="Fully Invoiced" domain="[('invoice_status', '=', 'invoiced')]"/>
+<filter name="filter_nothing_to_invoice" string="Nothing to Invoice" domain="[('invoice_status', '=', 'no')]"/>
+<separator/>
+<filter name="group_by_invoice_status" string="Invoice Status" context="{'group_by': 'invoice_status'}"/>
+<filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
+</search>
 </field>
 </record>
 <record id="view_sale_order_outlet_pda_list" model="ir.ui.view">
@@ -1229,6 +1241,23 @@
 <field name="origin" string="Source Document" optional="show"/>
 <field name="state" string="Status" widget="badge" decoration-info="state == 'assigned'" decoration-warning="state in ('draft', 'confirmed', 'waiting')" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </list>
+</field>
+</record>
+<record id="view_route_direct_return_outlet_pda_search" model="ir.ui.view">
+<field name="name">route.direct.return.outlet.pda.search</field>
+<field name="model">route.direct.return</field>
+<field name="arch" type="xml">
+<search string="Customer Profile Returns">
+<field name="name" string="Reference"/>
+<field name="return_date" string="Return Date"/>
+<field name="sale_order_id" string="Sale Order"/>
+<field name="state" string="Status"/>
+<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
+<filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+<separator/>
+<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
+<filter name="group_by_sale_order" string="Sale Order" context="{'group_by': 'sale_order_id'}"/>
+</search>
 </field>
 </record>
 <record id="view_stock_picking_outlet_return_pda_search" model="ir.ui.view">
