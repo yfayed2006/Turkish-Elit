@@ -60,8 +60,8 @@ class RouteOutletProspect(models.Model):
     email = fields.Char(string="Email")
 
     route_country_id = fields.Many2one("res.country", string="Route Country")
-    route_city_id = fields.Many2one("route.city", string="Route City", domain="[('country_id', '=', route_country_id)]")
-    area_id = fields.Many2one("route.area", string="Area", domain="[('city_id', '=', route_city_id)]")
+    route_city_id = fields.Many2one("route.city", string="Route City")
+    area_id = fields.Many2one("route.area", string="Area")
     route_area_name = fields.Char(string="Area Name")
     street = fields.Char(string="Street / Address Line 1")
     street2 = fields.Char(string="Address Line 2")
@@ -193,6 +193,36 @@ class RouteOutletProspect(models.Model):
             params["next"] = next_action
         return {"type": "ir.actions.client", "tag": "display_notification", "params": params}
 
+    def _action_open_salesperson_prospects(self):
+        action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+        else:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Potential Customers"),
+                "res_model": "route.outlet.prospect",
+                "view_mode": "kanban,list,form",
+            }
+        action["target"] = "main"
+        action["domain"] = [
+            ("salesperson_id", "=", self.env.user.id),
+            ("state", "in", ["draft", "submitted", "needs_correction"]),
+        ]
+        action["context"] = dict(
+            self.env.context,
+            default_salesperson_id=self.env.user.id,
+            search_default_filter_my_leads=1,
+            route_pda_salesperson_form=1,
+            create=True,
+            edit=True,
+            delete=False,
+        )
+        return action
+
+    def action_noop_pending_review(self):
+        return self._notify(_("Pending Review"), _("This potential customer is already waiting for supervisor review."), "info")
+
     def action_submit(self):
         self._validate_submit_ready()
         for record in self:
@@ -203,10 +233,7 @@ class RouteOutletProspect(models.Model):
                 "submitted_at": fields.Datetime.now(),
             })
             record.message_post(body=_("Potential customer submitted for supervisor approval."))
-        return self._notify(
-            _("Submitted"),
-            _("The potential customer was submitted to supervisor review."),
-        )
+        return self._action_open_salesperson_prospects()
 
     def action_request_correction(self):
         for record in self:
