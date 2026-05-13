@@ -349,12 +349,18 @@ class RouteOutletProspect(models.Model):
 
     def action_capture_location(self):
         self.ensure_one()
+        view_xmlid = "route_core.view_route_outlet_prospect_review_form" if self.env.context.get("route_pda_supervisor_form") else "route_core.view_route_outlet_prospect_form"
+        view = self.env.ref(view_xmlid, raise_if_not_found=False)
         return {
             "type": "ir.actions.client",
             "tag": "route_core_capture_outlet_prospect_location",
             "params": {
                 "prospect_id": self.id,
-                "view_id": self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False).id if self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False) else False,
+                "view_id": view.id if view else False,
+                "context": {
+                    "route_pda_salesperson_form": bool(self.env.context.get("route_pda_salesperson_form")),
+                    "route_pda_supervisor_form": bool(self.env.context.get("route_pda_supervisor_form")),
+                },
             },
         }
 
