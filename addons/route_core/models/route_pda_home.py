@@ -1685,6 +1685,14 @@ class RoutePdaHome(models.TransientModel):
             domain=[("active", "=", True)],
         )
 
+    def action_open_outlet_financial_profiles(self):
+        self.ensure_one()
+        return self._prepare_outlet_workspace_action(
+            name="Outlet Financial Profiles",
+            domain=[("active", "=", True)],
+            context={"route_financial_profile_mode": True},
+        )
+
     def action_create_direct_transfer(self):
         self.ensure_one()
         vehicle = self._get_current_vehicle()
