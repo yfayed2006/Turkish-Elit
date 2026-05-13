@@ -12,6 +12,7 @@ class RouteOutletProspectGeoCaptureAction extends Component {
         this.notification = useService("notification");
         this.prospectId = this.props.action.params.prospect_id;
         this.viewId = this.props.action.params.view_id || false;
+        this.returnContext = this.props.action.params.context || {};
         onMounted(() => this.captureCurrentLocation());
     }
 
@@ -92,6 +93,8 @@ class RouteOutletProspectGeoCaptureAction extends Component {
                 create: true,
                 edit: true,
                 delete: false,
+                route_pda_salesperson_form: !!this.returnContext.route_pda_salesperson_form,
+                route_pda_supervisor_form: !!this.returnContext.route_pda_supervisor_form,
             },
         };
         await this.action.doAction(action);
