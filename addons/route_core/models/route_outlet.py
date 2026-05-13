@@ -1896,7 +1896,7 @@ class RouteOutlet(models.Model):
                 action["views"].append((form_view.id, "form"))
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = (search_view.id, search_view.name)
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_stock_balances(self):
@@ -1950,7 +1950,7 @@ class RouteOutlet(models.Model):
                 action["views"].append((form_view.id, "form"))
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = (search_view.id, search_view.name)
+            action["search_view_id"] = search_view.id
         return action
 
 
@@ -1980,7 +1980,7 @@ class RouteOutlet(models.Model):
                 action["views"] = views
                 action["view_mode"] = "kanban,list,form"
             if search_view:
-                action["search_view_id"] = (search_view.id, search_view.name)
+                action["search_view_id"] = search_view.id
             return action
 
         pickings = self._get_consignment_transfer_pickings()
@@ -2006,7 +2006,7 @@ class RouteOutlet(models.Model):
             action["views"] = views
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = (search_view.id, search_view.name)
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_transfers(self):
@@ -2035,7 +2035,7 @@ class RouteOutlet(models.Model):
             action["views"] = views
             action["view_mode"] = "kanban,list,form"
         if search_view:
-            action["search_view_id"] = (search_view.id, search_view.name)
+            action["search_view_id"] = search_view.id
         return action
 
     def action_view_open_shortages(self):
