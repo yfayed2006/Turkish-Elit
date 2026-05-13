@@ -36,6 +36,8 @@ const OUTLET_WORKSPACE_ENTRY_BUTTONS = new Set([
     "action_open_direct_sale_customers",
     "action_open_consignment_customers",
     "action_open_all_outlets",
+    "action_open_customer_profiles",
+    "action_open_outlet_financial_profiles",
 ]);
 const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_visits",
@@ -290,9 +292,9 @@ function isOutletWorkspacePage() {
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
     const listLike = (
-        ["outlets", "direct sale customers", "consignment customers", "all outlets"].includes(title)
+        ["outlets", "direct sale customers", "consignment customers", "all outlets", "customer profiles", "outlet financial profiles"].includes(title)
         || breadcrumbText.includes("outlets")
-        || pageText.includes("customer and outlets")
+        || (pageText.includes("customer and outlets") || pageText.includes("customer profiles"))
     ) && (
         rootText.includes("outlet code")
         || rootText.includes("current due")
@@ -310,13 +312,13 @@ function isOutletFormPage() {
     const rootText = getRootText();
     const breadcrumbText = getBreadcrumbText();
     const hasOutletButtons = hasAnyVisibleButton(Array.from(OUTLET_FORM_ENTRY_BUTTONS));
-    const hasOutletTabs = rootText.includes("outlet summary") || rootText.includes("outlet details") || rootText.includes("financial snapshot") || rootText.includes("consignment stock snapshot");
-    const hasQuickSnapshot = rootText.includes("quick snapshot") && rootText.includes("current due") && rootText.includes("last visit date");
-    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    const hasOutletTabs = rootText.includes("outlet summary") || rootText.includes("outlet details") || rootText.includes("financial snapshot") || rootText.includes("customer profile") || rootText.includes("current financial position") || rootText.includes("consignment stock snapshot");
+    const hasQuickSnapshot = (rootText.includes("quick snapshot") && rootText.includes("current due") && rootText.includes("last visit date")) || (rootText.includes("current financial position") && rootText.includes("bank/pos"));
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles"));
     return !!(
         (hasOutletButtons && hasQuickSnapshot)
         || (hasOutletTrail && hasOutletTabs)
-        || (title && title !== "outlets" && title !== "customer and outlets" && hasQuickSnapshot)
+        || (title && title !== "outlets" && title !== "customer and outlets" && title !== "customer profiles" && hasQuickSnapshot)
     );
 }
 
@@ -328,7 +330,7 @@ function isOutletRelatedSubpage(pageNames, requiredHints = [], originButtons = [
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets");
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles"));
     const hasRecentOrigin = originButtons.length ? recentOutletSubpageIs(originButtons) : false;
     if (!pageNames.includes(title)) {
         return false;
@@ -361,7 +363,7 @@ function isOutletReturnsPage() {
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_return_orders"]);
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_return_orders"]);
     if (!hasOutletTrail) {
         return false;
     }
@@ -384,7 +386,7 @@ function isOutletTransfersPage() {
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_transfers"]);
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_transfers"]);
     if (!hasOutletTrail) {
         return false;
     }
@@ -406,7 +408,7 @@ function isOutletStockFromOutletPage() {
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || recentOutletSubpageIs(["action_view_stock_balances"]);
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_stock_balances"]);
     if (!hasOutletTrail) {
         return false;
     }
@@ -1254,7 +1256,7 @@ function getBackConfig(pageKind) {
     }
     if (["outlet_workspace", "outlet_form"].includes(pageKind)) {
         return {
-            label: "Back to Customer and Outlets",
+            label: "Back to Customer Profiles",
             href: getOutletCenterHref(),
             onClick: navigateBackToOutletCenter,
             interceptBrowser: true,
@@ -1263,7 +1265,7 @@ function getBackConfig(pageKind) {
     }
     if (["outlet_visits", "outlet_payments", "outlet_sales_orders", "outlet_returns", "outlet_transfers", "outlet_stock_from_outlet"].includes(pageKind)) {
         return {
-            label: "Back to Outlet",
+            label: "Back to Customer Profile",
             href: getOutletFormHref(),
             onClick: navigateBackToOutletForm,
             interceptBrowser: true,
