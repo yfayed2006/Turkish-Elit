@@ -256,7 +256,7 @@ class RoutePdaHome(models.TransientModel):
         return self.action_open_product_actions_screen()
 
     def action_open_outlet_center_screen(self):
-        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer and Outlets")
+        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer Profiles")
 
 
     def action_open_direct_sale_mode_screen(self):
@@ -1388,7 +1388,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         # Legacy fallback used by older workspace buttons. Keep it aligned with All Outlets.
         return self._prepare_outlet_workspace_action(
-            name="All Outlets",
+            name="Customer Profiles",
             domain=[("active", "=", True)],
         )
 
@@ -1606,7 +1606,7 @@ class RoutePdaHome(models.TransientModel):
         )
         kanban_view = self.env.ref("route_core.view_route_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_route_outlet_pda_list", raise_if_not_found=False)
-        form_view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_outlet_financial_profile_form", raise_if_not_found=False)
         search_view = self.env.ref("route_core.view_route_outlet_pda_search", raise_if_not_found=False)
         views = []
         if kanban_view:
@@ -1678,17 +1678,21 @@ class RoutePdaHome(models.TransientModel):
             context={"group_by": "partner_id"},
         )
 
+    def action_open_customer_profiles(self):
+        self.ensure_one()
+        return self.action_open_all_outlets()
+
     def action_open_all_outlets(self):
         self.ensure_one()
         return self._prepare_outlet_workspace_action(
-            name="All Outlets",
+            name="Customer Profiles",
             domain=[("active", "=", True)],
         )
 
     def action_open_outlet_financial_profiles(self):
         self.ensure_one()
         return self._prepare_outlet_workspace_action(
-            name="Outlet Financial Profiles",
+            name="Customer Profiles",
             domain=[("active", "=", True)],
             context={"route_financial_profile_mode": True},
         )
