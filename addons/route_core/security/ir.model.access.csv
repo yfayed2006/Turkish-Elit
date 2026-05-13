@@ -197,3 +197,6 @@ access_route_area_cheque_accountant,access.route.area.cheque.accountant,model_ro
 access_route_city_cheque_accountant,access.route.city.cheque.accountant,model_route_city,route_core.group_route_cheque_accountant,1,0,0,0
 access_sale_order_route_cheque_accountant,access.sale.order.route.cheque.accountant,sale.model_sale_order,route_core.group_route_cheque_accountant,1,0,0,0
 access_route_custody_accounting_work_queue_accountant,access.route.custody.accounting.work.queue.accountant,model_route_custody_accounting_work_queue,route_core.group_route_cheque_accountant,1,0,0,0
+access_route_outlet_prospect_salesperson,access.route.outlet.prospect.salesperson,model_route_outlet_prospect,route_core.group_route_salesperson,1,1,1,0
+access_route_outlet_prospect_supervisor,access.route.outlet.prospect.supervisor,model_route_outlet_prospect,route_core.group_route_supervisor,1,1,1,0
+access_route_outlet_prospect_management,access.route.outlet.prospect.management,model_route_outlet_prospect,route_core.group_route_management,1,1,1,1
