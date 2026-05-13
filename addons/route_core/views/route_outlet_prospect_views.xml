@@ -121,6 +121,7 @@
 <form string="Potential Customer" create="1" edit="1" delete="0">
 <header>
 <button name="action_submit" type="object" string="Submit for Approval" class="btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_noop_pending_review" type="object" string="Pending Review" class="btn-secondary" invisible="state != 'submitted'"/>
 <button name="action_capture_location" type="object" string="Capture Current Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
 <button name="action_open_captured_location_map" type="object" string="Open Location" class="btn-secondary" invisible="not location_captured"/>
 <button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
@@ -184,19 +185,19 @@
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Route Country</div>
 <div class="route_pda_info_value">
-<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" options="{'no_create': True, 'no_create_edit': True}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Route City</div>
 <div class="route_pda_info_value">
-<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" domain="[]" context="{'default_country_id': route_country_id}" options="{'no_create': True, 'no_create_edit': True}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Area</div>
 <div class="route_pda_info_value">
-<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" domain="[]" context="{'default_city_id': route_city_id}" options="{'no_create': True, 'no_create_edit': True}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
@@ -380,6 +381,7 @@
 <form string="Potential Customer" create="1" edit="1" delete="0">
 <header>
 <button name="action_submit" type="object" string="Submit for Approval" class="btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
+<button name="action_noop_pending_review" type="object" string="Pending Review" class="btn-secondary" invisible="state != 'submitted'"/>
 <button name="action_capture_location" type="object" string="Capture Current Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
 <button name="action_open_captured_location_map" type="object" string="Open Location" class="btn-secondary" invisible="not location_captured"/>
 <button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
@@ -472,19 +474,19 @@
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Route Country</div>
 <div class="route_pda_info_value">
-<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="route_country_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" options="{'no_create': True, 'no_create_edit': True}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Route City</div>
 <div class="route_pda_info_value">
-<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="route_city_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" domain="[]" context="{'default_country_id': route_country_id}" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
 <div class="route_pda_info_label">Area</div>
 <div class="route_pda_info_value">
-<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+<field name="area_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" domain="[]" context="{'default_city_id': route_city_id}" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
 </div>
 </div>
 <div class="route_pda_info_card">
