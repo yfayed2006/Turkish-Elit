@@ -487,6 +487,7 @@
 <form string="Customer Profiles" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="active_outlet_count" invisible="1"/>
+<field name="potential_customer_count" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left" title="Arrow Left"/>
@@ -504,6 +505,14 @@
 <span class="route_pda_app_hint">Outlet identity, finance, visits and documents</span>
 <span class="route_pda_app_hint_value">
 <field name="active_outlet_count" readonly="1" nolabel="1"/>
+</span>
+</button>
+<button type="object" name="action_open_potential_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-user-plus route_pda_app_icon" title="Potential Customer"/>
+<span class="route_pda_app_label">Potential Customer</span>
+<span class="route_pda_app_hint">Capture new shop details for approval</span>
+<span class="route_pda_app_hint_value">
+<field name="potential_customer_count" readonly="1" nolabel="1"/>
 </span>
 </button>
 </div>
