@@ -4,6 +4,7 @@
 <field name="model">route.outlet.prospect.approval.wizard</field>
 <field name="arch" type="xml">
 <form string="Approve Potential Customer">
+<!--  ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6  -->
 <sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
 <field name="prospect_id" invisible="1"/>
 <field name="company_id" invisible="1"/>
@@ -14,7 +15,7 @@
 <field name="outlet_name" readonly="1"/>
 </h1>
 </div>
-<div class="alert alert-info" role="alert"> Complete the commercial setup before creating the official outlet. Direct Sale uses a pricelist. Consignment can use a fixed commission or category commissions by product category. </div>
+<div class="alert alert-info" role="alert"> The salesperson submitted basic shop information only. The supervisor must choose Direct Sale or Consignment here, then complete pricelist, shelf credit, and commission setup before creating the official outlet. </div>
 <group string="Approval Context" col="2">
 <group>
 <field name="salesperson_id" readonly="1"/>
