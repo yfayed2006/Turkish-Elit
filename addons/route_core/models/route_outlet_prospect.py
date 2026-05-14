@@ -568,6 +568,7 @@ class RouteOutletProspect(models.Model):
             "success",
         )
 
+    # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
     def action_approve(self):
         """Open supervisor-only commercial setup before creating the outlet.
 
