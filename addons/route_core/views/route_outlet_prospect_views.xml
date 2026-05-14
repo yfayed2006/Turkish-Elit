@@ -1,4 +1,5 @@
 <odoo>
+<!--  ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7  -->
 <!--  ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6  -->
 <record id="view_route_outlet_prospect_kanban" model="ir.ui.view">
 <field name="name">route.outlet.prospect.kanban</field>
@@ -118,13 +119,14 @@
 <field name="arch" type="xml">
 <form string="Potential Customer" create="1" edit="1" delete="0">
 <header>
+<!--  ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7: salesperson context hides supervisor buttons on this form.  -->
 <button name="action_submit" type="object" string="Submit for Approval" class="btn-primary" invisible="state not in ('draft', 'needs_correction')"/>
 <button name="action_noop_pending_review" type="object" string="Pending Review" class="btn-secondary" invisible="state != 'submitted'"/>
 <button name="action_capture_location" type="object" string="Capture Current Location" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
 <button name="action_open_captured_location_map" type="object" string="Open Location" class="btn-secondary" invisible="not location_captured"/>
-<button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
-<button name="action_request_correction" type="object" string="Request Correction" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted'"/>
-<button name="action_reject" type="object" string="Reject" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state not in ('submitted', 'needs_correction')"/>
+<button name="action_approve" type="object" string="Approve and Create Outlet" class="btn-primary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted' or context.get('route_pda_salesperson_form')"/>
+<button name="action_request_correction" type="object" string="Request Correction" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'submitted' or context.get('route_pda_salesperson_form')"/>
+<button name="action_reject" type="object" string="Reject" class="btn-secondary" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state not in ('submitted', 'needs_correction') or context.get('route_pda_salesperson_form')"/>
 <button name="action_reset_to_draft" type="object" string="Reset to Draft" class="btn-secondary" invisible="state not in ('needs_correction', 'rejected', 'cancelled')"/>
 <button name="action_cancel" type="object" string="Cancel" class="btn-secondary" invisible="state not in ('draft', 'needs_correction')"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,submitted,needs_correction,approved"/>
