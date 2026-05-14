@@ -1,0 +1,59 @@
+<odoo>
+<record id="view_route_outlet_prospect_approval_wizard_form" model="ir.ui.view">
+<field name="name">route.outlet.prospect.approval.wizard.form</field>
+<field name="model">route.outlet.prospect.approval.wizard</field>
+<field name="arch" type="xml">
+<form string="Approve Potential Customer">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet">
+<field name="prospect_id" invisible="1"/>
+<field name="company_id" invisible="1"/>
+<field name="currency_id" invisible="1"/>
+<div class="oe_title">
+<label for="outlet_name" string="Potential Customer"/>
+<h1>
+<field name="outlet_name" readonly="1"/>
+</h1>
+</div>
+<div class="alert alert-info" role="alert"> Complete the commercial setup before creating the official outlet. Direct Sale uses a pricelist. Consignment can use a fixed commission or category commissions by product category. </div>
+<group string="Approval Context" col="2">
+<group>
+<field name="salesperson_id" readonly="1"/>
+<field name="outlet_operation_mode" widget="radio"/>
+</group>
+<group>
+<field name="direct_sale_pricelist_id" invisible="outlet_operation_mode != 'direct_sale'" required="outlet_operation_mode == 'direct_sale'" options="{'no_open': False}"/>
+</group>
+</group>
+<group string="Consignment Commercial Setup" col="2" invisible="outlet_operation_mode != 'consignment'">
+<group string="Stock and Credit">
+<field name="consignment_stock_location_mode"/>
+<field name="stock_location_id" invisible="consignment_stock_location_mode != 'select_existing'" required="consignment_stock_location_mode == 'select_existing'" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="active_stock_tracking" widget="boolean_toggle"/>
+<field name="shelf_credit_limit_amount"/>
+</group>
+<group string="Commission">
+<field name="consignment_commission_mode" widget="radio"/>
+<field name="default_commission_rate"/>
+</group>
+</group>
+<group string="Category Commission Rules" invisible="outlet_operation_mode != 'consignment' or consignment_commission_mode != 'category_rate'">
+<div class="alert alert-warning" role="alert"> Load product categories, then edit the commission percentage for each category. These rules will be copied to the created outlet. </div>
+<button name="action_load_categories" type="object" string="Load Product Categories" class="btn-primary"/>
+<field name="category_commission_line_ids" nolabel="1">
+<list editable="bottom" create="1" delete="1">
+<field name="active"/>
+<field name="category_id" options="{'no_create': True, 'no_open': False}"/>
+<field name="commission_rate"/>
+<field name="note"/>
+</list>
+</field>
+</group>
+</sheet>
+<footer>
+<button name="action_confirm_approval" type="object" string="Approve and Create Outlet" class="btn-primary"/>
+<button string="Cancel" special="cancel" class="btn-secondary"/>
+</footer>
+</form>
+</field>
+</record>
+</odoo>
