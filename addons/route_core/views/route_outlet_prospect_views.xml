@@ -30,9 +30,6 @@
 <span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.state.raw_value or 'draft'}">
 <t t-esc="record.state.value or 'Draft'"/>
 </span>
-<span class="route_pda_payment_badge route_pda_payment_badge_collection">
-<t t-esc="record.outlet_operation_mode.value or ''"/>
-</span>
 <span t-if="record.location_captured.raw_value" class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_cash">GPS Captured</span>
 </div>
 <div class="route_pda_payment_metrics">
@@ -78,7 +75,7 @@
 <field name="name"/>
 <field name="state" widget="badge" decoration-info="state == 'submitted'" decoration-warning="state == 'needs_correction'" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'"/>
 <field name="salesperson_id"/>
-<field name="outlet_operation_mode"/>
+<field name="outlet_operation_mode" string="Final Operation Mode" optional="hide"/>
 <field name="phone" optional="show"/>
 <field name="mobile" optional="show"/>
 <field name="area_id" optional="show"/>
@@ -151,7 +148,7 @@
 <div class="route_pda_payment_badges route_pda_payment_badges_primary">
 <field name="reference" readonly="1" nolabel="1"/>
 <field name="state" readonly="1" widget="badge" nolabel="1" decoration-success="state == 'approved'" decoration-warning="state in ('submitted', 'needs_correction')" decoration-danger="state == 'rejected'"/>
-<field name="outlet_operation_mode" readonly="state in ('approved', 'rejected', 'cancelled')" widget="badge" nolabel="1"/>
+<field name="outlet_operation_mode" readonly="1" widget="badge" nolabel="1" invisible="state != 'approved'"/>
 </div>
 <div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state not in ('draft', 'needs_correction')"> Capture the shop identity, contact, location, photos, and business notes, then submit it for supervisor approval. </div>
 <div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state in ('draft', 'needs_correction')"> This potential customer has been submitted or reviewed. Supervisor approval will create the official customer and outlet. </div>
@@ -411,7 +408,7 @@
 <div class="route_pda_payment_badges route_pda_payment_badges_primary">
 <field name="reference" readonly="1" nolabel="1"/>
 <field name="state" readonly="1" widget="badge" nolabel="1" decoration-success="state == 'approved'" decoration-warning="state in ('submitted', 'needs_correction')" decoration-danger="state == 'rejected'"/>
-<field name="outlet_operation_mode" readonly="state in ('approved', 'rejected', 'cancelled')" widget="badge" nolabel="1"/>
+<field name="outlet_operation_mode" readonly="1" widget="badge" nolabel="1" invisible="state != 'approved'"/>
 </div>
 <div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state not in ('draft', 'needs_correction')"> Capture the shop identity, contact, location, photos, and business notes, then submit it for supervisor approval. </div>
 <div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state in ('draft', 'needs_correction')"> This potential customer has been submitted or reviewed. Supervisor approval will create the official customer and outlet. </div>
@@ -444,8 +441,8 @@
 </div>
 </div>
 </div>
-<div class="route_pda_group route_pda_group_operations" groups="route_core.group_route_supervisor,route_core.group_route_management">
-<div class="route_pda_group_title">Approval Setup</div>
+<div class="route_pda_group route_pda_group_operations" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="state != 'approved'">
+<div class="route_pda_group_title">Approved Commercial Setup</div>
 <div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state != 'submitted'">Select the final commercial setup before creating the official outlet.</div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
 <div class="route_pda_info_card">
