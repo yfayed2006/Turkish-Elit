@@ -538,7 +538,7 @@
 <div class="route_workspace_inline_back_wrapper route_pda_mobile_only">
 <button name="action_back_to_customer_and_outlets" type="object" class="btn route_workspace_inline_back_btn route_pda_back_btn">
 <i class="fa fa-arrow-left"/>
-<span>Back to Customer and Outlets</span>
+<span>Back to Customer Profiles</span>
 </button>
 </div>
 <div class="oe_button_box route_pda_outlet_button_box" name="button_box" invisible="not id">
@@ -569,20 +569,36 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
-<group string="Quick Snapshot" col="4">
-<group>
-<field name="outlet_operation_mode" string="Mode" readonly="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
-</group>
-<group>
-<field name="summary_alert_level" string="Status" readonly="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
-</group>
-<group>
-<field name="current_due_amount" readonly="1"/>
-</group>
-<group>
-<field name="last_visit_date" readonly="1"/>
-</group>
-</group>
+<!--  ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4  -->
+<div class="route_pda_group route_pda_product_center_group route_pda_outlet_snapshot_group">
+<div class="route_pda_group_title">Quick Snapshot</div>
+<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Mode</div>
+<div class="route_pda_info_value">
+<field name="outlet_operation_mode" readonly="1" nolabel="1" widget="badge" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Status</div>
+<div class="route_pda_info_value">
+<field name="summary_alert_level" readonly="1" nolabel="1" widget="badge" decoration-success="summary_alert_level == 'normal'" decoration-warning="summary_alert_level == 'warning'" decoration-danger="summary_alert_level == 'critical'"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Current Due</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="current_due_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Visit Date</div>
+<div class="route_pda_info_value">
+<field name="last_visit_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 <div class="route_pda_group route_pda_product_center_group">
 <div class="route_pda_group_title">Outlet Actions</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_3 route_pda_center_grid route_pda_product_center_grid">
@@ -620,26 +636,95 @@
 </div>
 <notebook class="route_pda_outlet_notebook">
 <page string="Summary">
-<group string="Outlet Summary" col="2">
-<group>
-<field name="code" readonly="1"/>
-<field name="partner_id" string="Customer" readonly="1" options="{'no_open': True, 'no_create': True}"/>
-<field name="phone" readonly="1"/>
-<field name="mobile" readonly="1"/>
-<field name="route_city_id" readonly="1"/>
-<field name="area_id" readonly="1"/>
-</group>
-<group>
-<field name="display_address" readonly="1"/>
-<field name="geo_status" readonly="1" widget="badge" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
-<field name="last_sale_order_id" readonly="1"/>
-<field name="visit_count" readonly="1"/>
-<field name="in_progress_visit_id" readonly="1"/>
-<field name="last_payment_date" readonly="1"/>
-<field name="last_return_ref" readonly="1" invisible="not last_return_ref"/>
-<field name="last_transfer_ref" readonly="1" invisible="outlet_operation_mode != 'consignment' or not last_transfer_ref"/>
-</group>
-</group>
+<div class="route_pda_group route_pda_product_center_group route_pda_outlet_summary_group">
+<div class="route_pda_group_title">Outlet Summary</div>
+<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Outlet Code</div>
+<div class="route_pda_info_value">
+<field name="code" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Customer</div>
+<div class="route_pda_info_value">
+<field name="partner_id" readonly="1" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Phone</div>
+<div class="route_pda_info_value">
+<field name="phone" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Mobile</div>
+<div class="route_pda_info_value">
+<field name="mobile" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Route City</div>
+<div class="route_pda_info_value">
+<field name="route_city_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Area</div>
+<div class="route_pda_info_value">
+<field name="area_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_info_card_full">
+<div class="route_pda_info_label">Address</div>
+<div class="route_pda_info_value">
+<field name="display_address" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Location Status</div>
+<div class="route_pda_info_value">
+<field name="geo_status" readonly="1" nolabel="1" widget="badge" decoration-danger="geo_status == 'missing'" decoration-warning="geo_status == 'unverified'" decoration-success="geo_status == 'verified'"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Sale Order</div>
+<div class="route_pda_info_value">
+<field name="last_sale_order_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Visits Count</div>
+<div class="route_pda_info_value">
+<field name="visit_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Visit In Progress</div>
+<div class="route_pda_info_value">
+<field name="in_progress_visit_id" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Last Payment Date</div>
+<div class="route_pda_info_value">
+<field name="last_payment_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="not last_return_ref">
+<div class="route_pda_info_label">Last Return Order</div>
+<div class="route_pda_info_value">
+<field name="last_return_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card" invisible="outlet_operation_mode != 'consignment' or not last_transfer_ref">
+<div class="route_pda_info_label">Last Transfer</div>
+<div class="route_pda_info_value">
+<field name="last_transfer_ref" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 </page>
 <page string="Details">
 <group string="Outlet Details" col="2">
