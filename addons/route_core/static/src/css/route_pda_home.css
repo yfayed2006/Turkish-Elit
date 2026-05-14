@@ -7336,3 +7336,61 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+
+
+/* Potential Customer: make multiline note cards editable and readable on mobile/desktop */
+.route_pda_text_card {
+    justify-content: flex-start !important;
+    min-height: 150px !important;
+}
+
+.route_pda_text_card .route_pda_info_value,
+.route_pda_text_card .route_pda_text_value,
+.route_pda_text_card .o_field_widget,
+.route_pda_text_card .o_field_text {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.route_pda_text_card textarea.o_input,
+.route_pda_text_card .o_field_text textarea,
+.route_pda_text_card .o_input {
+    display: block !important;
+    width: 100% !important;
+    min-height: 92px !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 4px 0 !important;
+    box-shadow: none !important;
+    resize: vertical !important;
+    text-align: left !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    font-size: 1rem !important;
+    line-height: 1.35 !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+}
+
+.route_pda_text_card .o_field_widget:not(.o_readonly_modifier) {
+    min-height: 92px !important;
+}
+
+.route_pda_text_card .o_readonly_modifier {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+}
+
+@media (max-width: 768px) {
+    .route_pda_text_card {
+        min-height: 145px !important;
+    }
+    .route_pda_text_card textarea.o_input,
+    .route_pda_text_card .o_field_text textarea,
+    .route_pda_text_card .o_input {
+        min-height: 86px !important;
+        font-size: 0.98rem !important;
+    }
+}
+
