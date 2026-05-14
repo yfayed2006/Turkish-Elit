@@ -4,6 +4,7 @@ import pytz
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tools.safe_eval import safe_eval
 
 from .route_schedule_common import compute_week_start_date
 
@@ -1692,7 +1693,7 @@ class RoutePdaHome(models.TransientModel):
             domain=[("active", "=", True)],
         )
 
-    # ROUTECORE_FIX_2026_05_14_2225_POTENTIAL_CUSTOMER_CARD_SYNC_V2
+    # ROUTECORE_FIX_2026_05_14_2345_POTENTIAL_CUSTOMER_ACTION_CONTEXT_SAFE_EVAL_V3
     def action_open_potential_customers(self):
         self.ensure_one()
         action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
@@ -1707,16 +1708,27 @@ class RoutePdaHome(models.TransientModel):
                 "view_mode": "kanban,list,form",
                 "target": "current",
             }
+
         action["domain"] = [
             ("salesperson_id", "=", self.env.user.id),
             ("state", "in", ["draft", "submitted", "needs_correction"]),
         ]
-        action["context"] = dict(
-            action.get("context") or {},
-            search_default_my_leads=1,
-            default_salesperson_id=self.env.user.id,
-            route_workspace_back=True,
-        )
+
+        base_context = action.get("context") or {}
+        if isinstance(base_context, str):
+            try:
+                base_context = safe_eval(base_context) or {}
+            except Exception:
+                base_context = {}
+        if not isinstance(base_context, dict):
+            base_context = {}
+
+        base_context.update({
+            "search_default_my_leads": 1,
+            "default_salesperson_id": self.env.user.id,
+            "route_workspace_back": True,
+        })
+        action["context"] = base_context
         return action
 
     def action_open_outlet_financial_profiles(self):
