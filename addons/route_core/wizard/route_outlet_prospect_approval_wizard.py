@@ -14,13 +14,15 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
 
     # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
     # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
+    # ROUTECORE_FIX_2026_05_15_0240_PROSPECT_APPROVAL_WIZARD_REQUIRED_V9
     # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
     # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
     outlet_operation_mode = fields.Selection(
         [("direct_sale", "Direct Sale"), ("consignment", "Consignment")],
         string="Outlet Operation Mode",
-        required=True,
+        required=False,
         default=False,
+        help="Supervisor must choose the final outlet commercial mode before approval. It is intentionally not required at wizard creation time so the approval popup can open first.",
     )
     direct_sale_pricelist_id = fields.Many2one(
         "product.pricelist",
@@ -68,7 +70,11 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
-        prospect_id = self.env.context.get("default_prospect_id")
+        prospect_id = self.env.context.get("default_prospect_id") or (
+            self.env.context.get("active_id")
+            if self.env.context.get("active_model") == "route.outlet.prospect"
+            else False
+        )
         prospect = self.env["route.outlet.prospect"].browse(prospect_id).exists() if prospect_id else self.env["route.outlet.prospect"]
         if prospect:
             vals.setdefault("prospect_id", prospect.id)
