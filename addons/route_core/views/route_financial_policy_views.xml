@@ -1,7 +1,7 @@
 <odoo>
-<!--   Dedicated management setup views for outlets.
+<!--    Dedicated management setup views for outlets.
       This action is the unified setup screen for creating and maintaining outlets:
-      identity, customer, operation mode, pricing/commission, consignment stock, and location.  -->
+      identity, customer, operation mode, pricing/commission, consignment stock, and location.   -->
 <record id="view_route_outlet_management_config_search" model="ir.ui.view">
 <field name="name">route.outlet.management.config.search</field>
 <field name="model">route.outlet</field>
@@ -167,6 +167,7 @@
 <record id="menu_route_outlet" model="ir.ui.menu">
 <field name="action" ref="route_core.action_route_outlet_management"/>
 </record>
+<menuitem id="menu_route_outlet_operations" name="Outlets" parent="route_core.menu_route_operations_workspace" action="route_core.action_route_outlet_management" sequence="18" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
 <record id="view_route_outlet_form_financial_policy" model="ir.ui.view">
 <field name="name">route.outlet.form.financial.policy</field>
 <field name="model">route.outlet</field>
