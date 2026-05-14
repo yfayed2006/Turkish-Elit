@@ -213,11 +213,11 @@ class RouteOutlet(models.Model):
         context.update({"create": 0, "edit": 0, "delete": 0})
         action = {
             "type": "ir.actions.act_window",
-            "name": _("Customer Profile"),
+            "name": _("Outlet Financial Profile"),
             "res_model": "route.outlet",
             "res_id": self.id,
             "view_mode": "form",
-            "target": "main",
+            "target": "current",
             "context": context,
         }
         if view:
