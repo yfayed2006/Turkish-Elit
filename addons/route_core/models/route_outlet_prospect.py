@@ -284,9 +284,18 @@ class RouteOutletProspect(models.Model):
                 raise ValidationError(_("Please enter at least one contact number before submitting."))
 
     def _validate_approval_ready(self):
+        """Validate only the lead information required before supervisor setup.
+
+        The final commercial setup is intentionally handled by the supervisor
+        approval wizard. This keeps salesperson lead capture separate from the
+        business decision: Direct Sale versus Consignment, pricelist, shelf
+        credit limit, and category commission rules.
+        """
         for record in self:
             if record.state != "submitted":
                 raise UserError(_("Only submitted potential customers can be approved."))
+            if not (record.contact_name or record.name):
+                raise ValidationError(_("Customer name is required before creating the official outlet."))
             has_existing_area = bool(record.area_id)
             has_new_area_details = bool(
                 record.route_country_id
@@ -295,23 +304,6 @@ class RouteOutletProspect(models.Model):
             )
             if not (has_existing_area or has_new_area_details):
                 raise ValidationError(_("Please select Area, or select Route Country, Route City, and enter Area Name before approval."))
-            if record.outlet_operation_mode == "direct_sale":
-                if not (record.contact_name or record.name):
-                    raise ValidationError(_("Customer name is required before creating a direct-sale outlet."))
-                if not record.approval_direct_sale_pricelist_id:
-                    raise ValidationError(_("Please select a Direct Sale Pricelist before approving this potential customer."))
-            if record.outlet_operation_mode == "consignment":
-                if not record.approval_consignment_commission_mode:
-                    raise ValidationError(_("Please select the Consignment Commission Type before approval."))
-                if (record.approval_default_commission_rate or 0.0) < 0.0:
-                    raise ValidationError(_("Commission percentage cannot be negative."))
-                if (record.approval_shelf_credit_limit_amount or 0.0) < 0.0:
-                    raise ValidationError(_("Shelf Credit Limit cannot be negative."))
-                if (
-                    record.approval_consignment_commission_mode == "category_rate"
-                    and not record.approval_category_commission_line_ids.filtered(lambda line: line.active and line.category_id)
-                ):
-                    raise ValidationError(_("Load Product Categories and enter category commission percentages before approval."))
 
     def _notify(self, title, message, notif_type="success", sticky=False, next_action=None):
         params = {
@@ -452,8 +444,9 @@ class RouteOutletProspect(models.Model):
             "city_id": city.id,
         })
 
-    def _prepare_partner_vals(self):
+    def _prepare_partner_vals(self, commercial_vals=None):
         self.ensure_one()
+        commercial_vals = dict(commercial_vals or {})
         route_city = self._get_or_create_route_city()
         route_area = self.area_id
         if not route_city and route_area:
@@ -471,8 +464,10 @@ class RouteOutletProspect(models.Model):
             "country_id": route_country.id if route_country else False,
             "company_id": self.company_id.id,
         }
-        if self.outlet_operation_mode == "direct_sale" and self.approval_direct_sale_pricelist_id:
-            vals["property_product_pricelist"] = self.approval_direct_sale_pricelist_id.id
+        final_operation_mode = commercial_vals.get("outlet_operation_mode") or self.outlet_operation_mode
+        final_pricelist_id = commercial_vals.get("direct_sale_pricelist_id") or self.approval_direct_sale_pricelist_id.id
+        if final_operation_mode == "direct_sale" and final_pricelist_id:
+            vals["property_product_pricelist"] = final_pricelist_id
         return self._filter_existing_fields("res.partner", vals)
 
     def _prepare_outlet_vals(self, partner, commercial_vals=None):
@@ -567,124 +562,86 @@ class RouteOutletProspect(models.Model):
             "success",
         )
 
-    def action_open_approval_setup_wizard(self):
+    def action_approve(self):
+        """Open the supervisor commercial setup before creating the outlet.
+
+        Salespeople only submit shop/location/details. The supervisor must choose
+        the final operation mode and the related commercial policy in the popup.
+        """
         self.ensure_one()
-        if self.state != "submitted":
-            raise UserError(_("Only submitted potential customers can be approved."))
+        self._validate_approval_ready()
+        Wizard = self.env["route.outlet.prospect.approval.wizard"]
+        wizard_vals = {
+            "prospect_id": self.id,
+            "outlet_operation_mode": "direct_sale",
+        }
+        # Keep a sensible default for fast approvals, but the supervisor can change it.
+        if self.outlet_operation_mode in ("direct_sale", "consignment"):
+            wizard_vals["outlet_operation_mode"] = self.outlet_operation_mode
+        if wizard_vals["outlet_operation_mode"] == "direct_sale":
+            pricelist = self.approval_direct_sale_pricelist_id or self.env["product.pricelist"].search([], limit=1)
+            if pricelist:
+                wizard_vals["direct_sale_pricelist_id"] = pricelist.id
+        if wizard_vals["outlet_operation_mode"] == "consignment":
+            wizard_vals.update({
+                "shelf_credit_limit_amount": self.approval_shelf_credit_limit_amount or 0.0,
+                "consignment_commission_mode": self.approval_consignment_commission_mode or "category_rate",
+                "default_commission_rate": self.approval_default_commission_rate or 20.0,
+            })
+        wizard = Wizard.create(wizard_vals)
+        if wizard.outlet_operation_mode == "consignment" and wizard.consignment_commission_mode == "category_rate":
+            wizard.write({"category_commission_line_ids": wizard._prepare_category_line_commands()})
         view = self.env.ref("route_core.view_route_outlet_prospect_approval_wizard_form", raise_if_not_found=False)
         return {
             "type": "ir.actions.act_window",
             "name": _("Approve Potential Customer"),
             "res_model": "route.outlet.prospect.approval.wizard",
+            "res_id": wizard.id,
             "view_mode": "form",
             "views": [(view.id, "form")] if view else [(False, "form")],
             "target": "new",
-            "context": {
-                "default_prospect_id": self.id,
-            },
+            "context": dict(self.env.context, default_prospect_id=self.id),
         }
 
-    def action_approve(self):
-        """Open a supervisor-only commercial setup wizard.
-
-        The salesperson lead only captures shop/contact/location information. The
-        final business model (Direct Sale vs Consignment), pricelist, shelf credit,
-        and category commission rules are supervisor decisions made here.
-        """
-        self.ensure_one()
-        return self.action_open_approval_setup_wizard()
-
-    def _validate_approval_basics(self):
-        for record in self:
-            if record.state != "submitted":
-                raise UserError(_("Only submitted potential customers can be approved."))
-            has_existing_area = bool(record.area_id)
-            has_new_area_details = bool(
-                record.route_country_id
-                and (record.route_city_id or (record.city or "").strip())
-                and (record.route_area_name or "").strip()
-            )
-            if not (has_existing_area or has_new_area_details):
-                raise ValidationError(_("Please select Area, or select Route Country, Route City, and enter Area Name before approval."))
-            if not (record.contact_name or record.name):
-                raise ValidationError(_("Customer name is required before approving this potential customer."))
-
-    def _sync_approval_setup_from_commercial_vals(self, commercial_vals, commission_line_vals):
-        self.ensure_one()
-        final_mode = commercial_vals.get("outlet_operation_mode") or self.outlet_operation_mode or "direct_sale"
-        setup_vals = {"outlet_operation_mode": final_mode}
-        if final_mode == "direct_sale":
-            setup_vals.update({
-                "approval_direct_sale_pricelist_id": commercial_vals.get("direct_sale_pricelist_id") or False,
-                "approval_shelf_credit_limit_amount": 0.0,
-                "approval_consignment_commission_mode": "fixed_rate",
-                "approval_default_commission_rate": commercial_vals.get("default_commission_rate") or self.approval_default_commission_rate or 20.0,
-            })
-            setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)]
-        else:
-            setup_vals.update({
-                "approval_direct_sale_pricelist_id": False,
-                "approval_shelf_credit_limit_amount": commercial_vals.get("shelf_credit_limit_amount") or 0.0,
-                "approval_consignment_commission_mode": commercial_vals.get("consignment_commission_mode") or "fixed_rate",
-                "approval_default_commission_rate": commercial_vals.get("default_commission_rate") or commercial_vals.get("commission_rate") or 0.0,
-            })
-            if setup_vals["approval_consignment_commission_mode"] == "category_rate":
-                setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)] + [
-                    (0, 0, {
-                        "category_id": vals.get("category_id"),
-                        "commission_rate": vals.get("commission_rate") or 0.0,
-                        "active": vals.get("active", True),
-                        "note": vals.get("note") or False,
-                    })
-                    for vals in commission_line_vals
-                    if vals.get("category_id")
-                ]
-            else:
-                setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)]
-        self.write(setup_vals)
-
-    def _validate_final_commercial_setup(self, commercial_vals, commission_line_vals):
-        self.ensure_one()
-        final_mode = commercial_vals.get("outlet_operation_mode") or self.outlet_operation_mode or "direct_sale"
-        if final_mode == "direct_sale":
-            if not commercial_vals.get("direct_sale_pricelist_id"):
-                raise ValidationError(_("Please choose the Direct Sale Pricelist before approval."))
-            return
-        if (commercial_vals.get("shelf_credit_limit_amount") or 0.0) < 0.0:
-            raise ValidationError(_("Shelf credit limit cannot be negative."))
-        default_rate = commercial_vals.get("default_commission_rate") or commercial_vals.get("commission_rate") or 0.0
-        if default_rate < 0.0 or default_rate > 100.0:
-            raise ValidationError(_("Default commission percentage must be between 0 and 100."))
-        if commercial_vals.get("consignment_commission_mode") == "category_rate":
-            if not commission_line_vals:
-                raise ValidationError(_("Load Product Categories and enter category commission percentages before approval."))
-            for line_vals in commission_line_vals:
-                rate = line_vals.get("commission_rate") or 0.0
-                if rate < 0.0 or rate > 100.0:
-                    raise ValidationError(_("Every category commission percentage must be between 0 and 100."))
-
     def _approve_and_create_outlet_from_setup(self, commercial_vals=None, commission_line_vals=None):
-        self._validate_approval_basics()
+        self._validate_approval_ready()
         commercial_vals = dict(commercial_vals or {})
         commission_line_vals = list(commission_line_vals or [])
+        final_operation_mode = commercial_vals.get("outlet_operation_mode")
+        if final_operation_mode not in ("direct_sale", "consignment"):
+            raise ValidationError(_("Please choose Direct Sale or Consignment before approving this potential customer."))
+        if final_operation_mode == "direct_sale" and not commercial_vals.get("direct_sale_pricelist_id"):
+            raise ValidationError(_("Please choose the Direct Sale Pricelist before approval."))
+        if final_operation_mode == "consignment":
+            commission_mode = commercial_vals.get("consignment_commission_mode") or "fixed_rate"
+            if commission_mode == "category_rate" and not commission_line_vals:
+                raise ValidationError(_("Load Product Categories and enter category commission percentages before approval."))
         OutletCommission = self.env["route.outlet.category.commission"].sudo()
         for record in self:
-            record._validate_final_commercial_setup(commercial_vals, commission_line_vals)
-            record._sync_approval_setup_from_commercial_vals(commercial_vals, commission_line_vals)
-            partner = self.env["res.partner"].create(record._prepare_partner_vals())
+            partner = self.env["res.partner"].create(record._prepare_partner_vals(commercial_vals=commercial_vals))
             outlet = self.env["route.outlet"].create(record._prepare_outlet_vals(partner, commercial_vals=commercial_vals))
             if outlet.outlet_operation_mode == "consignment" and outlet.consignment_commission_mode == "category_rate":
                 for line_vals in commission_line_vals:
                     vals = dict(line_vals)
                     vals["outlet_id"] = outlet.id
                     OutletCommission.create(vals)
-            record.write({
+            approval_write_vals = {
                 "state": "approved",
+                "outlet_operation_mode": final_operation_mode,
                 "approved_partner_id": partner.id,
                 "approved_outlet_id": outlet.id,
                 "reviewed_by_id": self.env.user.id,
                 "reviewed_at": fields.Datetime.now(),
-            })
+            }
+            if final_operation_mode == "direct_sale" and commercial_vals.get("direct_sale_pricelist_id"):
+                approval_write_vals["approval_direct_sale_pricelist_id"] = commercial_vals.get("direct_sale_pricelist_id")
+            if final_operation_mode == "consignment":
+                approval_write_vals.update({
+                    "approval_shelf_credit_limit_amount": commercial_vals.get("shelf_credit_limit_amount") or 0.0,
+                    "approval_consignment_commission_mode": commercial_vals.get("consignment_commission_mode") or "fixed_rate",
+                    "approval_default_commission_rate": commercial_vals.get("default_commission_rate") or commercial_vals.get("commission_rate") or 0.0,
+                })
+            record.write(approval_write_vals)
             record.message_post(body=_("Potential customer approved and outlet created: %s") % outlet.display_name)
             view = self.env.ref("route_core.view_route_outlet_financial_profile_form", raise_if_not_found=False)
             action = {
