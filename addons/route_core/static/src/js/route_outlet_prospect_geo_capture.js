@@ -1,5 +1,5 @@
+// ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
 /** @odoo-module **/
-// ROUTECORE_FIX_2026_05_14_2359_PROSPECT_CAPTURE_ASSET_V5
 
 import { registry } from "@web/core/registry";
 import { _t } from "@web/core/l10n/translation";
