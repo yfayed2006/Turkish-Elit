@@ -140,6 +140,8 @@ class RouteOutletProspect(models.Model):
         for rec in self:
             if rec.route_city_id:
                 rec.route_country_id = rec.route_city_id.country_id
+                if not rec.city:
+                    rec.city = rec.route_city_id.name
             if rec.area_id and rec.area_id.city_id != rec.route_city_id:
                 rec.area_id = False
 
@@ -150,6 +152,8 @@ class RouteOutletProspect(models.Model):
                 rec.route_city_id = rec.area_id.city_id
                 rec.route_country_id = rec.area_id.country_id
                 rec.route_area_name = rec.area_id.name
+                if not rec.city and rec.route_city_id:
+                    rec.city = rec.route_city_id.name
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -177,7 +181,13 @@ class RouteOutletProspect(models.Model):
         for record in self:
             if record.state != "submitted":
                 raise UserError(_("Only submitted potential customers can be approved."))
-            if not (record.area_id or (record.route_country_id and record.route_city_id and record.route_area_name)):
+            has_existing_area = bool(record.area_id)
+            has_new_area_details = bool(
+                record.route_country_id
+                and (record.route_city_id or (record.city or "").strip())
+                and (record.route_area_name or "").strip()
+            )
+            if not (has_existing_area or has_new_area_details):
                 raise ValidationError(_("Please select Area, or select Route Country, Route City, and enter Area Name before approval."))
             if record.outlet_operation_mode == "direct_sale" and not (record.contact_name or record.name):
                 raise ValidationError(_("Customer name is required before creating a direct-sale outlet."))
@@ -274,9 +284,61 @@ class RouteOutletProspect(models.Model):
             record.write({"state": "draft"})
         return self._notify(_("Reset"), _("The potential customer was reset to draft."))
 
+    def _filter_existing_fields(self, model_name, vals):
+        """Keep the approval flow compatible with different Odoo/Odoo.sh editions.
+
+        Some databases/customizations do not expose optional contact fields such as
+        mobile on res.partner. Filtering prevents approval from failing with
+        "Invalid field ..." while still passing every field that exists.
+        """
+        model_fields = self.env[model_name]._fields
+        return {key: value for key, value in vals.items() if key in model_fields}
+
+    def _get_or_create_route_city(self):
+        self.ensure_one()
+        if self.route_city_id:
+            return self.route_city_id
+        city_name = (self.city or "").strip()
+        if not (self.route_country_id and city_name):
+            return self.env["route.city"]
+        city = self.env["route.city"].sudo().search([
+            ("country_id", "=", self.route_country_id.id),
+            ("name", "=ilike", city_name),
+        ], limit=1)
+        if city:
+            return city
+        return self.env["route.city"].sudo().create({
+            "name": city_name,
+            "country_id": self.route_country_id.id,
+        })
+
+    def _get_or_create_route_area(self):
+        self.ensure_one()
+        if self.area_id:
+            return self.area_id
+        city = self._get_or_create_route_city()
+        area_name = (self.route_area_name or "").strip()
+        if not (city and area_name):
+            return self.env["route.area"]
+        area = self.env["route.area"].sudo().search([
+            ("city_id", "=", city.id),
+            ("name", "=ilike", area_name),
+        ], limit=1)
+        if area:
+            return area
+        return self.env["route.area"].sudo().create({
+            "name": area_name,
+            "city_id": city.id,
+        })
+
     def _prepare_partner_vals(self):
         self.ensure_one()
-        return {
+        route_city = self._get_or_create_route_city()
+        route_area = self.area_id
+        if not route_city and route_area:
+            route_city = route_area.city_id
+        route_country = self.route_country_id or (route_area.country_id if route_area else self.env["res.country"])
+        vals = {
             "name": self.contact_name or self.name,
             "company_type": "company",
             "phone": self.phone or False,
@@ -284,12 +346,18 @@ class RouteOutletProspect(models.Model):
             "email": self.email or False,
             "street": self.street or False,
             "street2": self.street2 or False,
-            "city": self.city or (self.route_city_id.name if self.route_city_id else False),
+            "city": self.city or (route_city.name if route_city else False),
+            "country_id": route_country.id if route_country else False,
             "company_id": self.company_id.id,
         }
+        return self._filter_existing_fields("res.partner", vals)
 
     def _prepare_outlet_vals(self, partner):
         self.ensure_one()
+        route_city = self._get_or_create_route_city()
+        route_area = self._get_or_create_route_area()
+        if not route_city and route_area:
+            route_city = route_area.city_id
         vals = {
             "name": self.name,
             "partner_id": partner.id,
@@ -298,18 +366,21 @@ class RouteOutletProspect(models.Model):
             "mobile": self.mobile or False,
             "street": self.street or False,
             "street2": self.street2 or False,
-            "city": self.city or (self.route_city_id.name if self.route_city_id else False),
+            "city": self.city or (route_city.name if route_city else False),
             "company_id": self.company_id.id,
             "note": self._build_outlet_note(),
         }
-        if self.area_id:
-            vals["area_id"] = self.area_id.id
+        if route_area:
+            vals["area_id"] = route_area.id
+            vals["route_area_name"] = route_area.name
+        elif self.route_area_name:
+            vals["route_area_name"] = self.route_area_name
         if self.route_country_id:
             vals["route_country_id"] = self.route_country_id.id
-        if self.route_city_id:
-            vals["route_city_id"] = self.route_city_id.id
-        if self.route_area_name:
-            vals["route_area_name"] = self.route_area_name
+        elif route_area and route_area.country_id:
+            vals["route_country_id"] = route_area.country_id.id
+        if route_city:
+            vals["route_city_id"] = route_city.id
         if "geo_latitude" in self.env["route.outlet"]._fields and self.location_captured:
             vals.update({
                 "geo_latitude": self.latitude,
@@ -318,7 +389,7 @@ class RouteOutletProspect(models.Model):
                 "geo_source": "manual",
                 "geo_verified": True,
             })
-        return vals
+        return self._filter_existing_fields("route.outlet", vals)
 
     def _build_outlet_note(self):
         self.ensure_one()
@@ -439,3 +510,4 @@ class RouteOutletProspect(models.Model):
         if view:
             action["views"] = [(view.id, "form")]
         return action
+
