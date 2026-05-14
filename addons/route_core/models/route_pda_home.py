@@ -4,7 +4,6 @@ import pytz
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools.safe_eval import safe_eval
 
 from .route_schedule_common import compute_week_start_date
 
@@ -60,7 +59,6 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
     consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
     active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
-    # ROUTECORE_FIX_2026_05_14_2225_POTENTIAL_CUSTOMER_CARD_SYNC_V2
     potential_customer_count = fields.Integer(string="Potential Customers", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
@@ -259,7 +257,7 @@ class RoutePdaHome(models.TransientModel):
         return self.action_open_product_actions_screen()
 
     def action_open_outlet_center_screen(self):
-        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer and Outlets")
+        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer Profiles")
 
 
     def action_open_direct_sale_mode_screen(self):
@@ -694,13 +692,13 @@ class RoutePdaHome(models.TransientModel):
         Shortage = self.env["route.shortage"]
         SalespersonShortage = self.env["route.salesperson.shortage"]
         Outlet = self.env["route.outlet"]
-        Prospect = self.env["route.outlet.prospect"]
         OutletBalance = self.env["outlet.stock.balance"]
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
         Quant = self.env["stock.quant"]
         SaleOrder = self.env["sale.order"]
         DirectReturn = self.env["route.direct.return"]
+        Prospect = self.env["route.outlet.prospect"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -1686,49 +1684,39 @@ class RoutePdaHome(models.TransientModel):
             context={"group_by": "partner_id"},
         )
 
+    # ROUTECORE_FIX_2026_05_14_2355_CUSTOMER_PROFILES_TWO_CARD_FLOW_V4
     def action_open_all_outlets(self):
         self.ensure_one()
         return self._prepare_outlet_workspace_action(
-            name="All Outlets",
+            name=_("Outlet Profiles"),
             domain=[("active", "=", True)],
         )
 
-    # ROUTECORE_FIX_2026_05_14_2345_POTENTIAL_CUSTOMER_ACTION_CONTEXT_SAFE_EVAL_V3
-    def action_open_potential_customers(self):
+    def action_open_customer_profiles(self):
+        """Compatibility alias for older PDA views/actions that still point to this method."""
+        return self.action_open_all_outlets()
+
+    def action_create_potential_customer(self):
         self.ensure_one()
-        action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
-        if action_ref:
-            action = action_ref.read()[0]
-        else:
-            # Safe fallback so the PDA button does not crash if the XML action is not loaded yet.
-            action = {
-                "type": "ir.actions.act_window",
-                "name": _("Potential Customers"),
-                "res_model": "route.outlet.prospect",
-                "view_mode": "kanban,list,form",
-                "target": "current",
-            }
-
-        action["domain"] = [
-            ("salesperson_id", "=", self.env.user.id),
-            ("state", "in", ["draft", "submitted", "needs_correction"]),
-        ]
-
-        base_context = action.get("context") or {}
-        if isinstance(base_context, str):
-            try:
-                base_context = safe_eval(base_context) or {}
-            except Exception:
-                base_context = {}
-        if not isinstance(base_context, dict):
-            base_context = {}
-
-        base_context.update({
-            "search_default_my_leads": 1,
-            "default_salesperson_id": self.env.user.id,
-            "route_workspace_back": True,
-        })
-        action["context"] = base_context
+        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("New Potential Customer"),
+            "res_model": "route.outlet.prospect",
+            "view_mode": "form",
+            "target": "main",
+            "context": {
+                "default_salesperson_id": self.env.user.id,
+                "default_company_id": self.env.company.id,
+                "route_pda_salesperson_form": 1,
+                "route_workspace_back": True,
+                "create": 1,
+                "edit": 1,
+                "delete": 0,
+            },
+        }
+        if form_view:
+            action["views"] = [(form_view.id, "form")]
         return action
 
     def action_open_outlet_financial_profiles(self):
@@ -1738,6 +1726,54 @@ class RoutePdaHome(models.TransientModel):
             domain=[("active", "=", True)],
             context={"route_financial_profile_mode": True},
         )
+
+    def action_open_potential_customers(self):
+        self.ensure_one()
+        action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+        else:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Potential Customers"),
+                "res_model": "route.outlet.prospect",
+                "view_mode": "kanban,list,form",
+                "target": "current",
+            }
+        action.update({
+            "name": _("Potential Customers"),
+            "domain": [
+                ("salesperson_id", "=", self.env.user.id),
+                ("state", "in", ["draft", "submitted", "needs_correction"]),
+            ],
+            "context": dict(
+                self.env.context,
+                default_salesperson_id=self.env.user.id,
+                search_default_filter_my_leads=1,
+                route_pda_salesperson_form=1,
+                create=True,
+                edit=True,
+                delete=False,
+            ),
+            "target": "current",
+        })
+        kanban_view = self.env.ref("route_core.view_route_outlet_prospect_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_outlet_prospect_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_outlet_prospect_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
 
     def action_create_direct_transfer(self):
         self.ensure_one()
