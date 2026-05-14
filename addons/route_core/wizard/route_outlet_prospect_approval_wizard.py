@@ -171,7 +171,7 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
 
     def _get_commercial_vals(self):
         self.ensure_one()
-        vals = {"outlet_operation_mode": self.outlet_operation_mode}
+        vals = {"outlet_operation_mode": self.outlet_operation_mode, "financial_policy": "auto"}
         if self.outlet_operation_mode == "direct_sale":
             vals["direct_sale_pricelist_id"] = self.direct_sale_pricelist_id.id if self.direct_sale_pricelist_id else False
             return vals
