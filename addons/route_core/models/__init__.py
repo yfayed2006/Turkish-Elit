@@ -1,7 +1,6 @@
 from . import route_city
 from . import route_area
 from . import route_outlet
-from . import route_outlet_prospect
 from . import route_plan
 from . import route_plan_line
 from . import route_vehicle
@@ -12,6 +11,7 @@ from . import route_visit_payment
 from . import outlet_stock_balance
 from . import route_visit_ext
 from . import route_outlet_ext
+from . import route_outlet_prospect
 from . import route_refill_backorder
 from . import route_refill_backorder_line
 from . import route_plan_pda
