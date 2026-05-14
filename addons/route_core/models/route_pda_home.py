@@ -1701,6 +1701,9 @@ class RoutePdaHome(models.TransientModel):
             context={"route_financial_profile_mode": True},
         )
 
+    # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
+    # Customer Profiles now opens the Potential Customers list first.
+    # Salesperson records use context to hide supervisor-only approval actions.
     # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
     def _prepare_potential_customer_context(self):
         return dict(
