@@ -378,15 +378,14 @@ class RouteOutletProspect(models.Model):
             record.message_post(body=_("Supervisor requested correction."))
         return self._notify(_("Correction Requested"), _("The potential customer was returned to the salesperson for correction."), "warning")
 
-    # ROUTECORE_FIX_2026_05_15_0405_PROSPECT_REJECT_IDEMPOTENT_V11
+    # ROUTECORE_FIX_2026_05_15_0525_PROSPECT_REJECT_RELOAD_V12
     def action_reject(self):
-        """Reject a potential customer safely from supervisor review.
+        """Reject a potential customer and force the current form to refresh.
 
-        Odoo may execute the button while the form is still holding an older
-        state in the browser. If the first call already changed the lead to
-        rejected, a repeated/stale call must not raise an error. This keeps the
-        UI clean: the lead is rejected, hidden from salesperson active leads,
-        and no misleading Invalid Operation popup appears.
+        Returning only display_notification leaves the browser on the old form
+        cache until the user manually refreshes. This button changes the record,
+        archives it from active salesperson lists, then returns a direct reload
+        action so the statusbar/buttons immediately show Rejected.
         """
         actionable = self.filtered(lambda record: record.state in ("draft", "submitted", "needs_correction"))
         already_rejected = self.filtered(lambda record: record.state == "rejected")
@@ -404,9 +403,7 @@ class RouteOutletProspect(models.Model):
             })
             record.message_post(body=_("Potential customer rejected."))
 
-        if already_rejected and not actionable:
-            return self._notify(_("Already Rejected"), _("This potential customer is already rejected."), "warning")
-        return self._notify(_("Rejected"), _("The potential customer was rejected."), "warning")
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def action_cancel(self):
         for record in self:
@@ -420,8 +417,8 @@ class RouteOutletProspect(models.Model):
         for record in self:
             if record.state not in ("needs_correction", "rejected", "cancelled"):
                 raise UserError(_("Only correction-needed, rejected, or cancelled potential customers can be reset to draft."))
-            record.write({"state": "draft"})
-        return self._notify(_("Reset"), _("The potential customer was reset to draft."))
+            record.write({"state": "draft", "active": True})
+        return {"type": "ir.actions.client", "tag": "reload"}
 
     def _filter_existing_fields(self, model_name, vals):
         """Keep the approval flow compatible with different Odoo/Odoo.sh editions.
