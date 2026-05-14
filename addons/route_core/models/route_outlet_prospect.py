@@ -94,7 +94,6 @@ class RouteOutletProspect(models.Model):
     reviewed_at = fields.Datetime(string="Reviewed At", readonly=True)
 
     # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
-    # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
     # Salespeople only submit shop/contact/location information. The final
     # Direct Sale / Consignment decision is made by the supervisor in the
     # approval wizard, then stored here after approval for audit/history.
@@ -376,10 +375,20 @@ class RouteOutletProspect(models.Model):
             record.message_post(body=_("Supervisor requested correction."))
         return self._notify(_("Correction Requested"), _("The potential customer was returned to the salesperson for correction."), "warning")
 
+    # ROUTECORE_FIX_2026_05_15_0315_PROSPECT_REJECT_DRAFT_ALLOWED_V10
     def action_reject(self):
+        """Reject any not-yet-approved potential customer.
+
+        In normal production use the supervisor usually rejects submitted or
+        correction-needed leads. During setup/testing, especially when the same
+        Odoo user has salesperson and supervisor roles, draft leads can also be
+        visible from supervisor review screens. Allowing draft rejection avoids a
+        confusing Invalid Operation popup and archives the lead so it disappears
+        from salesperson lists.
+        """
         for record in self:
-            if record.state not in ("submitted", "needs_correction"):
-                raise UserError(_("Only submitted or correction-needed potential customers can be rejected."))
+            if record.state not in ("draft", "submitted", "needs_correction"):
+                raise UserError(_("Only draft, submitted, or correction-needed potential customers can be rejected."))
             record.write({
                 "state": "rejected",
                 "active": False,
@@ -387,7 +396,7 @@ class RouteOutletProspect(models.Model):
                 "reviewed_at": fields.Datetime.now(),
             })
             record.message_post(body=_("Potential customer rejected."))
-        return self._notify(_("Rejected"), _("The potential customer was rejected."), "warning")
+        return self._notify(_("Rejected"), _("The potential customer was rejected and removed from active salesperson lists."), "warning")
 
     def action_cancel(self):
         for record in self:
@@ -570,7 +579,6 @@ class RouteOutletProspect(models.Model):
         )
 
     # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
-    # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
     def action_approve(self):
         """Open supervisor-only commercial setup before creating the outlet.
 
