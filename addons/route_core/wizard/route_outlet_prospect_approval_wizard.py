@@ -12,11 +12,12 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
     outlet_name = fields.Char(string="Outlet Name", related="prospect_id.name", readonly=True)
     salesperson_id = fields.Many2one("res.users", string="Salesperson", related="prospect_id.salesperson_id", readonly=True)
 
+    # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
     outlet_operation_mode = fields.Selection(
         [("direct_sale", "Direct Sale"), ("consignment", "Consignment")],
         string="Outlet Operation Mode",
         required=True,
-        default="direct_sale",
+        default=False,
     )
     direct_sale_pricelist_id = fields.Many2one(
         "product.pricelist",
@@ -68,9 +69,9 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
         prospect = self.env["route.outlet.prospect"].browse(prospect_id).exists() if prospect_id else self.env["route.outlet.prospect"]
         if prospect:
             vals.setdefault("prospect_id", prospect.id)
-            vals.setdefault("outlet_operation_mode", prospect.outlet_operation_mode or "direct_sale")
-            if prospect.outlet_operation_mode == "consignment":
-                vals.setdefault("consignment_commission_mode", "category_rate")
+            # Do not copy a salesperson-side/default operation mode into the
+            # approval. The supervisor must explicitly choose Direct Sale or
+            # Consignment in this popup.
         outlet_model = self.env["route.outlet"]
         outlet_default_fields = [
             field_name
@@ -158,6 +159,8 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
             raise UserError(_("Potential customer was not found."))
         if self.prospect_id.state != "submitted":
             raise UserError(_("Only submitted potential customers can be approved."))
+        if self.outlet_operation_mode not in ("direct_sale", "consignment"):
+            raise ValidationError(_("Please choose Direct Sale or Consignment before creating the outlet."))
         if self.outlet_operation_mode == "direct_sale":
             if not self.direct_sale_pricelist_id:
                 raise ValidationError(_("Please choose the Direct Sale Pricelist before approval."))
