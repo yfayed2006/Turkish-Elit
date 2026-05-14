@@ -1757,18 +1757,16 @@ class RoutePdaHome(models.TransientModel):
             action["search_view_id"] = search_view.id
         return action
 
+    # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
     def action_create_potential_customer(self):
+        """Open the Potential Customers list first.
+
+        The salesperson can review existing draft/submitted/correction leads,
+        then press New if a new shop proposal is needed. This prevents the
+        Customer Profiles card from jumping directly into a blank form.
+        """
         self.ensure_one()
-        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("New Potential Customer"),
-            "res_model": "route.outlet.prospect",
-            "view_mode": "form",
-            "views": [(form_view.id, "form")] if form_view else [(False, "form")],
-            "target": "current",
-            "context": self._prepare_potential_customer_context(),
-        }
+        return self.action_open_potential_customers()
 
     def action_create_direct_transfer(self):
         self.ensure_one()
