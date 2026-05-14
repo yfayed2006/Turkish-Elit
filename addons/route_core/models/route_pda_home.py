@@ -1,8 +1,4 @@
-from datetime import datetime, time, timedelta
 
-import pytz
-
-from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 from .route_schedule_common import compute_week_start_date
@@ -59,6 +55,7 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
     consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
     active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
+    potential_customer_count = fields.Integer(string="Potential Customers", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
     direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
@@ -256,7 +253,7 @@ class RoutePdaHome(models.TransientModel):
         return self.action_open_product_actions_screen()
 
     def action_open_outlet_center_screen(self):
-        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer and Outlets")
+        return self._open_self_view("route_core.view_route_pda_outlet_center_form", "Customer Profiles")
 
 
     def action_open_direct_sale_mode_screen(self):
@@ -697,6 +694,7 @@ class RoutePdaHome(models.TransientModel):
         Quant = self.env["stock.quant"]
         SaleOrder = self.env["sale.order"]
         DirectReturn = self.env["route.direct.return"]
+        Prospect = self.env["route.outlet.prospect"]
 
         for rec in self:
             user = rec.user_id or self.env.user
@@ -883,6 +881,10 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
             rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
             rec.active_outlet_count = len(active_outlets)
+            rec.potential_customer_count = Prospect.search_count([
+                ("salesperson_id", "=", user.id),
+                ("state", "in", ["draft", "submitted", "needs_correction"]),
+            ])
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
             rec.direct_transfer_today_count = len(today_direct_transfers)
@@ -1692,6 +1694,54 @@ class RoutePdaHome(models.TransientModel):
             domain=[("active", "=", True)],
             context={"route_financial_profile_mode": True},
         )
+
+    def action_open_potential_customers(self):
+        self.ensure_one()
+        action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+        else:
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Potential Customers"),
+                "res_model": "route.outlet.prospect",
+                "view_mode": "kanban,list,form",
+                "target": "current",
+            }
+        action.update({
+            "name": _("Potential Customers"),
+            "domain": [
+                ("salesperson_id", "=", self.env.user.id),
+                ("state", "in", ["draft", "submitted", "needs_correction"]),
+            ],
+            "context": dict(
+                self.env.context,
+                default_salesperson_id=self.env.user.id,
+                search_default_filter_my_leads=1,
+                route_pda_salesperson_form=1,
+                create=True,
+                edit=True,
+                delete=False,
+            ),
+            "target": "current",
+        })
+        kanban_view = self.env.ref("route_core.view_route_outlet_prospect_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_outlet_prospect_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_outlet_prospect_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        return action
 
     def action_create_direct_transfer(self):
         self.ensure_one()
