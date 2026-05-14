@@ -444,6 +444,62 @@
 </div>
 </div>
 </div>
+<div class="route_pda_group route_pda_group_operations" groups="route_core.group_route_supervisor,route_core.group_route_management">
+<div class="route_pda_group_title">Approval Setup</div>
+<div class="route_pda_info_hint_inline route_pda_product_center_note" invisible="state != 'submitted'">Select the final commercial setup before creating the official outlet.</div>
+<div class="route_pda_card_grid route_pda_card_grid_2">
+<div class="route_pda_info_card">
+<div class="route_pda_info_label">Final Operation Mode</div>
+<div class="route_pda_info_value">
+<field name="outlet_operation_mode" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="outlet_operation_mode != 'direct_sale'">
+<div class="route_pda_info_label">Direct Sale Pricelist</div>
+<div class="route_pda_info_value">
+<field name="approval_direct_sale_pricelist_id" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="outlet_operation_mode != 'consignment'">
+<div class="route_pda_info_label">Shelf Credit Limit</div>
+<div class="route_pda_info_value">
+<field name="approval_shelf_credit_limit_amount" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="outlet_operation_mode != 'consignment'">
+<div class="route_pda_info_label">Commission Type</div>
+<div class="route_pda_info_value">
+<field name="approval_consignment_commission_mode" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="outlet_operation_mode != 'consignment'">
+<div class="route_pda_info_label">Commission % / Default %</div>
+<div class="route_pda_info_value">
+<field name="approval_default_commission_rate" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')"/>
+</div>
+</div>
+<div class="route_pda_info_card" invisible="outlet_operation_mode != 'consignment' or approval_consignment_commission_mode != 'category_rate'">
+<div class="route_pda_info_label">Category Rules</div>
+<div class="route_pda_info_value">
+<field name="approval_category_commission_line_count" nolabel="1" readonly="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_action" invisible="outlet_operation_mode != 'consignment' or approval_consignment_commission_mode != 'category_rate' or state in ('approved', 'rejected', 'cancelled')">
+<div class="route_pda_info_label">Category Actions</div>
+<button name="action_generate_prospect_category_commissions" type="object" string="Load Product Categories" class="btn btn-primary"/>
+</div>
+</div>
+<div invisible="outlet_operation_mode != 'consignment' or approval_consignment_commission_mode != 'category_rate'">
+<field name="approval_category_commission_line_ids" nolabel="1" readonly="state in ('approved', 'rejected', 'cancelled')">
+<list editable="bottom">
+<field name="active"/>
+<field name="category_id" options="{'no_create': True, 'no_open': False}"/>
+<field name="commission_rate"/>
+<field name="note"/>
+</list>
+</field>
+</div>
+</div>
 <div class="route_pda_group route_pda_group_operations">
 <div class="route_pda_group_title">Contact and Location</div>
 <div class="route_pda_card_grid route_pda_card_grid_2">
