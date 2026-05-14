@@ -567,50 +567,110 @@ class RouteOutletProspect(models.Model):
             "success",
         )
 
-    def action_approve(self):
+    def action_open_approval_setup_wizard(self):
         self.ensure_one()
-        self._validate_approval_ready()
-        commercial_vals = {
-            "financial_policy": "auto",
+        if self.state != "submitted":
+            raise UserError(_("Only submitted potential customers can be approved."))
+        view = self.env.ref("route_core.view_route_outlet_prospect_approval_wizard_form", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Approve Potential Customer"),
+            "res_model": "route.outlet.prospect.approval.wizard",
+            "view_mode": "form",
+            "views": [(view.id, "form")] if view else [(False, "form")],
+            "target": "new",
+            "context": {
+                "default_prospect_id": self.id,
+            },
         }
-        commission_line_vals = []
 
-        if self.outlet_operation_mode == "direct_sale":
-            commercial_vals.update({
-                "direct_sale_pricelist_id": self.approval_direct_sale_pricelist_id.id,
+    def action_approve(self):
+        """Open a supervisor-only commercial setup wizard.
+
+        The salesperson lead only captures shop/contact/location information. The
+        final business model (Direct Sale vs Consignment), pricelist, shelf credit,
+        and category commission rules are supervisor decisions made here.
+        """
+        self.ensure_one()
+        return self.action_open_approval_setup_wizard()
+
+    def _validate_approval_basics(self):
+        for record in self:
+            if record.state != "submitted":
+                raise UserError(_("Only submitted potential customers can be approved."))
+            has_existing_area = bool(record.area_id)
+            has_new_area_details = bool(
+                record.route_country_id
+                and (record.route_city_id or (record.city or "").strip())
+                and (record.route_area_name or "").strip()
+            )
+            if not (has_existing_area or has_new_area_details):
+                raise ValidationError(_("Please select Area, or select Route Country, Route City, and enter Area Name before approval."))
+            if not (record.contact_name or record.name):
+                raise ValidationError(_("Customer name is required before approving this potential customer."))
+
+    def _sync_approval_setup_from_commercial_vals(self, commercial_vals, commission_line_vals):
+        self.ensure_one()
+        final_mode = commercial_vals.get("outlet_operation_mode") or self.outlet_operation_mode or "direct_sale"
+        setup_vals = {"outlet_operation_mode": final_mode}
+        if final_mode == "direct_sale":
+            setup_vals.update({
+                "approval_direct_sale_pricelist_id": commercial_vals.get("direct_sale_pricelist_id") or False,
+                "approval_shelf_credit_limit_amount": 0.0,
+                "approval_consignment_commission_mode": "fixed_rate",
+                "approval_default_commission_rate": commercial_vals.get("default_commission_rate") or self.approval_default_commission_rate or 20.0,
             })
+            setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)]
         else:
-            commercial_vals.update({
-                "consignment_settlement_policy": "net_after_commission",
-                "consignment_commission_mode": self.approval_consignment_commission_mode or "fixed_rate",
-                "default_commission_rate": self.approval_default_commission_rate or 0.0,
-                "commission_rate": self.approval_default_commission_rate or 0.0,
-                "shelf_credit_limit_amount": self.approval_shelf_credit_limit_amount or 0.0,
-                "active_stock_tracking": True,
+            setup_vals.update({
+                "approval_direct_sale_pricelist_id": False,
+                "approval_shelf_credit_limit_amount": commercial_vals.get("shelf_credit_limit_amount") or 0.0,
+                "approval_consignment_commission_mode": commercial_vals.get("consignment_commission_mode") or "fixed_rate",
+                "approval_default_commission_rate": commercial_vals.get("default_commission_rate") or commercial_vals.get("commission_rate") or 0.0,
             })
-            if self.approval_consignment_commission_mode == "category_rate":
-                commission_line_vals = [
-                    {
-                        "category_id": line.category_id.id,
-                        "commission_rate": line.commission_rate or 0.0,
-                        "active": line.active,
-                        "note": line.note or False,
-                    }
-                    for line in self.approval_category_commission_line_ids
-                    if line.category_id and line.active
+            if setup_vals["approval_consignment_commission_mode"] == "category_rate":
+                setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)] + [
+                    (0, 0, {
+                        "category_id": vals.get("category_id"),
+                        "commission_rate": vals.get("commission_rate") or 0.0,
+                        "active": vals.get("active", True),
+                        "note": vals.get("note") or False,
+                    })
+                    for vals in commission_line_vals
+                    if vals.get("category_id")
                 ]
+            else:
+                setup_vals["approval_category_commission_line_ids"] = [(5, 0, 0)]
+        self.write(setup_vals)
 
-        return self._approve_and_create_outlet_from_setup(
-            commercial_vals=commercial_vals,
-            commission_line_vals=commission_line_vals,
-        )
+    def _validate_final_commercial_setup(self, commercial_vals, commission_line_vals):
+        self.ensure_one()
+        final_mode = commercial_vals.get("outlet_operation_mode") or self.outlet_operation_mode or "direct_sale"
+        if final_mode == "direct_sale":
+            if not commercial_vals.get("direct_sale_pricelist_id"):
+                raise ValidationError(_("Please choose the Direct Sale Pricelist before approval."))
+            return
+        if (commercial_vals.get("shelf_credit_limit_amount") or 0.0) < 0.0:
+            raise ValidationError(_("Shelf credit limit cannot be negative."))
+        default_rate = commercial_vals.get("default_commission_rate") or commercial_vals.get("commission_rate") or 0.0
+        if default_rate < 0.0 or default_rate > 100.0:
+            raise ValidationError(_("Default commission percentage must be between 0 and 100."))
+        if commercial_vals.get("consignment_commission_mode") == "category_rate":
+            if not commission_line_vals:
+                raise ValidationError(_("Load Product Categories and enter category commission percentages before approval."))
+            for line_vals in commission_line_vals:
+                rate = line_vals.get("commission_rate") or 0.0
+                if rate < 0.0 or rate > 100.0:
+                    raise ValidationError(_("Every category commission percentage must be between 0 and 100."))
 
     def _approve_and_create_outlet_from_setup(self, commercial_vals=None, commission_line_vals=None):
-        self._validate_approval_ready()
+        self._validate_approval_basics()
         commercial_vals = dict(commercial_vals or {})
         commission_line_vals = list(commission_line_vals or [])
         OutletCommission = self.env["route.outlet.category.commission"].sudo()
         for record in self:
+            record._validate_final_commercial_setup(commercial_vals, commission_line_vals)
+            record._sync_approval_setup_from_commercial_vals(commercial_vals, commission_line_vals)
             partner = self.env["res.partner"].create(record._prepare_partner_vals())
             outlet = self.env["route.outlet"].create(record._prepare_outlet_vals(partner, commercial_vals=commercial_vals))
             if outlet.outlet_operation_mode == "consignment" and outlet.consignment_commission_mode == "category_rate":
