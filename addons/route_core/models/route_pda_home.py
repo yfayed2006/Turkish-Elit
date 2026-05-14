@@ -59,6 +59,8 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
     consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
     active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
+    # ROUTECORE_FIX_2026_05_14_2225_POTENTIAL_CUSTOMER_CARD_SYNC_V2
+    potential_customer_count = fields.Integer(string="Potential Customers", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
     direct_return_today_count = fields.Integer(string="Direct Returns Today", compute="_compute_dashboard")
@@ -691,6 +693,7 @@ class RoutePdaHome(models.TransientModel):
         Shortage = self.env["route.shortage"]
         SalespersonShortage = self.env["route.salesperson.shortage"]
         Outlet = self.env["route.outlet"]
+        Prospect = self.env["route.outlet.prospect"]
         OutletBalance = self.env["outlet.stock.balance"]
         Payment = self.env["route.visit.payment"]
         Product = self.env["product.template"]
@@ -883,6 +886,10 @@ class RoutePdaHome(models.TransientModel):
             rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
             rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
             rec.active_outlet_count = len(active_outlets)
+            rec.potential_customer_count = Prospect.search_count([
+                ("salesperson_id", "=", user.id),
+                ("state", "in", ["draft", "submitted", "needs_correction"]),
+            ])
             rec.direct_sale_order_today_count = len(today_direct_orders)
             rec.direct_return_today_count = len(today_direct_returns)
             rec.direct_transfer_today_count = len(today_direct_transfers)
@@ -1684,6 +1691,33 @@ class RoutePdaHome(models.TransientModel):
             name="All Outlets",
             domain=[("active", "=", True)],
         )
+
+    # ROUTECORE_FIX_2026_05_14_2225_POTENTIAL_CUSTOMER_CARD_SYNC_V2
+    def action_open_potential_customers(self):
+        self.ensure_one()
+        action_ref = self.env.ref("route_core.action_route_outlet_prospect_salesperson", raise_if_not_found=False)
+        if action_ref:
+            action = action_ref.read()[0]
+        else:
+            # Safe fallback so the PDA button does not crash if the XML action is not loaded yet.
+            action = {
+                "type": "ir.actions.act_window",
+                "name": _("Potential Customers"),
+                "res_model": "route.outlet.prospect",
+                "view_mode": "kanban,list,form",
+                "target": "current",
+            }
+        action["domain"] = [
+            ("salesperson_id", "=", self.env.user.id),
+            ("state", "in", ["draft", "submitted", "needs_correction"]),
+        ]
+        action["context"] = dict(
+            action.get("context") or {},
+            search_default_my_leads=1,
+            default_salesperson_id=self.env.user.id,
+            route_workspace_back=True,
+        )
+        return action
 
     def action_open_outlet_financial_profiles(self):
         self.ensure_one()
