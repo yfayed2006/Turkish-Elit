@@ -59,6 +59,7 @@ class RoutePdaHome(models.TransientModel):
     direct_sale_customer_count = fields.Integer(string="Direct Sale Customers", compute="_compute_dashboard")
     consignment_customer_count = fields.Integer(string="Consignment Customers", compute="_compute_dashboard")
     active_outlet_count = fields.Integer(string="Active Outlets", compute="_compute_dashboard")
+    # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
     potential_customer_count = fields.Integer(string="Potential Customers", compute="_compute_dashboard")
 
     direct_sale_order_today_count = fields.Integer(string="Direct Sale Orders Today", compute="_compute_dashboard")
@@ -887,6 +888,7 @@ class RoutePdaHome(models.TransientModel):
             rec.active_outlet_count = len(active_outlets)
             rec.potential_customer_count = Prospect.search_count([
                 ("salesperson_id", "=", user.id),
+                ("active", "=", True),
                 ("state", "in", ["draft", "submitted", "needs_correction"]),
             ])
             rec.direct_sale_order_today_count = len(today_direct_orders)
@@ -1684,40 +1686,12 @@ class RoutePdaHome(models.TransientModel):
             context={"group_by": "partner_id"},
         )
 
-    # ROUTECORE_FIX_2026_05_14_2355_CUSTOMER_PROFILES_TWO_CARD_FLOW_V4
     def action_open_all_outlets(self):
         self.ensure_one()
         return self._prepare_outlet_workspace_action(
-            name=_("Outlet Profiles"),
+            name="All Outlets",
             domain=[("active", "=", True)],
         )
-
-    def action_open_customer_profiles(self):
-        """Compatibility alias for older PDA views/actions that still point to this method."""
-        return self.action_open_all_outlets()
-
-    def action_create_potential_customer(self):
-        self.ensure_one()
-        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
-        action = {
-            "type": "ir.actions.act_window",
-            "name": _("New Potential Customer"),
-            "res_model": "route.outlet.prospect",
-            "view_mode": "form",
-            "target": "main",
-            "context": {
-                "default_salesperson_id": self.env.user.id,
-                "default_company_id": self.env.company.id,
-                "route_pda_salesperson_form": 1,
-                "route_workspace_back": True,
-                "create": 1,
-                "edit": 1,
-                "delete": 0,
-            },
-        }
-        if form_view:
-            action["views"] = [(form_view.id, "form")]
-        return action
 
     def action_open_outlet_financial_profiles(self):
         self.ensure_one()
@@ -1725,6 +1699,18 @@ class RoutePdaHome(models.TransientModel):
             name="Outlet Financial Profiles",
             domain=[("active", "=", True)],
             context={"route_financial_profile_mode": True},
+        )
+
+    # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
+    def _prepare_potential_customer_context(self):
+        return dict(
+            self.env.context,
+            default_salesperson_id=self.env.user.id,
+            search_default_filter_my_leads=1,
+            route_pda_salesperson_form=1,
+            create=True,
+            edit=True,
+            delete=False,
         )
 
     def action_open_potential_customers(self):
@@ -1744,17 +1730,10 @@ class RoutePdaHome(models.TransientModel):
             "name": _("Potential Customers"),
             "domain": [
                 ("salesperson_id", "=", self.env.user.id),
+                ("active", "=", True),
                 ("state", "in", ["draft", "submitted", "needs_correction"]),
             ],
-            "context": dict(
-                self.env.context,
-                default_salesperson_id=self.env.user.id,
-                search_default_filter_my_leads=1,
-                route_pda_salesperson_form=1,
-                create=True,
-                edit=True,
-                delete=False,
-            ),
+            "context": self._prepare_potential_customer_context(),
             "target": "current",
         })
         kanban_view = self.env.ref("route_core.view_route_outlet_prospect_kanban", raise_if_not_found=False)
@@ -1774,6 +1753,19 @@ class RoutePdaHome(models.TransientModel):
         if search_view:
             action["search_view_id"] = search_view.id
         return action
+
+    def action_create_potential_customer(self):
+        self.ensure_one()
+        form_view = self.env.ref("route_core.view_route_outlet_prospect_form", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("New Potential Customer"),
+            "res_model": "route.outlet.prospect",
+            "view_mode": "form",
+            "views": [(form_view.id, "form")] if form_view else [(False, "form")],
+            "target": "current",
+            "context": self._prepare_potential_customer_context(),
+        }
 
     def action_create_direct_transfer(self):
         self.ensure_one()
