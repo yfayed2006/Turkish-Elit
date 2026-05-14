@@ -71,13 +71,19 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
             vals.setdefault("outlet_operation_mode", prospect.outlet_operation_mode or "direct_sale")
             if prospect.outlet_operation_mode == "consignment":
                 vals.setdefault("consignment_commission_mode", "category_rate")
-        outlet_defaults = self.env["route.outlet"].default_get([
-            "default_commission_rate",
-            "commission_rate",
-            "consignment_stock_location_mode",
-            "active_stock_tracking",
-            "shelf_credit_limit_amount",
-        ])
+        outlet_model = self.env["route.outlet"]
+        outlet_default_fields = [
+            field_name
+            for field_name in [
+                "default_commission_rate",
+                "commission_rate",
+                "consignment_stock_location_mode",
+                "active_stock_tracking",
+                "shelf_credit_limit_amount",
+            ]
+            if field_name in outlet_model._fields
+        ]
+        outlet_defaults = outlet_model.default_get(outlet_default_fields) if outlet_default_fields else {}
         vals.setdefault("default_commission_rate", outlet_defaults.get("default_commission_rate") or outlet_defaults.get("commission_rate") or 20.0)
         vals.setdefault("consignment_stock_location_mode", outlet_defaults.get("consignment_stock_location_mode") or "auto_create")
         vals.setdefault("active_stock_tracking", outlet_defaults.get("active_stock_tracking", True))
@@ -171,7 +177,7 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
 
     def _get_commercial_vals(self):
         self.ensure_one()
-        vals = {"outlet_operation_mode": self.outlet_operation_mode, "financial_policy": "auto"}
+        vals = {"outlet_operation_mode": self.outlet_operation_mode}
         if self.outlet_operation_mode == "direct_sale":
             vals["direct_sale_pricelist_id"] = self.direct_sale_pricelist_id.id if self.direct_sale_pricelist_id else False
             return vals
