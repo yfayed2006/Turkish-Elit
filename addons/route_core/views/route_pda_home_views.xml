@@ -154,7 +154,7 @@
 </button>
 <button type="object" name="action_open_outlet_center_screen" class="btn route_pda_app_btn route_pda_app_btn_catalog">
 <i class="fa fa-building route_pda_app_icon" title="Building"/>
-<span class="route_pda_app_label">Customer and Outlets</span>
+<span class="route_pda_app_label">Customer Profiles</span>
 </button>
 <button type="object" name="action_open_product_actions_screen" class="btn route_pda_app_btn route_pda_app_btn_sales">
 <i class="fa fa-exchange route_pda_app_icon" title="Exchange"/>
@@ -484,69 +484,40 @@
 <field name="name">route.pda.home.outlet.center.form</field>
 <field name="model">route.pda.home</field>
 <field name="arch" type="xml">
-<form string="Customer and Outlets" create="0" edit="0" delete="0">
+<form string="Customer Profiles" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
 <field name="route_show_direct_sale_tools" invisible="1"/>
 <field name="route_show_consignment_tools" invisible="1"/>
 <field name="direct_sale_customer_count" invisible="1"/>
 <field name="consignment_customer_count" invisible="1"/>
-<!--  ROUTECORE_FIX_2026_05_14_2225_POTENTIAL_CUSTOMER_CARD_SYNC_V2  -->
-<field name="potential_customer_count" invisible="1"/>
 <field name="active_outlet_count" invisible="1"/>
+<field name="potential_customer_count" invisible="1"/>
 <div class="route_pda_detail_header">
 <button type="object" name="action_back_home" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left" title="Arrow Left"/>
 <span>Back to Route Workspace</span>
 </button>
-<h2 class="route_pda_detail_title">Customer and Outlets</h2>
+<h2 class="route_pda_detail_title">Customer Profiles</h2>
 </div>
-<div class="route_pda_info_hint_inline route_pda_product_center_note">Use customer views for faster follow-up. Open All Outlets when you need the full outlet directory.</div>
+<!--  ROUTECORE_FIX_2026_05_14_2355_CUSTOMER_PROFILES_TWO_CARD_FLOW_V4  -->
+<div class="route_pda_info_hint_inline route_pda_product_center_note">Use this center to open existing outlet profiles or create a new potential customer for supervisor approval.</div>
 <div class="route_pda_group route_pda_product_center_group">
-<div class="route_pda_group_title">Customer Views</div>
-<div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
-<button type="object" name="action_open_direct_sale_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="route_show_direct_sale_tools == False">
-<i class="fa fa-users route_pda_app_icon" title="Users"/>
-<span class="route_pda_app_label">Direct Sale Customers</span>
-<span class="route_pda_app_hint">Grouped customer accounts</span>
-<span class="route_pda_app_hint_value">
-<field name="direct_sale_customer_count" readonly="1" nolabel="1"/>
-</span>
-</button>
-<button type="object" name="action_open_consignment_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn" invisible="route_show_consignment_tools == False">
-<i class="fa fa-users route_pda_app_icon" title="Users"/>
-<span class="route_pda_app_label">Consignment Customers</span>
-<span class="route_pda_app_hint">Shelf-route customer groups</span>
-<span class="route_pda_app_hint_value">
-<field name="consignment_customer_count" readonly="1" nolabel="1"/>
-</span>
-</button>
-</div>
-</div>
-<div class="route_pda_group route_pda_product_center_group">
-<div class="route_pda_group_title">Outlet Views</div>
+<div class="route_pda_group_title">Customer Profiles</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
 <button type="object" name="action_open_all_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
-<i class="fa fa-building route_pda_app_icon" title="Building"/>
-<span class="route_pda_app_label">All Outlets</span>
-<span class="route_pda_app_hint">Full outlet directory</span>
+<i class="fa fa-building route_pda_app_icon" title="Outlet Profiles"/>
+<span class="route_pda_app_label">Existing Outlets</span>
+<span class="route_pda_app_hint">Open approved outlet profiles</span>
 <span class="route_pda_app_hint_value">
 <field name="active_outlet_count" readonly="1" nolabel="1"/>
 </span>
 </button>
-<button type="object" name="action_open_potential_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
-<i class="fa fa-user-plus route_pda_app_icon" title="User Plus"/>
-<span class="route_pda_app_label">Potential Customer</span>
-<span class="route_pda_app_hint">Capture new shop details for approval</span>
+<button type="object" name="action_create_potential_customer" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-user-plus route_pda_app_icon" title="New Potential Customer"/>
+<span class="route_pda_app_label">New Potential Customer</span>
+<span class="route_pda_app_hint">Create shop proposal for approval</span>
 <span class="route_pda_app_hint_value">
 <field name="potential_customer_count" readonly="1" nolabel="1"/>
-</span>
-</button>
-<button type="object" name="action_open_outlet_financial_profiles" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
-<i class="fa fa-credit-card route_pda_app_icon" title="Credit Card"/>
-<span class="route_pda_app_label">Financial Profiles</span>
-<span class="route_pda_app_hint">Outlet account status</span>
-<span class="route_pda_app_hint_value">
-<field name="active_outlet_count" readonly="1" nolabel="1"/>
 </span>
 </button>
 </div>
