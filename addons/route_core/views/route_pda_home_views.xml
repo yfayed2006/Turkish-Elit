@@ -486,6 +486,10 @@
 <field name="arch" type="xml">
 <form string="Customer Profiles" create="0" edit="0" delete="0">
 <sheet class="route_pda_home_sheet route_pda_detail_sheet">
+<field name="route_show_direct_sale_tools" invisible="1"/>
+<field name="route_show_consignment_tools" invisible="1"/>
+<field name="direct_sale_customer_count" invisible="1"/>
+<field name="consignment_customer_count" invisible="1"/>
 <field name="active_outlet_count" invisible="1"/>
 <field name="potential_customer_count" invisible="1"/>
 <div class="route_pda_detail_header">
@@ -499,8 +503,8 @@
 <div class="route_pda_group route_pda_product_center_group">
 <div class="route_pda_group_title">Customer Profile Center</div>
 <div class="route_pda_apps_grid route_pda_apps_grid_2 route_pda_center_grid route_pda_product_center_grid">
-<button type="object" name="action_open_customer_profiles" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
-<i class="fa fa-address-card route_pda_app_icon" title="Customer Profiles"/>
+<button type="object" name="action_open_all_outlets" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
+<i class="fa fa-address-card route_pda_app_icon" title="Address Card"/>
 <span class="route_pda_app_label">Customer Profiles</span>
 <span class="route_pda_app_hint">Outlet identity, finance, visits and documents</span>
 <span class="route_pda_app_hint_value">
@@ -508,7 +512,7 @@
 </span>
 </button>
 <button type="object" name="action_open_potential_customers" class="btn route_pda_app_btn route_pda_app_btn_catalog route_pda_product_center_btn">
-<i class="fa fa-user-plus route_pda_app_icon" title="Potential Customer"/>
+<i class="fa fa-user-plus route_pda_app_icon" title="User Plus"/>
 <span class="route_pda_app_label">Potential Customer</span>
 <span class="route_pda_app_hint">Capture new shop details for approval</span>
 <span class="route_pda_app_hint_value">
