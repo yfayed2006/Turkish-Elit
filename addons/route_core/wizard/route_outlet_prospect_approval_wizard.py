@@ -12,6 +12,7 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
     outlet_name = fields.Char(string="Outlet Name", related="prospect_id.name", readonly=True)
     salesperson_id = fields.Many2one("res.users", string="Salesperson", related="prospect_id.salesperson_id", readonly=True)
 
+    # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
     # ROUTECORE_FIX_2026_05_15_0005_CONSOLIDATED_PROSPECT_FLOW_V6
     outlet_operation_mode = fields.Selection(
         [("direct_sale", "Direct Sale"), ("consignment", "Consignment")],
