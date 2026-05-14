@@ -352,12 +352,13 @@ class RouteOutletProspect(models.Model):
         }
         return self._filter_existing_fields("res.partner", vals)
 
-    def _prepare_outlet_vals(self, partner):
+    def _prepare_outlet_vals(self, partner, commercial_vals=None):
         self.ensure_one()
         route_city = self._get_or_create_route_city()
         route_area = self._get_or_create_route_area()
         if not route_city and route_area:
             route_city = route_area.city_id
+        commercial_vals = dict(commercial_vals or {})
         vals = {
             "name": self.name,
             "partner_id": partner.id,
@@ -381,6 +382,7 @@ class RouteOutletProspect(models.Model):
             vals["route_country_id"] = route_area.country_id.id
         if route_city:
             vals["route_city_id"] = route_city.id
+        vals.update(commercial_vals)
         if "geo_latitude" in self.env["route.outlet"]._fields and self.location_captured:
             vals.update({
                 "geo_latitude": self.latitude,
@@ -418,10 +420,44 @@ class RouteOutletProspect(models.Model):
         return "\n".join(lines)
 
     def action_approve(self):
+        self.ensure_one()
         self._validate_approval_ready()
+        wizard_vals = {
+            "prospect_id": self.id,
+            "outlet_operation_mode": self.outlet_operation_mode or "direct_sale",
+        }
+        if (self.outlet_operation_mode or "direct_sale") == "direct_sale":
+            pricelist = self.env["product.pricelist"].search([], limit=1)
+            if pricelist:
+                wizard_vals["direct_sale_pricelist_id"] = pricelist.id
+        wizard = self.env["route.outlet.prospect.approval.wizard"].create(wizard_vals)
+        if wizard.outlet_operation_mode == "consignment" and wizard.consignment_commission_mode == "category_rate":
+            wizard.write({"category_commission_line_ids": wizard._prepare_category_line_commands()})
+        view = self.env.ref("route_core.view_route_outlet_prospect_approval_wizard_form", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Approve Potential Customer"),
+            "res_model": "route.outlet.prospect.approval.wizard",
+            "res_id": wizard.id,
+            "view_mode": "form",
+            "views": [(view.id, "form")] if view else [(False, "form")],
+            "target": "new",
+            "context": dict(self.env.context, default_prospect_id=self.id),
+        }
+
+    def _approve_and_create_outlet_from_setup(self, commercial_vals=None, commission_line_vals=None):
+        self._validate_approval_ready()
+        commercial_vals = dict(commercial_vals or {})
+        commission_line_vals = list(commission_line_vals or [])
+        OutletCommission = self.env["route.outlet.category.commission"].sudo()
         for record in self:
             partner = self.env["res.partner"].create(record._prepare_partner_vals())
-            outlet = self.env["route.outlet"].create(record._prepare_outlet_vals(partner))
+            outlet = self.env["route.outlet"].create(record._prepare_outlet_vals(partner, commercial_vals=commercial_vals))
+            if outlet.outlet_operation_mode == "consignment" and outlet.consignment_commission_mode == "category_rate":
+                for line_vals in commission_line_vals:
+                    vals = dict(line_vals)
+                    vals["outlet_id"] = outlet.id
+                    OutletCommission.create(vals)
             record.write({
                 "state": "approved",
                 "approved_partner_id": partner.id,
