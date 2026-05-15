@@ -410,12 +410,9 @@ pending visit(s) were found for this planning area.
 <field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
 <list editable="bottom" decoration-warning="state == 'pending'" decoration-info="state == 'in_progress'" decoration-success="state == 'visited'" decoration-muted="state == 'skipped'">
 <field name="sequence" widget="handle"/>
-<field name="available_outlet_ids" column_invisible="1"/>
-<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
-<field name="area_id" readonly="1" optional="show"/>
+<field name="area_id" optional="show"/>
+<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
 <field name="partner_id" readonly="1" optional="show"/>
-<field name="outlet_default_vehicle_id" readonly="1" optional="hide"/>
-<field name="outlet_default_source_location_id" readonly="1" optional="hide"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
 <field name="visit_id" string="Visit" readonly="1" optional="show"/>
 <field name="skip_reason" optional="hide"/>
