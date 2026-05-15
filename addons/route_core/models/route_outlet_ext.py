@@ -15,6 +15,54 @@ class RouteOutlet(models.Model):
         help="Optional pricelist used for this outlet when operation mode is Direct Sale.",
     )
 
+    # ROUTECORE_STAGE_2026_05_15_OUTLET_ASSIGNMENT_DEFAULTS
+    assigned_salesperson_id = fields.Many2one(
+        "res.users",
+        string="Responsible Salesperson",
+        ondelete="set null",
+        help="Default salesperson responsible for this outlet. Visibility rules will use this field in a later phase.",
+    )
+    assigned_supervisor_id = fields.Many2one(
+        "res.users",
+        string="Responsible Supervisor",
+        ondelete="set null",
+        help="Default supervisor responsible for this outlet. Visibility rules will use this field in a later phase.",
+    )
+    default_vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Default Vehicle",
+        ondelete="set null",
+        help="Default route vehicle normally serving this outlet.",
+    )
+    default_source_location_id = fields.Many2one(
+        "stock.location",
+        string="Default Source Location",
+        domain=[("usage", "=", "internal")],
+        ondelete="set null",
+        help="Default source location used when loading or delivering goods for this outlet. It can be a van location or an internal warehouse location.",
+    )
+    saleable_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Saleable Return Location",
+        domain=[("usage", "=", "internal")],
+        ondelete="set null",
+        help="Default location for goods returned in saleable condition.",
+    )
+    damaged_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Damaged Return Location",
+        domain=[("usage", "=", "internal")],
+        ondelete="set null",
+        help="Default location for damaged returns.",
+    )
+    expiry_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Expired / Near Expiry Return Location",
+        domain=[("usage", "=", "internal")],
+        ondelete="set null",
+        help="Default location for expired or near-expiry returns.",
+    )
+
     last_visit_id = fields.Many2one(
         "route.visit",
         string="Last Visit",
@@ -252,3 +300,10 @@ class RouteOutlet(models.Model):
         for record in self:
             if record.outlet_operation_mode != "consignment" and "stock_location_id" in record._fields:
                 record.stock_location_id = False
+
+    @api.onchange("default_vehicle_id")
+    def _onchange_route_outlet_default_vehicle(self):
+        for record in self:
+            vehicle_location = record.default_vehicle_id.stock_location_id if record.default_vehicle_id and getattr(record.default_vehicle_id, "stock_location_id", False) else False
+            if vehicle_location and not record.default_source_location_id:
+                record.default_source_location_id = vehicle_location
