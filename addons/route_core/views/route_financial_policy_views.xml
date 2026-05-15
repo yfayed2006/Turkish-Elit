@@ -1,7 +1,7 @@
 <odoo>
-<!--    Dedicated management setup views for outlets.
+<!--     Dedicated management setup views for outlets.
       This action is the unified setup screen for creating and maintaining outlets:
-      identity, customer, operation mode, pricing/commission, consignment stock, and location.   -->
+      identity, customer, operation mode, pricing/commission, consignment stock, and location.    -->
 <record id="view_route_outlet_management_config_search" model="ir.ui.view">
 <field name="name">route.outlet.management.config.search</field>
 <field name="model">route.outlet</field>
@@ -95,6 +95,19 @@
 <field name="outlet_operation_mode" widget="radio"/>
 <field name="effective_financial_policy_label" readonly="1"/>
 <field name="direct_sale_pricelist_id" string="Direct Sale Pricelist" invisible="outlet_operation_mode != 'direct_sale'" required="outlet_operation_mode == 'direct_sale'" options="{'no_open': False}"/>
+</group>
+</group>
+<group string="Assignment and Operational Defaults" col="2">
+<group string="Responsibility">
+<field name="assigned_salesperson_id" options="{'no_create': True, 'no_open': False}"/>
+<field name="assigned_supervisor_id" options="{'no_create': True, 'no_open': False}"/>
+<field name="default_vehicle_id" options="{'no_create': True, 'no_open': False}"/>
+</group>
+<group string="Stock Defaults">
+<field name="default_source_location_id" domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="saleable_return_location_id" domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="damaged_return_location_id" domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
+<field name="expiry_return_location_id" domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]" options="{'no_create': False, 'no_create_edit': False, 'no_open': False}"/>
 </group>
 </group>
 <group string="Consignment Configuration" col="2" invisible="outlet_operation_mode != 'consignment'">
