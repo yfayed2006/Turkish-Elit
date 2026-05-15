@@ -289,9 +289,26 @@ class RouteVisit(models.Model):
             raise UserError(_("There is no refill transfer linked to this visit."))
 
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        pda_form_view = self.env.ref(
+            "route_core.view_stock_picking_outlet_pda_form",
+            raise_if_not_found=False,
+        )
+        fallback_form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        form_view = pda_form_view or fallback_form_view
+
+        action["name"] = _("Refill Transfer")
         action["res_id"] = self.refill_picking_id.id
-        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
-        action["context"] = {
-            "default_route_visit_id": self.id,
-        }
+        action["view_mode"] = "form"
+        action["target"] = "current"
+        if form_view:
+            action["views"] = [(form_view.id, "form")]
+        action["context"] = dict(
+            self.env.context,
+            default_route_visit_id=self.id,
+            route_visit_id=self.id,
+            route_outlet_back_id=self.outlet_id.id if self.outlet_id else False,
+            create=False,
+            edit=False,
+            delete=False,
+        )
         return action
