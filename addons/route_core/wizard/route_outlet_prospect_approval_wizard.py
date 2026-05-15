@@ -189,18 +189,21 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
 
     def _get_commercial_vals(self):
         self.ensure_one()
-        vals = {"outlet_operation_mode": self.outlet_operation_mode}
+        vals = {
+            "outlet_operation_mode": self.outlet_operation_mode,
+            "financial_policy": "auto",
+        }
         if self.outlet_operation_mode == "direct_sale":
             vals["direct_sale_pricelist_id"] = self.direct_sale_pricelist_id.id if self.direct_sale_pricelist_id else False
             return vals
         vals.update({
+            "direct_sale_pricelist_id": False,
             "consignment_stock_location_mode": self.consignment_stock_location_mode or "auto_create",
             "stock_location_id": self.stock_location_id.id if self.stock_location_id else False,
             "shelf_credit_limit_amount": self.shelf_credit_limit_amount or 0.0,
             "active_stock_tracking": self.active_stock_tracking,
             "consignment_commission_mode": self.consignment_commission_mode or "fixed_rate",
             "consignment_settlement_policy": "net_after_commission",
-            "financial_policy": "auto",
             "default_commission_rate": self.default_commission_rate or 0.0,
             "commission_rate": self.default_commission_rate or 0.0,
         })
@@ -224,9 +227,36 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
             })
         return vals_list
 
+    # ROUTECORE_FIX_2026_05_15_1615_PROSPECT_APPROVAL_POPUP_RESTORE_V13
+    def _sync_prospect_approval_setup(self):
+        """Persist the supervisor choices on the potential customer before approval."""
+        self.ensure_one()
+        vals = {
+            "outlet_operation_mode": self.outlet_operation_mode,
+            "approval_direct_sale_pricelist_id": self.direct_sale_pricelist_id.id if self.outlet_operation_mode == "direct_sale" and self.direct_sale_pricelist_id else False,
+            "approval_shelf_credit_limit_amount": self.shelf_credit_limit_amount if self.outlet_operation_mode == "consignment" else 0.0,
+            "approval_consignment_commission_mode": self.consignment_commission_mode or "fixed_rate",
+            "approval_default_commission_rate": self.default_commission_rate or 0.0,
+        }
+        if self.outlet_operation_mode == "consignment" and self.consignment_commission_mode == "category_rate":
+            vals["approval_category_commission_line_ids"] = [(5, 0, 0)] + [
+                (0, 0, {
+                    "category_id": line.category_id.id,
+                    "commission_rate": line.commission_rate or 0.0,
+                    "active": line.active,
+                    "note": line.note or False,
+                })
+                for line in self.category_commission_line_ids
+                if line.category_id and line.active
+            ]
+        elif self.outlet_operation_mode != "consignment" or self.consignment_commission_mode != "category_rate":
+            vals["approval_category_commission_line_ids"] = [(5, 0, 0)]
+        self.prospect_id.write(vals)
+
     def action_confirm_approval(self):
         self.ensure_one()
         self._validate_commercial_setup()
+        self._sync_prospect_approval_setup()
         return self.prospect_id._approve_and_create_outlet_from_setup(
             commercial_vals=self._get_commercial_vals(),
             commission_line_vals=self._get_commission_line_vals(),
