@@ -1826,7 +1826,7 @@ class RouteOutlet(models.Model):
 
     def action_open_pda_form(self):
         self.ensure_one()
-        view = self.env.ref("route_core.view_route_outlet_financial_profile_form", raise_if_not_found=False)
+        view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
             "name": _("Customer Profile"),
