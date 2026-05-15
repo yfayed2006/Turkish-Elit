@@ -305,7 +305,10 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
             lambda line: not line.product_id and (line.quantity or 0.0) > 0
         )
         if invalid_quantity_lines:
-            raise UserError(_("Remove empty lines or choose a product before entering a quantity."))
+            raise UserError(_(
+                "One or more wizard lines lost the product value before saving. "
+                "Close this setup window, open Load Previous Balance again, then enter the quantities again."
+            ))
 
         selected_lines = self.line_ids.filtered(
             lambda line: line.product_id and (line.quantity or 0.0) > 0
@@ -372,7 +375,7 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
     product_id = fields.Many2one(
         "product.product",
         string="Product",
-        required=False,
+        required=True,
     )
     lot_id = fields.Many2one(
         "stock.lot",
