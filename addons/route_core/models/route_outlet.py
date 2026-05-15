@@ -1860,6 +1860,11 @@ class RouteOutlet(models.Model):
     def action_view_visits(self):
         self.ensure_one()
         action = self.env.ref("route_core.action_route_visit_pda").read()[0]
+        # Return a fully dynamic action so Odoo Web does not reuse the cached
+        # global "My Visits" action/search panel. This keeps the outlet-specific
+        # filters visible when visits are opened from Customer Profile.
+        action.pop("id", None)
+        action.pop("xml_id", None)
         action["name"] = _("Customer Profile Visits")
         action["target"] = "main"
         action["domain"] = [("outlet_id", "=", self.id)]
@@ -1867,6 +1872,14 @@ class RouteOutlet(models.Model):
             default_outlet_id=self.id,
             default_area_id=self.area_id.id,
             default_partner_id=self.partner_id.id if self.partner_id else False,
+            route_outlet_back_id=self.id,
+            search_default_filter_pending_checkin=0,
+            search_default_filter_missing_outlet_location=0,
+            search_default_filter_inside_zone=0,
+            search_default_filter_outside_zone=0,
+            search_default_filter_needs_review=0,
+            search_default_filter_accepted=0,
+            search_default_filter_needs_correction=0,
         )
         outlet_search_view = self.env.ref("route_core.view_route_visit_outlet_pda_search", raise_if_not_found=False)
         if outlet_search_view:
