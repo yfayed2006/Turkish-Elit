@@ -2096,6 +2096,24 @@ class RouteVisit(models.Model):
 
         return 0.0
 
+    def _route_get_outlet_default_source_location(self, outlet=False, vehicle=False):
+        """Return the operational source location configured on the outlet.
+
+        The outlet can explicitly use a van location or any internal warehouse.
+        If no outlet source is configured, keep the older vehicle-stock fallback.
+        """
+        outlet = outlet or self.outlet_id
+        vehicle = vehicle or self.vehicle_id
+        if outlet and "default_source_location_id" in outlet._fields and outlet.default_source_location_id:
+            return outlet.default_source_location_id
+        if vehicle and getattr(vehicle, "stock_location_id", False):
+            return vehicle.stock_location_id
+        return self.env["stock.location"]
+
+    def _route_get_effective_source_location(self):
+        self.ensure_one()
+        return self.source_location_id or self._route_get_outlet_default_source_location()
+
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
@@ -2103,8 +2121,13 @@ class RouteVisit(models.Model):
                 rec.area_id = rec.outlet_id.area_id
                 if rec.outlet_id.partner_id:
                     rec.partner_id = rec.outlet_id.partner_id
-                if hasattr(rec.vehicle_id, "stock_location_id") and rec.vehicle_id.stock_location_id:
-                    rec.source_location_id = rec.vehicle_id.stock_location_id
+                if "assigned_salesperson_id" in rec.outlet_id._fields and rec.outlet_id.assigned_salesperson_id:
+                    rec.user_id = rec.outlet_id.assigned_salesperson_id
+                if "default_vehicle_id" in rec.outlet_id._fields and rec.outlet_id.default_vehicle_id:
+                    rec.vehicle_id = rec.outlet_id.default_vehicle_id
+                source_location = rec._route_get_outlet_default_source_location(rec.outlet_id, rec.vehicle_id)
+                if source_location:
+                    rec.source_location_id = source_location
                 if hasattr(rec.outlet_id, "stock_location_id") and rec.outlet_id.stock_location_id:
                     rec.destination_location_id = rec.outlet_id.stock_location_id
 
@@ -2121,8 +2144,9 @@ class RouteVisit(models.Model):
     @api.onchange("vehicle_id")
     def _onchange_vehicle_id_set_source_location(self):
         for rec in self:
-            if rec.vehicle_id and hasattr(rec.vehicle_id, "stock_location_id"):
-                rec.source_location_id = rec.vehicle_id.stock_location_id
+            source_location = rec._route_get_outlet_default_source_location(rec.outlet_id, rec.vehicle_id)
+            if source_location:
+                rec.source_location_id = source_location
 
     def _sync_plan_line_state(self):
         plan_lines = self.env["route.plan.line"].search([("visit_id", "in", self.ids)])
@@ -2212,17 +2236,31 @@ class RouteVisit(models.Model):
                         vals["partner_id"] = outlet.partner_id.id
                     if not vals.get("company_id") and outlet.company_id:
                         vals["company_id"] = outlet.company_id.id
+                    if not vals.get("user_id") and "assigned_salesperson_id" in outlet._fields and outlet.assigned_salesperson_id:
+                        vals["user_id"] = outlet.assigned_salesperson_id.id
+                    if not vals.get("vehicle_id") and "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id:
+                        vals["vehicle_id"] = outlet.default_vehicle_id.id
+                        vehicle_id = outlet.default_vehicle_id.id
+                    if not vals.get("source_location_id"):
+                        vehicle_for_source = self.env["route.vehicle"].browse(vehicle_id).exists() if vehicle_id else self.env["route.vehicle"]
+                        source_location = self._route_get_outlet_default_source_location(outlet=outlet, vehicle=vehicle_for_source)
+                        if source_location:
+                            vals["source_location_id"] = source_location.id
                     if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                         vals["destination_location_id"] = outlet.stock_location_id.id
 
                     if "commission_rate" in self._fields and not vals.get("commission_rate"):
                         vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
-            if vehicle_id:
+            if vehicle_id and not vals.get("source_location_id"):
                 vehicle = self.env["route.vehicle"].browse(vehicle_id)
                 if vehicle.exists():
-                    if not vals.get("source_location_id") and hasattr(vehicle, "stock_location_id") and vehicle.stock_location_id:
-                        vals["source_location_id"] = vehicle.stock_location_id.id
+                    source_location = self._route_get_outlet_default_source_location(
+                        outlet=self.env["route.outlet"].browse(outlet_id).exists() if outlet_id else False,
+                        vehicle=vehicle,
+                    )
+                    if source_location:
+                        vals["source_location_id"] = source_location.id
 
             vals.setdefault("company_id", self.env.company.id)
             vals.setdefault("visit_process_state", "draft")
@@ -2278,17 +2316,28 @@ class RouteVisit(models.Model):
                     vals["partner_id"] = outlet.partner_id.id
                 if not vals.get("company_id") and outlet.company_id:
                     vals["company_id"] = outlet.company_id.id
+                if not vals.get("user_id") and "assigned_salesperson_id" in outlet._fields and outlet.assigned_salesperson_id:
+                    vals["user_id"] = outlet.assigned_salesperson_id.id
+                if not vals.get("vehicle_id") and "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id:
+                    vals["vehicle_id"] = outlet.default_vehicle_id.id
+                if not vals.get("source_location_id"):
+                    vehicle_for_source = self.env["route.vehicle"].browse(vals.get("vehicle_id")).exists() if vals.get("vehicle_id") else False
+                    source_location = self._route_get_outlet_default_source_location(outlet=outlet, vehicle=vehicle_for_source)
+                    if source_location:
+                        vals["source_location_id"] = source_location.id
                 if not vals.get("destination_location_id") and hasattr(outlet, "stock_location_id") and outlet.stock_location_id:
                     vals["destination_location_id"] = outlet.stock_location_id.id
 
                 if "commission_rate" in self._fields and not vals.get("commission_rate"):
                     vals["commission_rate"] = self._get_outlet_commission_rate_value(outlet)
 
-        if vals.get("vehicle_id"):
+        if vals.get("vehicle_id") and not vals.get("source_location_id"):
             vehicle = self.env["route.vehicle"].browse(vals["vehicle_id"])
             if vehicle.exists():
-                if not vals.get("source_location_id") and hasattr(vehicle, "stock_location_id") and vehicle.stock_location_id:
-                    vals["source_location_id"] = vehicle.stock_location_id.id
+                outlet_for_source = self.env["route.outlet"].browse(vals.get("outlet_id")).exists() if vals.get("outlet_id") else False
+                source_location = self._route_get_outlet_default_source_location(outlet=outlet_for_source, vehicle=vehicle)
+                if source_location:
+                    vals["source_location_id"] = source_location.id
 
         result = super().write(vals)
         self._sync_plan_line_state()
@@ -2391,7 +2440,7 @@ class RouteVisit(models.Model):
         self.ensure_one()
         outlet = outlet or self.outlet_id
         vehicle = self.vehicle_id
-        source_location = vehicle.stock_location_id if vehicle and getattr(vehicle, "stock_location_id", False) else False
+        source_location = self._route_get_outlet_default_source_location(outlet=outlet, vehicle=vehicle)
         if create:
             action = {
                 "type": "ir.actions.act_window",
@@ -2507,7 +2556,7 @@ class RouteVisit(models.Model):
                 "direct_stop_skip_return": False,
                 "direct_stop_credit_policy": False,
                 "direct_stop_credit_note": False,
-                "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and getattr(rec.vehicle_id, "stock_location_id", False) else False,
+                "source_location_id": rec._route_get_effective_source_location().id if rec._route_get_effective_source_location() else False,
                 "destination_location_id": False if rec._is_direct_sales_stop() else (rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False),
             })
 
