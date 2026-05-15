@@ -267,10 +267,21 @@ class RouteDirectReturn(models.Model):
             vals.setdefault("company_id", self.env.company.id)
             if default_visit_id and not vals.get("visit_id") and "visit_id" in self._fields:
                 vals["visit_id"] = default_visit_id
+            if vals.get("outlet_id") and not vals.get("vehicle_id"):
+                outlet = self.env["route.outlet"].browse(vals["outlet_id"]).exists()
+                vehicle = self._default_vehicle(outlet=outlet)
+                if vehicle:
+                    vals["vehicle_id"] = vehicle.id
         return super().create(vals_list)
 
     @api.model
-    def _default_vehicle(self):
+    def _default_vehicle(self, outlet=False):
+        outlet = outlet or self.env["route.outlet"].browse(
+            self.env.context.get("default_outlet_id") or self.env.context.get("route_outlet_id") or False
+        ).exists()
+        if outlet and "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id:
+            return outlet.default_vehicle_id
+
         today = fields.Date.context_today(self)
 
         current_visit = self.env["route.visit"].search([
@@ -308,7 +319,8 @@ class RouteDirectReturn(models.Model):
         if not self.env.company.route_enable_direct_return:
             raise UserError(_("Direct Return is disabled in Route Settings."))
         if "vehicle_id" in self._fields and not vals.get("vehicle_id"):
-            vehicle = self._default_vehicle()
+            outlet = self.env["route.outlet"].browse(vals.get("outlet_id") or self.env.context.get("default_outlet_id") or False).exists()
+            vehicle = self._default_vehicle(outlet=outlet)
             if vehicle:
                 vals["vehicle_id"] = vehicle.id
         visit_id = self.env.context.get("default_visit_id") or self.env.context.get("route_visit_id")
@@ -321,6 +333,11 @@ class RouteDirectReturn(models.Model):
             ], order="id desc", limit=1)
             if outlet:
                 vals["outlet_id"] = outlet.id
+        outlet = self.env["route.outlet"].browse(vals.get("outlet_id") or False).exists()
+        if outlet and not vals.get("vehicle_id"):
+            vehicle = self._default_vehicle(outlet=outlet)
+            if vehicle:
+                vals["vehicle_id"] = vehicle.id
         return vals
 
     @api.onchange("outlet_id")
@@ -329,7 +346,7 @@ class RouteDirectReturn(models.Model):
             if not rec.outlet_id:
                 continue
             if not rec.vehicle_id:
-                rec.vehicle_id = self._default_vehicle()
+                rec.vehicle_id = self._default_vehicle(outlet=rec.outlet_id)
             if rec.sale_order_id and rec.sale_order_id.route_outlet_id != rec.outlet_id:
                 rec.sale_order_id = False
                 rec.reference_picking_id = False
@@ -371,7 +388,7 @@ class RouteDirectReturn(models.Model):
 
     def _get_vehicle_return_location(self):
         self.ensure_one()
-        vehicle = self.vehicle_id or self._default_vehicle()
+        vehicle = self.vehicle_id or self._default_vehicle(outlet=self.outlet_id)
         if vehicle and getattr(vehicle, "stock_location_id", False):
             return vehicle.stock_location_id
         raise UserError(_("Vehicle stock location is required for saleable or slow-moving direct returns."))
@@ -379,18 +396,25 @@ class RouteDirectReturn(models.Model):
     def _get_default_destination_for_reason(self, reason):
         self.ensure_one()
         company = self.company_id or self.env.company
+        outlet = self.outlet_id
         if reason in ("saleable", "slow_moving"):
+            if outlet and "saleable_return_location_id" in outlet._fields and outlet.saleable_return_location_id:
+                return outlet.saleable_return_location_id
             return self._get_vehicle_return_location()
         if reason in ("damaged", "expired"):
+            if outlet and "damaged_return_location_id" in outlet._fields and outlet.damaged_return_location_id:
+                return outlet.damaged_return_location_id
             if company.return_damaged_location_id:
                 return company.return_damaged_location_id
-            raise UserError(_("Please configure Return Damaged Location in Return Settings."))
+            raise UserError(_("Please configure Damaged Return Location on the outlet or Return Damaged Location in Return Settings."))
         if reason == "near_expiry":
+            if outlet and "expiry_return_location_id" in outlet._fields and outlet.expiry_return_location_id:
+                return outlet.expiry_return_location_id
             if company.return_near_expiry_location_id:
                 return company.return_near_expiry_location_id
             if company.return_damaged_location_id:
                 return company.return_damaged_location_id
-            raise UserError(_("Please configure Return Near Expiry Location in Return Settings."))
+            raise UserError(_("Please configure Expired / Near Expiry Return Location on the outlet or Return Near Expiry Location in Return Settings."))
         return False
 
     def _get_incoming_picking_type(self):
