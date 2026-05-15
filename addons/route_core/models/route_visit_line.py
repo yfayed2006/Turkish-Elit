@@ -37,6 +37,13 @@ class RouteVisitLine(models.Model):
         index=True,
     )
 
+    route_product_image_128 = fields.Image(
+        string="Product Image",
+        related="product_id.image_128",
+        readonly=True,
+        store=False,
+    )
+
 
     lot_id = fields.Many2one(
         "stock.lot",
