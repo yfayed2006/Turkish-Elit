@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class StockPicking(models.Model):
@@ -11,6 +11,53 @@ class StockPicking(models.Model):
         copy=False,
         ondelete="set null",
     )
+    route_pda_currency_id = fields.Many2one(
+        "res.currency",
+        string="Currency",
+        related="company_id.currency_id",
+        store=False,
+        readonly=True,
+    )
+    route_pda_return_line_count = fields.Integer(
+        string="Lines",
+        compute="_compute_route_pda_return_summary",
+        store=False,
+    )
+    route_pda_return_qty = fields.Float(
+        string="Returned Qty",
+        compute="_compute_route_pda_return_summary",
+        store=False,
+    )
+    route_pda_return_value = fields.Monetary(
+        string="Estimated Value",
+        currency_field="route_pda_currency_id",
+        compute="_compute_route_pda_return_summary",
+        store=False,
+    )
+
+    @api.depends(
+        "move_ids_without_package.product_uom_qty",
+        "move_ids_without_package.quantity",
+        "move_ids_without_package.route_direct_return_estimated_amount",
+        "move_ids_without_package.product_id.lst_price",
+    )
+    def _compute_route_pda_return_summary(self):
+        for picking in self:
+            moves = picking.move_ids_without_package
+            line_count = 0
+            total_qty = 0.0
+            total_value = 0.0
+            for move in moves:
+                line_count += 1
+                qty = (getattr(move, "quantity", 0.0) or 0.0) or (move.product_uom_qty or 0.0)
+                total_qty += qty
+                amount = getattr(move, "route_direct_return_estimated_amount", 0.0) or 0.0
+                if not amount and move.product_id:
+                    amount = qty * (move.product_id.lst_price or 0.0)
+                total_value += amount
+            picking.route_pda_return_line_count = line_count
+            picking.route_pda_return_qty = total_qty
+            picking.route_pda_return_value = total_value
 
     def _get_related_consignment_outlets_for_balance_sync(self):
         self.ensure_one()
