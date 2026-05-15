@@ -9,7 +9,12 @@ class RouteVisit(models.Model):
 
     def _get_default_source_location(self):
         self.ensure_one()
-        return self.source_location_id or self.vehicle_id.stock_location_id
+        if self.source_location_id:
+            return self.source_location_id
+        outlet = self.outlet_id
+        if outlet and "default_source_location_id" in outlet._fields and outlet.default_source_location_id:
+            return outlet.default_source_location_id
+        return self.vehicle_id.stock_location_id
 
     def _sync_source_location_from_vehicle(self):
         for rec in self:
