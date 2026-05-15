@@ -347,24 +347,43 @@ class RouteVisit(models.Model):
     def action_view_return_transfers(self):
         self.ensure_one()
 
-        return_pickings = self.return_picking_ids.filtered(
-            lambda p: p.location_id == self.outlet_stock_location_id
-        )
+        if hasattr(self, "_get_route_receipt_return_pickings"):
+            return_pickings = self._get_route_receipt_return_pickings()
+        elif hasattr(self, "_get_return_transfer_domain"):
+            return_pickings = self.env["stock.picking"].search(self._get_return_transfer_domain(), order="id desc")
+        else:
+            return_pickings = self.return_picking_ids.filtered(
+                lambda p: p.location_id == self.outlet_stock_location_id
+            )
 
         if not return_pickings:
             raise UserError(_("There are no return transfers linked to this visit."))
 
+        if hasattr(self, "_get_pickings_action"):
+            return self._get_pickings_action(return_pickings, _("Return Transfers"))
+
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["name"] = _("Return Transfers")
         action["domain"] = [("id", "in", return_pickings.ids)]
+        action["target"] = "current"
         action["context"] = {
             "default_route_visit_id": self.id,
+            "route_visit_back_id": self.id,
+            "route_pda_salesperson_mode": 1,
             "default_picking_type_id": self._get_internal_picking_type().id,
             "default_location_id": self._get_outlet_stock_location().id,
+            "create": 0,
+            "edit": 0,
+            "delete": 0,
         }
 
         if len(return_pickings) == 1:
             action["res_id"] = return_pickings.id
-            action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+            form_view = self.env.ref("route_core.view_stock_picking_outlet_pda_form", raise_if_not_found=False)
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+            else:
+                action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
 
         return action
 
