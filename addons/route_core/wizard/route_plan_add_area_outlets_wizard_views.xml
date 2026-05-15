@@ -10,9 +10,10 @@
 <field name="area_id"/>
 </group>
 <group string="Outlets">
-<field name="outlet_ids" widget="many2many_tags" domain="[('area_id', '=', area_id)]" options="{'no_create': True, 'no_create_edit': True, 'no_open': False}" placeholder="Select outlets from the chosen area"/>
+<field name="available_outlet_ids" invisible="1"/>
+<field name="outlet_ids" widget="many2many_tags" domain="[('id', 'in', available_outlet_ids)]" options="{'no_create': True, 'no_create_edit': True, 'no_open': False}" placeholder="Select outlets assigned to this plan scope"/>
 </group>
-<div class="text-muted"> Select one area first, then choose one or more outlets from that area. </div>
+<div class="text-muted"> Select an area first. The list shows only outlets matching this plan's salesperson and vehicle, excluding outlets already added to the plan. </div>
 </sheet>
 <footer>
 <button name="action_select_all_outlets" type="object" string="Select All" class="btn-secondary"/>
