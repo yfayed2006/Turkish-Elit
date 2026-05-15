@@ -71,6 +71,22 @@ class RoutePlanLine(models.Model):
         store=True,
         readonly=True,
     )
+    available_outlet_ids = fields.Many2many(
+        "route.outlet",
+        string="Available Outlets",
+        compute="_compute_available_outlet_ids",
+        help="Outlet choices allowed by the daily plan scope and current area.",
+    )
+    outlet_default_vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Outlet Default Vehicle",
+        compute="_compute_outlet_planning_defaults",
+    )
+    outlet_default_source_location_id = fields.Many2one(
+        "stock.location",
+        string="Outlet Source Location",
+        compute="_compute_outlet_planning_defaults",
+    )
     weekly_schedule_id = fields.Many2one(
         "route.weekly.schedule",
         string="Weekly Schedule",
@@ -131,6 +147,90 @@ class RoutePlanLine(models.Model):
     def _plan_sync_context_key(self):
         return "route_plan_line_skip_plan_sync"
 
+    def _get_effective_area_for_domain(self):
+        self.ensure_one()
+        return self.area_id or (self.outlet_id.area_id if self.outlet_id else False) or (self.plan_id.area_id if self.plan_id else False)
+
+    @api.depends(
+        "plan_id",
+        "plan_id.user_id",
+        "plan_id.vehicle_id",
+        "plan_id.area_id",
+        "plan_id.line_ids.outlet_id",
+        "area_id",
+    )
+    def _compute_available_outlet_ids(self):
+        Outlet = self.env["route.outlet"]
+        for rec in self:
+            if rec.plan_id:
+                domain = rec.plan_id._get_outlet_planning_domain(
+                    area=rec._get_effective_area_for_domain(),
+                    exclude_line=rec,
+                )
+                rec.available_outlet_ids = Outlet.search(domain)
+            else:
+                rec.available_outlet_ids = Outlet.search([("active", "=", True)])
+
+    @api.depends("outlet_id", "plan_id.vehicle_id")
+    def _compute_outlet_planning_defaults(self):
+        for rec in self:
+            outlet = rec.outlet_id
+            vehicle = rec.plan_id.vehicle_id if rec.plan_id else False
+            source_location = False
+
+            if outlet and "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id:
+                vehicle = outlet.default_vehicle_id
+            if outlet and "default_source_location_id" in outlet._fields and outlet.default_source_location_id:
+                source_location = outlet.default_source_location_id
+            if not source_location and vehicle and getattr(vehicle, "stock_location_id", False):
+                source_location = vehicle.stock_location_id
+
+            rec.outlet_default_vehicle_id = vehicle
+            rec.outlet_default_source_location_id = source_location
+
+    def _check_outlet_matches_plan_scope(self, outlet=False, plan=False):
+        self.ensure_one()
+        outlet = outlet or self.outlet_id
+        plan = plan or self.plan_id
+        if not outlet or not plan:
+            return
+
+        if (
+            plan.user_id
+            and "assigned_salesperson_id" in outlet._fields
+            and outlet.assigned_salesperson_id
+            and outlet.assigned_salesperson_id != plan.user_id
+        ):
+            raise ValidationError(
+                _(
+                    "Outlet '%(outlet)s' is assigned to salesperson '%(outlet_user)s', "
+                    "but this route plan is for '%(plan_user)s'."
+                )
+                % {
+                    "outlet": outlet.display_name,
+                    "outlet_user": outlet.assigned_salesperson_id.display_name,
+                    "plan_user": plan.user_id.display_name,
+                }
+            )
+
+        if (
+            plan.vehicle_id
+            and "default_vehicle_id" in outlet._fields
+            and outlet.default_vehicle_id
+            and outlet.default_vehicle_id != plan.vehicle_id
+        ):
+            raise ValidationError(
+                _(
+                    "Outlet '%(outlet)s' normally uses vehicle '%(outlet_vehicle)s', "
+                    "but this route plan is for '%(plan_vehicle)s'."
+                )
+                % {
+                    "outlet": outlet.display_name,
+                    "outlet_vehicle": outlet.default_vehicle_id.display_name,
+                    "plan_vehicle": plan.vehicle_id.display_name,
+                }
+            )
+
     def _ensure_line_editable(self, action_label=None):
         for rec in self:
             if rec.plan_id and rec.plan_id.planning_finalized:
@@ -185,19 +285,29 @@ class RoutePlanLine(models.Model):
     @api.onchange("area_id")
     def _onchange_area_id(self):
         for rec in self:
-            if rec.outlet_id and rec.outlet_id.area_id != rec.area_id:
+            if rec.outlet_id and rec.area_id and rec.outlet_id.area_id != rec.area_id:
                 rec.outlet_id = False
-        return {
-            "domain": {
-                "outlet_id": [("area_id", "=", self.area_id.id)] if self.area_id else []
-            }
-        }
+        domain = []
+        if self.plan_id:
+            domain = self.plan_id._get_outlet_planning_domain(area=self.area_id, exclude_line=self)
+        elif self.area_id:
+            domain = [("area_id", "=", self.area_id.id)]
+        return {"domain": {"outlet_id": domain}}
 
     @api.onchange("outlet_id")
     def _onchange_outlet_id(self):
         for rec in self:
-            if rec.outlet_id and not rec.area_id:
+            if rec.outlet_id:
                 rec.area_id = rec.outlet_id.area_id
+                if rec.plan_id:
+                    rec._check_outlet_matches_plan_scope(rec.outlet_id, rec.plan_id)
+        domain = []
+        if self.plan_id:
+            domain = self.plan_id._get_outlet_planning_domain(
+                area=self._get_effective_area_for_domain() if self else False,
+                exclude_line=self,
+            )
+        return {"domain": {"outlet_id": domain}} if domain else {}
 
     @api.constrains("plan_id", "outlet_id")
     def _check_unique_outlet_per_plan(self):
@@ -220,6 +330,12 @@ class RoutePlanLine(models.Model):
                 raise ValidationError(
                     _("The selected outlet does not belong to the selected area.")
                 )
+
+    @api.constrains("plan_id", "outlet_id")
+    def _check_outlet_matches_plan(self):
+        for rec in self:
+            if rec.plan_id and rec.outlet_id:
+                rec._check_outlet_matches_plan_scope(rec.outlet_id, rec.plan_id)
 
     def _sync_parent_plan_state(self):
         plans = self.mapped("plan_id")
@@ -253,8 +369,8 @@ class RoutePlanLine(models.Model):
             "delete": 0,
             "pda_mode": True,
             "default_plan_id": self.plan_id.id,
-            "default_user_id": self.plan_id.user_id.id if self.plan_id.user_id else False,
-            "default_vehicle_id": self.plan_id.vehicle_id.id if self.plan_id.vehicle_id else False,
+            "default_user_id": (self.outlet_id.assigned_salesperson_id.id if self.outlet_id and "assigned_salesperson_id" in self.outlet_id._fields and self.outlet_id.assigned_salesperson_id else (self.plan_id.user_id.id if self.plan_id.user_id else False)),
+            "default_vehicle_id": (self.outlet_id.default_vehicle_id.id if self.outlet_id and "default_vehicle_id" in self.outlet_id._fields and self.outlet_id.default_vehicle_id else (self.plan_id.vehicle_id.id if self.plan_id.vehicle_id else False)),
         }
         return action
 
@@ -514,7 +630,10 @@ class RoutePlanLine(models.Model):
                             "Please reopen the daily plan first."
                         )
                     )
-                if not vals.get("area_id") and plan.exists() and plan.area_id:
+                outlet = self.env["route.outlet"].browse(vals.get("outlet_id")).exists() if vals.get("outlet_id") else self.env["route.outlet"]
+                if not vals.get("area_id") and outlet and outlet.area_id:
+                    vals["area_id"] = outlet.area_id.id
+                elif not vals.get("area_id") and plan.exists() and plan.area_id:
                     vals["area_id"] = plan.area_id.id
 
         records = super().create(vals_list)
