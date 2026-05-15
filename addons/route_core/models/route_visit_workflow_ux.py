@@ -489,7 +489,12 @@ class RouteVisit(models.Model):
             has_lines = bool(rec.line_ids)
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
             has_return_qty = any((line.return_qty or 0.0) > 0 for line in rec.line_ids)
-            has_return_transfers = bool(rec.return_picking_ids or rec.return_picking_count)
+            if has_return_qty and rec.id and hasattr(rec, "_get_route_receipt_return_pickings"):
+                has_return_transfers = bool(rec._get_route_receipt_return_pickings())
+            elif has_return_qty and rec.id and hasattr(rec, "_get_return_transfer_domain"):
+                has_return_transfers = bool(self.env["stock.picking"].search_count(rec._get_return_transfer_domain()))
+            else:
+                has_return_transfers = False
 
             load_balance_required = (
                 rec.state == "in_progress"
@@ -2019,6 +2024,10 @@ class RouteVisit(models.Model):
         self.ensure_one()
         summary = self._get_consignment_receipt_summary()
         currency_code = self.currency_id.name if self.currency_id else ""
+        gross_sale = summary.get("visit_sale_amount", 0.0) or 0.0
+        returned_value = summary.get("returned_value", 0.0) or 0.0
+        gross_after_returns = summary.get("gross_after_returns_amount", max(gross_sale - returned_value, 0.0)) or 0.0
+        commission_amount = summary.get("commission_amount", 0.0) or 0.0
         lines = [
             _("Settlement receipt"),
             _("Consignment visit"),
@@ -2027,8 +2036,13 @@ class RouteVisit(models.Model):
             _("Sale Order: %s") % (summary.get("sale_order_ref") or "-"),
             _("Refill Transfer: %s") % (summary.get("refill_ref") or "-"),
             _("Return Transfers: %s") % (summary.get("return_refs") or "-"),
+            "",
+            _("Gross Sale: %.2f %s") % (gross_sale, currency_code),
+            _("Returns: %.2f %s") % (returned_value, currency_code),
+            _("Gross After Returns: %.2f %s") % (gross_after_returns, currency_code),
+            _("Category Commission: %.2f %s") % (commission_amount, currency_code),
+            _("Net Payable: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
             _("Total Outlet Due: %.2f %s") % (summary.get("total_outlet_due", summary.get("current_due", 0.0)), currency_code),
-            _("Current Visit Net: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
             _("Collected Now: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
             _("Current Visit Remaining: %.2f %s") % (summary.get("current_visit_remaining", summary.get("remaining_amount", 0.0)), currency_code),
             _("Total Outlet Balance After Collection: %.2f %s") % (summary.get("total_outstanding_after_collection", 0.0), currency_code),
