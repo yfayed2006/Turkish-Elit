@@ -1063,6 +1063,7 @@ class RouteVisit(models.Model):
             return action
 
         outlet_pricelist = self.env["sale.order"]._route_get_outlet_pricelist(self.outlet_id) if self.outlet_id and hasattr(self.env["sale.order"], "_route_get_outlet_pricelist") else False
+        source_location = self._route_get_effective_source_location() if hasattr(self, "_route_get_effective_source_location") else (self.vehicle_id.stock_location_id if self.vehicle_id and self.vehicle_id.stock_location_id else False)
         action = {
             "type": "ir.actions.act_window",
             "name": _("Create Direct Sale"),
@@ -1072,7 +1073,7 @@ class RouteVisit(models.Model):
             "context": {
                 "default_route_order_mode": "direct_sale",
                 "default_user_id": self.user_id.id or self.env.user.id,
-                "default_route_source_location_id": self.vehicle_id.stock_location_id.id if self.vehicle_id and self.vehicle_id.stock_location_id else False,
+                "default_route_source_location_id": source_location.id if source_location else False,
                 "default_route_payment_mode": "cash",
                 "default_route_outlet_id": self.outlet_id.id if self.outlet_id else False,
                 "default_pricelist_id": outlet_pricelist.id if outlet_pricelist else False,
