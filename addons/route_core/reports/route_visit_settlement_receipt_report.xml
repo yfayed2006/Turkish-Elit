@@ -711,7 +711,7 @@ Date:
 </td>
 </tr>
 <tr>
-<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Return No.</td>
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-bottom:1px solid #e5e7eb;">Return Transfer(s)</td>
 <td style="padding:6px 10px; border-bottom:1px solid #e5e7eb;">
 <span t-esc="summary.get('return_refs') or '-'"/>
 </td>
