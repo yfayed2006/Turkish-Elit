@@ -1993,7 +1993,7 @@ class RouteOutlet(models.Model):
         action["context"] = self._get_pda_clean_action_context(route_outlet_back_id=self.id)
         kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_stock_picking_outlet_pda_list", raise_if_not_found=False)
-        form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_stock_picking_outlet_pda_form", raise_if_not_found=False)
         search_view = self.env.ref("route_core.view_stock_picking_outlet_return_pda_search", raise_if_not_found=False)
         views = []
         if kanban_view:
@@ -2022,7 +2022,7 @@ class RouteOutlet(models.Model):
         action["context"] = self._get_pda_clean_action_context(route_outlet_back_id=self.id)
         kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
         list_view = self.env.ref("route_core.view_stock_picking_outlet_pda_list", raise_if_not_found=False)
-        form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_stock_picking_outlet_pda_form", raise_if_not_found=False)
         search_view = self.env.ref("route_core.view_stock_picking_outlet_transfer_pda_search", raise_if_not_found=False)
         views = []
         if kanban_view:
