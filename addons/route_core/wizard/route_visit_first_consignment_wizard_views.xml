@@ -32,6 +32,8 @@
 <field name="product_image_128" string="Image" widget="image" readonly="1" optional="show"/>
 <field name="product_id" readonly="1"/>
 <field name="product_barcode" string="Barcode" readonly="1" optional="show"/>
+<field name="lot_id" string="Lot/Serial" readonly="1" optional="show"/>
+<field name="expiry_date" string="Expiry Date" readonly="1" optional="show"/>
 <field name="available_qty" readonly="1"/>
 <field name="quantity"/>
 <field name="uom_id" readonly="1" optional="show"/>
