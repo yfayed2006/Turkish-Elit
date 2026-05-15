@@ -34,8 +34,9 @@ class RouteVisit(models.Model):
 
     def _get_route_stock_locations(self):
         self.ensure_one()
+        source_location = self._route_get_effective_source_location() if hasattr(self, "_route_get_effective_source_location") else self._get_vehicle_stock_location()
         return {
-            "source_location": self._get_vehicle_stock_location(),
+            "source_location": source_location,
             "destination_location": self._get_outlet_stock_location(),
         }
 
@@ -47,12 +48,13 @@ class RouteVisit(models.Model):
             if not rec.vehicle_id:
                 raise UserError(_("Please select a vehicle before continuing."))
 
-            if not rec.vehicle_id.stock_location_id:
+            source_location = rec._route_get_effective_source_location() if hasattr(rec, "_route_get_effective_source_location") else rec.vehicle_id.stock_location_id
+            if not source_location:
                 raise UserError(
                     _(
-                        "Vehicle '%s' does not have a Vehicle Stock Location."
+                        "No source location is available for visit '%s'. Please set Default Source Location on the outlet or Vehicle Stock Location on the vehicle."
                     )
-                    % (rec.vehicle_id.display_name,)
+                    % (rec.display_name,)
                 )
 
             if getattr(rec, "_is_direct_sales_stop", False) and rec._is_direct_sales_stop():
@@ -66,7 +68,15 @@ class RouteVisit(models.Model):
                     % (rec.outlet_id.display_name,)
                 )
 
-            if rec.vehicle_id.stock_location_id == rec.outlet_id.stock_location_id:
+            if source_location and rec.outlet_id.stock_location_id and source_location == rec.outlet_id.stock_location_id:
+                raise UserError(
+                    _(
+                        "Source Location and Outlet Stock Location cannot be the same on visit '%s'."
+                    )
+                    % (rec.display_name,)
+                )
+
+            if rec.vehicle_id.stock_location_id and rec.vehicle_id.stock_location_id == rec.outlet_id.stock_location_id:
                 raise UserError(
                     _(
                         "Vehicle Stock Location and Outlet Stock Location cannot be the same on visit '%s'."
@@ -79,8 +89,9 @@ class RouteVisit(models.Model):
         result = super().action_start_visit()
         for rec in self:
             if getattr(rec, "_is_direct_sales_stop", False) and rec._is_direct_sales_stop():
+                source_location = rec._route_get_effective_source_location() if hasattr(rec, "_route_get_effective_source_location") else rec.vehicle_id.stock_location_id
                 rec.with_context(route_visit_force_write=True).write({
-                    "source_location_id": rec.vehicle_id.stock_location_id.id if rec.vehicle_id and rec.vehicle_id.stock_location_id else False,
+                    "source_location_id": source_location.id if source_location else False,
                     "destination_location_id": False,
                 })
         return result
