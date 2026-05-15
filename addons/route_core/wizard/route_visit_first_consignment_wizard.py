@@ -83,25 +83,6 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
             ]
         return res
 
-    def _get_quant_available_qty(self, quant):
-        """Return usable qty for a vehicle quant without assuming a fixed Odoo version."""
-        if "available_quantity" in quant._fields:
-            return quant.available_quantity or 0.0
-        reserved_qty = quant.reserved_quantity if "reserved_quantity" in quant._fields else 0.0
-        return (quant.quantity or 0.0) - (reserved_qty or 0.0)
-
-    def _get_lot_expiry_date(self, lot):
-        if not lot:
-            return False
-        expiry_value = False
-        for field_name in ("expiration_date", "use_date", "removal_date", "alert_date"):
-            if field_name in lot._fields and lot[field_name]:
-                expiry_value = lot[field_name]
-                break
-        if expiry_value and hasattr(expiry_value, "date"):
-            return expiry_value.date()
-        return expiry_value or False
-
     def _prepare_default_vehicle_product_lines(self, visit):
         source_location = visit.source_location_id or visit.vehicle_id.stock_location_id
         if not source_location:
@@ -112,38 +93,25 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
             ("quantity", ">", 0),
         ])
 
-        qty_by_product_lot = defaultdict(float)
-        lot_by_key = {}
+        qty_by_product = defaultdict(float)
         for quant in quants:
-            available_qty = self._get_quant_available_qty(quant)
-            if not quant.product_id or available_qty <= 0:
-                continue
-            lot = quant.lot_id if "lot_id" in quant._fields else False
-            key = (quant.product_id.id, lot.id if lot else False)
-            qty_by_product_lot[key] += available_qty
-            if lot:
-                lot_by_key[key] = lot
+            if quant.product_id and quant.quantity > 0:
+                qty_by_product[quant.product_id.id] += quant.quantity
 
         rows = []
         Product = self.env["product.product"]
-        for (product_id, lot_id), available_qty in qty_by_product_lot.items():
+        for product_id, available_qty in qty_by_product.items():
             product = Product.browse(product_id)
-            if not product.exists() or available_qty <= 0:
+            if not product.exists():
                 continue
-            lot = lot_by_key.get((product_id, lot_id))
             rows.append({
                 "product_id": product.id,
-                "lot_id": lot.id if lot else False,
-                "expiry_date": self._get_lot_expiry_date(lot),
                 "available_qty": available_qty,
                 "quantity": 0.0,
                 "unit_price": self._get_default_unit_price(visit, product),
             })
 
-        rows.sort(key=lambda vals: (
-            Product.browse(vals["product_id"]).display_name or "",
-            self.env["stock.lot"].browse(vals.get("lot_id")).name if vals.get("lot_id") else "",
-        ))
+        rows.sort(key=lambda vals: Product.browse(vals["product_id"]).display_name or "")
         return rows
 
     def _get_default_unit_price(self, visit, product):
@@ -225,35 +193,6 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
         if hasattr(visit, "message_post"):
             visit.message_post(body=body)
 
-    def _prepare_visit_line_values(self, visit, line, available_qty):
-        visit_line_model = self.env["route.visit.line"]
-        vals = {
-            "visit_id": visit.id,
-            "company_id": visit.company_id.id if "company_id" in visit._fields else self.env.company.id,
-            "product_id": line.product_id.id,
-            "previous_qty": 0.0,
-            "counted_qty": 0.0,
-            "supplied_qty": line.quantity,
-            "pending_refill_qty": 0.0,
-            "vehicle_available_qty": available_qty,
-            "unit_price": line.unit_price or line.product_id.lst_price or 0.0,
-        }
-        if "lot_id" in visit_line_model._fields and line.lot_id:
-            vals["lot_id"] = line.lot_id.id
-        if "expiry_date" in visit_line_model._fields and line.expiry_date:
-            vals["expiry_date"] = line.expiry_date
-        if "expiration_date" in visit_line_model._fields and line.expiry_date:
-            vals["expiration_date"] = line.expiry_date
-        if "barcode" in visit_line_model._fields and line.product_barcode:
-            vals["barcode"] = line.product_barcode
-        if "product_barcode" in visit_line_model._fields and line.product_barcode:
-            vals["product_barcode"] = line.product_barcode
-        if "uom_id" in visit_line_model._fields and line.uom_id:
-            vals["uom_id"] = line.uom_id.id
-        if "product_uom_id" in visit_line_model._fields and line.uom_id:
-            vals["product_uom_id"] = line.uom_id.id
-        return vals
-
     def action_apply(self):
         self.ensure_one()
         visit = self._validate_visit()
@@ -301,28 +240,15 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                 },
             }
 
-        invalid_quantity_lines = self.line_ids.filtered(
-            lambda line: not line.product_id and (line.quantity or 0.0) > 0
-        )
-        if invalid_quantity_lines:
-            raise UserError(_(
-                "One or more wizard lines lost the product value before saving. "
-                "Close this setup window, open Load Previous Balance again, then enter the quantities again."
-            ))
-
-        selected_lines = self.line_ids.filtered(
-            lambda line: line.product_id and (line.quantity or 0.0) > 0
-        )
+        selected_lines = self.line_ids.filtered(lambda line: (line.quantity or 0.0) > 0)
         if not selected_lines:
             raise UserError(_("Enter at least one product quantity to add from the vehicle."))
 
-        if hasattr(visit, "_sync_source_location_from_vehicle"):
-            visit._sync_source_location_from_vehicle()
-
+        visit._sync_source_location_from_vehicle()
         visit_line_model = self.env["route.visit.line"]
         created_lines = self.env["route.visit.line"]
         for line in selected_lines:
-            available_qty = line.available_qty or visit._get_vehicle_available_qty_for_product(line.product_id)
+            available_qty = visit._get_vehicle_available_qty_for_product(line.product_id)
             if line.quantity - available_qty > 1e-9:
                 raise UserError(_(
                     "The requested quantity for %(product)s is greater than the vehicle available quantity.\nRequested: %(requested).2f\nAvailable: %(available).2f"
@@ -331,11 +257,19 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                     "requested": line.quantity,
                     "available": available_qty,
                 })
-            created_lines |= visit_line_model.create(
-                self._prepare_visit_line_values(visit, line, available_qty)
-            )
+            created_lines |= visit_line_model.create({
+                "visit_id": visit.id,
+                "company_id": visit.company_id.id if "company_id" in visit._fields else self.env.company.id,
+                "product_id": line.product_id.id,
+                "previous_qty": 0.0,
+                "counted_qty": 0.0,
+                "supplied_qty": line.quantity,
+                "pending_refill_qty": 0.0,
+                "vehicle_available_qty": available_qty,
+                "unit_price": line.unit_price or line.product_id.lst_price or 0.0,
+            })
 
-        if created_lines and hasattr(visit, "_update_vehicle_available_on_lines"):
+        if created_lines:
             visit._update_vehicle_available_on_lines(created_lines)
 
         self._write_visit_state(visit, {
@@ -377,15 +311,6 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
         string="Product",
         required=True,
     )
-    lot_id = fields.Many2one(
-        "stock.lot",
-        string="Lot/Serial",
-        readonly=True,
-    )
-    expiry_date = fields.Date(
-        string="Expiry Date",
-        readonly=True,
-    )
     available_qty = fields.Float(string="Vehicle Available", readonly=True)
     quantity = fields.Float(string="Qty to Add", default=0.0)
     product_image_128 = fields.Image(
@@ -395,8 +320,7 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
     )
     product_barcode = fields.Char(
         string="Barcode",
-        compute="_compute_product_barcode",
-        store=False,
+        related="product_id.barcode",
         readonly=True,
     )
     unit_price = fields.Float(string="Unit Price")
@@ -413,11 +337,6 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
         readonly=True,
     )
 
-    @api.depends("product_id", "product_id.barcode", "product_id.default_code")
-    def _compute_product_barcode(self):
-        for rec in self:
-            rec.product_barcode = rec.product_id.barcode or rec.product_id.default_code or ""
-
     @api.depends("quantity", "unit_price")
     def _compute_estimated_value(self):
         for rec in self:
@@ -429,8 +348,6 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
             if not rec.product_id or not rec.wizard_id.visit_id:
                 rec.available_qty = 0.0
                 rec.unit_price = 0.0
-                rec.lot_id = False
-                rec.expiry_date = False
                 continue
             visit = rec.wizard_id.visit_id
             rec.available_qty = visit._get_vehicle_available_qty_for_product(rec.product_id)
