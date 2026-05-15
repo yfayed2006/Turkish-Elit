@@ -168,6 +168,14 @@ class SaleOrder(models.Model):
             if not order.company_id.route_enable_direct_return:
                 raise UserError(_("Direct Return is disabled in Route Settings."))
 
+    def _route_get_outlet_default_source_location(self, outlet=False):
+        outlet = outlet or self.route_outlet_id
+        if outlet and "default_source_location_id" in outlet._fields and outlet.default_source_location_id:
+            return outlet.default_source_location_id
+        if outlet and "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id and getattr(outlet.default_vehicle_id, "stock_location_id", False):
+            return outlet.default_vehicle_id.stock_location_id
+        return self.env["stock.location"]
+
     @api.onchange("route_outlet_id")
     def _onchange_route_outlet_id(self):
         for order in self:
@@ -178,12 +186,21 @@ class SaleOrder(models.Model):
                     order.partner_invoice_id = partner.address_get(["invoice"]).get("invoice") or partner.id
                 if "partner_shipping_id" in order._fields:
                     order.partner_shipping_id = partner.address_get(["delivery"]).get("delivery") or partner.id
+            if order.route_order_mode == "direct_sale" and order.route_outlet_id:
+                source_location = order._route_get_outlet_default_source_location(order.route_outlet_id)
+                if source_location:
+                    order.route_source_location_id = source_location
 
     @api.onchange("route_order_mode")
     def _onchange_route_order_mode(self):
         for order in self:
             if order.route_order_mode != "direct_sale":
                 continue
+            if order.route_outlet_id:
+                source_location = order._route_get_outlet_default_source_location(order.route_outlet_id)
+                if source_location:
+                    order.route_source_location_id = source_location
+                    continue
             if not order.route_source_location_id:
                 vehicle = order.env["route.vehicle"].search([("user_id", "=", order.env.user.id)], order="id desc", limit=1)
                 if vehicle and getattr(vehicle, "stock_location_id", False):
@@ -203,6 +220,16 @@ class SaleOrder(models.Model):
                     visit = self.env["route.visit"].browse(default_route_visit_id).exists()
                     if visit:
                         vals["origin"] = visit.name
+                        if not vals.get("route_source_location_id"):
+                            source_location = visit._route_get_effective_source_location() if hasattr(visit, "_route_get_effective_source_location") else False
+                            if source_location:
+                                vals["route_source_location_id"] = source_location.id
+                if vals.get("route_outlet_id"):
+                    outlet = self.env["route.outlet"].browse(vals["route_outlet_id"]).exists()
+                    configured_source = outlet.default_source_location_id if outlet and "default_source_location_id" in outlet._fields else False
+                    source_location = configured_source or (False if vals.get("route_source_location_id") else self._route_get_outlet_default_source_location(outlet))
+                    if source_location:
+                        vals["route_source_location_id"] = source_location.id
         return super().create(vals_list)
 
     def write(self, vals):
@@ -239,6 +266,9 @@ class SaleOrder(models.Model):
                         vals["partner_invoice_id"] = invoice_partner
                     if "partner_shipping_id" in self._fields:
                         vals["partner_shipping_id"] = delivery_partner
+                source_location = self._route_get_outlet_default_source_location(outlet)
+                if source_location:
+                    vals["route_source_location_id"] = source_location.id
         return vals
 
 
