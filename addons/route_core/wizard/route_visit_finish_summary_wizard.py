@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class RouteVisitFinishSummaryWizard(models.TransientModel):
@@ -279,6 +280,12 @@ class RouteVisitFinishSummaryWizard(models.TransientModel):
     def action_share_receipt(self):
         self.ensure_one()
         return self.visit_id.action_open_whatsapp_share_wizard()
+
+    def action_open_refill_transfer(self):
+        self.ensure_one()
+        if not self.visit_id or not self.visit_id.refill_picking_id:
+            raise UserError(_("There is no refill transfer linked to this visit."))
+        return self.visit_id.action_view_refill_transfer()
 
     def action_close(self):
         self.ensure_one()
