@@ -7443,3 +7443,132 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+/* ROUTECORE_FIX_2026_05_15_OUTLET_ORDER_RETURN_MOBILE_POLISH */
+.route_mobile_page_back {
+    margin: 0 0 12px 0;
+}
+
+.route_mobile_back_button {
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    font-weight: 800 !important;
+}
+
+.route_mobile_section_title {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 18px 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.route_mobile_wrap_value,
+.route_mobile_wrap_value .o_field_widget,
+.route_mobile_wrap_value .o_field_many2one_selection,
+.route_mobile_wrap_value a {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+.route_mobile_stock_picking_title_row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.route_mobile_stock_picking_title_row h2 {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: #0f766e;
+}
+
+.route_mobile_stock_state {
+    flex: 0 0 auto;
+}
+
+.route_mobile_table_field .o_list_table,
+.route_mobile_table_field .o_data_table {
+    width: 100% !important;
+}
+
+.route_mobile_table_field .o_list_view,
+.route_mobile_table_field .o_list_renderer {
+    overflow-x: auto !important;
+}
+
+.route_pda_stock_picking_sheet .o_form_sheet_bg,
+.route_pda_stock_picking_sheet .o_form_sheet {
+    overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+    .route_pda_sale_order_sheet .route_pda_sale_order_notebook .nav-tabs,
+    .route_pda_stock_picking_sheet .route_pda_stock_picking_notebook .nav-tabs {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        background: #f8fafc !important;
+        margin-top: 10px !important;
+    }
+
+    .route_pda_sale_order_sheet .route_pda_sale_order_notebook .nav-tabs .nav-link,
+    .route_pda_stock_picking_sheet .route_pda_stock_picking_notebook .nav-tabs .nav-link {
+        width: 100% !important;
+        min-height: 44px !important;
+        padding: 8px 6px !important;
+        border-radius: 0 !important;
+        border: 0 !important;
+        border-inline-end: 1px solid #e5e7eb !important;
+        background: #f8fafc !important;
+        font-size: 0.94rem !important;
+        font-weight: 850 !important;
+        white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .route_pda_sale_order_sheet .route_pda_sale_order_notebook .nav-tabs .nav-link.active,
+    .route_pda_stock_picking_sheet .route_pda_stock_picking_notebook .nav-tabs .nav-link.active {
+        background: #ffffff !important;
+        color: #7c466d !important;
+        box-shadow: inset 0 3px 0 #7c466d !important;
+    }
+
+    .route_pda_sale_order_sheet .route_mobile_info_card,
+    .route_pda_stock_picking_sheet .route_mobile_info_card {
+        min-height: 88px !important;
+        padding: 10px 12px !important;
+    }
+
+    .route_pda_sale_order_sheet .route_mobile_summary_grid,
+    .route_pda_stock_picking_sheet .route_mobile_summary_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .route_pda_sale_order_sheet .route_mobile_info_card_full,
+    .route_pda_stock_picking_sheet .route_mobile_info_card_full {
+        grid-column: 1 / -1 !important;
+    }
+
+    .route_mobile_table_field .o_list_table,
+    .route_mobile_table_field .o_data_table {
+        min-width: 640px !important;
+    }
+
+    .route_mobile_stock_picking_title_row h2 {
+        font-size: 1.35rem;
+    }
+}
+
