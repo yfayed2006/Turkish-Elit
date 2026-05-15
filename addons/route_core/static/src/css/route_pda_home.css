@@ -7926,3 +7926,189 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+/* ROUTECORE_FIX_2026_05_15_CONSIGNMENT_VISIT_MOBILE_PRODUCT_CARDS */
+.route_pda_count_hint {
+    margin: 0 0 12px 0;
+    border-radius: 14px;
+    border-left: 4px solid #7c466d;
+}
+
+.route_pda_consignment_lines_x2many .o_x2m_control_panel,
+.route_first_consignment_lines_x2many .o_x2m_control_panel {
+    display: none !important;
+}
+
+.route_pda_consignment_lines_x2many .o_field_x2many_list_row_add,
+.route_first_consignment_lines_x2many .o_field_x2many_list_row_add {
+    display: none !important;
+}
+
+.route_pda_consignment_lines_x2many .o_list_renderer,
+.route_first_consignment_lines_x2many .o_list_renderer {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: auto;
+    background: #ffffff;
+}
+
+.route_pda_consignment_lines_x2many .o_list_table th,
+.route_pda_consignment_lines_x2many .o_list_table td,
+.route_first_consignment_lines_x2many .o_list_table th,
+.route_first_consignment_lines_x2many .o_list_table td {
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .route_pda_consignment_lines_x2many,
+    .route_first_consignment_lines_x2many {
+        display: block;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .route_pda_consignment_lines_x2many .o_list_renderer,
+    .route_first_consignment_lines_x2many .o_list_renderer {
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: transparent !important;
+    }
+
+    .route_pda_consignment_lines_x2many .o_list_table,
+    .route_first_consignment_lines_x2many .o_list_table,
+    .route_pda_consignment_lines_x2many .o_list_table tbody,
+    .route_first_consignment_lines_x2many .o_list_table tbody {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .route_pda_consignment_lines_x2many .o_list_table thead,
+    .route_first_consignment_lines_x2many .o_list_table thead {
+        display: none !important;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row,
+    .route_first_consignment_lines_x2many .o_data_row {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100% !important;
+        margin: 10px 0 !important;
+        padding: 12px !important;
+        border: 1px solid #e5e7eb !important;
+        border-left: 4px solid #0ea5b7 !important;
+        border-radius: 18px !important;
+        background: #ffffff !important;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td,
+    .route_first_consignment_lines_x2many .o_data_row td {
+        display: block !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        border: 0 !important;
+        padding: 8px 10px !important;
+        border-radius: 12px !important;
+        background: #f8fafc !important;
+        color: #111827;
+        white-space: normal !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td::before,
+    .route_first_consignment_lines_x2many .o_data_row td::before {
+        content: "";
+        display: block;
+        margin-bottom: 4px;
+        color: #6b7280;
+        font-size: 0.72rem;
+        line-height: 1.1;
+        font-weight: 850;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(1),
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) {
+        grid-column: 1 / -1;
+        background: #ffffff !important;
+        color: #0f766e;
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1.25;
+        border: 1px solid #eef2f7 !important;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(1)::before,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1)::before { content: "Product"; }
+
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(2)::before { content: "Barcode"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(3)::before { content: "Lot/Serial"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(4)::before { content: "Expiry"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(5)::before { content: "Previous"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(6)::before { content: "Counted"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(7)::before { content: "Sold"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(8)::before { content: "Returned"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(9)::before { content: "Vehicle"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(10)::before { content: "Refill Proposal"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(11)::before { content: "Approved Refill"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(12)::before { content: "UoM"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(13)::before { content: "Return Route"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(14)::before { content: "Unit Price"; }
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(15)::before { content: "Sold Amount"; }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(2)::before { content: "Vehicle Balance"; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(3)::before { content: "Qty to Add"; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(4)::before { content: "UoM"; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5)::before { content: "Unit Price"; }
+
+    .route_pda_consignment_lines_x2many .o_data_row td.o_list_record_selector,
+    .route_pda_consignment_lines_x2many .o_data_row td.o_handle_cell,
+    .route_pda_consignment_lines_x2many .o_data_row td.o_optional_columns_dropdown_toggle,
+    .route_pda_consignment_lines_x2many .o_data_row td.o_list_button,
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_record_selector,
+    .route_first_consignment_lines_x2many .o_data_row td.o_handle_cell,
+    .route_first_consignment_lines_x2many .o_data_row td.o_optional_columns_dropdown_toggle {
+        display: none !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_record_remove,
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_button {
+        grid-column: 1 / -1;
+        display: flex !important;
+        align-items: center;
+        justify-content: flex-end;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td .o_field_widget,
+    .route_first_consignment_lines_x2many .o_data_row td .o_field_widget,
+    .route_pda_consignment_lines_x2many .o_data_row td .o_input,
+    .route_first_consignment_lines_x2many .o_data_row td .o_input {
+        max-width: 100% !important;
+        font-weight: 850;
+        color: #111827;
+    }
+
+    .route_pda_consignment_lines_x2many .o_data_row td:nth-child(1) .o_field_widget,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) .o_field_widget {
+        color: #0f766e;
+        font-weight: 900;
+    }
+
+    .route_first_consignment_wizard .modal-body,
+    .route_first_consignment_wizard .o_form_sheet_bg,
+    .route_first_consignment_wizard .o_form_sheet {
+        overflow-x: hidden !important;
+    }
+
+    .route_first_consignment_wizard .o_group {
+        max-width: 100%;
+    }
+}
+
