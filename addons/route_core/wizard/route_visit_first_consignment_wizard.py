@@ -313,13 +313,34 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
     )
     available_qty = fields.Float(string="Vehicle Available", readonly=True)
     quantity = fields.Float(string="Qty to Add", default=0.0)
+    product_image_128 = fields.Image(
+        string="Image",
+        related="product_id.image_128",
+        readonly=True,
+    )
+    product_barcode = fields.Char(
+        string="Barcode",
+        related="product_id.barcode",
+        readonly=True,
+    )
     unit_price = fields.Float(string="Unit Price")
+    estimated_value = fields.Float(
+        string="Estimated Value",
+        compute="_compute_estimated_value",
+        store=False,
+        readonly=True,
+    )
     uom_id = fields.Many2one(
         "uom.uom",
         string="UoM",
         related="product_id.uom_id",
         readonly=True,
     )
+
+    @api.depends("quantity", "unit_price")
+    def _compute_estimated_value(self):
+        for rec in self:
+            rec.estimated_value = (rec.quantity or 0.0) * (rec.unit_price or 0.0)
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
