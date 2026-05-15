@@ -99,13 +99,50 @@ class RouteVisit(models.Model):
 
     def _get_pickings_action(self, pickings, action_name):
         self.ensure_one()
+        pickings = pickings.exists()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = action_name
         action["domain"] = [("id", "in", pickings.ids)]
-        action["context"] = dict(self.env.context, default_route_visit_id=self.id)
+        action["target"] = "current"
+
+        context = dict(self.env.context)
+        context.update({
+            "default_route_visit_id": self.id,
+            "route_visit_back_id": self.id,
+            "route_pda_salesperson_mode": 1,
+            "create": 0,
+            "edit": 0,
+            "delete": 0,
+        })
+        action["context"] = context
+
+        form_view = self.env.ref("route_core.view_stock_picking_outlet_pda_form", raise_if_not_found=False)
+        kanban_view = self.env.ref("route_core.view_stock_picking_outlet_pda_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_stock_picking_outlet_pda_list", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_stock_picking_outlet_transfer_pda_search", raise_if_not_found=False)
+
+        if search_view:
+            action["search_view_id"] = [search_view.id, search_view.name]
+
         if len(pickings) == 1:
             action["res_id"] = pickings.id
-            action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+            action["view_mode"] = "form"
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+            else:
+                action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+            return action
+
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = ",".join(view_type for _view_id, view_type in views)
         return action
 
     def action_view_sale_deliveries(self):
