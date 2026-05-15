@@ -30,14 +30,12 @@
 <field name="line_ids" nolabel="1" class="route_first_consignment_lines_x2many">
 <list editable="bottom" create="0" delete="1">
 <field name="product_image_128" string="Image" widget="image" readonly="1" optional="show"/>
-<field name="product_id" readonly="1" force_save="1"/>
+<field name="product_id" readonly="1"/>
 <field name="product_barcode" string="Barcode" readonly="1" optional="show"/>
-<field name="lot_id" string="Lot/Serial" readonly="1" force_save="1" optional="show"/>
-<field name="expiry_date" string="Expiry Date" readonly="1" force_save="1" optional="show"/>
-<field name="available_qty" readonly="1" force_save="1"/>
+<field name="available_qty" readonly="1"/>
 <field name="quantity"/>
 <field name="uom_id" readonly="1" optional="show"/>
-<field name="unit_price" readonly="1" force_save="1" optional="show"/>
+<field name="unit_price" readonly="1" optional="show"/>
 <field name="estimated_value" readonly="1" optional="show"/>
 </list>
 </field>
