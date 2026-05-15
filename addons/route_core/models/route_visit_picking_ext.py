@@ -67,17 +67,20 @@ class RouteVisit(models.Model):
             "route_visit_id": self.id,
             "company_id": (self.company_id or self.env.company).id,
             "note": _(
-                "Route transfer prepared from vehicle location to outlet location."
+                "Route transfer prepared from the outlet default source location to the outlet stock location."
             ),
         }
 
     def _create_route_internal_picking(self):
         self.ensure_one()
 
+        locations = self._get_route_stock_locations()
+        source_location = locations["source_location"]
+        destination_location = locations["destination_location"]
         existing = self.picking_ids.filtered(
             lambda p: p.state != "cancel"
-            and p.location_id == self.vehicle_stock_location_id
-            and p.location_dest_id == self.outlet_stock_location_id
+            and p.location_id == source_location
+            and p.location_dest_id == destination_location
         )[:1]
         if existing:
             return existing
