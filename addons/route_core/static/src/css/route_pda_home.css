@@ -8112,3 +8112,158 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+
+/* ROUTECORE_FIX_2026_05_15_FIRST_CONSIGNMENT_PRODUCT_CARD_DETAILS */
+.route_first_consignment_lines_x2many .o_list_table img,
+.route_first_consignment_lines_x2many .o_field_image img,
+.route_first_consignment_lines_x2many .o_image img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.route_first_consignment_lines_x2many .o_list_table td[data-name="quantity"] input,
+.route_first_consignment_lines_x2many .o_list_table td[data-name="quantity"] .o_input {
+    font-weight: 900;
+}
+
+@media (max-width: 768px) {
+    .route_first_consignment_lines_x2many .o_data_row {
+        position: relative !important;
+        grid-template-columns: 76px minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 10px !important;
+        padding: 14px 12px 42px 12px !important;
+        align-items: stretch !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td {
+        min-height: 74px;
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) {
+        grid-column: 1 / 2 !important;
+        grid-row: 1 / 2 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 76px !important;
+        padding: 8px !important;
+        background: #ffffff !important;
+        border: 1px solid #eef2f7 !important;
+        border-radius: 16px !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1)::before {
+        display: none !important;
+        content: "" !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) .o_field_widget,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) .o_field_image,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) .o_image {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(1) img {
+        width: 62px !important;
+        height: 62px !important;
+        object-fit: contain !important;
+        border-radius: 14px !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(2) {
+        grid-column: 2 / -1 !important;
+        grid-row: 1 / 2 !important;
+        min-height: 76px !important;
+        padding-right: 38px !important;
+        background: #ffffff !important;
+        color: #0f766e !important;
+        font-size: 1.02rem !important;
+        font-weight: 900 !important;
+        line-height: 1.25 !important;
+        border: 1px solid #eef2f7 !important;
+        border-radius: 16px !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(2)::before { content: "Product" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(3)::before { content: "Barcode" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(4)::before { content: "Vehicle Balance" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5)::before { content: "Qty to Add" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(6)::before { content: "UoM" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(7)::before { content: "Unit Price" !important; }
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(8)::before { content: "Estimated Value" !important; }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(3) {
+        grid-column: 1 / -1 !important;
+        min-height: 58px !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(4),
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5),
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(6),
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(7) {
+        grid-column: span 1 !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(8) {
+        grid-column: 1 / -1 !important;
+        min-height: 58px !important;
+        background: #f1f5f9 !important;
+        border: 1px solid #dbeafe !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5) {
+        background: #fefce8 !important;
+        border: 1px solid #fde68a !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5) input,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(5) .o_input {
+        width: 100% !important;
+        min-height: 34px !important;
+        border-radius: 10px !important;
+        font-size: 1rem !important;
+        font-weight: 900 !important;
+        text-align: right !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(7) .o_field_widget,
+    .route_first_consignment_lines_x2many .o_data_row td:nth-child(8) .o_field_widget {
+        font-weight: 900 !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_record_remove,
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_button {
+        position: absolute !important;
+        top: 10px !important;
+        right: 10px !important;
+        z-index: 2 !important;
+        width: 34px !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        grid-column: auto !important;
+        background: rgba(255, 255, 255, 0.94) !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 999px !important;
+        padding: 0 !important;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.10) !important;
+    }
+
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_record_remove::before,
+    .route_first_consignment_lines_x2many .o_data_row td.o_list_button::before {
+        display: none !important;
+        content: "" !important;
+    }
+}
