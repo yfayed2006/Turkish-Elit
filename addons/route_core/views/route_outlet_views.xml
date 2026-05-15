@@ -874,59 +874,20 @@
 </div>
 </page>
 <page string="Stock" invisible="outlet_operation_mode != 'consignment'">
-<div class="route_pda_group route_pda_product_center_group route_pda_outlet_stock_group">
-<div class="route_pda_group_title">Consignment Stock Snapshot</div>
-<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Stock Items</div>
-<div class="route_pda_info_value">
-<field name="stock_balance_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Total Shelf Qty</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="stock_total_qty" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Stock Value</div>
-<div class="route_pda_info_value route_pda_money_value">
-<field name="stock_total_value" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Refill Needed Items</div>
-<div class="route_pda_info_value">
-<field name="refill_needed_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Zero Stock Items</div>
-<div class="route_pda_info_value">
-<field name="zero_stock_product_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
-<div class="route_pda_info_label">Near Expiry Items</div>
-<div class="route_pda_info_value">
-<field name="near_expiry_product_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
-<div class="route_pda_info_label">Expired Items</div>
-<div class="route_pda_info_value">
-<field name="expired_product_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_info_card route_pda_payment_summary_card">
-<div class="route_pda_info_label">Last Stock Update</div>
-<div class="route_pda_info_value">
-<field name="last_stock_update_at" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-</div>
+<group string="Consignment Stock Snapshot" col="2">
+<group>
+<field name="stock_balance_count" readonly="1"/>
+<field name="stock_total_qty" readonly="1"/>
+<field name="stock_total_value" readonly="1"/>
+<field name="refill_needed_count" readonly="1"/>
+</group>
+<group>
+<field name="zero_stock_product_count" readonly="1"/>
+<field name="near_expiry_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="expired_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
+<field name="last_stock_update_at" readonly="1"/>
+</group>
+</group>
 </page>
 </notebook>
 </sheet>
