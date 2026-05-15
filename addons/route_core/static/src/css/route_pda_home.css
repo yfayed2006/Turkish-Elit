@@ -7779,3 +7779,150 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+/* ROUTECORE_FIX_2026_05_15_OUTLET_ORDER_RETURN_PRODUCT_CARDS_V3 */
+.route_pda_order_snapshot_grid,
+.route_pda_order_amounts_grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.route_pda_order_snapshot_card,
+.route_pda_order_amount_card {
+    min-height: 96px;
+}
+
+.route_pda_order_amount_card_total {
+    background: #f8fafc;
+    border-color: #dbe5e8;
+}
+
+.route_pda_order_amount_card_total .route_pda_info_value .o_input,
+.route_pda_order_amount_card_total .route_pda_info_value {
+    font-size: 1.35rem;
+    font-weight: 900;
+}
+
+.route_pda_sale_order_lines_x2many .o_kanban_renderer,
+.route_pda_sale_order_line_kanban .o_kanban_renderer,
+.route_pda_return_move_cards_x2many .o_kanban_renderer,
+.route_pda_return_move_kanban .o_kanban_renderer {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.route_pda_sale_order_lines_x2many .o_kanban_record,
+.route_pda_sale_order_line_kanban .o_kanban_record,
+.route_pda_return_move_cards_x2many .o_kanban_record,
+.route_pda_return_move_kanban .o_kanban_record {
+    width: auto !important;
+    margin: 0 !important;
+}
+
+.route_pda_product_line_card,
+.route_pda_return_move_card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    padding: 12px;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.route_pda_sale_order_line_head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.route_pda_sale_order_line_thumb {
+    width: 72px;
+    height: 72px;
+    flex: 0 0 72px;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.route_pda_sale_order_line_thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.route_pda_product_line_card .route_pda_sale_order_line_product,
+.route_pda_return_move_card .route_pda_sale_order_line_product {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.route_pda_return_move_cards_x2many {
+    display: block;
+    margin-top: 8px;
+}
+
+.route_pda_return_move_cards_x2many .o_x2m_control_panel,
+.route_pda_sale_order_lines_x2many .o_x2m_control_panel {
+    display: none !important;
+}
+
+.route_pda_stock_picking_detail_sheet .route_pda_return_move_cards_x2many .o_kanban_view,
+.route_pda_sale_order_sheet .route_pda_sale_order_lines_x2many .o_kanban_view {
+    background: transparent !important;
+}
+
+@media (max-width: 768px) {
+    .route_pda_order_snapshot_grid,
+    .route_pda_order_amounts_grid,
+    .route_pda_stock_snapshot_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+
+    .route_pda_order_snapshot_card,
+    .route_pda_order_amount_card {
+        min-height: 86px;
+        padding: 12px 14px;
+    }
+
+    .route_pda_sale_order_lines_x2many .o_kanban_renderer,
+    .route_pda_sale_order_line_kanban .o_kanban_renderer,
+    .route_pda_return_move_cards_x2many .o_kanban_renderer,
+    .route_pda_return_move_kanban .o_kanban_renderer {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    .route_pda_sale_order_line_head {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .route_pda_sale_order_line_thumb {
+        width: 64px;
+        height: 64px;
+        flex-basis: 64px;
+        border-radius: 12px;
+    }
+
+    .route_pda_product_line_card,
+    .route_pda_return_move_card {
+        padding: 10px;
+        border-radius: 14px;
+    }
+}
+
