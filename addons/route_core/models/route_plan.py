@@ -529,15 +529,75 @@ class RoutePlan(models.Model):
         )
         return True
 
+    def _get_outlet_planning_domain(self, area=False, exclude_line=False):
+        """Return outlets that match this daily plan's planning scope.
+
+        The route plan header remains the daily scope (salesperson, vehicle,
+        date, and optional area).  Planned stops are now outlet-driven: once an
+        outlet is selected, area and operational defaults come from the outlet.
+        This domain keeps Add Visits / Add by Area focused on outlets that are
+        assigned to the plan salesperson and vehicle, while still allowing
+        unassigned outlets so supervisors can complete assignment later.
+        """
+        self.ensure_one()
+        domain = [("active", "=", True)]
+
+        area = area or self.area_id
+        if area:
+            domain.append(("area_id", "=", area.id))
+
+        if self.user_id and "assigned_salesperson_id" in self.env["route.outlet"]._fields:
+            domain += [
+                "|",
+                ("assigned_salesperson_id", "=", False),
+                ("assigned_salesperson_id", "=", self.user_id.id),
+            ]
+
+        if self.vehicle_id and "default_vehicle_id" in self.env["route.outlet"]._fields:
+            domain += [
+                "|",
+                ("default_vehicle_id", "=", False),
+                ("default_vehicle_id", "=", self.vehicle_id.id),
+            ]
+
+        existing_outlet_ids = self.line_ids.filtered(
+            lambda line: line.outlet_id and (not exclude_line or line.id != exclude_line.id)
+        ).mapped("outlet_id").ids
+        if existing_outlet_ids:
+            domain.append(("id", "not in", existing_outlet_ids))
+
+        return domain
+
     def _prepare_visit_vals(self, line):
         self.ensure_one()
+        outlet = line.outlet_id
+        salesperson = self.user_id
+        vehicle = self.vehicle_id
+        source_location = False
+        destination_location = False
+
+        if outlet:
+            if "assigned_salesperson_id" in outlet._fields and outlet.assigned_salesperson_id:
+                salesperson = outlet.assigned_salesperson_id
+            if "default_vehicle_id" in outlet._fields and outlet.default_vehicle_id:
+                vehicle = outlet.default_vehicle_id
+            if "default_source_location_id" in outlet._fields and outlet.default_source_location_id:
+                source_location = outlet.default_source_location_id
+            if getattr(outlet, "stock_location_id", False):
+                destination_location = outlet.stock_location_id
+
+        if not source_location and vehicle and getattr(vehicle, "stock_location_id", False):
+            source_location = vehicle.stock_location_id
+
         return {
             "date": self.date,
-            "outlet_id": line.outlet_id.id,
+            "outlet_id": outlet.id,
             "partner_id": line.partner_id.id if line.partner_id else False,
-            "area_id": line.area_id.id if line.area_id else (self.area_id.id if self.area_id else False),
-            "vehicle_id": self.vehicle_id.id,
-            "user_id": self.user_id.id,
+            "area_id": line.area_id.id if line.area_id else (outlet.area_id.id if outlet and outlet.area_id else (self.area_id.id if self.area_id else False)),
+            "vehicle_id": vehicle.id if vehicle else False,
+            "user_id": salesperson.id if salesperson else False,
+            "source_location_id": source_location.id if source_location else False,
+            "destination_location_id": destination_location.id if destination_location else False,
             "notes": line.note or False,
         }
 
