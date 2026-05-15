@@ -582,43 +582,34 @@ class RouteOutletProspect(models.Model):
             "success",
         )
 
+    # ROUTECORE_FIX_2026_05_15_1615_PROSPECT_APPROVAL_POPUP_RESTORE_V13
     def action_approve(self):
+        """Open the supervisor commercial setup popup before creating an outlet.
+
+        The salesperson only submits the shop identity. The supervisor must choose
+        Direct Sale or Consignment, then complete pricelist / shelf credit /
+        commission settings in the approval wizard. This method must therefore
+        never create a direct-sale outlet immediately from the header button.
+        """
         self.ensure_one()
-        self._validate_approval_ready()
-        commercial_vals = {
-            "financial_policy": "auto",
+        if self.state != "submitted":
+            raise UserError(_("Only submitted potential customers can be approved."))
+        view = self.env.ref("route_core.view_route_outlet_prospect_approval_wizard_form", raise_if_not_found=False)
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Approve Potential Customer"),
+            "res_model": "route.outlet.prospect.approval.wizard",
+            "view_mode": "form",
+            "views": [(view.id, "form")] if view else [(False, "form")],
+            "target": "new",
+            "context": dict(
+                self.env.context,
+                active_model="route.outlet.prospect",
+                active_id=self.id,
+                active_ids=self.ids,
+                default_prospect_id=self.id,
+            ),
         }
-        commission_line_vals = []
-
-        if self.outlet_operation_mode == "direct_sale":
-            commercial_vals.update({
-                "direct_sale_pricelist_id": self.approval_direct_sale_pricelist_id.id,
-            })
-        else:
-            commercial_vals.update({
-                "consignment_settlement_policy": "net_after_commission",
-                "consignment_commission_mode": self.approval_consignment_commission_mode or "fixed_rate",
-                "default_commission_rate": self.approval_default_commission_rate or 0.0,
-                "commission_rate": self.approval_default_commission_rate or 0.0,
-                "shelf_credit_limit_amount": self.approval_shelf_credit_limit_amount or 0.0,
-                "active_stock_tracking": True,
-            })
-            if self.approval_consignment_commission_mode == "category_rate":
-                commission_line_vals = [
-                    {
-                        "category_id": line.category_id.id,
-                        "commission_rate": line.commission_rate or 0.0,
-                        "active": line.active,
-                        "note": line.note or False,
-                    }
-                    for line in self.approval_category_commission_line_ids
-                    if line.category_id and line.active
-                ]
-
-        return self._approve_and_create_outlet_from_setup(
-            commercial_vals=commercial_vals,
-            commission_line_vals=commission_line_vals,
-        )
 
     def _approve_and_create_outlet_from_setup(self, commercial_vals=None, commission_line_vals=None):
         self._validate_approval_ready()
