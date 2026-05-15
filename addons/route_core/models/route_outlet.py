@@ -1859,31 +1859,48 @@ class RouteOutlet(models.Model):
 
     def action_view_visits(self):
         self.ensure_one()
-        action = self.env.ref("route_core.action_route_visit_pda").read()[0]
-        # Return a fully dynamic action so Odoo Web does not reuse the cached
-        # global "My Visits" action/search panel. This keeps the outlet-specific
-        # filters visible when visits are opened from Customer Profile.
-        action.pop("id", None)
-        action.pop("xml_id", None)
-        action["name"] = _("Customer Profile Visits")
-        action["target"] = "main"
-        action["domain"] = [("outlet_id", "=", self.id)]
-        action["context"] = self._get_pda_clean_action_context(
-            default_outlet_id=self.id,
-            default_area_id=self.area_id.id,
-            default_partner_id=self.partner_id.id if self.partner_id else False,
-            route_outlet_back_id=self.id,
-            search_default_filter_pending_checkin=0,
-            search_default_filter_missing_outlet_location=0,
-            search_default_filter_inside_zone=0,
-            search_default_filter_outside_zone=0,
-            search_default_filter_needs_review=0,
-            search_default_filter_accepted=0,
-            search_default_filter_needs_correction=0,
-        )
-        outlet_search_view = self.env.ref("route_core.view_route_visit_outlet_pda_search", raise_if_not_found=False)
-        if outlet_search_view:
-            action["search_view_id"] = outlet_search_view.id
+        kanban_view = self.env.ref("route_core.view_route_visit_pda_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_visit_tree", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_visit_outlet_pda_search", raise_if_not_found=False)
+
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if not views:
+            views = [(False, "kanban"), (False, "list"), (False, "form")]
+
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Outlet Visits"),
+            "res_model": "route.visit",
+            "view_mode": "kanban,list,form",
+            "views": views,
+            "target": "main",
+            "domain": [("outlet_id", "=", self.id)],
+            "context": self._get_pda_clean_action_context(
+                default_outlet_id=self.id,
+                default_area_id=self.area_id.id if self.area_id else False,
+                default_partner_id=self.partner_id.id if self.partner_id else False,
+                route_outlet_back_id=self.id,
+                route_outlet_visit_mode=1,
+                search_default_filter_my_visits=0,
+                search_default_filter_today=0,
+                search_default_filter_pending_checkin=0,
+                search_default_filter_missing_outlet_location=0,
+                search_default_filter_inside_zone=0,
+                search_default_filter_outside_zone=0,
+                search_default_filter_needs_review=0,
+                search_default_filter_accepted=0,
+                search_default_filter_needs_correction=0,
+            ),
+        }
+        if search_view:
+            action["search_view_id"] = [search_view.id, search_view.name]
         return action
 
     def action_view_payments(self):
