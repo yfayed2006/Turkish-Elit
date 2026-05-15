@@ -945,8 +945,9 @@ Check-in Map
 </div>
 <notebook class="route_pda_visit_notebook">
 <page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
-<field name="line_ids">
-<list editable="bottom">
+<div class="alert alert-info route_pda_count_hint" role="alert" invisible="visit_process_state != 'draft'"> Start the visit first. Product lines are loaded from outlet balance or first consignment setup after check-in. </div>
+<field name="line_ids" class="route_pda_consignment_lines_x2many">
+<list editable="bottom" create="0" delete="0">
 <field name="product_id"/>
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
