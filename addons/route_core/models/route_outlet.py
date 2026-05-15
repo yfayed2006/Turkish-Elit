@@ -1868,6 +1868,9 @@ class RouteOutlet(models.Model):
             default_area_id=self.area_id.id,
             default_partner_id=self.partner_id.id if self.partner_id else False,
         )
+        outlet_search_view = self.env.ref("route_core.view_route_visit_outlet_pda_search", raise_if_not_found=False)
+        if outlet_search_view:
+            action["search_view_id"] = outlet_search_view.id
         return action
 
     def action_view_payments(self):
