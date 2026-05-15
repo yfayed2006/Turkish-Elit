@@ -1342,7 +1342,6 @@
 <kanban class="route_pda_sale_order_line_kanban" create="0" delete="0" edit="0">
 <field name="product_template_id"/>
 <field name="product_uom_qty"/>
-<field name="product_uom"/>
 <field name="price_unit"/>
 <field name="discount"/>
 <field name="price_subtotal"/>
@@ -1357,12 +1356,6 @@
 <span class="route_pda_sale_order_line_label">Qty</span>
 <span class="route_pda_sale_order_line_value">
 <field name="product_uom_qty"/>
-</span>
-</div>
-<div class="route_pda_sale_order_line_metric">
-<span class="route_pda_sale_order_line_label">UoM</span>
-<span class="route_pda_sale_order_line_value">
-<field name="product_uom"/>
 </span>
 </div>
 <div class="route_pda_sale_order_line_metric">
@@ -1549,7 +1542,7 @@
 </div>
 <div class="route_pda_group route_pda_product_center_group">
 <div class="route_pda_group_title">Products</div>
-<field name="move_ids_without_package" readonly="1" nolabel="1" class="route_pda_return_move_lines">
+<field name="move_ids" readonly="1" nolabel="1" class="route_pda_return_move_lines">
 <list string="Products" create="0" delete="0" edit="0">
 <field name="product_id" string="Product"/>
 <field name="product_uom_qty" string="Demand"/>
