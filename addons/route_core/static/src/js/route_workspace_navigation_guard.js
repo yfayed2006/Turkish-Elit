@@ -48,7 +48,7 @@ const OUTLET_FORM_ENTRY_BUTTONS = new Set([
     "action_view_stock_balances",
 ]);
 const OUTLET_WORKSPACE_FLAG_TTL = 30 * 60 * 1000;
-const OUTLET_SUBPAGE_FLAG_TTL = 90 * 1000;
+const OUTLET_SUBPAGE_FLAG_TTL = 30 * 60 * 1000;
 const STOCK_SNAPSHOT_ORIGIN_TTL = 15 * 60 * 1000;
 
 let isInternalRedirect = false;
