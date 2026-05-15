@@ -8,7 +8,8 @@
 <field name="plan_id" readonly="1"/>
 <field name="vehicle_id" readonly="1"/>
 <field name="destination_location_id" readonly="1"/>
-<field name="source_location_id" options="{'no_create': True}"/>
+<field name="allowed_source_location_ids" invisible="1"/>
+<field name="source_location_id" domain="[('id', 'in', allowed_source_location_ids)]" options="{'no_create': True, 'no_create_edit': True}"/>
 </group>
 <footer>
 <button name="action_confirm" type="object" string="Apply Source and Continue" class="btn-primary"/>
