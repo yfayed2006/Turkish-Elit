@@ -1,1510 +1,297 @@
-<odoo>
-<record id="view_route_visit_tree" model="ir.ui.view">
-<field name="name">route.visit.tree</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<list string="Route Visits" create="0" delete="0">
-<field name="name"/>
-<field name="date"/>
-<field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="area_id"/>
-<field name="vehicle_id"/>
-<field name="user_id"/>
-<field name="visit_process_state"/>
-<field name="state"/>
-<field name="sale_order_id"/>
-<field name="start_datetime"/>
-<field name="end_datetime"/>
-</list>
-</field>
-</record>
-<record id="view_route_visit_pda_kanban" model="ir.ui.view">
-<field name="name">route.visit.pda.kanban</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<kanban class="o_kanban_mobile route_pda_visit_kanban" create="0" delete="0">
-<header>
-<button name="action_pda_back_route_workspace" type="object" string="Route Workspace" class="btn-primary route_pda_nav_btn" icon="fa-home" display="always"/>
-<button name="action_pda_back_today_route_map" type="object" string="Today Route Map" class="btn-secondary route_pda_nav_btn" icon="fa-map" display="always"/>
-</header>
-<field name="name"/>
-<field name="date"/>
-<field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="area_id"/>
-<field name="user_id"/>
-<field name="visit_process_state"/>
-<field name="state"/>
-<field name="sale_order_id"/>
-<field name="visit_execution_mode"/>
-<field name="visit_execution_mode_label"/>
-<field name="consignment_amount_due_now"/>
-<field name="direct_stop_grand_due_amount"/>
-<field name="collected_amount"/>
-<field name="direct_stop_settlement_paid_amount"/>
-<field name="consignment_immediate_remaining_amount"/>
-<field name="direct_stop_immediate_remaining_amount"/>
-<field name="route_geo_enabled"/>
-<field name="geo_checkin_status"/>
-<field name="currency_id"/>
-<templates>
-<t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_visit_card route_pda_visit_card_compact">
-<div class="route_pda_visit_title_row">
-<div class="route_pda_visit_title_block">
-<div class="route_pda_visit_title">
-<field name="outlet_id"/>
-</div>
-<div class="route_pda_visit_meta">
-<span class="route_pda_visit_ref">
-<field name="name"/>
-</span>
-<span class="route_pda_visit_dot">•</span>
-<span>
-<field name="date"/>
-</span>
-</div>
-</div>
-<div class="route_pda_visit_status_badges route_pda_visit_status_badges_stack">
-<t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
-<span class="route_pda_visit_badge route_pda_visit_badge_done">Done</span>
-</t>
-<t t-elif="record.state.raw_value == 'in_progress' or record.visit_process_state.raw_value in ['checked_in', 'counting', 'reconciled', 'collection_done', 'ready_to_close']">
-<span class="route_pda_visit_badge route_pda_visit_badge_in_progress">In Progress</span>
-</t>
-<t t-else="">
-<span class="route_pda_visit_badge route_pda_visit_badge_pending">Pending</span>
-</t>
-<t t-if="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value == 'outside'">
-<span class="route_pda_visit_badge route_pda_visit_badge_location_outside">Outside Zone</span>
-</t>
-<t t-elif="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value == 'inside'">
-<span class="route_pda_visit_badge route_pda_visit_badge_location_inside">Inside Zone</span>
-</t>
-<t t-elif="record.route_geo_enabled.raw_value and record.geo_checkin_status.raw_value in ['pending', 'outlet_missing']">
-<span class="route_pda_visit_badge route_pda_visit_badge_location_pending">Location Pending</span>
-</t>
-</div>
-</div>
-<div class="route_pda_visit_mini_grid">
-<div class="route_pda_visit_mini_box route_pda_visit_mini_box_mode">
-<span class="route_pda_visit_label">Mode</span>
-<span class="route_pda_visit_value route_pda_visit_value_wrap">
-<field name="visit_execution_mode_label"/>
-</span>
-</div>
-<div class="route_pda_visit_mini_box">
-<span class="route_pda_visit_label">Area</span>
-<span class="route_pda_visit_value route_pda_visit_value_wrap">
-<field name="area_id"/>
-</span>
-</div>
-<div class="route_pda_visit_mini_box route_pda_visit_mini_box_money">
-<span class="route_pda_visit_label">Due Now</span>
-<span class="route_pda_visit_value">
-<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
-<field name="direct_stop_grand_due_amount"/>
-</t>
-<t t-else="">
-<field name="consignment_amount_due_now"/>
-</t>
-</span>
-</div>
-<div class="route_pda_visit_mini_box route_pda_visit_mini_box_money">
-<span class="route_pda_visit_label">Remaining</span>
-<span class="route_pda_visit_value">
-<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
-<field name="direct_stop_immediate_remaining_amount"/>
-</t>
-<t t-else="">
-<field name="consignment_immediate_remaining_amount"/>
-</t>
-</span>
-</div>
-<div class="route_pda_visit_mini_box route_pda_visit_mini_box_full">
-<span class="route_pda_visit_label">Current Step</span>
-<span class="route_pda_visit_value route_pda_visit_value_wrap">
-<field name="visit_process_state"/>
-</span>
-</div>
-</div>
-<div class="route_pda_visit_btn_wrap">
-<t t-if="record.state.raw_value in ['done', 'cancel'] or record.visit_process_state.raw_value == 'done'">
-<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">View Visit Summary</a>
-</t>
-<t t-else="">
-<a type="open" role="button" class="btn btn-primary w-100 route_pda_visit_open_btn">Open Visit</a>
-</t>
-</div>
-</div>
-</t>
-</templates>
-</kanban>
-</field>
-</record>
-<record id="view_route_visit_history_mobile_kanban" model="ir.ui.view">
-<field name="name">route.visit.history.mobile.kanban</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<kanban class="o_kanban_mobile route_visit_history_kanban" create="0" edit="0" delete="0" default_order="date desc, id desc">
-<header>
-<button name="action_pda_back_route_workspace" type="object" string="Route Workspace" class="btn-primary route_pda_nav_btn" icon="fa-home" display="always"/>
-</header>
-<field name="name"/>
-<field name="date"/>
-<field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="area_id"/>
-<field name="vehicle_id"/>
-<field name="state"/>
-<field name="visit_process_state"/>
-<field name="visit_execution_mode"/>
-<field name="visit_execution_mode_label"/>
-<field name="direct_stop_grand_due_amount"/>
-<field name="direct_stop_immediate_remaining_amount"/>
-<field name="consignment_amount_due_now"/>
-<field name="consignment_immediate_remaining_amount"/>
-<field name="collected_amount"/>
-<field name="direct_stop_settlement_paid_amount"/>
-<field name="route_geo_enabled"/>
-<field name="geo_checkin_status"/>
-<field name="geo_review_state"/>
-<field name="geo_checkin_datetime"/>
-<field name="geo_checkin_distance_display"/>
-<field name="geo_checkin_outside_zone_reason"/>
-<field name="geo_review_supervisor_decision"/>
-<field name="currency_id"/>
-<templates>
-<t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_visit_history_card">
-<div class="route_visit_history_card_head">
-<div>
-<div class="route_visit_history_ref">
-<field name="name"/>
-</div>
-<div class="route_visit_history_date">
-<field name="date"/>
-</div>
-</div>
-<div class="route_visit_history_badges">
-<t t-if="record.state.raw_value == 'done' or record.visit_process_state.raw_value == 'done'">
-<span class="route_visit_history_badge route_visit_history_badge_done">Done</span>
-</t>
-<t t-elif="record.state.raw_value in ['cancel', 'cancelled']">
-<span class="route_visit_history_badge route_visit_history_badge_cancelled">Cancelled</span>
-</t>
-<t t-elif="record.state.raw_value == 'in_progress' or record.visit_process_state.raw_value in ['checked_in', 'counting', 'reconciled', 'collection_done', 'ready_to_close']">
-<span class="route_visit_history_badge route_visit_history_badge_active">In Progress</span>
-</t>
-<t t-else="">
-<span class="route_visit_history_badge route_visit_history_badge_pending">Pending</span>
-</t>
-</div>
-</div>
-<div class="route_visit_history_outlet">
-<field name="outlet_id"/>
-</div>
-<div class="route_visit_history_subline">
-<span>
-<field name="partner_id"/>
-</span>
-<span class="route_visit_history_dot">•</span>
-<span>
-<field name="area_id"/>
-</span>
-</div>
-<div class="route_visit_history_mini_grid">
-<div class="route_visit_history_metric">
-<span class="route_visit_history_label">Mode</span>
-<span class="route_visit_history_value">
-<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">Direct Sale</t>
-<t t-elif="record.visit_execution_mode.raw_value == 'consignment'">Consignment</t>
-<t t-else="">
-<field name="visit_execution_mode_label"/>
-</t>
-</span>
-</div>
-<div class="route_visit_history_metric">
-<span class="route_visit_history_label">Vehicle</span>
-<span class="route_visit_history_value">
-<field name="vehicle_id"/>
-</span>
-</div>
-<div class="route_visit_history_metric route_visit_history_metric_money">
-<span class="route_visit_history_label">Due</span>
-<span class="route_visit_history_value">
-<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
-<field name="direct_stop_grand_due_amount"/>
-</t>
-<t t-else="">
-<field name="consignment_amount_due_now"/>
-</t>
-</span>
-</div>
-<div class="route_visit_history_metric route_visit_history_metric_money">
-<span class="route_visit_history_label">Remaining</span>
-<span class="route_visit_history_value">
-<t t-if="record.visit_execution_mode.raw_value == 'direct_sales'">
-<field name="direct_stop_immediate_remaining_amount"/>
-</t>
-<t t-else="">
-<field name="consignment_immediate_remaining_amount"/>
-</t>
-</span>
-</div>
-</div>
-<t t-if="record.route_geo_enabled.raw_value and (record.geo_checkin_status.raw_value in ['inside', 'outside'] or record.geo_checkin_datetime.raw_value or record.geo_checkin_outside_zone_reason.raw_value or record.geo_review_supervisor_decision.raw_value)">
-<div class="route_visit_history_location_block">
-<div class="route_visit_history_location_row">
-<span class="route_visit_history_label">Location</span>
-<t t-if="record.geo_checkin_status.raw_value == 'outside'">
-<span class="route_visit_history_location_status route_visit_history_location_outside">Outside Zone</span>
-</t>
-<t t-elif="record.geo_checkin_status.raw_value == 'inside'">
-<span class="route_visit_history_location_status route_visit_history_location_inside">Inside Zone</span>
-</t>
-<t t-elif="record.geo_checkin_status.raw_value == 'outlet_missing'">
-<span class="route_visit_history_location_status route_visit_history_location_pending">Outlet Missing</span>
-</t>
-<t t-else="">
-<span class="route_visit_history_location_status route_visit_history_location_pending">Pending Check-in</span>
-</t>
-</div>
-<div class="route_visit_history_location_meta">
-<t t-if="record.geo_checkin_datetime.raw_value">
-<span>
-<field name="geo_checkin_datetime"/>
-</span>
-</t>
-<t t-if="record.geo_checkin_distance_display.raw_value">
-<span>
-<field name="geo_checkin_distance_display"/>
-</span>
-</t>
-<t t-if="record.geo_review_supervisor_decision.raw_value">
-<span>
-<field name="geo_review_supervisor_decision"/>
-</span>
-</t>
-</div>
-<t t-if="record.geo_checkin_outside_zone_reason.raw_value">
-<div class="route_visit_history_reason">
-<field name="geo_checkin_outside_zone_reason"/>
-</div>
-</t>
-</div>
-</t>
-<div class="route_visit_history_actions">
-<a type="open" role="button" class="btn btn-primary route_visit_history_action_main">
-<i class="fa fa-external-link"/>
-Open Visit
-</a>
-<button name="action_open_visit_outlet_map" type="object" class="btn btn-secondary route_visit_history_action" invisible="not route_geo_enabled">
-<i class="fa fa-map-marker"/>
-Outlet Map
-</button>
-<button name="action_open_visit_checkin_map" type="object" class="btn btn-secondary route_visit_history_action" invisible="not geo_checkin_datetime">
-<i class="fa fa-location-arrow"/>
-Check-in Map
-</button>
-</div>
-</div>
-</t>
-</templates>
-</kanban>
-</field>
-</record>
-<record id="view_route_visit_form" model="ir.ui.view">
-<field name="name">route.visit.form</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<form string="Route Visit" create="0" delete="0">
-<header>
-<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
-<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
-<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
-<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
-<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
-<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
-<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
-<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
-<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
-<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision'"/>
-<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_sale_decision'"/>
-<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
-<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
-<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="visit_process_state in ('draft', 'cancel', 'done')"/>
-<button name="action_open_statement_of_account" string="Visit Summary" type="object" class="btn-secondary" invisible="visit_process_state != 'done'"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_open_whatsapp_share_wizard" string="Share Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
-</header>
-<sheet>
-<field name="ux_primary_action" invisible="1"/>
-<field name="ux_stage" invisible="1"/>
-<field name="ux_stage_title" invisible="1"/>
-<field name="ux_stage_help" invisible="1"/>
-<field name="returns_step_done" invisible="1"/>
-<field name="has_returns_declared" invisible="1"/>
-<field name="ux_can_scan_barcode" invisible="1"/>
-<field name="ux_can_scan_returns" invisible="1"/>
-<field name="ux_can_no_returns" invisible="1"/>
-<field name="ux_can_create_sale_order" invisible="1"/>
-<field name="ux_can_view_sale_order" invisible="1"/>
-<field name="ux_can_confirm_return_transfers" invisible="1"/>
-<field name="ux_can_view_return_transfers" invisible="1"/>
-<field name="ux_can_generate_refill" invisible="1"/>
-<field name="ux_can_confirm_refill" invisible="1"/>
-<field name="ux_can_view_refill_transfer" invisible="1"/>
-<field name="ux_can_open_pending_refill" invisible="1"/>
-<field name="ux_can_collect_payment" invisible="1"/>
-<field name="ux_can_confirm_payments" invisible="1"/>
-<field name="ux_can_skip_collection" invisible="1"/>
-<field name="ux_can_open_payments" invisible="1"/>
-<field name="ux_can_finish_visit" invisible="1"/>
-<field name="visit_execution_mode" invisible="1"/>
-<field name="visit_execution_mode_label" invisible="1"/>
-<field name="outlet_operation_mode" invisible="1"/>
-<field name="ux_can_receipt_actions" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
-<div class="alert alert-info mb-3 route_pda_visit_stage_alert" role="alert">
-<strong>
-<field name="ux_stage_title" readonly="1" nolabel="1"/>
-</strong>
-<div class="mt-1">
-<field name="ux_stage_help" readonly="1" nolabel="1"/>
-</div>
-</div>
-<separator string="Visit Command Header"/>
-<group col="4">
-<group>
-<field name="outlet_id" readonly="1"/>
-<field name="name" readonly="1"/>
-<field name="start_datetime" readonly="1"/>
-</group>
-<group>
-<field name="consignment_amount_due_now" string="Total Outlet Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_immediate_remaining_amount" string="Current Visit Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_immediate_remaining_amount" string="Remaining After Collection" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-</group>
-<group>
-<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-</group>
-<group>
-<field name="collection_priority" readonly="1" widget="badge" decoration-success="collection_priority == 'low'" decoration-info="collection_priority == 'medium'" decoration-warning="collection_priority == 'high'" decoration-danger="collection_priority == 'critical'"/>
-<field name="collection_priority_score" readonly="1"/>
-<field name="collection_trend_status" string="Collection Trend" readonly="1" widget="badge" decoration-success="collection_trend_status == 'good'" decoration-info="collection_trend_status == 'no_basis'" decoration-warning="collection_trend_status == 'warning'" decoration-danger="collection_trend_status == 'weak'"/>
-<field name="debt_risk_level" readonly="1" widget="badge" decoration-success="debt_risk_level == 'low'" decoration-info="debt_risk_level == 'medium'" decoration-warning="debt_risk_level == 'high'" decoration-danger="debt_risk_level == 'critical'"/>
-<field name="debt_policy_action" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
-<field name="visit_mode" readonly="1"/>
-<field name="visit_mode_recommendation" string="Recommended Mode" readonly="1"/>
-<field name="recommended_visit_frequency" readonly="1" widget="badge" decoration-info="recommended_visit_frequency in ('daily','every_2_days','twice_weekly')" decoration-success="recommended_visit_frequency in ('weekly','on_demand')"/>
-<field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
-</group>
-</group>
-<separator string="Decision Flags" invisible="1"/>
-<div class="mb-2" invisible="1">
-<field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
-</div>
-<group string="Collection Control Snapshot" col="3">
-<group>
-<field name="outlet_open_promise_count" readonly="1"/>
-<field name="outlet_overdue_promise_count" readonly="1"/>
-</group>
-<group>
-<field name="outlet_unpaid_visit_count" readonly="1"/>
-<field name="next_promise_to_pay_date" readonly="1"/>
-</group>
-<group>
-<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-<field name="collection_priority_reason" readonly="1"/>
-</group>
-</group>
-<group string="Debt Policy Snapshot" col="4">
-<group>
-<field name="outlet_aging_0_30_amount" readonly="1"/>
-<field name="outlet_aging_31_60_amount" readonly="1"/>
-</group>
-<group>
-<field name="outlet_aging_61_90_amount" readonly="1"/>
-<field name="outlet_aging_90_plus_amount" readonly="1"/>
-</group>
-<group>
-<field name="debt_risk_level" readonly="1" widget="badge" decoration-success="debt_risk_level == 'low'" decoration-info="debt_risk_level == 'medium'" decoration-warning="debt_risk_level == 'high'" decoration-danger="debt_risk_level == 'critical'"/>
-<field name="debt_policy_action" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
-</group>
-<group>
-<field name="collection_first_required" readonly="1"/>
-<field name="debt_policy_reason" readonly="1"/>
-</group>
-</group>
-<group string="Movement Snapshot" col="3">
-<group>
-<field name="slow_moving_line_count" readonly="1"/>
-<field name="very_slow_line_count" readonly="1"/>
-</group>
-<group>
-<field name="no_sale_history_line_count" readonly="1"/>
-<field name="average_days_on_shelf" readonly="1"/>
-</group>
-<group>
-<field name="oldest_days_on_shelf" readonly="1"/>
-</group>
-</group>
-<group string="Visit Planning Snapshot" col="3">
-<group>
-<field name="recommended_visit_frequency" readonly="1" widget="badge" decoration-info="recommended_visit_frequency in ('daily','every_2_days','twice_weekly')" decoration-success="recommended_visit_frequency in ('weekly','on_demand')"/>
-<field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
-</group>
-<group>
-<field name="outlet_health_score" readonly="1"/>
-<field name="visit_regularity_status" readonly="1" widget="badge" decoration-success="visit_regularity_status == 'on_track'" decoration-warning="visit_regularity_status == 'follow_up'" decoration-danger="visit_regularity_status == 'overdue'" decoration-info="visit_regularity_status == 'unknown'"/>
-</group>
-<group>
-<field name="visit_regularity_days" readonly="1"/>
-<field name="visit_planning_reason" readonly="1"/>
-</group>
-</group>
-<group string="Visit Details" col="2">
-<group>
-<field name="partner_id" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="vehicle_id" readonly="1"/>
-<field name="user_id" readonly="1"/>
-</group>
-<group>
-<field name="date" readonly="1"/>
-<field name="sale_order_id" readonly="1"/>
-<field name="end_datetime" readonly="1"/>
-</group>
-</group>
-<notebook>
-<page string="Visit Lines">
-<field name="line_ids">
-<list editable="bottom">
-<field name="product_id"/>
-<field name="barcode" readonly="1" optional="show"/>
-<field name="lot_id" optional="show" options="{'no_create': True}"/>
-<field name="expiry_date" readonly="1" optional="show"/>
-<field name="previous_qty" string="Previous"/>
-<field name="counted_qty" string="Counted"/>
-<field name="sold_qty" string="Sold Qty" readonly="1"/>
-<field name="return_qty" string="Returned Qty" optional="show"/>
-<field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
-<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
-<field name="uom_id" readonly="1" optional="hide"/>
-<field name="return_route" optional="hide"/>
-<field name="last_sold_date" readonly="1" optional="hide"/>
-<field name="days_on_shelf" readonly="1" optional="hide"/>
-<field name="movement_status" readonly="1" widget="badge" optional="hide" decoration-success="movement_status == 'active'" decoration-info="movement_status == 'watch'" decoration-warning="movement_status in ('slow', 'no_sale_history')" decoration-danger="movement_status == 'very_slow'"/>
-<field name="new_balance_qty" readonly="1" optional="hide"/>
-<field name="unit_price" optional="hide"/>
-<field name="sold_amount" readonly="1" optional="hide"/>
-<field name="return_amount" readonly="1" optional="hide"/>
-<field name="supply_value" readonly="1" optional="hide"/>
-<field name="new_balance_value" readonly="1" optional="hide"/>
-<field name="note" optional="hide"/>
-</list>
-</field>
-</page>
-<page string="Payments">
-<group string="Collection Summary" col="2">
-<group>
-<field name="net_due_amount" readonly="1"/>
-<field name="collected_amount" readonly="1"/>
-<field name="remaining_due_amount" readonly="1"/>
-</group>
-<group>
-<field name="promise_to_pay_count" readonly="1"/>
-<field name="next_promise_to_pay_date" readonly="1"/>
-<field name="latest_promise_to_pay_amount" readonly="1"/>
-<field name="latest_promise_status" readonly="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-</group>
-</group>
-<field name="display_payment_ids" readonly="1" context="{'default_visit_id': id}">
-<list create="0" delete="0">
-<field name="payment_date"/>
-<field name="payment_mode"/>
-<field name="collection_type"/>
-<field name="amount"/>
-<field name="due_date"/>
-<field name="promise_date"/>
-<field name="effective_promise_amount" string="Promise Amount"/>
-<field name="promise_status" widget="badge" decoration-info="promise_status == 'open'" decoration-warning="promise_status == 'due_today'" decoration-danger="promise_status == 'overdue'" decoration-success="promise_status == 'closed'"/>
-<field name="reference"/>
-<field name="state"/>
-</list>
-</field>
-</page>
-<page string="Direct Stop" invisible="1">
-<group string="Direct Stop Review" col="3">
-<group>
-<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
-<field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
-<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
-</group>
-<group>
-<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
-<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Total Due Now" readonly="1"/>
-<field name="direct_stop_return_status" readonly="1" widget="badge"/>
-</group>
-<group>
-<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Remaining After Collection" readonly="1"/>
-<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
-<field name="direct_stop_settlement_ready" readonly="1"/>
-</group>
-</group>
-<group string="Direct Stop Documents" col="4">
-<field name="direct_stop_order_count" readonly="1"/>
-<field name="direct_stop_return_count" readonly="1"/>
-</group>
-</page>
-<page string="Notes">
-<field name="notes" placeholder="Internal notes..."/>
-</page>
-<page string="Location Check-in">
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Location check-in is disabled in Route Settings. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy not in ('require_reason', 'block_start') or visit_process_state != 'draft'"> Please capture your location before starting the visit. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outlet_missing' or route_geo_checkin_policy not in ('require_reason', 'block_start') or visit_process_state != 'draft'"> Outlet location is missing. Please set and verify outlet coordinates before starting the visit. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft' or geo_checkin_outside_zone_reason"> You are outside the allowed outlet radius. A reason is required before starting the visit. </div>
-<div class="alert alert-info route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason' or visit_process_state == 'draft' or not geo_checkin_outside_zone_reason"> Outside-zone check-in reason was recorded for supervisor review. </div>
-<div class="alert alert-danger route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> You are outside the allowed outlet radius. This visit cannot start under the current policy. </div>
-<div class="alert alert-info" role="alert" invisible="visit_process_state == 'draft'"> Location check-in is locked because this visit has already started. </div>
-<div class="route_geo_action_grid">
-<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
-<button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
-<button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" invisible="context.get('route_pda_salesperson_mode') or not route_geo_enabled or outlet_geo_status == 'missing' or visit_process_state != 'draft'"/>
-<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
-</div>
-<separator string="Outlet Location"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Location Enabled</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_enabled" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Policy</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_checkin_policy" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Radius</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_checkin_radius_m" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Outlet Status</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="outlet_geo_status" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Outlet GPS</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="outlet_geo_coordinates" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<separator string="Check-in Snapshot"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Check-in Status</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_status" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Distance</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_distance_display" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Check-in Time</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_datetime" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Accuracy</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_accuracy_m" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Latitude</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_latitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Longitude</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_longitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-</div>
-<separator string="Review Notes"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
-<div class="route_mobile_detail_label">Outside Zone Reason</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_outside_zone_reason" readonly="visit_process_state != 'draft'" nolabel="1" placeholder="Optional reason for later enforcement."/>
-</div>
-</div>
-</div>
-</page>
-<page string="Completion Notes" invisible="not no_sale_reason">
-<field name="no_sale_reason" readonly="1"/>
-</page>
-<page string="Internal Tools" invisible="1">
-<group col="2">
-<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
-<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
-</group>
-</page>
-</notebook>
-</sheet>
-<chatter/>
-</form>
-</field>
-</record>
-<record id="view_route_visit_pda_form" model="ir.ui.view">
-<field name="name">route.visit.pda.form</field>
-<field name="model">route.visit</field>
-<field name="priority" eval="90"/>
-<field name="arch" type="xml">
-<form string="Route Visit" create="0" delete="0" class="route_pda_visit_form">
-<header>
-<button name="action_ux_start_visit" string="Start Visit" type="object" class="btn-primary" invisible="ux_primary_action != 'start_visit'"/>
-<button name="action_ux_load_previous_balance" string="Load Previous Balance" type="object" class="btn-primary" invisible="ux_primary_action != 'load_previous_balance'"/>
-<button name="action_ux_scan_shelf" string="Scan Shelf" type="object" class="btn-primary" invisible="ux_primary_action != 'scan_shelf'"/>
-<button name="action_ux_returns_step" string="Add Additional Returns" type="object" class="btn-primary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_no_returns" string="No Additional Returns" type="object" class="btn-secondary" invisible="ux_primary_action != 'returns_step'"/>
-<button name="action_ux_reconcile_count" string="Reconcile Count" type="object" class="btn-primary" invisible="ux_primary_action != 'reconcile_count'"/>
-<button name="action_ux_confirm_return_transfers" string="Confirm Return Transfers" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_return_transfers'"/>
-<button name="action_ux_generate_refill" string="Generate Refill Proposal" type="object" class="btn-primary" invisible="ux_primary_action != 'generate_refill'"/>
-<button name="action_ux_confirm_refill" string="Confirm Refill" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_refill'"/>
-<button name="action_ux_collect_payment" string="Collect Payment" type="object" class="btn-primary" invisible="ux_primary_action != 'collect_payment'"/>
-<button name="action_ux_confirm_payments" string="Confirm Payments" type="object" class="btn-primary" invisible="ux_primary_action != 'confirm_payments'"/>
-<button name="action_ux_finalize_visit" string="Finish Visit" type="object" class="btn-success" invisible="ux_primary_action != 'finalize_visit' and ux_primary_action != 'finish_visit'"/>
-<button name="action_ux_create_direct_sale" string="Yes, Create Sale" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_sale_decision'"/>
-<button name="action_ux_no_sale" string="No Sale" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_sale_decision'"/>
-<button name="action_ux_create_direct_return" string="Yes, Create Return" type="object" class="btn-primary" invisible="ux_primary_action != 'direct_return_decision'"/>
-<button name="action_ux_no_return" string="No Return" type="object" class="btn-secondary" invisible="ux_primary_action != 'direct_return_decision'"/>
-<button name="action_cancel" string="Cancel Process" type="object" class="btn-secondary" invisible="visit_process_state in ('done', 'cancel')"/>
-<button name="action_open_statement_of_account" string="Statement of Account" type="object" class="btn-secondary" invisible="visit_process_state in ('draft', 'cancel', 'done')"/>
-<button name="action_open_statement_of_account" string="Visit Summary" type="object" class="btn-secondary" invisible="visit_process_state != 'done'"/>
-<button name="action_print_direct_stop_settlement_receipt" string="Print Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_outlet" string="WhatsApp Outlet" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_send_direct_stop_whatsapp_supervisor" string="WhatsApp Supervisor" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<button name="action_open_whatsapp_share_wizard" string="Share Receipt" type="object" class="btn-secondary" invisible="not ux_can_receipt_actions or visit_process_state in ('draft', 'cancel')"/>
-<field name="visit_process_state" widget="statusbar" statusbar_visible="draft,checked_in,counting,reconciled,collection_done,ready_to_close,done,cancel"/>
-</header>
-<sheet>
-<field name="ux_primary_action" invisible="1"/>
-<field name="ux_stage" invisible="1"/>
-<field name="ux_stage_title" invisible="1"/>
-<field name="ux_stage_help" invisible="1"/>
-<field name="returns_step_done" invisible="1"/>
-<field name="has_returns_declared" invisible="1"/>
-<field name="ux_can_scan_barcode" invisible="1"/>
-<field name="ux_can_scan_returns" invisible="1"/>
-<field name="ux_can_no_returns" invisible="1"/>
-<field name="ux_can_create_sale_order" invisible="1"/>
-<field name="ux_can_view_sale_order" invisible="1"/>
-<field name="ux_can_confirm_return_transfers" invisible="1"/>
-<field name="ux_can_view_return_transfers" invisible="1"/>
-<field name="ux_can_generate_refill" invisible="1"/>
-<field name="ux_can_confirm_refill" invisible="1"/>
-<field name="ux_can_view_refill_transfer" invisible="1"/>
-<field name="ux_can_open_pending_refill" invisible="1"/>
-<field name="ux_can_collect_payment" invisible="1"/>
-<field name="ux_can_confirm_payments" invisible="1"/>
-<field name="ux_can_skip_collection" invisible="1"/>
-<field name="ux_can_open_payments" invisible="1"/>
-<field name="ux_can_finish_visit" invisible="1"/>
-<field name="visit_execution_mode" invisible="1"/>
-<field name="outlet_operation_mode" invisible="1"/>
-<field name="ux_can_receipt_actions" invisible="1"/>
-<field name="route_enable_lot_serial_tracking" invisible="1"/>
-<field name="route_enable_expiry_tracking" invisible="1"/>
-<div class="route_pda_visit_nav_bar">
-<button name="action_pda_back_route_workspace" type="object" string="Route Workspace" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-home"/>
-<button name="action_pda_back_today_route_map" type="object" string="Today Route Map" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-map"/>
-<button name="action_pda_back_today_visits" type="object" string="Today's Visits" class="btn btn-secondary route_pda_visit_nav_btn" icon="fa-list"/>
-</div>
-<div class="route_pda_visit_quick_panel">
-<div class="route_pda_visit_quick_card route_pda_visit_quick_card_primary">
-<div class="route_pda_visit_quick_label">Outlet</div>
-<div class="route_pda_visit_quick_value route_pda_visit_quick_value_link">
-<field name="outlet_id" readonly="1" nolabel="1" options="{'no_open': True, 'no_create': True}"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_pda_visit_quick_label">Total Outlet Due</div>
-<div class="route_pda_visit_quick_value">
-<field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_pda_visit_quick_label">Total Due Now</div>
-<div class="route_pda_visit_quick_value">
-<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_pda_visit_quick_label">Collected</div>
-<div class="route_pda_visit_quick_value">
-<field name="collected_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_pda_visit_quick_label">Collected</div>
-<div class="route_pda_visit_quick_value">
-<field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_pda_visit_quick_label">Visit Remaining</div>
-<div class="route_pda_visit_quick_value">
-<field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_pda_visit_quick_label">Remaining After Collection</div>
-<div class="route_pda_visit_quick_value">
-<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card route_pda_visit_quick_card_subtle">
-<div class="route_pda_visit_quick_label">Mode</div>
-<div class="route_pda_visit_quick_value route_pda_visit_quick_value_small">
-<field name="visit_execution_mode_label" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_pda_visit_quick_card route_pda_visit_quick_card_status">
-<div class="route_pda_visit_quick_label">Status</div>
-<div class="route_pda_visit_quick_value">
-<field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
-</div>
-</div>
-</div>
-<div class="alert alert-info mb-3 route_pda_visit_stage_alert" role="alert">
-<strong>
-<field name="ux_stage_title" readonly="1" nolabel="1"/>
-</strong>
-<div class="mt-1">
-<field name="ux_stage_help" readonly="1" nolabel="1"/>
-</div>
-</div>
-<separator string="Visit Command Header" class="route_pda_visit_command_header_title"/>
-<group col="4" class="route_pda_visit_command_header_block">
-<group>
-<field name="outlet_id" readonly="1" options="{'no_open': True, 'no_create': True}"/>
-<field name="name" readonly="1"/>
-<field name="start_datetime" readonly="1"/>
-<field name="end_datetime" readonly="1"/>
-</group>
-<group>
-<field name="consignment_amount_due_now" string="Total Outlet Due" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_grand_due_amount" string="Current Due" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_immediate_remaining_amount" string="Current Visit Remaining" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_immediate_remaining_amount" string="Remaining After Collection" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="consignment_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_open_promise_amount" string="Promise Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-<field name="collected_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode == 'direct_sales'"/>
-<field name="direct_stop_settlement_paid_amount" string="Collected Amount" readonly="1" invisible="visit_execution_mode != 'direct_sales'"/>
-</group>
-<group invisible="visit_execution_mode != 'direct_sales'">
-<field name="direct_stop_order_refs" string="Sale Order" readonly="1"/>
-<field name="direct_stop_return_refs" string="Return" readonly="1"/>
-<field name="direct_stop_latest_promise_date" string="Next Promise Date" readonly="1" invisible="not direct_stop_open_promise_amount"/>
-<field name="direct_stop_latest_promise_status" string="Latest Promise Status" readonly="1" widget="badge" invisible="not direct_stop_open_promise_amount" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
-</group>
-<group invisible="1">
-<field name="outlet_near_expiry_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="pending_near_expiry_line_count" string="Pending Near Expiry" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-</group>
-</group>
-<group string="Direct Stop Operational Summary" col="3" invisible="1">
-<group>
-<field name="direct_stop_previous_due_amount" string="Previous Due" readonly="1"/>
-<field name="direct_stop_previous_due_since_date" readonly="1"/>
-<field name="direct_stop_sales_total" string="Current Stop Gross Sale" readonly="1"/>
-<field name="direct_stop_sale_status" readonly="1" widget="badge"/>
-</group>
-<group>
-<field name="direct_stop_returns_total" string="Current Stop Returns" readonly="1"/>
-<field name="direct_stop_current_net_amount" string="Current Stop Net" readonly="1"/>
-<field name="direct_stop_grand_due_amount" string="Total Due Now" readonly="1"/>
-<field name="direct_stop_return_status" readonly="1" widget="badge"/>
-</group>
-<group>
-<field name="direct_stop_settlement_paid_amount" string="Collected Now" readonly="1"/>
-<field name="direct_stop_settlement_remaining_amount" string="Remaining After Collection" readonly="1"/>
-<field name="direct_stop_credit_amount" string="Return Credit" readonly="1" invisible="not direct_stop_credit_amount"/>
-<field name="direct_stop_settlement_ready" readonly="1"/>
-</group>
-</group>
-<separator string="Decision Flags" invisible="1"/>
-<div class="mb-2" invisible="1">
-<field name="outlet_decision_flags_html" readonly="1" nolabel="1" widget="html"/>
-</div>
-<group string="Debt Policy Snapshot" col="4" invisible="1">
-<group>
-<field name="outlet_aging_0_30_amount" readonly="1"/>
-<field name="outlet_aging_31_60_amount" readonly="1"/>
-</group>
-<group>
-<field name="outlet_aging_61_90_amount" readonly="1"/>
-<field name="outlet_aging_90_plus_amount" readonly="1"/>
-</group>
-<group>
-<field name="debt_risk_level" readonly="1" widget="badge" decoration-success="debt_risk_level == 'low'" decoration-info="debt_risk_level == 'medium'" decoration-warning="debt_risk_level == 'high'" decoration-danger="debt_risk_level == 'critical'"/>
-<field name="debt_policy_action" readonly="1" widget="badge" decoration-success="debt_policy_action == 'allow'" decoration-warning="debt_policy_action == 'warning'" decoration-info="debt_policy_action == 'supervisor'" decoration-danger="debt_policy_action == 'block'"/>
-</group>
-<group>
-<field name="collection_first_required" readonly="1"/>
-<field name="debt_policy_reason" readonly="1"/>
-</group>
-</group>
-<group string="Movement Snapshot" col="3" invisible="1">
-<group>
-<field name="slow_moving_line_count" readonly="1"/>
-<field name="very_slow_line_count" readonly="1"/>
-</group>
-<group>
-<field name="no_sale_history_line_count" readonly="1"/>
-<field name="average_days_on_shelf" readonly="1"/>
-</group>
-<group>
-<field name="oldest_days_on_shelf" readonly="1"/>
-</group>
-</group>
-<group string="Visit Planning Snapshot" col="3" invisible="1">
-<group>
-<field name="recommended_visit_frequency" readonly="1" widget="badge" decoration-info="recommended_visit_frequency in ('daily','every_2_days','twice_weekly')" decoration-success="recommended_visit_frequency in ('weekly','on_demand')"/>
-<field name="outlet_health_status" readonly="1" widget="badge" decoration-success="outlet_health_status == 'healthy'" decoration-warning="outlet_health_status == 'attention'" decoration-danger="outlet_health_status == 'critical'"/>
-</group>
-<group>
-<field name="outlet_health_score" readonly="1"/>
-<field name="visit_regularity_status" readonly="1" widget="badge" decoration-success="visit_regularity_status == 'on_track'" decoration-warning="visit_regularity_status == 'follow_up'" decoration-danger="visit_regularity_status == 'overdue'" decoration-info="visit_regularity_status == 'unknown'"/>
-</group>
-<group>
-<field name="visit_regularity_days" readonly="1"/>
-<field name="visit_planning_reason" readonly="1"/>
-</group>
-</group>
-<group string="Visit Details" col="2" invisible="1">
-<group>
-<field name="partner_id" readonly="1"/>
-<field name="area_id" readonly="1"/>
-<field name="vehicle_id" readonly="1"/>
-<field name="user_id" readonly="1" invisible="1"/>
-</group>
-<group>
-<field name="date" readonly="1"/>
-<field name="sale_order_id" readonly="1" invisible="1"/>
-<field name="end_datetime" readonly="1" invisible="1"/>
-<field name="show_consignment_category_commission_breakdown" invisible="1"/>
-</group>
-</group>
-<div class="route_pda_visit_section_header">
-<span class="route_pda_visit_section_eyebrow" invisible="visit_process_state != 'done'">Completed Visit</span>
-<span class="route_pda_visit_section_eyebrow" invisible="visit_process_state == 'done'">Visit Sections</span>
-<span class="route_pda_visit_section_title" invisible="visit_process_state != 'done'">Review completed visit details</span>
-<span class="route_pda_visit_section_title" invisible="visit_process_state == 'done'">Open the step you need now</span>
-</div>
-<notebook class="route_pda_visit_notebook">
-<page string="Count" invisible="visit_execution_mode == 'direct_sales' or outlet_operation_mode == 'direct_sale' or outlet_operation_mode == 'direct_sales' or visit_process_state in ('collection_done', 'ready_to_close', 'done')">
-<div class="alert alert-info route_pda_count_hint" role="alert" invisible="visit_process_state != 'draft'"> Start the visit first. Product lines are loaded from outlet balance or first consignment setup after check-in. </div>
-<field name="line_ids" class="route_pda_consignment_lines_x2many">
-<list editable="bottom" create="0" delete="0">
-<field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_pda_consignment_product_image_cell"/>
-<field name="product_id"/>
-<field name="barcode" readonly="1" optional="show"/>
-<field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
-<field name="expiry_date" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
-<field name="previous_qty" string="Previous" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
-<field name="counted_qty" string="Counted" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
-<field name="sold_qty" string="Sold Qty" readonly="1" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
-<field name="return_qty" string="Returned Qty" optional="show" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
-<field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="hide"/>
-<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
-<field name="uom_id" readonly="1" optional="show"/>
-<field name="return_route" optional="hide"/>
-<field name="unit_price" optional="hide"/>
-<field name="sold_amount" readonly="1" optional="hide"/>
-</list>
-</field>
-</page>
-<page string="Summary">
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales'">
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Previous Due</div>
-<div class="route_mobile_info_value">
-<field name="consignment_previous_due_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Sale</div>
-<div class="route_mobile_info_value">
-<field name="consignment_current_visit_sale_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Returns</div>
-<div class="route_mobile_info_value">
-<field name="consignment_current_visit_return_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Net</div>
-<div class="route_mobile_info_value">
-<field name="consignment_net_amount_for_visit" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Total Outlet Due</div>
-<div class="route_mobile_info_value">
-<field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected</div>
-<div class="route_mobile_info_value">
-<field name="collected_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Remaining</div>
-<div class="route_mobile_info_value">
-<field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="promise_to_pay_count == 0">
-<div class="route_mobile_info_label">Promise Amount</div>
-<div class="route_mobile_info_value">
-<field name="consignment_promise_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<div class="route_mobile_detail_grid" invisible="visit_execution_mode == 'direct_sales' or not show_consignment_category_commission_breakdown">
-<div class="route_mobile_detail_box_full route_commission_form_full_width">
-<field name="consignment_category_commission_html" readonly="1" nolabel="1" widget="html"/>
-</div>
-</div>
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales'">
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Previous Due</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_previous_due_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Sale Total</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_sales_total" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Return Total</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_returns_total" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Net Due</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_current_net_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Total Due Now</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Promise Amount</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_open_promise_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref">
-<div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_reference_value">
-<field name="summary_sale_order_ref" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_refill_transfer_ref or summary_refill_transfer_ref == '-'">
-<div class="route_mobile_detail_label">Refill Transfer</div>
-<div class="route_mobile_detail_value route_mobile_reference_stack">
-<div class="route_mobile_reference_number">
-<field name="summary_refill_transfer_ref" readonly="1" nolabel="1"/>
-</div>
-<button name="action_view_refill_transfer" string="View Transfer" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs or summary_return_transfer_refs == '-'">
-<div class="route_mobile_detail_label">Return Transfers</div>
-<div class="route_mobile_detail_value route_mobile_reference_value">
-<field name="summary_return_transfer_refs" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
-<div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_reference_stack">
-<div class="route_mobile_reference_number">
-<field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
-</div>
-<button name="action_ux_open_direct_sale_order_ref" string="Open Sale" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
-<div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_reference_stack">
-<div class="route_mobile_reference_number">
-<field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
-</div>
-<button name="action_ux_open_direct_return_ref" string="Open Return" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
-<div class="route_mobile_detail_label">Visit Process State</div>
-<div class="route_mobile_detail_value">
-<field name="visit_process_state" readonly="1" nolabel="1" widget="badge" decoration-info="visit_process_state in ('checked_in', 'counting', 'reconciled')" decoration-warning="visit_process_state == 'collection_done'" decoration-success="visit_process_state in ('ready_to_close', 'done')"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' and visit_process_state == 'done'">
-<div class="route_mobile_detail_label">Current Step</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="ux_stage_title" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<div class="route_mobile_summary_grid">
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0">
-<div class="route_mobile_info_label">Open Promises</div>
-<div class="route_mobile_info_value">
-<field name="promise_to_pay_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Open Promise Amount</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_open_promise_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0">
-<div class="route_mobile_info_label">Next Promise Date</div>
-<div class="route_mobile_info_value">
-<field name="next_promise_to_pay_date" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Next Promise Date</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_latest_promise_date" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or promise_to_pay_count == 0">
-<div class="route_mobile_info_label">Latest Promise Status</div>
-<div class="route_mobile_info_value">
-<field name="latest_promise_status" readonly="1" nolabel="1" widget="badge" decoration-info="latest_promise_status == 'open'" decoration-warning="latest_promise_status == 'due_today'" decoration-danger="latest_promise_status == 'overdue'" decoration-success="latest_promise_status == 'closed'"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Latest Promise Status</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_latest_promise_status" readonly="1" nolabel="1" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False or outlet_near_expiry_count == 0">
-<div class="route_mobile_info_label">Near Expiry</div>
-<div class="route_mobile_info_value">
-<field name="outlet_near_expiry_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False or pending_near_expiry_line_count == 0">
-<div class="route_mobile_info_label">Pending Near Expiry</div>
-<div class="route_mobile_info_value">
-<field name="pending_near_expiry_line_count" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-</page>
-<page string="Payments">
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode == 'direct_sales' or (not display_payment_ids and consignment_amount_due_now == 0 and collected_amount == 0 and consignment_immediate_remaining_amount == 0 and promise_to_pay_count == 0)">
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Total Outlet Due</div>
-<div class="route_mobile_info_value">
-<field name="consignment_amount_due_now" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected</div>
-<div class="route_mobile_info_value">
-<field name="collected_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Current Visit Remaining</div>
-<div class="route_mobile_info_value">
-<field name="consignment_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="promise_to_pay_count == 0">
-<div class="route_mobile_info_label">Promise Amount</div>
-<div class="route_mobile_info_value">
-<field name="consignment_promise_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<div class="route_mobile_summary_grid" invisible="visit_execution_mode != 'direct_sales' or (not display_payment_ids and direct_stop_grand_due_amount == 0 and direct_stop_settlement_paid_amount == 0 and direct_stop_immediate_remaining_amount == 0 and not direct_stop_open_promise_amount)">
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Total Due Now</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Collected</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_settlement_paid_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card">
-<div class="route_mobile_info_label">Remaining After Collection</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_immediate_remaining_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_info_card" invisible="not direct_stop_open_promise_amount">
-<div class="route_mobile_info_label">Promise Amount</div>
-<div class="route_mobile_info_value">
-<field name="direct_stop_open_promise_amount" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
-<div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="direct_stop_order_refs" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_return_refs or direct_stop_return_refs == '-'">
-<div class="route_mobile_detail_label">Return</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value">
-<field name="direct_stop_return_refs" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_detail_label">Next Promise Date</div>
-<div class="route_mobile_detail_value">
-<field name="direct_stop_latest_promise_date" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_open_promise_amount">
-<div class="route_mobile_detail_label">Latest Promise Status</div>
-<div class="route_mobile_detail_value">
-<field name="direct_stop_latest_promise_status" readonly="1" nolabel="1" widget="badge" decoration-info="direct_stop_latest_promise_status == 'open'" decoration-warning="direct_stop_latest_promise_status == 'due_today'" decoration-danger="direct_stop_latest_promise_status == 'overdue'" decoration-success="direct_stop_latest_promise_status == 'closed'"/>
-</div>
-</div>
-</div>
-<div class="route_pda_payment_cards_host">
-<field name="display_payment_cards_html" readonly="1" nolabel="1" widget="html"/>
-</div>
-</page>
-<page string="Notes">
-<field name="notes" placeholder="Internal notes..."/>
-</page>
-<page string="Location Check-in">
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'review_only'"> Location is recorded for review only and does not block visit execution. </div>
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins require a reason before the visit can start. </div>
-<div class="alert alert-info" role="alert" invisible="not route_geo_enabled or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> Location check-in is required before Start Visit. Outside-zone check-ins cannot start the visit. </div>
-<div class="alert alert-info" role="alert" invisible="route_geo_enabled"> Location check-in is disabled in Route Settings. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'pending' or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft'"> Please capture your location before starting the visit. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy == 'require_reason' or route_geo_checkin_policy == 'block_start'"> You are outside the allowed outlet radius. This is recorded for review only. </div>
-<div class="alert alert-warning route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason' or visit_process_state != 'draft' or geo_checkin_outside_zone_reason"> You are outside the allowed outlet radius. A reason is required before starting the visit. </div>
-<div class="alert alert-info route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'require_reason' or visit_process_state == 'draft' or not geo_checkin_outside_zone_reason"> Outside-zone check-in reason was recorded for supervisor review. </div>
-<div class="alert alert-danger route_geo_outside_warning" role="alert" invisible="geo_checkin_status != 'outside' or route_geo_checkin_policy != 'block_start' or visit_process_state != 'draft'"> You are outside the allowed outlet radius. This visit cannot start under the current policy. </div>
-<div class="alert alert-info" role="alert" invisible="visit_process_state == 'draft'"> Location check-in is locked because this visit has already started. </div>
-<div class="route_geo_action_grid">
-<button name="action_capture_current_geo_checkin" type="object" string="Capture My Location" class="btn-primary route_geo_action_btn" icon="fa-crosshairs" invisible="not route_geo_enabled or visit_process_state != 'draft'"/>
-<button name="action_open_visit_outlet_map" type="object" string="Open Outlet Map" class="btn-secondary route_geo_action_btn" icon="fa-map-marker" invisible="not route_geo_enabled"/>
-<button name="action_open_visit_outlet_navigation" type="object" string="Navigate from Current Location" class="btn-secondary route_geo_action_btn" icon="fa-location-arrow" invisible="not route_geo_enabled or outlet_geo_status == 'missing'"/>
-<button name="action_geo_checkin_from_outlet_location" type="object" string="Use Outlet Coordinates" class="btn-primary route_geo_action_btn" icon="fa-check-circle" groups="route_core.group_route_supervisor,route_core.group_route_management" context="{'allow_outlet_coordinate_checkin': True}" invisible="1"/>
-<button name="action_clear_geo_checkin_location" type="object" string="Clear Check-in" class="btn-secondary route_geo_action_btn" icon="fa-trash" invisible="visit_process_state != 'draft' or (not geo_checkin_latitude and not geo_checkin_longitude)"/>
-</div>
-<separator string="Outlet Location"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Location Enabled</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_enabled" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Policy</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_checkin_policy" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Radius</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="route_geo_checkin_radius_m" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Outlet Status</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="outlet_geo_status" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Outlet GPS</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="outlet_geo_coordinates" readonly="1" nolabel="1"/>
-</div>
-</div>
-</div>
-<separator string="Check-in Snapshot"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Check-in Status</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_status" readonly="1" nolabel="1" widget="badge"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Distance</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_distance_display" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Check-in Time</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_datetime" readonly="1" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Accuracy</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_accuracy_m" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Latitude</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_latitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-<div class="route_mobile_detail_box route_geo_card">
-<div class="route_mobile_detail_label">Longitude</div>
-<div class="route_mobile_detail_value route_geo_value">
-<field name="geo_checkin_longitude" readonly="visit_process_state != 'draft'" nolabel="1"/>
-</div>
-</div>
-</div>
-<separator string="Review Notes"/>
-<div class="route_mobile_detail_grid route_geo_card_grid">
-<div class="route_mobile_detail_box route_mobile_detail_box_full route_geo_card route_geo_card_full">
-<div class="route_mobile_detail_label">Outside Zone Reason</div>
-<div class="route_mobile_detail_value route_mobile_wrap_value route_geo_value route_geo_wrap_value">
-<field name="geo_checkin_outside_zone_reason" readonly="visit_process_state != 'draft'" nolabel="1" placeholder="Optional reason for later enforcement."/>
-</div>
-</div>
-</div>
-</page>
-<page string="Completion Notes" invisible="not no_sale_reason">
-<field name="no_sale_reason" readonly="1"/>
-</page>
-<page string="Internal Tools" invisible="1">
-<group col="2">
-<button name="action_recompute_visit_health" type="object" string="Recompute Visit Health" class="btn-secondary"/>
-<button name="action_visit_diagnostics" type="object" string="Visit Diagnostics" class="btn-secondary"/>
-</group>
-</page>
-</notebook>
-</sheet>
-</form>
-</field>
-</record>
-<record id="view_route_visit_search" model="ir.ui.view">
-<field name="name">route.visit.search</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<search string="Route Visits">
-<field name="name"/>
-<field name="date"/>
-<field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="area_id"/>
-<field name="vehicle_id"/>
-<field name="user_id"/>
-<field name="state"/>
-<field name="visit_process_state"/>
-<filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_my_visits" string="My Visits" domain="[('user_id', '=', uid)]"/>
-<filter name="filter_active" string="Active" domain="[('state', 'not in', ['done', 'cancel', 'cancelled'])]"/>
-<filter name="filter_in_progress" string="In Progress" domain="[('state', '=', 'in_progress')]"/>
-<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
-<filter name="filter_cancelled" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
-<separator/>
-<filter name="filter_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
-<filter name="filter_customer" string="Customer" domain="[]" context="{'group_by': 'partner_id'}"/>
-<filter name="filter_area" string="Area" domain="[]" context="{'group_by': 'area_id'}"/>
-<filter name="filter_salesperson" string="Salesperson" domain="[]" context="{'group_by': 'user_id'}"/>
-<filter name="group_by_vehicle" string="Vehicle" context="{'group_by': 'vehicle_id'}"/>
-<filter name="group_by_process" string="Process State" context="{'group_by': 'visit_process_state'}"/>
-<filter name="group_by_state" string="Status" context="{'group_by': 'state'}"/>
-<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
-<searchpanel>
-<field name="outlet_id" string="Outlet"/>
-<field name="area_id" string="Area"/>
-<field name="partner_id" string="Customer"/>
-<field name="user_id" string="Salesperson"/>
-<field name="vehicle_id" string="Vehicle"/>
-</searchpanel>
-</search>
-</field>
-</record>
-<record id="view_route_visit_history_salesperson_search" model="ir.ui.view">
-<field name="name">route.visit.history.salesperson.search</field>
-<field name="model">route.visit</field>
-<field name="arch" type="xml">
-<search string="My Visit History">
-<field name="name" string="Visit"/>
-<field name="visit_history_time_bucket" string="Visit Time" expand="1" enable_counters="1"/>
-<field name="outlet_id"/>
-<field name="partner_id"/>
-<field name="area_id"/>
-<field name="date"/>
-<filter name="filter_today" string="Today" domain="[('date', '=', context_today())]"/>
-<filter name="filter_last_7_days" string="Last 7 Days" domain="[('date', '>=', (context_today() - relativedelta(days=6)).strftime('%Y-%m-%d'))]"/>
-<filter name="filter_last_30_days" string="Last 30 Days" domain="[('date', '>=', (context_today() - relativedelta(days=29)).strftime('%Y-%m-%d'))]"/>
-<filter name="filter_this_month" string="This Month" domain="[('date', '>=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
-<filter name="filter_visit_date" string="Custom Dates" date="date"/>
-<separator/>
-<filter name="filter_done" string="Done" domain="[('state', '=', 'done')]"/>
-<filter name="filter_cancelled" string="Cancelled" domain="[('state', 'in', ['cancel', 'cancelled'])]"/>
-<filter name="filter_outside_zone" string="Outside Zone" domain="[('geo_review_state', 'in', ['outside_no_reason', 'outside_with_reason'])]"/>
-<filter name="filter_pending_location" string="Pending Location" domain="[('geo_review_state', 'in', ['pending_checkin', 'outlet_missing'])]"/>
-<separator/>
-<filter name="group_by_date" string="Date" context="{'group_by': 'date'}"/>
-<filter name="group_by_outlet" string="Outlet" context="{'group_by': 'outlet_id'}"/>
-<filter name="group_by_area" string="Area" context="{'group_by': 'area_id'}"/>
-<filter name="group_by_status" string="Status" context="{'group_by': 'state'}"/>
-<searchpanel>
-<field name="visit_history_time_bucket" string="Visit Time" expand="1" enable_counters="1"/>
-<field name="outlet_id" string="Outlet"/>
-<field name="area_id" string="Area"/>
-<field name="partner_id" string="Customer"/>
-<field name="state" string="Status"/>
-</searchpanel>
-</search>
-</field>
-</record>
-<record id="action_route_visit" model="ir.actions.act_window">
-<field name="name">Visit History</field>
-<field name="res_model">route.visit</field>
-<field name="view_mode">list,form</field>
-<field name="search_view_id" ref="view_route_visit_search"/>
-<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0}</field>
-<field name="help" type="html">
-<p class="o_view_nocontent_smiling_face"> Visit History is for review and operational settlement. </p>
-</field>
-</record>
-<record id="action_route_visit_list_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="1"/>
-<field name="view_mode">list</field>
-<field name="view_id" ref="view_route_visit_tree"/>
-<field name="act_window_id" ref="action_route_visit"/>
-</record>
-<record id="action_route_visit_form_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="2"/>
-<field name="view_mode">form</field>
-<field name="view_id" ref="view_route_visit_form"/>
-<field name="act_window_id" ref="action_route_visit"/>
-</record>
-<record id="action_route_visit_pda" model="ir.actions.act_window">
-<field name="name">My Visits</field>
-<field name="res_model">route.visit</field>
-<field name="view_mode">kanban,form,list</field>
-<field name="search_view_id" ref="view_route_visit_search"/>
-<field name="context">{'search_default_filter_my_visits': 1, 'search_default_filter_today': 1, 'create': 0, 'edit': 1, 'delete': 0, 'route_pda_salesperson_mode': 1}</field>
-<field name="help" type="html">
-<p class="o_view_nocontent_smiling_face"> Open the route visits for the selected plan in workspace mode. </p>
-</field>
-</record>
-<record id="action_route_visit_pda_kanban_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="1"/>
-<field name="view_mode">kanban</field>
-<field name="view_id" ref="view_route_visit_pda_kanban"/>
-<field name="act_window_id" ref="action_route_visit_pda"/>
-</record>
-<record id="action_route_visit_pda_form_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="2"/>
-<field name="view_mode">form</field>
-<field name="view_id" ref="view_route_visit_pda_form"/>
-<field name="act_window_id" ref="action_route_visit_pda"/>
-</record>
-<record id="action_route_visit_pda_list_view" model="ir.actions.act_window.view">
-<field name="sequence" eval="3"/>
-<field name="view_mode">list</field>
-<field name="view_id" ref="view_route_visit_tree"/>
-<field name="act_window_id" ref="action_route_visit_pda"/>
-</record>
-<menuitem id="menu_route_visit_root" name="Route Sales" sequence="10"/>
-<menuitem id="menu_route_visit_history" name="Visit History" parent="menu_route_visit_root" action="action_route_visit" sequence="40"/>
-<record id="menu_route_visit" model="ir.ui.menu">
-<field name="active" eval="False"/>
-</record>
-</odoo>
+from odoo import _, api, fields, models, SUPERUSER_ID
+from odoo.exceptions import UserError
+
+
+class RouteVisit(models.Model):
+    _inherit = "route.visit"
+
+    refill_picking_id = fields.Many2one(
+        "stock.picking",
+        string="Refill Transfer",
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    refill_picking_count = fields.Integer(
+        string="Refill Transfer Count",
+        compute="_compute_refill_picking_count",
+        store=False,
+    )
+
+    refill_credit_warning_visible = fields.Boolean(
+        string="Refill Credit Warning Visible",
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+
+    refill_credit_warning_level = fields.Selection(
+        [
+            ("warning", "Warning"),
+            ("danger", "Danger"),
+        ],
+        string="Refill Credit Warning Level",
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+
+    refill_credit_warning_text = fields.Text(
+        string="Refill Credit Warning Text",
+        compute="_compute_refill_credit_warning",
+        store=False,
+    )
+
+    def _compute_refill_picking_count(self):
+        for rec in self:
+            rec.refill_picking_count = 1 if rec.refill_picking_id else 0
+
+    @api.depends(
+        "outlet_id",
+        "outlet_id.shelf_credit_limit_amount",
+        "outlet_id.stock_total_value",
+        "line_ids.supplied_qty",
+        "line_ids.unit_price",
+        "visit_process_state",
+    )
+    def _compute_refill_credit_warning(self):
+        for rec in self:
+            rec.refill_credit_warning_visible = False
+            rec.refill_credit_warning_level = False
+            rec.refill_credit_warning_text = False
+
+            outlet = rec.outlet_id
+            if not outlet:
+                continue
+
+            limit_amount = outlet.shelf_credit_limit_amount or 0.0
+            if limit_amount <= 0:
+                continue
+
+            current_shelf_value = outlet.stock_total_value or 0.0
+            refill_value = rec._get_refill_total_value()
+            projected_shelf_value = current_shelf_value + refill_value
+            available_capacity = max(limit_amount - current_shelf_value, 0.0)
+
+            if projected_shelf_value > limit_amount and refill_value > 0:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_level = "danger"
+                rec.refill_credit_warning_text = _(
+                    "Outlet shelf credit limit will be exceeded.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Refill value: %(refill).2f\n"
+                    "Projected shelf value: %(projected).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Available capacity before refill: %(available).2f\n"
+                    "Over limit by: %(over).2f"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "refill": refill_value,
+                    "projected": projected_shelf_value,
+                    "limit": limit_amount,
+                    "available": available_capacity,
+                    "over": max(projected_shelf_value - limit_amount, 0.0),
+                }
+            elif current_shelf_value > limit_amount:
+                rec.refill_credit_warning_visible = True
+                rec.refill_credit_warning_level = "warning"
+                rec.refill_credit_warning_text = _(
+                    "Outlet is already over shelf credit limit.\n"
+                    "Outlet: %(outlet)s\n"
+                    "Current shelf value: %(current).2f\n"
+                    "Shelf credit limit: %(limit).2f\n"
+                    "Over limit by: %(over).2f"
+                ) % {
+                    "outlet": outlet.display_name,
+                    "current": current_shelf_value,
+                    "limit": limit_amount,
+                    "over": max(current_shelf_value - limit_amount, 0.0),
+                }
+
+    def _get_refill_transfer_lines(self):
+        self.ensure_one()
+        visit = self.with_user(SUPERUSER_ID).sudo()
+        return visit.line_ids.filtered(
+            lambda line: line.product_id and (line.supplied_qty or 0.0) > 0
+        )
+
+    def _prepare_refill_picking_vals(self):
+        self.ensure_one()
+        picking_type = self._get_internal_picking_type()
+        source_location = self._get_vehicle_stock_location()
+        dest_location = self._get_outlet_stock_location()
+        return {
+            "picking_type_id": picking_type.id,
+            "location_id": source_location.id,
+            "location_dest_id": dest_location.id,
+            "origin": self.name,
+            "route_visit_id": self.id,
+            "partner_id": self.partner_id.id if self.partner_id else False,
+            "move_type": "direct",
+        }
+
+    def _prepare_refill_move_vals(self, picking, line):
+        self.ensure_one()
+        line = line.with_user(SUPERUSER_ID).sudo()
+        picking = picking.with_user(SUPERUSER_ID).sudo()
+        product = line.product_id.with_user(SUPERUSER_ID).sudo()
+        unit_price = line.unit_price or product.lst_price or 0.0
+        supplied_qty = line.supplied_qty or 0.0
+        return {
+            "product_id": product.id,
+            "product_uom_qty": supplied_qty,
+            "product_uom": line.uom_id.id or product.uom_id.id,
+            "location_id": picking.location_id.id,
+            "location_dest_id": picking.location_dest_id.id,
+            "picking_id": picking.id,
+            "route_visit_id": self.id,
+            "route_visit_line_id": line.id,
+            "route_direct_return_unit_price": unit_price,
+            "route_direct_return_estimated_amount": supplied_qty * unit_price,
+        }
+
+    def _fill_move_line_qty_done(self, picking):
+        picking = picking.with_user(SUPERUSER_ID).sudo()
+        StockMoveLine = self.env["stock.move.line"].with_user(SUPERUSER_ID).sudo()
+
+        for move in picking.move_ids.with_user(SUPERUSER_ID).sudo():
+            qty = move.product_uom_qty or 0.0
+            if qty <= 0:
+                continue
+
+            if move.move_line_ids:
+                remaining = qty
+                for ml in move.move_line_ids.with_user(SUPERUSER_ID).sudo():
+                    if remaining <= 0:
+                        break
+                    ml.quantity = remaining
+                    remaining = 0.0
+            else:
+                StockMoveLine.create({
+                    "move_id": move.id,
+                    "picking_id": picking.id,
+                    "product_id": move.product_id.id,
+                    "product_uom_id": move.product_uom.id,
+                    "quantity": qty,
+                    "location_id": move.location_id.id,
+                    "location_dest_id": move.location_dest_id.id,
+                })
+
+    def _get_refill_total_value(self):
+        self.ensure_one()
+        return sum(
+            (line.supplied_qty or 0.0) * (line.unit_price or 0.0)
+            for line in self._get_refill_transfer_lines()
+        )
+
+    def _check_outlet_shelf_credit_limit(self):
+        self.ensure_one()
+        outlet = self.outlet_id
+        limit_amount = outlet.shelf_credit_limit_amount or 0.0
+        if limit_amount <= 0:
+            return
+
+        current_shelf_value = outlet.stock_total_value or 0.0
+        refill_value = self._get_refill_total_value()
+        projected_shelf_value = current_shelf_value + refill_value
+
+        if projected_shelf_value > limit_amount:
+            raise UserError(
+                _(
+                    "Outlet shelf credit limit exceeded.\n\n"
+                    "Outlet: %s\n"
+                    "Current shelf value: %.2f\n"
+                    "Refill value: %.2f\n"
+                    "Projected shelf value: %.2f\n"
+                    "Shelf credit limit: %.2f\n"
+                    "Available capacity before refill: %.2f"
+                )
+                % (
+                    outlet.display_name,
+                    current_shelf_value,
+                    refill_value,
+                    projected_shelf_value,
+                    limit_amount,
+                    max(limit_amount - current_shelf_value, 0.0),
+                )
+            )
+
+    def _create_refill_picking(self):
+        self.ensure_one()
+        visit = self.with_user(SUPERUSER_ID).sudo()
+
+        if visit.refill_picking_id and visit.refill_picking_id.state != "cancel":
+            return visit.refill_picking_id.with_user(SUPERUSER_ID).sudo()
+
+        if visit.state != "in_progress":
+            raise UserError(_("Refill transfer can only be created while the visit is in progress."))
+
+        if visit.visit_process_state != "reconciled":
+            raise UserError(_("Refill transfer can only be created after reconciliation."))
+
+        visit._check_route_stock_locations_ready()
+
+        lines = visit._get_refill_transfer_lines()
+        if not lines:
+            raise UserError(_("There are no refill quantities to transfer."))
+
+        visit._check_outlet_shelf_credit_limit()
+
+        picking_vals = visit._prepare_refill_picking_vals()
+        picking = self.env["stock.picking"].with_user(SUPERUSER_ID).sudo().create(picking_vals)
+
+        StockMove = self.env["stock.move"].with_user(SUPERUSER_ID).sudo()
+        for line in lines.with_user(SUPERUSER_ID).sudo():
+            move_vals = visit._prepare_refill_move_vals(picking, line)
+            StockMove.create(move_vals)
+
+        visit.write({"refill_picking_id": picking.id})
+        return picking.with_user(SUPERUSER_ID).sudo()
+
+    def action_confirm_refill_transfer(self):
+        self.ensure_one()
+        visit = self.with_user(SUPERUSER_ID).sudo()
+
+        picking = visit._create_refill_picking().with_user(SUPERUSER_ID).sudo()
+
+        if picking.state == "draft":
+            picking.action_confirm()
+
+        if picking.state in ("confirmed", "waiting"):
+            picking.action_assign()
+
+        visit._fill_move_line_qty_done(picking)
+
+        if picking.state not in ("done", "cancel"):
+            result = picking.button_validate()
+            if isinstance(result, dict):
+                return result
+
+        if picking.state != "done":
+            raise UserError(
+                _("The refill transfer was created, but it could not be fully validated automatically.")
+            )
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Visit"),
+            "res_model": "route.visit",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
+        }
+
+    def action_view_refill_transfer(self):
+        self.ensure_one()
+
+        if not self.refill_picking_id:
+            raise UserError(_("There is no refill transfer linked to this visit."))
+
+        action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        action["res_id"] = self.refill_picking_id.id
+        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        action["context"] = {
+            "default_route_visit_id": self.id,
+        }
+        return action
