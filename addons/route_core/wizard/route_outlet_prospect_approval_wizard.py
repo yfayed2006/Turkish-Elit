@@ -12,6 +12,47 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
     outlet_name = fields.Char(string="Outlet Name", related="prospect_id.name", readonly=True)
     salesperson_id = fields.Many2one("res.users", string="Salesperson", related="prospect_id.salesperson_id", readonly=True)
 
+    # ROUTECORE_STAGE_2026_05_15_OUTLET_ASSIGNMENT_DEFAULTS
+    assigned_salesperson_id = fields.Many2one(
+        "res.users",
+        string="Responsible Salesperson",
+        help="Salesperson who will normally serve this outlet.",
+    )
+    assigned_supervisor_id = fields.Many2one(
+        "res.users",
+        string="Responsible Supervisor",
+        help="Supervisor responsible for this outlet.",
+    )
+    default_vehicle_id = fields.Many2one(
+        "route.vehicle",
+        string="Default Vehicle",
+        help="Default vehicle normally serving this outlet.",
+    )
+    default_source_location_id = fields.Many2one(
+        "stock.location",
+        string="Default Source Location",
+        domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]",
+        help="Default warehouse or vehicle location used as the source of goods.",
+    )
+    saleable_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Saleable Return Location",
+        domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]",
+        help="Default location for saleable returns.",
+    )
+    damaged_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Damaged Return Location",
+        domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]",
+        help="Default location for damaged returns.",
+    )
+    expiry_return_location_id = fields.Many2one(
+        "stock.location",
+        string="Expired / Near Expiry Return Location",
+        domain="[('usage', '=', 'internal'), ('company_id', 'in', [False, company_id])]",
+        help="Default location for expired or near-expiry returns.",
+    )
+
     # ROUTECORE_FIX_2026_05_15_0110_PROSPECT_CONTEXT_WIZARD_V7
     # # ROUTECORE_FIX_2026_05_15_0155_PROSPECT_APPROVAL_REQUIRED_FIX_V8
     # ROUTECORE_FIX_2026_05_15_0240_PROSPECT_APPROVAL_WIZARD_REQUIRED_V9
@@ -78,6 +119,8 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
         prospect = self.env["route.outlet.prospect"].browse(prospect_id).exists() if prospect_id else self.env["route.outlet.prospect"]
         if prospect:
             vals.setdefault("prospect_id", prospect.id)
+            vals.setdefault("assigned_salesperson_id", prospect.salesperson_id.id if prospect.salesperson_id else False)
+            vals.setdefault("assigned_supervisor_id", self.env.user.id)
             # Do not copy a salesperson-side/default operation mode into the
             # approval. The supervisor must explicitly choose Direct Sale or
             # Consignment in this popup.
@@ -118,6 +161,13 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
                 wizard.category_commission_line_ids = [(5, 0, 0)]
                 wizard.shelf_credit_limit_amount = 0.0
                 wizard.stock_location_id = False
+
+    @api.onchange("default_vehicle_id")
+    def _onchange_route_operational_vehicle(self):
+        for wizard in self:
+            vehicle_location = wizard.default_vehicle_id.stock_location_id if wizard.default_vehicle_id and getattr(wizard.default_vehicle_id, "stock_location_id", False) else False
+            if vehicle_location and not wizard.default_source_location_id:
+                wizard.default_source_location_id = vehicle_location
 
     @api.onchange("consignment_commission_mode", "default_commission_rate")
     def _onchange_consignment_commission_mode(self):
@@ -168,6 +218,10 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
             raise UserError(_("Potential customer was not found."))
         if self.prospect_id.state != "submitted":
             raise UserError(_("Only submitted potential customers can be approved."))
+        if not self.assigned_salesperson_id:
+            raise ValidationError(_("Please choose the responsible salesperson before creating the outlet."))
+        if not self.assigned_supervisor_id:
+            raise ValidationError(_("Please choose the responsible supervisor before creating the outlet."))
         if self.outlet_operation_mode not in ("direct_sale", "consignment"):
             raise ValidationError(_("Please choose Direct Sale or Consignment before creating the outlet."))
         if self.outlet_operation_mode == "direct_sale":
@@ -192,6 +246,13 @@ class RouteOutletProspectApprovalWizard(models.TransientModel):
         vals = {
             "outlet_operation_mode": self.outlet_operation_mode,
             "financial_policy": "auto",
+            "assigned_salesperson_id": self.assigned_salesperson_id.id if self.assigned_salesperson_id else False,
+            "assigned_supervisor_id": self.assigned_supervisor_id.id if self.assigned_supervisor_id else False,
+            "default_vehicle_id": self.default_vehicle_id.id if self.default_vehicle_id else False,
+            "default_source_location_id": self.default_source_location_id.id if self.default_source_location_id else False,
+            "saleable_return_location_id": self.saleable_return_location_id.id if self.saleable_return_location_id else False,
+            "damaged_return_location_id": self.damaged_return_location_id.id if self.damaged_return_location_id else False,
+            "expiry_return_location_id": self.expiry_return_location_id.id if self.expiry_return_location_id else False,
         }
         if self.outlet_operation_mode == "direct_sale":
             vals["direct_sale_pricelist_id"] = self.direct_sale_pricelist_id.id if self.direct_sale_pricelist_id else False
