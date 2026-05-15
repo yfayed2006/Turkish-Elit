@@ -576,7 +576,7 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
-<!--   ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4   -->
+<!--    ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4    -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_snapshot_group">
 <div class="route_pda_group_title">Quick Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -606,7 +606,7 @@
 </div>
 </div>
 </div>
-<!--  ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS  -->
+<!--   ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS   -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_commercial_group">
 <div class="route_pda_group_title">Commercial Setup</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -874,20 +874,59 @@
 </div>
 </page>
 <page string="Stock" invisible="outlet_operation_mode != 'consignment'">
-<group string="Consignment Stock Snapshot" col="2">
-<group>
-<field name="stock_balance_count" readonly="1"/>
-<field name="stock_total_qty" readonly="1"/>
-<field name="stock_total_value" readonly="1"/>
-<field name="refill_needed_count" readonly="1"/>
-</group>
-<group>
-<field name="zero_stock_product_count" readonly="1"/>
-<field name="near_expiry_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="expired_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="last_stock_update_at" readonly="1"/>
-</group>
-</group>
+<div class="route_pda_group route_pda_product_center_group route_pda_stock_snapshot_section">
+<div class="route_pda_group_title">Consignment Stock Snapshot</div>
+<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_stock_snapshot_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card">
+<div class="route_pda_info_label">Stock Items</div>
+<div class="route_pda_info_value">
+<field name="stock_balance_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card">
+<div class="route_pda_info_label">Total Shelf Qty</div>
+<div class="route_pda_info_value">
+<field name="stock_total_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card">
+<div class="route_pda_info_label">Stock Value</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="stock_total_value" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card">
+<div class="route_pda_info_label">Refill Needed Items</div>
+<div class="route_pda_info_value">
+<field name="refill_needed_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card">
+<div class="route_pda_info_label">Zero Stock Items</div>
+<div class="route_pda_info_value">
+<field name="zero_stock_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_pda_info_label">Near Expiry Items</div>
+<div class="route_pda_info_value">
+<field name="near_expiry_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_pda_info_label">Expired Items</div>
+<div class="route_pda_info_value">
+<field name="expired_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_stock_snapshot_card route_pda_info_card_full">
+<div class="route_pda_info_label">Last Stock Update</div>
+<div class="route_pda_info_value">
+<field name="last_stock_update_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
 </page>
 </notebook>
 </sheet>
@@ -1298,14 +1337,57 @@
 </group>
 </group>
 </page>
-<page string="Lines">
-<field name="order_line" readonly="1">
-<list create="0" delete="0" edit="0">
-<field name="product_template_id" string="Product"/>
-<field name="product_uom_qty" string="Qty"/>
+<page string="Products">
+<field name="order_line" readonly="1" nolabel="1" class="route_pda_sale_order_lines_x2many">
+<kanban class="route_pda_sale_order_line_kanban" create="0" delete="0" edit="0">
+<field name="product_template_id"/>
+<field name="product_uom_qty"/>
+<field name="product_uom"/>
 <field name="price_unit"/>
-<field name="price_subtotal" string="Subtotal"/>
-</list>
+<field name="discount"/>
+<field name="price_subtotal"/>
+<templates>
+<t t-name="card">
+<div class="o_kanban_record route_pda_sale_order_line_card">
+<div class="route_pda_sale_order_line_product">
+<field name="product_template_id"/>
+</div>
+<div class="route_pda_sale_order_line_metrics">
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">Qty</span>
+<span class="route_pda_sale_order_line_value">
+<field name="product_uom_qty"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">UoM</span>
+<span class="route_pda_sale_order_line_value">
+<field name="product_uom"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">Unit Price</span>
+<span class="route_pda_sale_order_line_value">
+<field name="price_unit"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">Discount %</span>
+<span class="route_pda_sale_order_line_value">
+<field name="discount"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric route_pda_sale_order_line_metric_total">
+<span class="route_pda_sale_order_line_label">Subtotal</span>
+<span class="route_pda_sale_order_line_value">
+<field name="price_subtotal"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
 </field>
 </page>
 </notebook>
@@ -1317,16 +1399,19 @@
 <field name="name">stock.picking.outlet.pda.kanban</field>
 <field name="model">stock.picking</field>
 <field name="arch" type="xml">
-<kanban class="route_pda_payment_kanban" create="0" edit="0" delete="0">
+<kanban class="route_pda_payment_kanban route_pda_return_transfer_kanban" create="0" edit="0" delete="0">
 <field name="name"/>
 <field name="scheduled_date"/>
 <field name="location_id"/>
 <field name="location_dest_id"/>
 <field name="origin"/>
 <field name="state"/>
+<field name="route_pda_return_line_count"/>
+<field name="route_pda_return_qty"/>
+<field name="route_pda_return_value"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_return_transfer_card">
 <div class="route_pda_payment_head">
 <div class="route_pda_payment_title">
 <field name="name"/>
@@ -1343,14 +1428,32 @@
 <t t-esc="record.origin.value"/>
 </span>
 </div>
-<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metrics route_pda_return_transfer_summary_grid">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Returned Qty</span>
+<span class="route_pda_payment_metric_value">
+<field name="route_pda_return_qty"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Estimated Value</span>
+<span class="route_pda_payment_metric_value">
+<field name="route_pda_return_value"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Lines</span>
+<span class="route_pda_payment_metric_value">
+<field name="route_pda_return_line_count"/>
+</span>
+</div>
 <div class="route_pda_payment_metric">
 <span class="route_pda_payment_metric_label">From</span>
 <span class="route_pda_payment_metric_value">
 <field name="location_id"/>
 </span>
 </div>
-<div class="route_pda_payment_metric">
+<div class="route_pda_payment_metric route_pda_payment_metric_single">
 <span class="route_pda_payment_metric_label">To</span>
 <span class="route_pda_payment_metric_value">
 <field name="location_dest_id"/>
@@ -1375,6 +1478,88 @@
 <field name="origin" string="Source Document" optional="show"/>
 <field name="state" string="Status" widget="badge" decoration-info="state == 'assigned'" decoration-warning="state in ('draft', 'confirmed', 'waiting')" decoration-success="state == 'done'" decoration-danger="state == 'cancel'"/>
 </list>
+</field>
+</record>
+<record id="view_stock_picking_outlet_pda_form" model="ir.ui.view">
+<field name="name">stock.picking.outlet.pda.form</field>
+<field name="model">stock.picking</field>
+<field name="arch" type="xml">
+<form string="Customer Profile Return / Transfer" create="0" edit="0" delete="0">
+<sheet class="route_pda_home_sheet route_pda_detail_sheet route_pda_outlet_sheet route_pda_stock_picking_detail_sheet">
+<div class="route_pda_detail_header">
+<button name="action_back_to_outlet_form" type="object" class="btn route_pda_back_btn">
+<i class="fa fa-arrow-left" title="Arrow Left"/>
+<span>Back to Customer Profile</span>
+</button>
+<h2 class="route_pda_detail_title">Return / Transfer Details</h2>
+</div>
+<div class="route_pda_payment_head route_pda_stock_picking_detail_head">
+<div>
+<div class="route_pda_payment_title route_pda_stock_picking_detail_title">
+<field name="name" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_badges">
+<field name="state" widget="badge" readonly="1" nolabel="1" decoration-success="state == 'done'" decoration-warning="state in ('draft', 'confirmed', 'waiting', 'assigned')" decoration-danger="state == 'cancel'"/>
+<span class="route_pda_payment_badge" invisible="not origin">
+<field name="origin" readonly="1" nolabel="1"/>
+</span>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="scheduled_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_card_grid route_pda_card_grid_2 route_pda_return_transfer_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_info_card_full">
+<div class="route_pda_info_label">From</div>
+<div class="route_pda_info_value">
+<field name="location_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_pda_info_card_full">
+<div class="route_pda_info_label">To</div>
+<div class="route_pda_info_value">
+<field name="location_dest_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Returned Qty</div>
+<div class="route_pda_info_value">
+<field name="route_pda_return_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Estimated Value</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="route_pda_return_value" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Lines</div>
+<div class="route_pda_info_value">
+<field name="route_pda_return_line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Source Document</div>
+<div class="route_pda_info_value">
+<field name="origin" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Products</div>
+<field name="move_ids_without_package" readonly="1" nolabel="1" class="route_pda_return_move_lines">
+<list string="Products" create="0" delete="0" edit="0">
+<field name="product_id" string="Product"/>
+<field name="product_uom_qty" string="Demand"/>
+<field name="quantity" string="Done Qty"/>
+<field name="product_uom" string="UoM"/>
+</list>
+</field>
+</div>
+</sheet>
+</form>
 </field>
 </record>
 <record id="view_stock_picking_outlet_return_pda_search" model="ir.ui.view">
