@@ -164,27 +164,32 @@ class RouteVisit(models.Model):
     def _get_return_destination_location(self, return_route):
         self.ensure_one()
 
-        if return_route == "vehicle":
-            return self._get_vehicle_stock_location()
-
+        outlet = self.outlet_id
         company = self.company_id or self.env.company
 
+        if return_route == "vehicle":
+            if outlet and "saleable_return_location_id" in outlet._fields and outlet.saleable_return_location_id:
+                return outlet.saleable_return_location_id
+            return self._get_vehicle_stock_location()
+
         if return_route == "damaged":
-            location = company.return_damaged_location_id
+            location = outlet.damaged_return_location_id if outlet and "damaged_return_location_id" in outlet._fields else False
+            location = location or company.return_damaged_location_id
             if not location:
                 raise UserError(
                     _(
-                        "Please configure Return Damaged Location in route return settings before confirming damaged returns."
+                        "Please configure Damaged Return Location on the outlet or Return Damaged Location in route return settings before confirming damaged returns."
                     )
                 )
             return location
 
         if return_route == "near_expiry":
-            location = company.return_near_expiry_location_id
+            location = outlet.expiry_return_location_id if outlet and "expiry_return_location_id" in outlet._fields else False
+            location = location or company.return_near_expiry_location_id
             if not location:
                 raise UserError(
                     _(
-                        "Please configure Return Near Expiry Location in route return settings before confirming near expiry returns."
+                        "Please configure Expired / Near Expiry Return Location on the outlet or Return Near Expiry Location in route return settings before confirming near expiry returns."
                     )
                 )
             return location
