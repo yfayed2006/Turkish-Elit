@@ -1011,6 +1011,13 @@
 <field name="geo_status" invisible="1"/>
 <field name="route_financial_profile_state" invisible="1"/>
 <field name="route_financial_profile_label" invisible="1"/>
+<field name="assigned_salesperson_id" invisible="1"/>
+<field name="assigned_supervisor_id" invisible="1"/>
+<field name="default_vehicle_id" invisible="1"/>
+<field name="default_source_location_id" invisible="1"/>
+<field name="saleable_return_location_id" invisible="1"/>
+<field name="damaged_return_location_id" invisible="1"/>
+<field name="expiry_return_location_id" invisible="1"/>
 <div class="route_pda_detail_header">
 <button name="action_open_pda_form" type="object" class="btn route_pda_back_btn">
 <i class="fa fa-arrow-left" title="Arrow Left"/>
@@ -1059,6 +1066,53 @@
 <div class="route_pda_info_label">Address</div>
 <div class="route_pda_info_value route_pda_info_value_left">
 <field name="display_address" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_product_center_group">
+<div class="route_pda_group_title">Assignment and Stock Defaults</div>
+<div class="route_pda_payment_summary_grid route_cheque_control_detail_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Responsible Salesperson</div>
+<div class="route_pda_info_value">
+<field name="assigned_salesperson_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Responsible Supervisor</div>
+<div class="route_pda_info_value">
+<field name="assigned_supervisor_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Default Vehicle</div>
+<div class="route_pda_info_value">
+<field name="default_vehicle_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Default Source Location</div>
+<div class="route_pda_info_value">
+<field name="default_source_location_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Saleable Return Location</div>
+<div class="route_pda_info_value">
+<field name="saleable_return_location_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card">
+<div class="route_pda_info_label">Damaged Return Location</div>
+<div class="route_pda_info_value">
+<field name="damaged_return_location_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_info_card_full route_pda_payment_summary_card">
+<div class="route_pda_info_label">Expired / Near Expiry Return Location</div>
+<div class="route_pda_info_value">
+<field name="expiry_return_location_id" readonly="1" nolabel="1" options="{'no_open': True}"/>
 </div>
 </div>
 </div>
