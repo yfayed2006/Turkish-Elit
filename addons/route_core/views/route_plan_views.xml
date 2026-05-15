@@ -400,7 +400,7 @@ pending visit(s) were found for this planning area.
 </div>
 </page>
 <page string="Planned Visits" invisible="not id">
-<div class="alert alert-info" role="alert" invisible="planning_finalized">Add, reorder, and review the final stop list before daily execution is locked.</div>
+<div class="alert alert-info" role="alert" invisible="planning_finalized">Select outlets only. Area, salesperson, vehicle, and source location are filled from the outlet assignment defaults and this route plan scope.</div>
 <div class="alert alert-info" role="alert" invisible="not planning_finalized">Planning is locked after finalization. Visits are generated automatically; monitor line status, open visits, and skipped stops here.</div>
 <div class="mb-2">
 <button name="action_open_add_area_outlets_wizard" type="object" string="Add Visits by Area" class="btn-primary" icon="fa-plus" invisible="planning_finalized" groups="route_core.group_route_supervisor,route_core.group_route_management"/>
@@ -410,9 +410,12 @@ pending visit(s) were found for this planning area.
 <field name="line_ids" context="{'default_area_id': area_id}" readonly="planning_finalized">
 <list editable="bottom" decoration-warning="state == 'pending'" decoration-info="state == 'in_progress'" decoration-success="state == 'visited'" decoration-muted="state == 'skipped'">
 <field name="sequence" widget="handle"/>
-<field name="area_id"/>
-<field name="outlet_id" domain="[('area_id', '=', area_id)]"/>
+<field name="available_outlet_ids" column_invisible="1"/>
+<field name="outlet_id" domain="[('id', 'in', available_outlet_ids)]"/>
+<field name="area_id" readonly="1" optional="show"/>
 <field name="partner_id" readonly="1" optional="show"/>
+<field name="outlet_default_vehicle_id" readonly="1" optional="hide"/>
+<field name="outlet_default_source_location_id" readonly="1" optional="hide"/>
 <field name="state" string="Visit Status" widget="badge" decoration-info="state == 'pending'" decoration-warning="state == 'in_progress'" decoration-success="state == 'visited'" decoration-danger="state == 'skipped'"/>
 <field name="visit_id" string="Visit" readonly="1" optional="show"/>
 <field name="skip_reason" optional="hide"/>
