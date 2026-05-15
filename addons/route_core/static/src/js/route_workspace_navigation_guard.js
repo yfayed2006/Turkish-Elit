@@ -344,7 +344,25 @@ function isOutletRelatedSubpage(pageNames, requiredHints = [], originButtons = [
 }
 
 function isOutletVisitsPage() {
-    return isOutletRelatedSubpage(["outlet visits", "visits", "my visits"], ["process", "visit", "outlet"], ["action_view_visits"]);
+    const title = normalizeText(findActionTitle());
+    const rootText = getRootText();
+    const pageText = getPageText();
+    const explicitOutletVisitTitle = [
+        "outlet visits",
+        "customer profile visits",
+        "customer visits",
+    ].includes(title);
+    const hasVisitCards = (
+        rootText.includes("current step")
+        || rootText.includes("open visit")
+        || rootText.includes("view visit summary")
+        || pageText.includes("rv/")
+    );
+    if (explicitOutletVisitTitle && hasVisitCards) {
+        markOutletWorkspaceActive();
+        return true;
+    }
+    return isOutletRelatedSubpage(["outlet visits", "customer profile visits", "customer visits", "visits", "my visits"], ["process", "visit", "outlet"], ["action_view_visits"]);
 }
 
 function isOutletPaymentsPage() {
@@ -386,20 +404,18 @@ function isOutletSaleOrdersPage() {
         || rootText.includes("total")
         || pageText.includes("sales orders")
     );
-    const hasStoredOutletForm = !!(getOutletFormTarget().url || getOutletFormTarget().hash);
-    return !!((hasOutletTrail || hasRecentOrigin || hasStoredOutletForm) && (titleLooksLikeOrderList || titleLooksLikeOrderRecord || hasRecentOrigin) && hasOrderContent);
+    return !!((hasOutletTrail || hasRecentOrigin) && (titleLooksLikeOrderList || titleLooksLikeOrderRecord || hasRecentOrigin) && hasOrderContent);
 }
 
 function isOutletReturnsPage() {
-    const hasStoredOutletForm = !!(getOutletFormTarget().url || getOutletFormTarget().hash);
-    if (!isOutletWorkspaceActive() && !hasStoredOutletForm) {
+    if (!isOutletWorkspaceActive()) {
         return false;
     }
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_return_orders"]) || hasStoredOutletForm;
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_return_orders"]);
     if (!hasOutletTrail) {
         return false;
     }
@@ -418,15 +434,14 @@ function isOutletReturnsPage() {
 }
 
 function isOutletTransfersPage() {
-    const hasStoredOutletForm = !!(getOutletFormTarget().url || getOutletFormTarget().hash);
-    if (!isOutletWorkspaceActive() && !hasStoredOutletForm) {
+    if (!isOutletWorkspaceActive()) {
         return false;
     }
     const title = normalizeText(findActionTitle());
     const rootText = getRootText();
     const pageText = getPageText();
     const breadcrumbText = getBreadcrumbText();
-    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_transfers"]) || hasStoredOutletForm;
+    const hasOutletTrail = (breadcrumbText.includes("outlets") || breadcrumbText.includes("customer and outlets") || breadcrumbText.includes("customer profiles")) || recentOutletSubpageIs(["action_view_transfers"]);
     if (!hasOutletTrail) {
         return false;
     }
@@ -1638,4 +1653,3 @@ if (document.readyState === "loading") {
 } else {
     bootRouteWorkspaceNavigationGuard();
 }
-// ROUTECORE_FIX_2026_05_15_OUTLET_RELATED_PAGES_BACK_V2
