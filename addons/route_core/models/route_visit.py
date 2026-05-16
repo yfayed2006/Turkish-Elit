@@ -2622,9 +2622,26 @@ class RouteVisit(models.Model):
 
     def _get_sale_order_form_action(self, sale_order):
         action = self.env.ref("sale.action_orders").read()[0]
+        form_view = self.env.ref("route_core.view_sale_order_outlet_pda_form", raise_if_not_found=False)
+        if not form_view:
+            form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
         action["res_id"] = sale_order.id
-        action["views"] = [(self.env.ref("sale.view_order_form").id, "form")]
-        action["context"] = dict(self.env.context, default_origin=self.name, route_visit_name=self.name)
+        action["views"] = [(form_view.id, "form")] if form_view else [(False, "form")]
+        action["view_mode"] = "form"
+        action["target"] = "current"
+        action["context"] = dict(
+            self.env.context,
+            default_origin=self.name,
+            route_visit_name=self.name,
+            default_route_visit_id=self.id,
+            route_visit_id=self.id,
+            route_visit_back_id=self.id,
+            route_pda_salesperson_mode=1,
+            pda_mode=True,
+            create=False,
+            edit=False,
+            delete=False,
+        )
         return action
 
     def _get_linked_route_sale_delivery(self):
