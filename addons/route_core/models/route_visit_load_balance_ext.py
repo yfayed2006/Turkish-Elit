@@ -41,6 +41,42 @@ class RouteVisit(models.Model):
         qty_field = "available_quantity" if "available_quantity" in quant_model._fields else "quantity"
         return sum(max(getattr(quant, qty_field, 0.0) or 0.0, 0.0) for quant in quants)
 
+    def _get_vehicle_available_qty_map(self, products=None):
+        """Return vehicle available quantities for many products in one query.
+
+        This helper is used by salesperson-heavy screens such as Load Previous
+        Balance and First Consignment Setup. It avoids calling
+        _get_vehicle_available_qty_for_product once per product, which can make
+        the mobile flow slow when the vehicle has many products/lots.
+        """
+        self.ensure_one()
+
+        source_location = self._get_default_source_location()
+        if not source_location:
+            return {}
+
+        product_ids = []
+        if products:
+            product_ids = [product.id for product in products if product]
+            if not product_ids:
+                return {}
+
+        quant_model = self.env["stock.quant"]
+        domain = [
+            ("location_id", "child_of", source_location.id),
+            ("product_id", "!=", False),
+        ]
+        if product_ids:
+            domain.append(("product_id", "in", product_ids))
+
+        qty_field = "available_quantity" if "available_quantity" in quant_model._fields else "quantity"
+        qty_by_product = defaultdict(float)
+        for quant in quant_model.search(domain):
+            qty = max(getattr(quant, qty_field, 0.0) or 0.0, 0.0)
+            if qty > 0 and quant.product_id:
+                qty_by_product[quant.product_id.id] += qty
+        return dict(qty_by_product)
+
     def _update_vehicle_available_on_lines(self, lines=None):
         for rec in self:
             rec._sync_source_location_from_vehicle()
@@ -69,6 +105,7 @@ class RouteVisit(models.Model):
 
         quants = self.env["stock.quant"].search([
             ("location_id", "child_of", location.id),
+            ("product_id", "!=", False),
             ("quantity", ">", 0),
         ])
 
@@ -80,30 +117,32 @@ class RouteVisit(models.Model):
         if not qty_by_product:
             return []
 
-        balance_model = self.env["outlet.stock.balance"]
+        product_ids = list(qty_by_product)
+        balances = self.env["outlet.stock.balance"].search([
+            ("outlet_id", "=", outlet.id),
+            ("product_id", "in", product_ids),
+        ])
+        price_by_product = {
+            balance.product_id.id: balance.unit_price
+            for balance in balances
+            if balance.product_id and balance.unit_price
+        }
+
+        products = self.env["product.product"].browse(product_ids).exists()
+        product_by_id = {product.id: product for product in products}
+
         result = []
-
         for product_id, qty in qty_by_product.items():
-            product = self.env["product.product"].browse(product_id)
-
-            existing_balance = balance_model.search([
-                ("outlet_id", "=", outlet.id),
-                ("product_id", "=", product_id),
-            ], limit=1)
-
-            unit_price = (
-                existing_balance.unit_price
-                if existing_balance and existing_balance.unit_price
-                else (product.lst_price or 0.0)
-            )
-
+            product = product_by_id.get(product_id)
+            if not product:
+                continue
             result.append({
                 "product_id": product_id,
                 "qty": qty,
-                "unit_price": unit_price,
+                "unit_price": price_by_product.get(product_id) or product.lst_price or 0.0,
             })
 
-        result.sort(key=lambda x: x["product_id"])
+        result.sort(key=lambda x: product_by_id.get(x["product_id"]).display_name or "")
         return result
 
     def _get_outlet_previous_balance_fallback_records(self):
@@ -188,21 +227,22 @@ class RouteVisit(models.Model):
                 }
 
             line_vals_list = []
-            for row in balance_rows:
-                product = self.env["product.product"].browse(row["product_id"])
-                vehicle_available_qty = rec._get_vehicle_available_qty_for_product(product)
+            product_ids = [row["product_id"] for row in balance_rows if row.get("product_id")]
+            products = self.env["product.product"].browse(product_ids).exists()
+            vehicle_qty_by_product = rec._get_vehicle_available_qty_map(products)
 
+            for row in balance_rows:
+                product_id = row["product_id"]
                 line_vals_list.append({
                     "visit_id": rec.id,
                     "company_id": rec.company_id.id,
-                    "product_id": row["product_id"],
+                    "product_id": product_id,
                     "previous_qty": row["qty"],
                     "unit_price": row["unit_price"],
-                    "vehicle_available_qty": vehicle_available_qty,
+                    "vehicle_available_qty": vehicle_qty_by_product.get(product_id, 0.0),
                 })
 
-            created_lines = route_visit_line.create(line_vals_list)
-            rec._update_vehicle_available_on_lines(created_lines)
+            route_visit_line.create(line_vals_list)
 
             vals = {
                 "visit_process_state": "checked_in",
