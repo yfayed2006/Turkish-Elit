@@ -177,13 +177,13 @@ class SaleOrder(models.Model):
     @api.depends("origin")
     def _compute_route_visit_id(self):
         Visit = self.env["route.visit"]
-        names = {order.origin for order in self if order.origin and order.route_order_mode == "direct_sale"}
+        names = {order.origin for order in self if order.origin}
         visit_map = {}
         if names:
             visits = Visit.search([("name", "in", list(names))])
             visit_map = {visit.name: visit for visit in visits}
         for order in self:
-            order.route_visit_id = visit_map.get(order.origin) if order.route_order_mode == "direct_sale" and order.origin else False
+            order.route_visit_id = visit_map.get(order.origin) if order.origin else False
 
     def _search_route_visit_id(self, operator, value):
         if operator not in ("=", "in"):
