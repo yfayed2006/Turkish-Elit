@@ -306,10 +306,10 @@ class RouteVisit(models.Model):
             self.env.context,
             default_route_visit_id=self.id,
             route_visit_id=self.id,
+            route_visit_back_id=self.id,
             route_outlet_back_id=self.outlet_id.id if self.outlet_id else False,
             create=False,
             edit=False,
             delete=False,
         )
         return action
-
