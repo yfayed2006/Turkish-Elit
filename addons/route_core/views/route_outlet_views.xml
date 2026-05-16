@@ -1506,7 +1506,7 @@ Expiry:
 </strong>
 </div>
 </t>
-<t t-if="not record.route_show_outlet_commission.raw_value">
+<t t-if="!record.route_show_outlet_commission.raw_value">
 <div class="route_pda_document_product_metric" t-if="record.discount.raw_value">
 <span>Discount %</span>
 <strong>
@@ -1768,7 +1768,7 @@ Expiry:
 <div class="route_mobile_section_header route_mobile_product_header route_pda_document_section_header">
 <div class="route_mobile_section_title">Products</div>
 </div>
-<field name="move_ids" mode="kanban,list,form" class="route_pda_transfer_lines_x2many" readonly="1">
+<field name="move_ids" mode="kanban,form" class="route_pda_transfer_lines_x2many" readonly="1">
 <kanban class="route_pda_document_product_kanban route_pda_transfer_product_kanban" create="0" edit="0" delete="0">
 <field name="product_id"/>
 <field name="route_product_image_128"/>
@@ -1853,19 +1853,6 @@ Expiry:
 </t>
 </templates>
 </kanban>
-<list string="Products" create="0" delete="0" edit="0" class="route_pda_transfer_line_list">
-<field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
-<field name="product_id" string="Product" readonly="1" options="{'no_create': True, 'no_open': True}"/>
-<field name="route_product_barcode" string="Barcode" readonly="1" optional="show"/>
-<field name="route_move_lot_label" string="Lot/Serial" readonly="1" optional="show"/>
-<field name="route_move_expiry_date" string="Expiry Date" readonly="1" optional="show"/>
-<field name="product_uom_qty" string="Demand" readonly="1"/>
-<field name="quantity" string="Done" readonly="1"/>
-<field name="product_uom" string="UoM" readonly="1" options="{'no_create': True, 'no_open': True}"/>
-<field name="route_move_return_route_display" string="Route / Reason" readonly="1" optional="show"/>
-<field name="route_move_unit_price_display" string="Unit Price" readonly="1" optional="show"/>
-<field name="route_move_value_display" string="Value" readonly="1" optional="show"/>
-</list>
 <form string="Transfer Product">
 <sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
 <field name="route_product_image_128" invisible="1"/>
