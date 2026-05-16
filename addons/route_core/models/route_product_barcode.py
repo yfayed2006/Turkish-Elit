@@ -119,21 +119,35 @@ class ProductProduct(models.Model):
         if "detailed_type" in self._fields:
             quant_domain.append(("product_id.detailed_type", "in", ["product", "consu"]))
 
-        quants = self.env["stock.quant"].with_context(
+        Quant = self.env["stock.quant"].with_context(
             route_skip_source_available_domain=True,
             route_only_source_available_products=False,
-        ).search(quant_domain)
-        available_by_product = {}
-        for quant in quants:
-            product = quant.product_id
-            if not product:
+        )
+        group_fields = ["product_id", "quantity:sum"]
+        has_reserved_quantity = "reserved_quantity" in Quant._fields
+        if has_reserved_quantity:
+            group_fields.append("reserved_quantity:sum")
+
+        # This method is used by salesperson product lookup and barcode scanning.
+        # Use one grouped query instead of loading every quant record and looping
+        # through them in Python; this keeps mobile product selection responsive
+        # when the vehicle/source location has many lots.
+        grouped_quants = Quant.read_group(
+            quant_domain,
+            group_fields,
+            ["product_id"],
+            lazy=False,
+        )
+        product_ids = []
+        for row in grouped_quants:
+            product_data = row.get("product_id")
+            product_id = product_data[0] if product_data else False
+            if not product_id:
                 continue
-            reserved = quant.reserved_quantity if "reserved_quantity" in quant._fields else 0.0
-            available_qty = max((quant.quantity or 0.0) - (reserved or 0.0), 0.0)
-            if available_qty <= 0:
-                continue
-            available_by_product[product.id] = available_by_product.get(product.id, 0.0) + available_qty
-        product_ids = [product_id for product_id, qty in available_by_product.items() if qty > 0]
+            quantity = row.get("quantity", 0.0) or 0.0
+            reserved = row.get("reserved_quantity", 0.0) if has_reserved_quantity else 0.0
+            if max(quantity - (reserved or 0.0), 0.0) > 0.0:
+                product_ids.append(product_id)
         return [("id", "in", product_ids or [0])]
 
     @api.model
