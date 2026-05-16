@@ -64,6 +64,47 @@ class RouteVisit(models.Model):
                 return fields.Date.to_date(lot[field_name])
         return False
 
+    def _get_lot_code_candidates(self, lot_code):
+        """Return normalized lot/barcode candidates for the salesperson scan flow."""
+        lot_code = (lot_code or "").strip()
+        if not lot_code:
+            return []
+
+        candidates = [lot_code]
+        upper_code = lot_code.upper()
+        if upper_code.startswith("LOT-") and lot_code[4:]:
+            candidates.append(lot_code[4:].strip())
+        else:
+            candidates.append("LOT-%s" % lot_code)
+
+        seen = set()
+        result = []
+        for code in candidates:
+            code = (code or "").strip()
+            if code and code not in seen:
+                seen.add(code)
+                result.append(code)
+        return result
+
+    def _get_lot_search_domain_for_codes(self, candidates, product=False):
+        """Build one domain for all accepted lot code formats.
+
+        The previous version searched stock.lot once per candidate and once per
+        barcode field.  A single OR domain keeps the scan popup responsive when
+        salespeople scan many lots during a shelf count.
+        """
+        Lot = self.env["stock.lot"]
+        candidates = [code for code in (candidates or []) if code]
+        if not candidates:
+            return [("id", "=", 0)]
+
+        code_domain = [("name", "in", candidates)]
+        if "barcode" in Lot._fields:
+            code_domain = ["|", ("name", "in", candidates), ("barcode", "in", candidates)]
+        if product:
+            return ["&", ("product_id", "=", product.id)] + code_domain
+        return code_domain
+
     def _find_available_lot_from_code(self, lot_code, product=False):
         self.ensure_one()
         if not self._is_route_lot_workflow_enabled():
@@ -78,38 +119,14 @@ class RouteVisit(models.Model):
 
         Lot = self.env["stock.lot"]
         Quant = self.env["stock.quant"]
+        candidates = self._get_lot_code_candidates(lot_code)
 
-        candidates = [lot_code]
-        upper_code = lot_code.upper()
-        if upper_code.startswith("LOT-") and lot_code[4:]:
-            candidates.append(lot_code[4:])
-        elif lot_code:
-            candidates.append("LOT-%s" % lot_code)
-
-        lots = Lot.browse()
-        seen_codes = set()
-        for code in candidates:
-            code = (code or "").strip()
-            if not code or code in seen_codes:
-                continue
-            seen_codes.add(code)
-            domain = [("name", "=", code)]
-            if product:
-                domain.append(("product_id", "=", product.id))
-            lots |= Lot.search(domain)
-            if "barcode" in Lot._fields:
-                domain = [("barcode", "=", code)]
-                if product:
-                    domain.append(("product_id", "=", product.id))
-                lots |= Lot.search(domain)
+        lots = Lot.search(self._get_lot_search_domain_for_codes(candidates, product=product))
 
         if not lots and product:
             # Fall back to locating the code on another product so the message can explain
             # that the scanned lot is not valid for the currently scanned product.
-            for code in candidates:
-                lots |= Lot.search([("name", "=", code)], limit=5)
-                if "barcode" in Lot._fields:
-                    lots |= Lot.search([("barcode", "=", code)], limit=5)
+            lots = Lot.search(self._get_lot_search_domain_for_codes(candidates), limit=5)
 
         if not lots:
             raise UserError(_("No lot/serial was found with code '%s'.") % lot_code)
@@ -544,31 +561,34 @@ class RouteVisit(models.Model):
         )
         return bool(quant)
 
+    def _read_group_quant_quantity_sum(self, domain):
+        """Return summed stock.quant quantity without loading quant records."""
+        grouped = self.env["stock.quant"].read_group(domain, ["quantity:sum"], [])
+        if not grouped:
+            return 0.0
+        return grouped[0].get("quantity", 0.0) or 0.0
+
     def _get_vehicle_available_qty_for_scan_product(self, product):
         self.ensure_one()
         source_location = self._get_scan_source_location()
         if not source_location or not product:
             return 0.0
 
-        quants = self.env["stock.quant"].search(
-            [
-                ("location_id", "child_of", source_location.id),
-                ("product_id", "=", product.id),
-            ]
-        )
-        return sum(quants.mapped("quantity"))
+        return self._read_group_quant_quantity_sum([
+            ("location_id", "child_of", source_location.id),
+            ("product_id", "=", product.id),
+        ])
 
     def _get_outlet_available_qty_for_product_lot(self, product, lot):
         self.ensure_one()
         outlet_location = self._get_scan_outlet_location()
         if not outlet_location or not product or not lot:
             return 0.0
-        quants = self.env["stock.quant"].search([
+        return self._read_group_quant_quantity_sum([
             ("location_id", "child_of", outlet_location.id),
             ("product_id", "=", product.id),
             ("lot_id", "=", lot.id),
         ])
-        return sum(quants.mapped("quantity"))
 
     def _find_visit_line_for_product(self, product, lot=False):
         self.ensure_one()
