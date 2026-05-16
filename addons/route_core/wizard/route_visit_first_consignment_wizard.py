@@ -88,15 +88,22 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
         if not source_location:
             return []
 
-        quants = self.env["stock.quant"].search([
+        quant_domain = [
             ("location_id", "child_of", source_location.id),
+            ("product_id", "!=", False),
             ("quantity", ">", 0),
-        ])
+        ]
+        if "active" in self.env["product.product"]._fields:
+            quant_domain.append(("product_id.active", "=", True))
+
+        quants = self.env["stock.quant"].search(quant_domain)
 
         qty_by_product = defaultdict(float)
         for quant in quants:
-            if quant.product_id and quant.quantity > 0:
-                qty_by_product[quant.product_id.id] += quant.quantity
+            product = quant.product_id
+            if not product or not product.exists() or quant.quantity <= 0:
+                continue
+            qty_by_product[product.id] += quant.quantity
 
         rows = []
         Product = self.env["product.product"]
@@ -240,7 +247,15 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                 },
             }
 
-        selected_lines = self.line_ids.filtered(lambda line: (line.quantity or 0.0) > 0)
+        invalid_selected_lines = self.line_ids.filtered(
+            lambda line: not line.product_id and (line.quantity or 0.0) > 0
+        )
+        if invalid_selected_lines:
+            raise UserError(_(
+                "One or more selected rows do not have a product. Please close the setup popup, open it again, and select valid vehicle products only."
+            ))
+
+        selected_lines = self.line_ids.filtered(lambda line: line.product_id and (line.quantity or 0.0) > 0)
         if not selected_lines:
             raise UserError(_("Enter at least one product quantity to add from the vehicle."))
 
@@ -309,7 +324,7 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
     product_id = fields.Many2one(
         "product.product",
         string="Product",
-        required=True,
+        required=False,
     )
     available_qty = fields.Float(string="Vehicle Available", readonly=True)
     quantity = fields.Float(string="Qty to Add", default=0.0)
@@ -341,6 +356,7 @@ class RouteVisitFirstConsignmentWizardLine(models.TransientModel):
     def _compute_estimated_value(self):
         for rec in self:
             rec.estimated_value = (rec.quantity or 0.0) * (rec.unit_price or 0.0)
+
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
