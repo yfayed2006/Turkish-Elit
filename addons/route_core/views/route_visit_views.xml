@@ -1124,10 +1124,13 @@ Check-in Map
 </div>
 </div>
 <div class="route_mobile_detail_grid">
-<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref">
+<div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_sale_order_ref or summary_sale_order_ref == '-'">
 <div class="route_mobile_detail_label">Sale Order</div>
-<div class="route_mobile_detail_value route_mobile_reference_value">
+<div class="route_mobile_detail_value route_mobile_reference_stack">
+<div class="route_mobile_reference_number">
 <field name="summary_sale_order_ref" readonly="1" nolabel="1"/>
+</div>
+<button name="action_view_sale_order" string="View Sale Order" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_refill_transfer_ref or summary_refill_transfer_ref == '-'">
@@ -1141,8 +1144,11 @@ Check-in Map
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode == 'direct_sales' or not summary_return_transfer_refs or summary_return_transfer_refs == '-'">
 <div class="route_mobile_detail_label">Return Transfers</div>
-<div class="route_mobile_detail_value route_mobile_reference_value">
+<div class="route_mobile_detail_value route_mobile_reference_stack">
+<div class="route_mobile_reference_number">
 <field name="summary_return_transfer_refs" readonly="1" nolabel="1"/>
+</div>
+<button name="action_view_return_transfers" string="View Return Transfer" type="object" class="btn-link route_mobile_reference_open route_mobile_reference_open_full"/>
 </div>
 </div>
 <div class="route_mobile_detail_box" invisible="visit_execution_mode != 'direct_sales' or not direct_stop_order_refs or direct_stop_order_refs == '-'">
