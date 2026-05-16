@@ -9571,3 +9571,134 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+/* ROUTECORE_FIX_2026_05_17_FIRST_CONSIGNMENT_CARD_LABELS
+   The First Consignment Setup mobile cards were showing numeric values without labels
+   on some Odoo 19 builds because the generated list cells do not always expose
+   name/data-name/data-field attributes. This block adds robust fallbacks using
+   explicit field classes, :has() selectors, data-tooltip selectors, and positional
+   fallbacks limited to the First Consignment wizard only. */
+@media (max-width: 768px) {
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td::before {
+        display: block !important;
+        margin-bottom: 6px !important;
+        color: #64748b !important;
+        font-size: 0.72rem !important;
+        line-height: 1.15 !important;
+        font-weight: 850 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.02em !important;
+        white-space: normal !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_image::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_image)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Image"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(1)::before {
+        display: none !important;
+        content: "" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_product::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_product)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Product"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(2)::before {
+        content: "Product" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_barcode::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_barcode)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Barcode"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(3)::before {
+        content: "Barcode" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_vehicle_balance::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_vehicle_balance)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Vehicle Available"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Vehicle Balance"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(4)::before {
+        content: "Vehicle Balance" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_qty_to_add::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_qty_to_add)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Qty to Add"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Quantity"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(5)::before {
+        content: "Qty to Add" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_uom::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_uom)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="UoM"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(6)::before {
+        content: "UoM" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_unit_price::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_unit_price)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Unit Price"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(7)::before {
+        content: "Unit Price" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_estimated_value::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_estimated_value)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Estimated Value"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(8)::before {
+        content: "Estimated Value" !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_qty_to_add,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_qty_to_add),
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Qty to Add"],
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(5) {
+        background: #ecfeff !important;
+        border: 1px solid #a5f3fc !important;
+    }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_estimated_value,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_estimated_value),
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Estimated Value"],
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(8) {
+        grid-column: 1 / -1 !important;
+        background: #f1f5f9 !important;
+        border: 1px solid #dbeafe !important;
+    }
+}
+
+/* ROUTECORE_FIX_2026_05_17_FIRST_CONSIGNMENT_LABELS_FINAL_OVERRIDE
+   Final field-specific override placed after positional fallbacks so generated
+   field classes/data-tooltip win even if Odoo adds selector/delete columns. */
+@media (max-width: 768px) {
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_product::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_product)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Product"]::before { content: "Product" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_barcode::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_barcode)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Barcode"]::before { content: "Barcode" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_vehicle_balance::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_vehicle_balance)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Vehicle Available"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Vehicle Balance"]::before { content: "Vehicle Balance" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_qty_to_add::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_qty_to_add)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Qty to Add"]::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Quantity"]::before { content: "Qty to Add" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_uom::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_uom)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="UoM"]::before { content: "UoM" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_unit_price::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_unit_price)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Unit Price"]::before { content: "Unit Price" !important; }
+
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td.route_fc_estimated_value::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:has(.route_fc_estimated_value)::before,
+    .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Estimated Value"]::before { content: "Estimated Value" !important; }
+}
+
