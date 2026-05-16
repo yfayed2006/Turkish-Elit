@@ -953,17 +953,17 @@ Check-in Map
 <field name="barcode" readonly="1" optional="show"/>
 <field name="lot_id" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False" options="{'no_create': True}"/>
 <field name="expiry_date" readonly="1" optional="show" column_invisible="parent.route_enable_lot_serial_tracking == False or parent.route_enable_expiry_tracking == False"/>
-<field name="previous_qty" string="Previous"/>
-<field name="counted_qty" string="Counted"/>
-<field name="sold_qty" string="Sold Qty" readonly="1"/>
-<field name="return_qty" string="Returned Qty" optional="show"/>
+<field name="previous_qty" string="Previous" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
+<field name="counted_qty" string="Counted" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
+<field name="sold_qty" string="Sold Qty" readonly="1" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
+<field name="return_qty" string="Returned Qty" optional="show" column_invisible="parent.visit_process_state in ('reconciled', 'collection_done', 'ready_to_close', 'done')"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
-<field name="unit_price" string="Unit Price" readonly="1" optional="show"/>
-<field name="sold_amount" string="Sold Amount" readonly="1" optional="show"/>
-<field name="uom_id" readonly="1" optional="show"/>
 <field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="hide"/>
+<field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
+<field name="uom_id" readonly="1" optional="show"/>
 <field name="return_route" optional="hide"/>
+<field name="unit_price" optional="hide"/>
+<field name="sold_amount" readonly="1" optional="hide"/>
 </list>
 </field>
 </page>
