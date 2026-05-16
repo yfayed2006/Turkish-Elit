@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -40,30 +42,61 @@ class RouteVisit(models.Model):
     def _compute_visit_document_links(self):
         Picking = self.env["stock.picking"]
         Shortage = self.env["route.shortage"]
+
         for rec in self:
             rec.sale_delivery_count = 0
             rec.return_transfer_count = 0
             rec.sale_delivery_id = False
             rec.generated_shortage_id = False
 
-            if rec.id:
-                sale_deliveries = Picking.search(
-                    rec._get_sale_delivery_domain(),
-                    order="id desc",
-                    limit=1,
-                )
-                rec.sale_delivery_id = sale_deliveries[:1].id if sale_deliveries else False
-                rec.sale_delivery_count = Picking.search_count(rec._get_sale_delivery_domain())
+        visits = self.filtered("id")
+        if not visits:
+            return
 
-                return_transfers = Picking.search_count(rec._get_return_transfer_domain())
-                rec.return_transfer_count = return_transfers
+        pickings_by_visit = defaultdict(lambda: self.env["stock.picking"])
+        pickings = Picking.search(
+            [
+                ("route_visit_id", "in", visits.ids),
+                ("state", "!=", "cancel"),
+                ("picking_type_id.code", "in", ["outgoing", "internal"]),
+            ],
+            order="id desc",
+        )
+        for picking in pickings:
+            pickings_by_visit[picking.route_visit_id.id] |= picking
 
-                shortage = Shortage.search(
-                    rec._get_generated_shortage_domain(),
-                    order="id desc",
-                    limit=1,
-                )
-                rec.generated_shortage_id = shortage[:1].id if shortage else False
+        shortage_by_visit = {}
+        shortages = Shortage.search(
+            [("source_visit_id", "in", visits.ids)],
+            order="id desc",
+        )
+        for shortage in shortages:
+            shortage_by_visit.setdefault(shortage.source_visit_id.id, shortage)
+
+        for rec in visits:
+            rec_pickings = pickings_by_visit.get(rec.id, self.env["stock.picking"])
+            outlet_location = rec.outlet_id.stock_location_id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False
+            sale_origin = rec.sale_order_id.name if rec.sale_order_id else False
+            refill_picking_id = rec.refill_picking_id.id if rec.refill_picking_id else False
+
+            sale_deliveries = rec_pickings.filtered(
+                lambda picking: picking.picking_type_id.code == "outgoing"
+                and (not sale_origin or picking.origin == sale_origin)
+                and (not outlet_location or picking.location_id == outlet_location)
+            )
+            rec.sale_delivery_count = len(sale_deliveries)
+            rec.sale_delivery_id = sale_deliveries[:1].id if sale_deliveries else False
+
+            return_transfers = rec_pickings.filtered(
+                lambda picking: picking.picking_type_id.code == "internal"
+                and (not outlet_location or picking.location_id == outlet_location)
+                and (not refill_picking_id or picking.id != refill_picking_id)
+                and (not sale_origin or picking.origin != sale_origin)
+            )
+            rec.return_transfer_count = len(return_transfers)
+
+            shortage = shortage_by_visit.get(rec.id)
+            rec.generated_shortage_id = shortage.id if shortage else False
 
     def _get_sale_delivery_domain(self):
         self.ensure_one()
