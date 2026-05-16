@@ -756,6 +756,69 @@ class RoutePdaHome(models.TransientModel):
             today_direct_transfers = rec._get_workspace_direct_transfers(start_dt=start_dt, end_dt=end_dt)
             open_direct_sales_visits = today_visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == "direct_sales" and v.state != "done")
 
+            # Performance note:
+            # Route Workspace reads the same payment helper values many times while
+            # building the dashboard.  Keep the business logic in the existing
+            # helper methods, but cache the result per payment during this single
+            # compute call to avoid repeated Python work and repeated related-field
+            # access on large historical payment sets.
+            payment_snapshot_mode_cache = {}
+            payment_snapshot_amount_cache = {}
+            payment_business_flow_cache = {}
+            payment_promise_status_cache = {}
+            payment_cheque_open_due_cache = {}
+            payment_cheque_pending_clearance_cache = {}
+            payment_cheque_cleared_cache = {}
+            payment_target_visit_cache = {}
+
+            def payment_snapshot_mode(payment):
+                payment_id = payment.id
+                if payment_id not in payment_snapshot_mode_cache:
+                    payment_snapshot_mode_cache[payment_id] = rec._get_payment_snapshot_mode(payment)
+                return payment_snapshot_mode_cache[payment_id]
+
+            def payment_snapshot_amount(payment):
+                payment_id = payment.id
+                if payment_id not in payment_snapshot_amount_cache:
+                    payment_snapshot_amount_cache[payment_id] = rec._get_payment_snapshot_amount(payment)
+                return payment_snapshot_amount_cache[payment_id]
+
+            def payment_business_flow(payment):
+                payment_id = payment.id
+                if payment_id not in payment_business_flow_cache:
+                    payment_business_flow_cache[payment_id] = rec._get_payment_business_flow(payment)
+                return payment_business_flow_cache[payment_id]
+
+            def payment_promise_status(payment):
+                payment_id = payment.id
+                if payment_id not in payment_promise_status_cache:
+                    payment_promise_status_cache[payment_id] = rec._get_payment_snapshot_promise_status(payment)
+                return payment_promise_status_cache[payment_id]
+
+            def payment_cheque_open_due_amount(payment):
+                payment_id = payment.id
+                if payment_id not in payment_cheque_open_due_cache:
+                    payment_cheque_open_due_cache[payment_id] = rec._get_payment_cheque_open_due_amount(payment)
+                return payment_cheque_open_due_cache[payment_id]
+
+            def payment_cheque_pending_clearance_amount(payment):
+                payment_id = payment.id
+                if payment_id not in payment_cheque_pending_clearance_cache:
+                    payment_cheque_pending_clearance_cache[payment_id] = rec._get_payment_cheque_pending_clearance_amount(payment)
+                return payment_cheque_pending_clearance_cache[payment_id]
+
+            def payment_cheque_cleared_amount(payment):
+                payment_id = payment.id
+                if payment_id not in payment_cheque_cleared_cache:
+                    payment_cheque_cleared_cache[payment_id] = rec._get_payment_cheque_financially_cleared_amount(payment)
+                return payment_cheque_cleared_cache[payment_id]
+
+            def payment_target_visit(payment):
+                payment_id = payment.id
+                if payment_id not in payment_target_visit_cache:
+                    payment_target_visit_cache[payment_id] = rec._get_payment_target_visit(payment)
+                return payment_target_visit_cache[payment_id]
+
             vehicle = rec._get_current_vehicle()
             warehouse_loc = rec._get_main_warehouse_location()
 
@@ -827,35 +890,35 @@ class RoutePdaHome(models.TransientModel):
                 ("qty", ">", 0),
             ])
             rec.payment_count = len(today_payments)
-            visit_collections = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "consignment_visit")
-            direct_stop_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_stop")
-            direct_sale_order_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) == "direct_sale_order")
-            direct_sales_today_payments = today_payments.filtered(lambda p: rec._get_payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
-            direct_sales_all_confirmed_payments = all_confirmed_payments.filtered(lambda p: rec._get_payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
+            visit_collections = today_payments.filtered(lambda p: payment_business_flow(p) == "consignment_visit")
+            direct_stop_payments = today_payments.filtered(lambda p: payment_business_flow(p) == "direct_stop")
+            direct_sale_order_payments = today_payments.filtered(lambda p: payment_business_flow(p) == "direct_sale_order")
+            direct_sales_today_payments = today_payments.filtered(lambda p: payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
+            direct_sales_all_confirmed_payments = all_confirmed_payments.filtered(lambda p: payment_business_flow(p) in ("direct_stop", "direct_sale_order"))
             deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
             direct_sales_deferred_entries = direct_sales_today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
             direct_sales_due_today_promises = direct_sales_all_confirmed_payments.filtered(
-                lambda p: rec._get_payment_snapshot_promise_status(p) == "due_today"
+                lambda p: payment_promise_status(p) == "due_today"
             )
             open_promise_entries = all_confirmed_payments.filtered(
-                lambda p: rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+                lambda p: payment_promise_status(p) in ("open", "due_today", "overdue")
             )
             overdue_promise_entries = open_promise_entries.filtered(
-                lambda p: rec._get_payment_snapshot_promise_status(p) == "overdue"
+                lambda p: payment_promise_status(p) == "overdue"
             )
             cheque_open_due_payments = all_confirmed_payments.filtered(
-                lambda p: rec._get_payment_cheque_open_due_amount(p) > 0.0
+                lambda p: payment_cheque_open_due_amount(p) > 0.0
             )
             cheque_pending_clearance_payments = all_confirmed_payments.filtered(
-                lambda p: rec._get_payment_cheque_pending_clearance_amount(p) > 0.0
+                lambda p: payment_cheque_pending_clearance_amount(p) > 0.0
             )
             today_cheque_cleared_payments = today_payments.filtered(
-                lambda p: rec._get_payment_cheque_financially_cleared_amount(p) > 0.0 and rec._get_payment_snapshot_mode(p) == "cheque"
+                lambda p: payment_cheque_cleared_amount(p) > 0.0 and payment_snapshot_mode(p) == "cheque"
             )
             followup_collections = all_confirmed_payments.filtered(
                 lambda p: (p.remaining_due_amount or 0.0) > 0.0
-                or rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
-                or rec._get_payment_cheque_open_due_amount(p) > 0.0
+                or payment_promise_status(p) in ("open", "due_today", "overdue")
+                or payment_cheque_open_due_amount(p) > 0.0
             )
 
             visit_collection_targets = set(visit_collections.mapped("visit_id").ids)
@@ -870,9 +933,9 @@ class RoutePdaHome(models.TransientModel):
             rec.collection_followup_count = len(followup_collections)
             rec.cheque_followup_entry_count = len(cheque_open_due_payments)
             rec.cheque_pending_clearance_entry_count = len(cheque_pending_clearance_payments)
-            rec.cheque_open_due_amount = sum(rec._get_payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
-            rec.cheque_pending_clearance_amount = sum(rec._get_payment_cheque_pending_clearance_amount(p) for p in cheque_pending_clearance_payments)
-            rec.cheque_cleared_today_amount = sum(rec._get_payment_cheque_financially_cleared_amount(p) for p in today_cheque_cleared_payments)
+            rec.cheque_open_due_amount = sum(payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
+            rec.cheque_pending_clearance_amount = sum(payment_cheque_pending_clearance_amount(p) for p in cheque_pending_clearance_payments)
+            rec.cheque_cleared_today_amount = sum(payment_cheque_cleared_amount(p) for p in today_cheque_cleared_payments)
             rec.open_promise_entry_count = len(open_promise_entries)
             rec.overdue_promise_entry_count = len(overdue_promise_entries)
             rec.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
@@ -930,13 +993,13 @@ class RoutePdaHome(models.TransientModel):
             rec.current_source_name = warehouse_loc.display_name if warehouse_loc else "-"
 
             cash_with_salesperson_payments = today_payments.filtered(
-                lambda p: rec._get_payment_snapshot_mode(p) == "cash"
+                lambda p: payment_snapshot_mode(p) == "cash"
                 and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
             )
-            rec.cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in cash_with_salesperson_payments)
-            rec.bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "bank")
-            rec.pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "pos")
-            rec.cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
+            rec.cash_today_amount = sum(payment_snapshot_amount(p) for p in cash_with_salesperson_payments)
+            rec.bank_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "bank")
+            rec.pos_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "pos")
+            rec.cheque_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "cheque")
 
             custody_primary_payments = Payment.browse()
             if hasattr(Payment, "_route_custody_primary_ids_sql"):
@@ -947,17 +1010,17 @@ class RoutePdaHome(models.TransientModel):
             else:
                 custody_primary_payments = all_confirmed_payments.filtered(
                     lambda p: (
-                        (rec._get_payment_snapshot_mode(p) == "cash" and (getattr(p, "cash_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
-                        or (rec._get_payment_snapshot_mode(p) == "cheque" and (getattr(p, "cheque_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
-                        or (rec._get_payment_snapshot_mode(p) in ("bank", "pos") and (getattr(p, "electronic_verification_state", False) or "reported") in ("reported", "rejected"))
+                        (payment_snapshot_mode(p) == "cash" and (getattr(p, "cash_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
+                        or (payment_snapshot_mode(p) == "cheque" and (getattr(p, "cheque_custody_state", False) or "with_salesperson") in ("with_salesperson", "handed_to_accounting"))
+                        or (payment_snapshot_mode(p) in ("bank", "pos") and (getattr(p, "electronic_verification_state", False) or "reported") in ("reported", "rejected"))
                     )
                 )
-            custody_cash_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) == "cash")
-            custody_cheque_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) == "cheque")
-            custody_electronic_payments = custody_primary_payments.filtered(lambda p: rec._get_payment_snapshot_mode(p) in ("bank", "pos"))
-            rec.custody_cash_amount = sum((getattr(p, "cash_custody_total_amount", 0.0) or rec._get_payment_snapshot_amount(p)) for p in custody_cash_payments)
+            custody_cash_payments = custody_primary_payments.filtered(lambda p: payment_snapshot_mode(p) == "cash")
+            custody_cheque_payments = custody_primary_payments.filtered(lambda p: payment_snapshot_mode(p) == "cheque")
+            custody_electronic_payments = custody_primary_payments.filtered(lambda p: payment_snapshot_mode(p) in ("bank", "pos"))
+            rec.custody_cash_amount = sum((getattr(p, "cash_custody_total_amount", 0.0) or payment_snapshot_amount(p)) for p in custody_cash_payments)
             rec.custody_cheque_count = len(custody_cheque_payments)
-            rec.custody_electronic_amount = sum(rec._get_payment_snapshot_amount(p) for p in custody_electronic_payments)
+            rec.custody_electronic_amount = sum(payment_snapshot_amount(p) for p in custody_electronic_payments)
             rec.custody_electronic_count = len(custody_electronic_payments)
             currency = rec.currency_id or rec.company_id.currency_id or self.env.company.currency_id
             cash_text = f"{rec.custody_cash_amount:,.2f}"
@@ -975,16 +1038,16 @@ class RoutePdaHome(models.TransientModel):
             rec.open_promise_amount = sum(
                 (p.promise_amount or 0.0)
                 for p in all_confirmed_payments
-                if rec._get_payment_snapshot_promise_status(p) in ("open", "due_today", "overdue")
+                if payment_promise_status(p) in ("open", "due_today", "overdue")
             )
             direct_sale_cash_with_salesperson_payments = direct_sales_today_payments.filtered(
-                lambda p: rec._get_payment_snapshot_mode(p) == "cash"
+                lambda p: payment_snapshot_mode(p) == "cash"
                 and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
             )
-            rec.direct_sale_cash_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sale_cash_with_salesperson_payments)
-            rec.direct_sale_bank_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "bank")
-            rec.direct_sale_pos_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "pos")
-            rec.direct_sale_cheque_today_amount = sum(rec._get_payment_snapshot_amount(p) for p in direct_sales_today_payments if rec._get_payment_snapshot_mode(p) == "cheque")
+            rec.direct_sale_cash_today_amount = sum(payment_snapshot_amount(p) for p in direct_sale_cash_with_salesperson_payments)
+            rec.direct_sale_bank_today_amount = sum(payment_snapshot_amount(p) for p in direct_sales_today_payments if payment_snapshot_mode(p) == "bank")
+            rec.direct_sale_pos_today_amount = sum(payment_snapshot_amount(p) for p in direct_sales_today_payments if payment_snapshot_mode(p) == "pos")
+            rec.direct_sale_cheque_today_amount = sum(payment_snapshot_amount(p) for p in direct_sales_today_payments if payment_snapshot_mode(p) == "cheque")
             rec.direct_sale_deferred_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_deferred_entries)
             rec.direct_sale_open_promise_due_today_amount = sum((p.promise_amount or 0.0) for p in direct_sales_due_today_promises)
             rec.direct_sale_open_promise_due_today_count = len(direct_sales_due_today_promises)
@@ -998,9 +1061,9 @@ class RoutePdaHome(models.TransientModel):
             )
             closed_or_unlinked_cheque_open_due = 0.0
             for payment in cheque_open_due_payments:
-                target_visit = rec._get_payment_target_visit(payment)
+                target_visit = payment_target_visit(payment)
                 if not target_visit or target_visit.id not in active_remaining_visit_ids:
-                    closed_or_unlinked_cheque_open_due += rec._get_payment_cheque_open_due_amount(payment)
+                    closed_or_unlinked_cheque_open_due += payment_cheque_open_due_amount(payment)
             rec.remaining_due_amount = active_visit_remaining_due + closed_or_unlinked_cheque_open_due
             rec.collection_collected_today_amount = rec.cash_today_amount + rec.bank_today_amount + rec.pos_today_amount + rec.cheque_today_amount
             rec.collection_total_signal_amount = rec.collection_collected_today_amount + rec.deferred_today_amount + rec.remaining_due_amount
