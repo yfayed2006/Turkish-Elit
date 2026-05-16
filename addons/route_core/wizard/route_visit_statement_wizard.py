@@ -1,3 +1,5 @@
+import json
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -45,6 +47,61 @@ class RouteVisitStatementWizard(models.TransientModel):
     next_promise_date = fields.Date(string="Next Promise Date", compute="_compute_statement", readonly=True)
     next_promise_amount = fields.Monetary(string="Next Promise Amount", currency_field="currency_id", compute="_compute_statement", readonly=True)
     can_continue_to_collection = fields.Boolean(string="Can Continue To Collection", compute="_compute_statement", readonly=True)
+
+    return_to_collection = fields.Boolean(string="Return To Collection", readonly=True)
+    return_settlement_mode = fields.Selection(
+        [
+            ("single", "Single Payment"),
+            ("split", "Split Payment"),
+        ],
+        string="Return Payment Structure",
+        readonly=True,
+    )
+    return_collection_type = fields.Selection(
+        [
+            ("full", "Full Payment"),
+            ("partial", "Partial Payment + Carry Forward"),
+            ("defer_date", "Defer To Specific Date"),
+            ("next_visit", "Carry To Next Visit"),
+        ],
+        string="Return Collection Scenario",
+        readonly=True,
+    )
+    return_payment_mode = fields.Selection(
+        [
+            ("cash", "Cash"),
+            ("bank", "Bank Transfer"),
+            ("pos", "POS"),
+            ("cheque", "Cheque"),
+            ("deferred", "Deferred"),
+        ],
+        string="Return Payment Mode",
+        readonly=True,
+    )
+    return_payment_date = fields.Datetime(string="Return Payment Date", readonly=True)
+    return_amount = fields.Monetary(string="Return Amount", currency_field="currency_id", readonly=True)
+    return_promise_date = fields.Date(string="Return Promise Date", readonly=True)
+    return_promise_amount = fields.Monetary(string="Return Promise Amount", currency_field="currency_id", readonly=True)
+    return_due_date = fields.Date(string="Return Due Date", readonly=True)
+    return_reference = fields.Char(string="Return Reference", readonly=True)
+    return_bank_name = fields.Char(string="Return Bank Name", readonly=True)
+    return_pos_terminal = fields.Char(string="Return POS Terminal", readonly=True)
+    return_cheque_number = fields.Char(string="Return Cheque Number", readonly=True)
+    return_cheque_date = fields.Date(string="Return Cheque Date", readonly=True)
+    return_cheque_holder_name = fields.Char(string="Return Cheque Holder", readonly=True)
+    return_cheque_note = fields.Text(string="Return Cheque Details", readonly=True)
+    return_note = fields.Text(string="Return Collection Note", readonly=True)
+    return_direct_stop_credit_policy = fields.Selection(
+        [
+            ("customer_credit", "Customer Credit"),
+            ("cash_refund", "Cash Refund"),
+            ("next_stop", "Carry To Next Stop"),
+        ],
+        string="Return Credit Settlement",
+        readonly=True,
+    )
+    return_direct_stop_credit_note = fields.Text(string="Return Credit Settlement Note", readonly=True)
+    return_payment_line_payload = fields.Text(string="Return Split Payment Snapshot", readonly=True)
 
     def _get_statement_reference_date(self, visit):
         self.ensure_one()
@@ -293,6 +350,59 @@ class RouteVisitStatementWizard(models.TransientModel):
         self.ensure_one()
         return self.env.ref("route_core.action_report_route_visit_statement_of_account").report_action(self)
 
+    def _get_restore_collection_context(self):
+        self.ensure_one()
+        context = {"default_visit_id": self.visit_id.id}
+        if not self.return_to_collection:
+            return context
+
+        restored_values = {
+            "settlement_mode": self.return_settlement_mode or "single",
+            "collection_type": self.return_collection_type or "full",
+            "payment_mode": self.return_payment_mode or "cash",
+            "payment_date": fields.Datetime.to_string(self.return_payment_date) if self.return_payment_date else False,
+            "amount": self.return_amount or 0.0,
+            "promise_date": fields.Date.to_string(self.return_promise_date) if self.return_promise_date else False,
+            "promise_amount": self.return_promise_amount or 0.0,
+            "due_date": fields.Date.to_string(self.return_due_date) if self.return_due_date else False,
+            "reference": self.return_reference or False,
+            "bank_name": self.return_bank_name or False,
+            "pos_terminal": self.return_pos_terminal or False,
+            "cheque_number": self.return_cheque_number or False,
+            "cheque_date": fields.Date.to_string(self.return_cheque_date) if self.return_cheque_date else False,
+            "cheque_holder_name": self.return_cheque_holder_name or False,
+            "cheque_note": self.return_cheque_note or False,
+            "note": self.return_note or False,
+            "direct_stop_credit_policy": self.return_direct_stop_credit_policy or False,
+            "direct_stop_credit_note": self.return_direct_stop_credit_note or False,
+        }
+        context.update({f"default_{field_name}": value for field_name, value in restored_values.items()})
+
+        if self.return_payment_line_payload:
+            try:
+                payment_lines = json.loads(self.return_payment_line_payload)
+            except Exception:
+                payment_lines = []
+            if payment_lines:
+                context["default_payment_line_ids"] = [(0, 0, line) for line in payment_lines]
+
+        return context
+
+    def _get_collect_payment_action(self, visit):
+        self.ensure_one()
+        view = self.env.ref("route_core.view_route_visit_collect_payment_wizard_form", raise_if_not_found=False)
+        action = {
+            "type": "ir.actions.act_window",
+            "name": _("Collect Payment"),
+            "res_model": "route.visit.collect.payment.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": self._get_restore_collection_context(),
+        }
+        if view:
+            action["views"] = [(view.id, "form")]
+        return action
+
     def action_continue_to_collection(self):
         self.ensure_one()
         visit = self.visit_id
@@ -315,6 +425,4 @@ class RouteVisitStatementWizard(models.TransientModel):
         if not getattr(visit, "ux_can_collect_payment", False):
             return self._get_statement_visit_action(visit)
 
-        if hasattr(visit, "action_ux_collect_payment"):
-            return visit.action_ux_collect_payment()
-        return {"type": "ir.actions.act_window_close"}
+        return self._get_collect_payment_action(visit)
