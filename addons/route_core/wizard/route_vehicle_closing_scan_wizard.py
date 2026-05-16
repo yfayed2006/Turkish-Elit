@@ -18,12 +18,15 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
 
     def _resolve_line(self):
         self.ensure_one()
-        lines = self.closing_id.line_ids
         lot_code = (self.lot_code or "").strip()
         product_code = (self.product_barcode or "").strip()
+        line_model = self.env["route.vehicle.closing.line"]
 
         if lot_code:
-            lot_line = lines.filtered(lambda l: l.lot_id and ((l.lot_id.name or '').strip().lower() == lot_code.lower()))[:1]
+            lot_line = line_model.search([
+                ("closing_id", "=", self.closing_id.id),
+                ("lot_id.name", "=ilike", lot_code),
+            ], limit=1)
             if lot_line:
                 return lot_line
             raise UserError(_("Scanned lot code '%s' was not found in the vehicle closing lines.") % lot_code)
@@ -31,7 +34,10 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
         if not product_code:
             raise UserError(_("Please scan a product barcode or a lot code first."))
 
-        product_lines = lines.filtered(lambda l: l.product_id and ((l.product_id.barcode or '').strip() == product_code))
+        product_lines = line_model.search([
+            ("closing_id", "=", self.closing_id.id),
+            ("product_id.barcode", "=", product_code),
+        ], limit=2)
         if not product_lines:
             raise UserError(_("Scanned product barcode '%s' was not found in the vehicle closing lines.") % product_code)
         if len(product_lines) > 1:
@@ -69,6 +75,12 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
             "view_mode": "form",
             "target": "new",
         }
+
+    def action_done(self):
+        self.ensure_one()
+        self.closing_id.action_mark_count_done()
+        return self.closing_id._open_form_action()
+
 
     def action_done(self):
         self.ensure_one()
