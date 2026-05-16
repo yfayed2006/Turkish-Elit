@@ -1,4 +1,4 @@
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -16,6 +16,57 @@ class RouteVisit(models.Model):
         default=False,
         copy=False,
     )
+
+    route_return_line_ids = fields.One2many(
+        "route.visit.line",
+        "visit_id",
+        string="Return Lines",
+        compute="_compute_route_return_transfer_summary",
+        store=False,
+        readonly=True,
+    )
+
+    route_return_product_count = fields.Integer(
+        string="Returned Products",
+        compute="_compute_route_return_transfer_summary",
+        store=False,
+    )
+
+    route_return_line_count = fields.Integer(
+        string="Return Lines",
+        compute="_compute_route_return_transfer_summary",
+        store=False,
+    )
+
+    route_return_total_qty = fields.Float(
+        string="Returned Quantity",
+        compute="_compute_route_return_transfer_summary",
+        store=False,
+    )
+
+    route_return_total_value = fields.Monetary(
+        string="Return Value",
+        currency_field="currency_id",
+        compute="_compute_route_return_transfer_summary",
+        store=False,
+    )
+
+    @api.depends(
+        "line_ids.product_id",
+        "line_ids.lot_id",
+        "line_ids.return_qty",
+        "line_ids.return_amount",
+    )
+    def _compute_route_return_transfer_summary(self):
+        for rec in self:
+            return_lines = rec.line_ids.filtered(
+                lambda line: line.product_id and (line.return_qty or 0.0) > 0
+            )
+            rec.route_return_line_ids = return_lines
+            rec.route_return_product_count = len(return_lines.mapped("product_id"))
+            rec.route_return_line_count = len(return_lines)
+            rec.route_return_total_qty = sum(return_lines.mapped("return_qty"))
+            rec.route_return_total_value = sum(return_lines.mapped("return_amount"))
 
     def _action_reopen_visit_form(self):
         self.ensure_one()
