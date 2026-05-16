@@ -80,6 +80,19 @@ class RouteVehicleClosing(models.Model):
         "reconciliation_picking_ids",
     )
     def _compute_totals(self):
+        shortage_count_by_closing = {}
+        if self.ids:
+            shortage_groups = self.env["route.salesperson.shortage.line"].read_group(
+                [("closing_id", "in", self.ids)],
+                ["closing_id"],
+                ["closing_id"],
+            )
+            shortage_count_by_closing = {
+                group["closing_id"][0]: group["closing_id_count"]
+                for group in shortage_groups
+                if group.get("closing_id")
+            }
+
         for rec in self:
             variance_lines = rec.line_ids.filtered(lambda line: abs(line.variance_qty or 0.0) > 0.0001)
             reviewed_variance_lines = variance_lines.filtered(lambda line: line.review_status == "reviewed")
@@ -93,7 +106,7 @@ class RouteVehicleClosing(models.Model):
             rec.executed_variance_line_count = len(executed_lines)
             rec.pending_execution_line_count = len(executable_lines) - len(executed_lines)
             rec.reconciliation_picking_count = len(rec.reconciliation_picking_ids)
-            rec.salesperson_shortage_line_count = self.env["route.salesperson.shortage.line"].search_count([("closing_id", "=", rec.id)])
+            rec.salesperson_shortage_line_count = shortage_count_by_closing.get(rec.id, 0)
             rec.total_system_qty = sum(rec.line_ids.mapped("system_qty"))
             rec.total_counted_qty = sum(rec.line_ids.mapped("counted_qty"))
             rec.total_variance_qty = sum(rec.line_ids.mapped("variance_qty"))
@@ -207,7 +220,7 @@ class RouteVehicleClosing(models.Model):
                 "generated_picking_id": line.generated_picking_id.id,
             }
 
-        line_vals = []
+        line_payloads = []
         for quant in self._get_vehicle_quants():
             if not quant.product_id:
                 continue
@@ -216,7 +229,7 @@ class RouteVehicleClosing(models.Model):
             available_qty = max(system_qty - reserved_qty, 0.0)
             key = (quant.product_id.id, quant.lot_id.id or False, quant.location_id.id)
             previous = existing_map.get(key, {})
-            line_vals.append({
+            vals = {
                 "product_id": quant.product_id.id,
                 "location_id": quant.location_id.id,
                 "lot_id": quant.lot_id.id or False,
@@ -230,28 +243,29 @@ class RouteVehicleClosing(models.Model):
                 "reconciliation_action": previous.get("reconciliation_action", False),
                 "review_note": previous.get("review_note", False),
                 "generated_picking_id": previous.get("generated_picking_id", False),
-            })
+            }
+            line_payloads.append((
+                quant.product_id.display_name or "",
+                vals.get("location_id") or 0,
+                vals.get("lot_id") or 0,
+                vals,
+            ))
 
-        line_vals.sort(key=lambda vals: (
-            self.env["product.product"].browse(vals["product_id"]).display_name or "",
-            vals.get("location_id") or 0,
-            vals.get("lot_id") or 0,
-        ))
-        return line_vals
+        line_payloads.sort(key=lambda payload: (payload[0], payload[1], payload[2]))
+        return [payload[3] for payload in line_payloads]
 
     def action_refresh_snapshot(self):
         for rec in self:
             if rec.state != "draft":
                 raise UserError(_("You can refresh the vehicle closing snapshot only while it is in draft."))
             line_vals = rec._build_snapshot_line_vals()
+            if not rec.count_started_datetime:
+                for vals in line_vals:
+                    vals["counted_qty"] = vals.get("system_qty", 0.0)
             rec.line_ids.unlink()
             if line_vals:
                 self.env["route.vehicle.closing.line"].create([dict(vals, closing_id=rec.id) for vals in line_vals])
             rec.snapshot_datetime = fields.Datetime.now()
-            if not rec.count_started_datetime:
-                rec.line_ids.write({"counted_qty": 0.0})
-                for line in rec.line_ids:
-                    line.counted_qty = line.system_qty
         return True
 
     def action_start_count(self):
@@ -651,13 +665,19 @@ class RouteVehicleClosing(models.Model):
                 })
             if ledger.state == "open":
                 ledger.state = "under_review"
+            existing_line_ids = set(line_model.search([
+                ("closing_line_id", "in", source_lines.ids),
+            ]).mapped("closing_line_id").ids)
+            shortage_vals_list = []
+            shortage_date = rec.plan_date or fields.Date.context_today(rec)
             for line in source_lines:
-                existing = line_model.search([("closing_line_id", "=", line.id)], limit=1)
-                if existing:
+                if line.id in existing_line_ids:
                     continue
-                line_model.create({
+                shortage_qty = abs(line.variance_qty or 0.0)
+                unit_price = getattr(line.product_id, "lst_price", 0.0) or 0.0
+                shortage_vals_list.append({
                     "ledger_id": ledger.id,
-                    "shortage_date": rec.plan_date or fields.Date.context_today(rec),
+                    "shortage_date": shortage_date,
                     "closing_id": rec.id,
                     "closing_line_id": line.id,
                     "plan_id": rec.plan_id.id,
@@ -668,11 +688,13 @@ class RouteVehicleClosing(models.Model):
                     "variance_reason": line.variance_reason,
                     "reconciliation_action": line.reconciliation_action,
                     "review_note": line.review_note,
-                    "shortage_qty": abs(line.variance_qty or 0.0),
-                    "unit_price": getattr(line.product_id, "lst_price", 0.0),
-                    "shortage_amount": abs(line.variance_qty or 0.0) * (getattr(line.product_id, "lst_price", 0.0) or 0.0),
+                    "shortage_qty": shortage_qty,
+                    "unit_price": unit_price,
+                    "shortage_amount": shortage_qty * unit_price,
                 })
-                created_count += 1
+            if shortage_vals_list:
+                line_model.create(shortage_vals_list)
+                created_count += len(shortage_vals_list)
         if created_count:
             self.message_post(body=_("Posted %(count)s salesperson shortage line(s) to the monthly shortage ledger.") % {"count": created_count})
         return True
@@ -838,3 +860,4 @@ class RoutePlan(models.Model):
             })
             closing.action_refresh_snapshot()
         return closing._open_form_action()
+
