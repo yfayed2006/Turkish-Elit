@@ -596,7 +596,7 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
-<!--       ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4       -->
+<!--        ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4        -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_snapshot_group">
 <div class="route_pda_group_title">Quick Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -626,7 +626,7 @@
 </div>
 </div>
 </div>
-<!--      ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS      -->
+<!--       ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS       -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_commercial_group">
 <div class="route_pda_group_title">Commercial Setup</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -1420,7 +1420,8 @@
 <field name="arch" type="xml">
 <form string="Outlet Sales Order" create="0" edit="0" delete="0">
 <header>
-<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not route_outlet_id and not context.get('route_outlet_back_id')"/>
+<button name="action_back_to_visit_or_outlet_form" string="Back to Visit" type="object" class="btn-secondary" invisible="not context.get('route_visit_back_id') and not context.get('route_visit_id') and not context.get('default_route_visit_id')"/>
+<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="context.get('route_visit_back_id') or context.get('route_visit_id') or context.get('default_route_visit_id') or (not route_outlet_id and not context.get('route_outlet_back_id'))"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,sent,sale,done,cancel"/>
 </header>
 <sheet class="route_pda_outlet_sheet route_pda_sale_order_sheet">
@@ -1530,10 +1531,14 @@
 <field name="order_line" readonly="1" nolabel="1" class="route_pda_sale_order_lines_x2many">
 <kanban class="route_pda_sale_order_line_kanban" create="0" delete="0" edit="0">
 <field name="product_id"/>
+<field name="route_product_barcode"/>
 <field name="product_uom_qty"/>
+<field name="qty_delivered"/>
+<field name="product_uom_id"/>
 <field name="price_unit"/>
-<field name="discount"/>
 <field name="price_subtotal"/>
+<field name="price_tax"/>
+<field name="price_total"/>
 <templates>
 <t t-name="card">
 <div class="o_kanban_record route_pda_sale_order_line_card route_pda_product_line_card">
@@ -1546,10 +1551,22 @@
 </div>
 </div>
 <div class="route_pda_sale_order_line_metrics">
+<div class="route_pda_sale_order_line_metric route_pda_sale_order_line_metric_full">
+<span class="route_pda_sale_order_line_label">Barcode</span>
+<span class="route_pda_sale_order_line_value">
+<field name="route_product_barcode"/>
+</span>
+</div>
 <div class="route_pda_sale_order_line_metric">
-<span class="route_pda_sale_order_line_label">Qty</span>
+<span class="route_pda_sale_order_line_label">Quantity</span>
 <span class="route_pda_sale_order_line_value">
 <field name="product_uom_qty"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">Delivered</span>
+<span class="route_pda_sale_order_line_value">
+<field name="qty_delivered"/>
 </span>
 </div>
 <div class="route_pda_sale_order_line_metric">
@@ -1558,16 +1575,28 @@
 <field name="price_unit"/>
 </span>
 </div>
-<div class="route_pda_sale_order_line_metric">
-<span class="route_pda_sale_order_line_label">Discount %</span>
+<div class="route_pda_sale_order_line_metric route_pda_sale_order_line_metric_total">
+<span class="route_pda_sale_order_line_label">Untaxed Amount</span>
 <span class="route_pda_sale_order_line_value">
-<field name="discount"/>
+<field name="price_subtotal"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric">
+<span class="route_pda_sale_order_line_label">Tax</span>
+<span class="route_pda_sale_order_line_value">
+<field name="price_tax"/>
 </span>
 </div>
 <div class="route_pda_sale_order_line_metric route_pda_sale_order_line_metric_total">
-<span class="route_pda_sale_order_line_label">Subtotal</span>
+<span class="route_pda_sale_order_line_label">Total Incl. Tax</span>
 <span class="route_pda_sale_order_line_value">
-<field name="price_subtotal"/>
+<field name="price_total"/>
+</span>
+</div>
+<div class="route_pda_sale_order_line_metric route_pda_sale_order_line_metric_full">
+<span class="route_pda_sale_order_line_label">UoM</span>
+<span class="route_pda_sale_order_line_value">
+<field name="product_uom_id"/>
 </span>
 </div>
 </div>
