@@ -331,7 +331,11 @@ class RouteSupervisorDailyControl(models.TransientModel):
         open_promises = promise_payments.filtered(lambda payment: payment.promise_status in ("open", "due_today", "overdue"))
 
         salesperson_lines = self._prepare_salesperson_control_lines(counter_visits, payments, open_promises)
-        vehicle_lines = self._prepare_vehicle_control_lines(counter_visits, plans, payments, open_promises, LoadingProposal)
+        vehicle_ids = (counter_visits.mapped("vehicle_id") | self.vehicle_id).ids
+        loading_count_by_vehicle = self._get_loading_proposal_count_by_vehicle(vehicle_ids)
+        vehicle_lines = self._prepare_vehicle_control_lines(
+            counter_visits, plans, payments, open_promises, loading_count_by_vehicle
+        )
         exception_lines = self._prepare_exception_control_lines(counter_visits, open_promises)
         return salesperson_lines, vehicle_lines, exception_lines
 
@@ -536,7 +540,37 @@ class RouteSupervisorDailyControl(models.TransientModel):
             })
         return lines
 
-    def _prepare_vehicle_control_lines(self, visits, plans, payments, open_promises, LoadingProposal=False):
+    def _get_loading_proposal_count_by_vehicle(self, vehicle_ids):
+        """Return loading proposal counts per vehicle in one grouped query.
+
+        The old implementation executed one search_count per vehicle while
+        building the Supervisor Daily Control vehicle cards. This method keeps
+        the exact same filter logic but batches the count with read_group, which
+        is much lighter when several vehicles are visible.
+        """
+        self.ensure_one()
+        vehicle_ids = [vehicle_id for vehicle_id in (vehicle_ids or []) if vehicle_id]
+        if not vehicle_ids:
+            return {}
+        groups = self.env["route.loading.proposal"].read_group(
+            [
+                ("company_id", "=", self.company_id.id or self.env.company.id),
+                ("vehicle_id", "in", vehicle_ids),
+                ("plan_date", "=", self.control_date or fields.Date.context_today(self)),
+            ],
+            ["vehicle_id"],
+            ["vehicle_id"],
+            lazy=False,
+        )
+        counts = {}
+        for group in groups:
+            vehicle_value = group.get("vehicle_id")
+            vehicle_id = vehicle_value[0] if vehicle_value else False
+            if vehicle_id:
+                counts[vehicle_id] = group.get("vehicle_id_count") or group.get("__count") or 0
+        return counts
+
+    def _prepare_vehicle_control_lines(self, visits, plans, payments, open_promises, loading_count_by_vehicle=False):
         self.ensure_one()
         lines = []
         vehicles = visits.mapped("vehicle_id")
@@ -553,16 +587,7 @@ class RouteSupervisorDailyControl(models.TransientModel):
                 or (payment.settlement_visit_id and payment.settlement_visit_id.vehicle_id == vehicle)
             )
             vehicle_plans = plans.filtered(lambda plan: plan.vehicle_id == vehicle)
-            loading_count = 0
-            if LoadingProposal:
-                try:
-                    loading_count = LoadingProposal.search_count([
-                        ("company_id", "=", self.company_id.id or self.env.company.id),
-                        ("vehicle_id", "=", vehicle.id),
-                        ("plan_date", "=", self.control_date or fields.Date.context_today(self)),
-                    ])
-                except Exception:
-                    loading_count = 0
+            loading_count = (loading_count_by_vehicle or {}).get(vehicle.id, 0)
             lines.append({
                 "sequence": index,
                 "vehicle_id": vehicle.id,
