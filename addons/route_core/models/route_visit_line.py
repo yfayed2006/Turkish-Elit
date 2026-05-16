@@ -501,12 +501,57 @@ class RouteVisitLine(models.Model):
     def create(self, vals_list):
         records = super().create(vals_list)
         records._sync_near_expiry_flags_after_write()
+        records._normalize_visit_lot_activity_after_line_change(vals_list=vals_list)
         return records
 
     def write(self, vals):
+        visits_before = self.mapped("visit_id")
         result = super().write(vals)
         self._sync_near_expiry_flags_after_write()
+        self._normalize_visit_lot_activity_after_line_change(vals=vals, extra_visits=visits_before)
         return result
+
+    def _normalize_visit_lot_activity_after_line_change(self, vals=None, vals_list=None, extra_visits=False):
+        """Normalize duplicated product/lot rows created from mobile return edits.
+
+        The route visit scan and return popups can update one2many lines quickly
+        while the visit form is still open.  If the salesperson first counts an
+        item on the original no-lot row and then records a return with a selected
+        Lot/Serial, Odoo may temporarily create a second row.  Run the visit-level
+        normalizer immediately after relevant line changes so the count table stays
+        clean before the salesperson presses Reconcile Count.
+        """
+        if self.env.context.get("skip_route_visit_line_lot_normalize"):
+            return True
+
+        relevant_fields = {
+            "visit_id",
+            "product_id",
+            "lot_id",
+            "previous_qty",
+            "counted_qty",
+            "return_qty",
+            "return_route",
+            "supplied_qty",
+            "expiry_date",
+        }
+
+        changed_fields = set(vals or {})
+        if vals_list is not None:
+            for line_vals in vals_list:
+                changed_fields.update(line_vals or {})
+
+        if changed_fields and not (changed_fields & relevant_fields):
+            return True
+
+        visits = (extra_visits or self.env["route.visit"]) | self.mapped("visit_id")
+        visits = visits.exists().filtered(
+            lambda visit: visit.visit_process_state in ("checked_in", "counting", "reconciled")
+            and hasattr(visit, "_normalize_scanned_lot_activity_lines")
+        )
+        if visits:
+            visits.with_context(skip_route_visit_line_lot_normalize=True)._normalize_scanned_lot_activity_lines()
+        return True
 
     def _sync_near_expiry_flags_after_write(self):
         for line in self:
@@ -526,4 +571,5 @@ class RouteVisitLine(models.Model):
             else:
                 if not line.suggest_near_expiry_return:
                     super(RouteVisitLine, line).write({"suggest_near_expiry_return": True})
+
 
