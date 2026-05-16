@@ -480,6 +480,70 @@ class RouteVisitPayment(models.Model):
             payments = payments.filtered(lambda p: p.id != self.id)
         return payments
 
+    def _read_group_confirmed_amounts(self, target_field, target_ids):
+        """Return confirmed collection totals by visit/order with one SQL query.
+
+        The older compute path called ``search`` once per payment card.  On the
+        salesperson Visit Collections screens this becomes expensive when many
+        collection cards are shown.  This helper keeps the same business rule
+        as ``_get_confirmed_target_payments`` but batches the sum calculation.
+        """
+        if not target_ids:
+            return {}
+        grouped = self.read_group(
+            [("state", "=", "confirmed"), (target_field, "in", list(target_ids))],
+            ["amount"],
+            [target_field],
+            lazy=False,
+        )
+        totals = {}
+        for row in grouped:
+            target_value = row.get(target_field)
+            target_id = target_value[0] if isinstance(target_value, (tuple, list)) else target_value
+            if target_id:
+                totals[target_id] = row.get("amount") or 0.0
+        return totals
+
+    def _get_target_remaining_due_by_record(self, exclude_self=False):
+        """Batch version of ``_get_target_remaining_due`` for compute methods."""
+        payments = self
+        result = {}
+
+        visit_records = payments.filtered(lambda p: p.source_type != "direct_sale" and p.visit_id)
+        order_records = payments.filtered(lambda p: p.source_type == "direct_sale" and p.sale_order_id)
+
+        visit_ids = set(visit_records.mapped("visit_id").ids)
+        order_ids = set(order_records.mapped("sale_order_id").ids)
+        visit_confirmed = self._read_group_confirmed_amounts("visit_id", visit_ids)
+        order_confirmed = self._read_group_confirmed_amounts("sale_order_id", order_ids)
+
+        for rec in payments:
+            if not rec._get_target_model():
+                result[rec.id] = 0.0
+                continue
+
+            if rec.source_type == "direct_sale" and rec.sale_order_id:
+                target_id = rec.sale_order_id.id
+                total_amount = rec.sale_order_id.amount_total or 0.0
+                confirmed_amount = order_confirmed.get(target_id, 0.0)
+            elif rec.visit_id:
+                target_id = rec.visit_id.id
+                confirmed_amount = visit_confirmed.get(target_id, 0.0)
+                if getattr(rec.visit_id, "visit_execution_mode", False) == "direct_sales":
+                    total_amount = (rec.visit_id.remaining_due_amount or 0.0) + confirmed_amount
+                else:
+                    total_amount = rec.visit_id.net_due_amount or 0.0
+            else:
+                result[rec.id] = 0.0
+                continue
+
+            if exclude_self and rec.id and rec.state == "confirmed":
+                confirmed_amount = max((confirmed_amount or 0.0) - (rec.amount or 0.0), 0.0)
+
+            result[rec.id] = max((total_amount or 0.0) - (confirmed_amount or 0.0), 0.0)
+
+        return result
+
     def _get_target_remaining_due(self, exclude_self=False):
         self.ensure_one()
         total_amount = self._get_target_total_amount()
@@ -649,8 +713,9 @@ class RouteVisitPayment(models.Model):
         "sale_order_id.direct_sale_payment_ids.state",
     )
     def _compute_visit_remaining_due(self):
+        remaining_by_record = self._get_target_remaining_due_by_record()
         for rec in self:
-            rec.visit_remaining_due = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
+            rec.visit_remaining_due = remaining_by_record.get(rec.id, 0.0)
 
     @api.depends(
         "source_type",
@@ -662,8 +727,9 @@ class RouteVisitPayment(models.Model):
         "sale_order_id.direct_sale_payment_ids.state",
     )
     def _compute_remaining_due_amount(self):
+        remaining_by_record = self._get_target_remaining_due_by_record()
         for rec in self:
-            rec.remaining_due_amount = rec._get_target_remaining_due() if rec._get_target_model() else 0.0
+            rec.remaining_due_amount = remaining_by_record.get(rec.id, 0.0)
 
     @api.depends(
         "state",
@@ -682,10 +748,9 @@ class RouteVisitPayment(models.Model):
     )
     def _compute_collection_filter_buckets(self):
         today = fields.Date.context_today(self)
+        remaining_by_record = self._get_target_remaining_due_by_record()
         for rec in self:
-            remaining_due = 0.0
-            if rec._get_target_model():
-                remaining_due = rec._get_target_remaining_due()
+            remaining_due = remaining_by_record.get(rec.id, 0.0)
 
             rec.collection_due_bucket = "remaining_due" if (remaining_due or 0.0) > 0.0001 else "fully_collected"
 
@@ -715,6 +780,7 @@ class RouteVisitPayment(models.Model):
         "sale_order_id.direct_sale_payment_ids.state",
     )
     def _compute_effective_promise_amount(self):
+        remaining_excluding_self = self._get_target_remaining_due_by_record(exclude_self=True)
         for rec in self:
             if not rec._get_target_model():
                 rec.effective_promise_amount = 0.0
@@ -724,9 +790,7 @@ class RouteVisitPayment(models.Model):
                 rec.effective_promise_amount = rec.promise_amount or 0.0
                 continue
 
-            due_before_this_payment = rec._get_target_remaining_due(
-                exclude_self=(rec.state == "confirmed")
-            )
+            due_before_this_payment = remaining_excluding_self.get(rec.id, 0.0)
             due_before_this_payment = max(due_before_this_payment or 0.0, 0.0)
 
             if rec.collection_type == "partial":
@@ -752,6 +816,7 @@ class RouteVisitPayment(models.Model):
     )
     def _compute_promise_status(self):
         today = fields.Date.context_today(self)
+        remaining_by_record = self._get_target_remaining_due_by_record()
         for rec in self:
             if rec.state == "cancelled" or (rec.promise_amount or 0.0) <= 0:
                 rec.promise_status = False
@@ -766,7 +831,7 @@ class RouteVisitPayment(models.Model):
                     rec.promise_status = "open"
                 continue
 
-            remaining_due = rec._get_target_remaining_due()
+            remaining_due = remaining_by_record.get(rec.id, 0.0)
             if remaining_due <= 0:
                 rec.promise_status = "closed"
             elif rec.promise_date and rec.promise_date < today:
