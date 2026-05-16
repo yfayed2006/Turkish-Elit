@@ -576,7 +576,7 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
-<!--   ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4   -->
+<!--    ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4    -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_snapshot_group">
 <div class="route_pda_group_title">Quick Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -606,7 +606,7 @@
 </div>
 </div>
 </div>
-<!--  ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS  -->
+<!--   ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS   -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_commercial_group">
 <div class="route_pda_group_title">Commercial Setup</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -1257,58 +1257,431 @@
 <record id="view_sale_order_outlet_pda_form" model="ir.ui.view">
 <field name="name">sale.order.outlet.pda.form</field>
 <field name="model">sale.order</field>
+<field name="priority" eval="230"/>
 <field name="arch" type="xml">
-<form string="Outlet Sales Order" create="0" edit="0" delete="0">
+<form string="Outlet Sales Order" create="0" edit="0" delete="0" class="route_pda_outlet_sale_order_form route_mobile_sale_order_form">
 <header>
+<button name="action_route_direct_sale_back_to_visit" string="Back to Visit" type="object" class="btn-secondary" invisible="not route_visit_id and not context.get('route_visit_back_id')"/>
 <button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not route_outlet_id and not context.get('route_outlet_back_id')"/>
 <field name="state" widget="statusbar" statusbar_visible="draft,sent,sale,done,cancel"/>
 </header>
-<sheet class="route_pda_outlet_sheet route_pda_sale_order_sheet">
+<sheet class="route_pda_outlet_sheet route_pda_sale_order_sheet route_mobile_sale_order_sheet route_pda_document_sheet">
 <field name="route_order_mode" invisible="1"/>
+<field name="route_visit_id" invisible="1"/>
 <field name="route_outlet_id" invisible="1"/>
 <field name="route_source_location_id" invisible="1"/>
 <field name="route_payment_mode" invisible="1"/>
 <field name="route_payment_due_date" invisible="1"/>
-<group string="Order Snapshot" col="2">
-<group>
-<field name="name" readonly="1"/>
-<field name="date_order" readonly="1"/>
-<field name="partner_id" readonly="1"/>
-<field name="user_id" readonly="1"/>
-</group>
-<group>
-<field name="route_outlet_id" readonly="1" invisible="not route_outlet_id" options="{'no_open': True, 'no_create': True}"/>
-<field name="invoice_status" readonly="1"/>
-<field name="route_payment_mode" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
-<field name="route_payment_due_date" readonly="1" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'"/>
-</group>
-</group>
-<notebook>
-<page string="Summary">
-<group string="Amounts" col="2">
-<group>
-<field name="amount_untaxed" readonly="1"/>
-<field name="amount_tax" readonly="1"/>
-<field name="amount_total" readonly="1"/>
-</group>
-<group>
-<field name="direct_sale_collected_amount" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
-<field name="direct_sale_remaining_due" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
-<field name="direct_sale_payment_count" readonly="1" invisible="route_order_mode != 'direct_sale'"/>
-</group>
-</group>
-</page>
-<page string="Lines">
-<field name="order_line" readonly="1">
-<list create="0" delete="0" edit="0">
-<field name="product_template_id" string="Product"/>
-<field name="product_uom_qty" string="Qty"/>
-<field name="price_unit"/>
-<field name="price_subtotal" string="Subtotal"/>
+<field name="direct_sale_payment_count" invisible="1"/>
+<field name="direct_sale_collected_amount" invisible="1"/>
+<field name="direct_sale_remaining_due" invisible="1"/>
+<field name="route_enable_lot_serial_tracking" invisible="1"/>
+<field name="route_enable_expiry_tracking" invisible="1"/>
+<field name="currency_id" invisible="1"/>
+<div class="route_mobile_header_title route_pda_document_title">
+<h1>
+<field name="name" readonly="1" nolabel="1"/>
+</h1>
+<div class="route_pda_document_subtitle">Sales order generated from the route visit.</div>
+</div>
+<div class="route_mobile_section_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Order Snapshot</div>
+</div>
+<div class="route_mobile_summary_grid route_mobile_sale_order_top_grid route_pda_document_snapshot_grid">
+<div class="route_mobile_info_card route_mobile_info_card_priority">
+<div class="route_mobile_info_label">Order Reference</div>
+<div class="route_mobile_info_value">
+<field name="name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Visit</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="route_visit_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Order Date</div>
+<div class="route_mobile_info_value">
+<field name="date_order" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_priority">
+<div class="route_mobile_info_label">Customer</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="partner_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="not route_outlet_id">
+<div class="route_mobile_info_label">Outlet</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="route_outlet_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Salesperson</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="user_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Invoice Status</div>
+<div class="route_mobile_info_value">
+<field name="invoice_status" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="not origin">
+<div class="route_mobile_info_label">Source Document</div>
+<div class="route_mobile_info_value">
+<field name="origin" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="route_order_mode != 'direct_sale'">
+<div class="route_mobile_info_label">Payment Mode</div>
+<div class="route_mobile_info_value">
+<field name="route_payment_mode" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="route_order_mode != 'direct_sale' or route_payment_mode != 'deferred'">
+<div class="route_mobile_info_label">Deferred Due Date</div>
+<div class="route_mobile_info_value">
+<field name="route_payment_due_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_section_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Amounts</div>
+</div>
+<div class="route_mobile_summary_grid route_mobile_sale_totals_grid route_pda_document_amount_grid">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Untaxed Amount</div>
+<div class="route_mobile_info_value">
+<field name="amount_untaxed" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Taxes</div>
+<div class="route_mobile_info_value">
+<field name="amount_tax" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_sale_total_card">
+<div class="route_mobile_info_label">Total</div>
+<div class="route_mobile_info_value">
+<field name="amount_total" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="route_order_mode != 'direct_sale'">
+<div class="route_mobile_info_label">Collected</div>
+<div class="route_mobile_info_value">
+<field name="direct_sale_collected_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="route_order_mode != 'direct_sale'">
+<div class="route_mobile_info_label">Remaining Due</div>
+<div class="route_mobile_info_value">
+<field name="direct_sale_remaining_due" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card" invisible="route_order_mode != 'direct_sale'">
+<div class="route_mobile_info_label">Payment Entries</div>
+<div class="route_mobile_info_value">
+<field name="direct_sale_payment_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_section_header route_mobile_product_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Products</div>
+</div>
+<field name="order_line" class="route_mobile_direct_products_field route_pda_sale_order_lines_x2many" readonly="1">
+<list string="Products" create="0" delete="0" edit="0" class="route_mobile_sale_line_list route_pda_sale_order_line_list">
+<field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
+<field name="product_id" string="Product" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<field name="route_product_barcode" string="Barcode" readonly="1" optional="show"/>
+<field name="route_lot_id" string="Lot/Serial" readonly="1" optional="show" options="{'no_create': True, 'no_open': True}"/>
+<field name="route_expiry_month_label" string="Expiry" readonly="1" optional="show"/>
+<field name="product_uom_qty" string="Qty" readonly="1"/>
+<field name="product_uom_id" string="UoM" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<field name="price_unit" string="Unit Price" readonly="1"/>
+<field name="discount" string="Disc. %" readonly="1" optional="show"/>
+<field name="tax_ids" string="Taxes" widget="many2many_tags" readonly="1" optional="show" options="{'no_create': True, 'no_open': True}"/>
+<field name="price_subtotal" string="Untaxed" readonly="1"/>
+<field name="price_tax" string="Tax" readonly="1" optional="show"/>
+<field name="price_total" string="Total Incl. Tax" readonly="1" optional="show"/>
 </list>
+<form string="Product">
+<sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
+<field name="route_product_image_128" invisible="1"/>
+<div class="route_mobile_product_image_preview" invisible="not product_id">
+<field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
+</div>
+<div class="route_mobile_summary_grid">
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Product</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="product_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Barcode</div>
+<div class="route_mobile_info_value">
+<field name="route_product_barcode" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Lot/Serial</div>
+<div class="route_mobile_info_value">
+<field name="route_lot_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Expiry</div>
+<div class="route_mobile_info_value">
+<field name="route_expiry_month_label" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Qty</div>
+<div class="route_mobile_info_value">
+<field name="product_uom_qty" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">UoM</div>
+<div class="route_mobile_info_value">
+<field name="product_uom_id" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Unit Price</div>
+<div class="route_mobile_info_value">
+<field name="price_unit" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Disc. %</div>
+<div class="route_mobile_info_value">
+<field name="discount" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Taxes</div>
+<div class="route_mobile_info_value">
+<field name="tax_ids" widget="many2many_tags" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Untaxed</div>
+<div class="route_mobile_info_value">
+<field name="price_subtotal" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Tax</div>
+<div class="route_mobile_info_value">
+<field name="price_tax" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_sale_total_card">
+<div class="route_mobile_info_label">Total Incl. Tax</div>
+<div class="route_mobile_info_value">
+<field name="price_total" readonly="1"/>
+</div>
+</div>
+</div>
+</sheet>
+</form>
 </field>
-</page>
-</notebook>
+</sheet>
+</form>
+</field>
+</record>
+<record id="view_stock_picking_outlet_pda_form" model="ir.ui.view">
+<field name="name">stock.picking.outlet.pda.form</field>
+<field name="model">stock.picking</field>
+<field name="priority" eval="230"/>
+<field name="arch" type="xml">
+<form string="Route Transfer" create="0" edit="0" delete="0" class="route_pda_stock_picking_form">
+<header>
+<button name="action_back_to_visit_or_outlet_form" string="Back to Visit" type="object" class="btn-secondary" invisible="not route_visit_id and not context.get('route_visit_back_id')"/>
+<button name="action_back_to_outlet_form" string="Back to Outlet" type="object" class="btn-secondary" invisible="not context.get('route_outlet_back_id')"/>
+<button name="button_validate" string="Validate Transfer" type="object" class="btn-primary" invisible="state in ('done', 'cancel')"/>
+<field name="state" widget="statusbar" statusbar_visible="draft,confirmed,assigned,done,cancel"/>
+</header>
+<sheet class="route_pda_outlet_sheet route_pda_transfer_sheet route_pda_document_sheet">
+<field name="route_visit_id" invisible="1"/>
+<field name="route_direct_return_id" invisible="1"/>
+<field name="route_pda_currency_id" invisible="1"/>
+<div class="route_mobile_header_title route_pda_document_title">
+<h1>
+<field name="name" readonly="1" nolabel="1"/>
+</h1>
+<div class="route_pda_document_subtitle">Internal movement generated by the route visit.</div>
+</div>
+<div class="route_mobile_section_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Transfer Snapshot</div>
+</div>
+<div class="route_mobile_summary_grid route_pda_document_snapshot_grid route_pda_transfer_snapshot_grid">
+<div class="route_mobile_info_card route_mobile_info_card_priority">
+<div class="route_mobile_info_label">Reference</div>
+<div class="route_mobile_info_value">
+<field name="name" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Contact</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="partner_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Operation Type</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="picking_type_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Source Location</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="location_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Destination Location</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="location_dest_id" readonly="1" options="{'no_create': True, 'no_open': True}" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Scheduled Date</div>
+<div class="route_mobile_info_value">
+<field name="scheduled_date" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Effective Date</div>
+<div class="route_mobile_info_value">
+<field name="date_done" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_info_card_full" invisible="not origin">
+<div class="route_mobile_info_label">Source Document</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="origin" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_section_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Movement Summary</div>
+</div>
+<div class="route_mobile_summary_grid route_pda_document_amount_grid route_pda_transfer_amount_grid">
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Product Lines</div>
+<div class="route_mobile_info_value">
+<field name="route_pda_return_line_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Total Qty</div>
+<div class="route_mobile_info_value">
+<field name="route_pda_return_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_sale_total_card">
+<div class="route_mobile_info_label">Estimated Value</div>
+<div class="route_mobile_info_value">
+<field name="route_pda_return_value" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+<div class="route_mobile_section_header route_mobile_product_header route_pda_document_section_header">
+<div class="route_mobile_section_title">Products</div>
+</div>
+<field name="move_ids" class="route_pda_transfer_lines_x2many" readonly="1">
+<list string="Products" create="0" delete="0" edit="0" class="route_pda_transfer_line_list">
+<field name="route_product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_mobile_product_image_cell"/>
+<field name="product_id" string="Product" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<field name="route_product_barcode" string="Barcode" readonly="1" optional="show"/>
+<field name="route_move_lot_label" string="Lot/Serial" readonly="1" optional="show"/>
+<field name="route_move_expiry_date" string="Expiry Date" readonly="1" optional="show"/>
+<field name="product_uom_qty" string="Demand" readonly="1"/>
+<field name="quantity" string="Done" readonly="1"/>
+<field name="product_uom" string="UoM" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+<field name="route_move_return_route_display" string="Route / Reason" readonly="1" optional="show"/>
+<field name="route_direct_return_unit_price" string="Unit Price" readonly="1" optional="show"/>
+<field name="route_direct_return_estimated_amount" string="Value" readonly="1" optional="show"/>
+</list>
+<form string="Transfer Product">
+<sheet class="route_mobile_compact_sheet route_mobile_sale_order_line_sheet">
+<field name="route_product_image_128" invisible="1"/>
+<div class="route_mobile_product_image_preview" invisible="not product_id">
+<field name="route_product_image_128" widget="image" readonly="1" nolabel="1" class="route_mobile_product_popup_image"/>
+</div>
+<div class="route_mobile_summary_grid">
+<div class="route_mobile_info_card route_mobile_info_card_full">
+<div class="route_mobile_info_label">Product</div>
+<div class="route_mobile_info_value route_mobile_wrap_value">
+<field name="product_id" readonly="1" options="{'no_create': True, 'no_open': True}"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Barcode</div>
+<div class="route_mobile_info_value">
+<field name="route_product_barcode" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Lot/Serial</div>
+<div class="route_mobile_info_value">
+<field name="route_move_lot_label" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Expiry Date</div>
+<div class="route_mobile_info_value">
+<field name="route_move_expiry_date" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Demand</div>
+<div class="route_mobile_info_value">
+<field name="product_uom_qty" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Done</div>
+<div class="route_mobile_info_value">
+<field name="quantity" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">UoM</div>
+<div class="route_mobile_info_value">
+<field name="product_uom" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Route / Reason</div>
+<div class="route_mobile_info_value">
+<field name="route_move_return_route_display" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card">
+<div class="route_mobile_info_label">Unit Price</div>
+<div class="route_mobile_info_value">
+<field name="route_direct_return_unit_price" readonly="1"/>
+</div>
+</div>
+<div class="route_mobile_info_card route_mobile_sale_total_card">
+<div class="route_mobile_info_label">Value</div>
+<div class="route_mobile_info_value">
+<field name="route_direct_return_estimated_amount" readonly="1"/>
+</div>
+</div>
+</div>
+</sheet>
+</form>
+</field>
 </sheet>
 </form>
 </field>
