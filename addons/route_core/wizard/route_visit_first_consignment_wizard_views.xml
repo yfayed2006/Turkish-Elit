@@ -29,14 +29,14 @@
 <group string="Products to place from vehicle" invisible="setup_mode != 'vehicle_refill'">
 <field name="line_ids" nolabel="1" class="route_first_consignment_lines_x2many">
 <list editable="bottom" create="0" delete="1">
-<field name="product_image_128" string="Image" widget="image" readonly="1" optional="show" class="route_fc_image"/>
-<field name="product_id" readonly="1" class="route_fc_product"/>
-<field name="product_barcode" string="Barcode" readonly="1" optional="show" class="route_fc_barcode"/>
-<field name="available_qty" readonly="1" class="route_fc_vehicle_balance"/>
+<field name="product_image_128" string="Image" widget="image" readonly="1" force_save="1" optional="show" class="route_fc_image"/>
+<field name="product_id" readonly="1" force_save="1" class="route_fc_product"/>
+<field name="product_barcode" string="Barcode" readonly="1" force_save="1" optional="show" class="route_fc_barcode"/>
+<field name="available_qty" readonly="1" force_save="1" class="route_fc_vehicle_balance"/>
 <field name="quantity" class="route_fc_qty_to_add"/>
-<field name="uom_id" readonly="1" optional="show" class="route_fc_uom"/>
-<field name="unit_price" readonly="1" optional="show" class="route_fc_unit_price"/>
-<field name="estimated_value" readonly="1" optional="show" class="route_fc_estimated_value"/>
+<field name="uom_id" readonly="1" force_save="1" optional="show" class="route_fc_uom"/>
+<field name="unit_price" readonly="1" force_save="1" optional="show" class="route_fc_unit_price"/>
+<field name="estimated_value" readonly="1" force_save="1" optional="show" class="route_fc_estimated_value"/>
 </list>
 </field>
 </group>
