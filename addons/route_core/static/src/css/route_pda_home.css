@@ -7638,7 +7638,8 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     min-width: 0;
 }
 
-.route_pda_sale_order_line_metric_total {
+.route_pda_sale_order_line_metric_total,
+.route_pda_sale_order_line_metric_full {
     grid-column: 1 / -1;
 }
 
