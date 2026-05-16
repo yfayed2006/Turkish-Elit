@@ -769,105 +769,141 @@ class RouteVisit(models.Model):
     def _normalize_scanned_lot_return_lines(self):
         """Move return rows into the matching operational lot row when safe.
 
-        This keeps the salesperson count table and the receipt readable: a return
-        for a tracked product should normally live on the same product/lot line
-        that already carries the previous and counted quantities.  The merge is
-        intentionally conservative; when more than one lot line exists, or when
-        return routes conflict, the method leaves the rows untouched so the
-        supervisor can see the ambiguity instead of losing stock-routing detail.
+        A common mobile flow is: the salesperson counts a product on the original
+        no-lot previous-balance row, then selects the real Lot/Serial only when a
+        return is recorded.  Without normalization, Odoo shows two lines for the
+        same product: the counted line and a second return line carrying the same
+        previous quantity.  This method keeps one operational row and avoids
+        doubling sold quantity, return value, and previous balance.
         """
+
+        def _line_activity_score(line):
+            score = 0.0
+            if (line.counted_qty or 0.0) > 0:
+                score += 1000.0 + (line.counted_qty or 0.0)
+            if (line.supplied_qty or 0.0) > 0:
+                score += 500.0 + (line.supplied_qty or 0.0)
+            if (line.previous_qty or 0.0) > 0:
+                score += 100.0 + (line.previous_qty or 0.0)
+            if (line.return_qty or 0.0) > 0:
+                score += 10.0 + (line.return_qty or 0.0)
+            return score
+
+        def _safe_return_route(lines):
+            routes = {line.return_route or "vehicle" for line in lines if (line.return_qty or 0.0) > 0}
+            if len(routes) > 1:
+                return False
+            return next(iter(routes), False)
+
+        def _merge_lines(target_line, source_lines, product, assign_lot=False):
+            source_lines = source_lines.filtered(lambda line: line and line != target_line)
+            if not target_line or not source_lines:
+                return False
+
+            all_lines = target_line | source_lines
+            return_route = _safe_return_route(all_lines)
+            if not return_route and any((line.return_qty or 0.0) > 0 for line in all_lines):
+                return False
+
+            vals = {
+                # Previous balance represents the opening shelf balance for this
+                # product/lot.  Duplicate return rows often copy the same previous
+                # quantity, so use the highest value instead of summing it.
+                "previous_qty": max(all_lines.mapped("previous_qty") or [0.0]),
+                "counted_qty": sum(all_lines.mapped("counted_qty")),
+                "return_qty": sum(all_lines.mapped("return_qty")),
+                "supplied_qty": sum(all_lines.mapped("supplied_qty")),
+                "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
+            }
+            if return_route:
+                vals["return_route"] = return_route
+            if assign_lot and "lot_id" in target_line._fields and not target_line.lot_id:
+                vals["lot_id"] = assign_lot.id
+
+            expiry_dates = [date for date in all_lines.mapped("expiry_date") if date]
+            if expiry_dates and not target_line.expiry_date:
+                vals["expiry_date"] = expiry_dates[0]
+
+            target_line.with_context(skip_route_visit_line_lot_normalize=True).write(vals)
+            visit._unlink_merged_visit_lines(source_lines)
+            return True
+
         for visit in self:
             RouteVisitLine = visit.env["route.visit.line"]
             if "lot_id" not in RouteVisitLine._fields:
                 continue
-            for product in visit.line_ids.mapped("product_id"):
-                product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
 
-                # Case A: existing no-lot count row + newly created lot return row.
-                # Keep one visible line by assigning the lot to the counted row and
-                # merging the return quantity into it without duplicating previous qty.
+            # Make sure the normalizer sees lines that were just created from a
+            # popup or inline one2many edit before this method was called.
+            visit.invalidate_recordset(["line_ids"])
+
+            for product in visit.line_ids.mapped("product_id"):
+                product_lines = visit.line_ids.filtered(lambda line: line.product_id == product)
+
+                # Case A: one no-lot operational row already contains Previous /
+                # Counted, and one or more lot rows only carry the return decision.
+                # Assign the selected lot to the operational row and remove the
+                # duplicated return row(s).  This is the exact case from product
+                # barcode 40: Previous 3, Counted 2, Return 1 must stay on one line.
                 no_lot_activity_lines = product_lines.filtered(
-                    lambda l: not l.lot_id
+                    lambda line: not line.lot_id
                     and (
-                        (l.previous_qty or 0.0) > 0
-                        or (l.counted_qty or 0.0) > 0
-                        or (l.return_qty or 0.0) > 0
-                        or (l.supplied_qty or 0.0) > 0
+                        (line.previous_qty or 0.0) > 0
+                        or (line.counted_qty or 0.0) > 0
+                        or (line.return_qty or 0.0) > 0
+                        or (line.supplied_qty or 0.0) > 0
                     )
                 )
                 lot_return_lines = product_lines.filtered(
-                    lambda l: l.lot_id
-                    and (l.return_qty or 0.0) > 0
-                    and (l.supplied_qty or 0.0) <= 0
+                    lambda line: line.lot_id
+                    and (line.return_qty or 0.0) > 0
+                    and (line.supplied_qty or 0.0) <= 0
                 )
                 if len(no_lot_activity_lines) == 1 and len(lot_return_lines.mapped("lot_id")) == 1:
                     target_line = no_lot_activity_lines[:1]
                     source_lot = lot_return_lines[:1].lot_id
-                    return_routes = set((line.return_route or "vehicle") for line in lot_return_lines)
-                    if (target_line.return_qty or 0.0) > 0:
-                        return_routes.add(target_line.return_route or "vehicle")
-                    if len(return_routes) == 1:
-                        merged_previous = max(
-                            target_line.previous_qty or 0.0,
-                            max(lot_return_lines.mapped("previous_qty") or [0.0]),
-                        )
-                        vals = {
-                            "lot_id": source_lot.id,
-                            "previous_qty": merged_previous,
-                            "counted_qty": (target_line.counted_qty or 0.0) + sum(lot_return_lines.mapped("counted_qty")),
-                            "return_qty": (target_line.return_qty or 0.0) + sum(lot_return_lines.mapped("return_qty")),
-                            "return_route": next(iter(return_routes)),
-                            "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
-                        }
-                        expiry_dates = [d for d in lot_return_lines.mapped("expiry_date") if d]
-                        if expiry_dates and not target_line.expiry_date:
-                            vals["expiry_date"] = expiry_dates[0]
-                        target_line.write(vals)
-                        visit._unlink_merged_visit_lines(lot_return_lines)
-                        product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+                    if _merge_lines(target_line, lot_return_lines, product, assign_lot=source_lot):
+                        visit.invalidate_recordset(["line_ids"])
+                        product_lines = visit.line_ids.filtered(lambda line: line.product_id == product)
 
-                product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+                # Case B: duplicate rows already have the same Lot/Serial.  Keep
+                # the row with the strongest operational data and merge the rest.
+                for lot in product_lines.mapped("lot_id"):
+                    lot_lines = product_lines.filtered(lambda line, lot=lot: line.lot_id == lot)
+                    if len(lot_lines) <= 1:
+                        continue
+                    sorted_lines = lot_lines.sorted(key=lambda line: (_line_activity_score(line), line.id), reverse=True)
+                    target_line = sorted_lines[:1]
+                    source_lines = sorted_lines - target_line
+                    if _merge_lines(target_line, source_lines, product):
+                        visit.invalidate_recordset(["line_ids"])
+                        product_lines = visit.line_ids.filtered(lambda line: line.product_id == product)
+
+                # Case C: an empty no-lot return-only row should move into the
+                # only operational lot row for that product.
                 unassigned_return_lines = product_lines.filtered(
-                    lambda l: not l.lot_id
-                    and (l.return_qty or 0.0) > 0
-                    and (l.previous_qty or 0.0) <= 0
-                    and (l.counted_qty or 0.0) <= 0
-                    and (l.supplied_qty or 0.0) <= 0
+                    lambda line: not line.lot_id
+                    and (line.return_qty or 0.0) > 0
+                    and (line.previous_qty or 0.0) <= 0
+                    and (line.counted_qty or 0.0) <= 0
+                    and (line.supplied_qty or 0.0) <= 0
                 )
                 if not unassigned_return_lines:
                     continue
 
                 lot_lines = product_lines.filtered(
-                    lambda l: l.lot_id
+                    lambda line: line.lot_id
                     and (
-                        (l.previous_qty or 0.0) > 0
-                        or (l.counted_qty or 0.0) > 0
-                        or (l.return_qty or 0.0) > 0
-                        or (l.supplied_qty or 0.0) > 0
+                        (line.previous_qty or 0.0) > 0
+                        or (line.counted_qty or 0.0) > 0
+                        or (line.return_qty or 0.0) > 0
+                        or (line.supplied_qty or 0.0) > 0
                     )
                 )
                 if len(lot_lines.mapped("lot_id")) != 1:
                     continue
 
-                lot_line = lot_lines[:1]
-                for return_line in unassigned_return_lines:
-                    return_qty = return_line.return_qty or 0.0
-                    if return_qty <= 0:
-                        continue
-                    return_route = return_line.return_route or "vehicle"
-                    lot_return_route = lot_line.return_route or "vehicle"
-                    if (lot_line.return_qty or 0.0) > 0 and lot_return_route != return_route:
-                        continue
-
-                    vals = {
-                        "return_qty": (lot_line.return_qty or 0.0) + return_qty,
-                        "return_route": return_route,
-                        "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
-                    }
-                    if return_line.expiry_date and not lot_line.expiry_date:
-                        vals["expiry_date"] = return_line.expiry_date
-                    lot_line.write(vals)
-                    visit._unlink_merged_visit_lines(return_line)
+                _merge_lines(lot_lines[:1], unassigned_return_lines, product)
         return True
 
     def _normalize_scanned_lot_activity_lines(self):
