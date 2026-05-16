@@ -35,13 +35,15 @@ class StockPicking(models.Model):
         store=False,
     )
 
-    @api.depends("move_ids")
+    @api.depends(
+        "move_ids_without_package.product_uom_qty",
+        "move_ids_without_package.quantity",
+        "move_ids_without_package.route_direct_return_estimated_amount",
+        "move_ids_without_package.product_id.lst_price",
+    )
     def _compute_route_pda_return_summary(self):
         for picking in self:
-            if "move_ids_without_package" in picking._fields:
-                moves = picking.move_ids_without_package
-            else:
-                moves = picking.move_ids
+            moves = picking.move_ids_without_package
             line_count = 0
             total_qty = 0.0
             total_value = 0.0
@@ -124,6 +126,12 @@ class StockPicking(models.Model):
             visit = self.env["route.visit"].search([("name", "=", self.origin)], limit=1)
 
         if visit:
+            if hasattr(visit, "_get_pda_form_action"):
+                return visit.with_context(
+                    pda_mode=True,
+                    route_pda_salesperson_mode=True,
+                )._get_pda_form_action()
+
             pda_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
             fallback_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
             form_view = pda_view or fallback_view
@@ -139,6 +147,8 @@ class StockPicking(models.Model):
                     create=False,
                     edit=True,
                     delete=False,
+                    pda_mode=True,
+                    route_pda_salesperson_mode=True,
                 ),
             }
             if form_view:
