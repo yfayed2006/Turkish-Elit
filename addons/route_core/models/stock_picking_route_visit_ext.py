@@ -35,15 +35,13 @@ class StockPicking(models.Model):
         store=False,
     )
 
-    @api.depends(
-        "move_ids_without_package.product_uom_qty",
-        "move_ids_without_package.quantity",
-        "move_ids_without_package.route_direct_return_estimated_amount",
-        "move_ids_without_package.product_id.lst_price",
-    )
+    @api.depends("move_ids")
     def _compute_route_pda_return_summary(self):
         for picking in self:
-            moves = picking.move_ids_without_package
+            if "move_ids_without_package" in picking._fields:
+                moves = picking.move_ids_without_package
+            else:
+                moves = picking.move_ids
             line_count = 0
             total_qty = 0.0
             total_value = 0.0
