@@ -629,6 +629,58 @@ class RouteVisit(models.Model):
             and (l.supplied_qty or 0.0) <= 0
         )[:1]
 
+    def _get_single_unassigned_operational_line_for_product(self, product):
+        """Return the single no-lot operational line for this product, when safe.
+
+        A salesperson can first count a tracked product without a lot on the
+        historical no-lot row, then later scan/select the real lot while
+        declaring a return.  In that case we must enrich the existing row with
+        the selected lot instead of creating a second line with the same previous
+        balance; otherwise sold quantity and return value are duplicated.
+        """
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+        if not product or "lot_id" not in RouteVisitLine._fields:
+            return RouteVisitLine
+
+        lines = self.line_ids.filtered(
+            lambda l: l.product_id == product
+            and not l.lot_id
+            and (
+                (l.previous_qty or 0.0) > 0
+                or (l.counted_qty or 0.0) > 0
+                or (l.return_qty or 0.0) > 0
+                or (l.supplied_qty or 0.0) > 0
+            )
+        )
+        return lines[:1] if len(lines) == 1 else RouteVisitLine
+
+    def _assign_lot_to_unassigned_operational_line(self, product, lot, expiry_date=False, lot_previous_qty=0.0):
+        """Safely convert one existing no-lot activity line into the selected lot."""
+        self.ensure_one()
+        RouteVisitLine = self.env["route.visit.line"]
+        if not product or not lot or "lot_id" not in RouteVisitLine._fields:
+            return RouteVisitLine
+
+        existing_lot_lines = self.line_ids.filtered(lambda l: l.product_id == product and l.lot_id)
+        if existing_lot_lines:
+            return RouteVisitLine
+
+        line = self._get_single_unassigned_operational_line_for_product(product)
+        if not line:
+            return RouteVisitLine
+
+        vals = {
+            "lot_id": lot.id,
+            "vehicle_available_qty": self._get_vehicle_available_qty_for_scan_product(product),
+        }
+        if expiry_date and not line.expiry_date:
+            vals["expiry_date"] = expiry_date
+        if lot_previous_qty and (line.previous_qty or 0.0) <= 0:
+            vals["previous_qty"] = lot_previous_qty
+        line.write(vals)
+        return line
+
     def _merge_unassigned_previous_qty_into_lot_line(self, product, lot_line, resolved_expiry_date=False, preferred_previous_qty=0.0):
         self.ensure_one()
         RouteVisitLine = self.env["route.visit.line"]
@@ -715,7 +767,7 @@ class RouteVisit(models.Model):
         return True
 
     def _normalize_scanned_lot_return_lines(self):
-        """Move no-lot return-only rows into the matching lot row when safe.
+        """Move return rows into the matching operational lot row when safe.
 
         This keeps the salesperson count table and the receipt readable: a return
         for a tracked product should normally live on the same product/lot line
@@ -729,6 +781,51 @@ class RouteVisit(models.Model):
             if "lot_id" not in RouteVisitLine._fields:
                 continue
             for product in visit.line_ids.mapped("product_id"):
+                product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+
+                # Case A: existing no-lot count row + newly created lot return row.
+                # Keep one visible line by assigning the lot to the counted row and
+                # merging the return quantity into it without duplicating previous qty.
+                no_lot_activity_lines = product_lines.filtered(
+                    lambda l: not l.lot_id
+                    and (
+                        (l.previous_qty or 0.0) > 0
+                        or (l.counted_qty or 0.0) > 0
+                        or (l.return_qty or 0.0) > 0
+                        or (l.supplied_qty or 0.0) > 0
+                    )
+                )
+                lot_return_lines = product_lines.filtered(
+                    lambda l: l.lot_id
+                    and (l.return_qty or 0.0) > 0
+                    and (l.supplied_qty or 0.0) <= 0
+                )
+                if len(no_lot_activity_lines) == 1 and len(lot_return_lines.mapped("lot_id")) == 1:
+                    target_line = no_lot_activity_lines[:1]
+                    source_lot = lot_return_lines[:1].lot_id
+                    return_routes = set((line.return_route or "vehicle") for line in lot_return_lines)
+                    if (target_line.return_qty or 0.0) > 0:
+                        return_routes.add(target_line.return_route or "vehicle")
+                    if len(return_routes) == 1:
+                        merged_previous = max(
+                            target_line.previous_qty or 0.0,
+                            max(lot_return_lines.mapped("previous_qty") or [0.0]),
+                        )
+                        vals = {
+                            "lot_id": source_lot.id,
+                            "previous_qty": merged_previous,
+                            "counted_qty": (target_line.counted_qty or 0.0) + sum(lot_return_lines.mapped("counted_qty")),
+                            "return_qty": (target_line.return_qty or 0.0) + sum(lot_return_lines.mapped("return_qty")),
+                            "return_route": next(iter(return_routes)),
+                            "vehicle_available_qty": visit._get_vehicle_available_qty_for_scan_product(product),
+                        }
+                        expiry_dates = [d for d in lot_return_lines.mapped("expiry_date") if d]
+                        if expiry_dates and not target_line.expiry_date:
+                            vals["expiry_date"] = expiry_dates[0]
+                        target_line.write(vals)
+                        visit._unlink_merged_visit_lines(lot_return_lines)
+                        product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
+
                 product_lines = visit.line_ids.filtered(lambda l: l.product_id == product)
                 unassigned_return_lines = product_lines.filtered(
                     lambda l: not l.lot_id
@@ -800,6 +897,15 @@ class RouteVisit(models.Model):
                 resolved_expiry_date=resolved_expiry_date,
                 preferred_previous_qty=lot_previous_qty,
             )
+
+        operational_line = self._assign_lot_to_unassigned_operational_line(
+            product,
+            resolved_lot,
+            expiry_date=resolved_expiry_date,
+            lot_previous_qty=lot_previous_qty,
+        )
+        if operational_line:
+            return operational_line
 
         unassigned_line = self.line_ids.filtered(
             lambda l: l.product_id == product
