@@ -510,7 +510,7 @@ Check-in Map
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
-<field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="show"/>
+<field name="refill_proposal_qty" string="Refill Proposal" readonly="1"/>
 <field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
 <field name="uom_id" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
@@ -1008,11 +1008,11 @@ Check-in Map
 <field name="sold_qty" string="Sold Qty" readonly="1"/>
 <field name="return_qty" string="Returned Qty" optional="show"/>
 <field name="vehicle_available_qty" string="Vehicle Balance" readonly="1" optional="show"/>
+<field name="refill_proposal_qty" string="Refill Proposal" readonly="1"/>
 <field name="approved_refill_qty" string="Approved Refill" optional="show" force_save="1"/>
 <field name="unit_price" string="Unit Price" readonly="1" optional="show"/>
 <field name="sold_amount" string="Sold Amount" readonly="1" optional="show"/>
 <field name="uom_id" readonly="1" optional="show"/>
-<field name="refill_proposal_qty" string="Refill Proposal" readonly="1" optional="hide"/>
 <field name="return_route" optional="hide"/>
 </list>
 </field>
