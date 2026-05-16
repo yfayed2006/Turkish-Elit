@@ -78,21 +78,29 @@ class RouteVisit(models.Model):
         StockMove = self.env["stock.move"]
         created_moves = self.env["stock.move"]
 
+        existing_moves = StockMove.search(
+            [
+                ("picking_id", "=", picking.id),
+                ("route_visit_line_id", "in", lines.ids),
+                ("state", "!=", "cancel"),
+            ]
+        )
+        existing_move_by_line = {
+            move.route_visit_line_id.id: move
+            for move in existing_moves
+            if move.route_visit_line_id
+        }
+
+        move_vals_list = []
         for line in lines:
-            existing_move = StockMove.search(
-                [
-                    ("picking_id", "=", picking.id),
-                    ("route_visit_line_id", "=", line.id),
-                    ("state", "!=", "cancel"),
-                ],
-                limit=1,
-            )
+            existing_move = existing_move_by_line.get(line.id)
             if existing_move:
                 created_moves |= existing_move
                 continue
+            move_vals_list.append(self._prepare_route_move_vals(picking, line))
 
-            vals = self._prepare_route_move_vals(picking, line)
-            created_moves |= StockMove.create(vals)
+        if move_vals_list:
+            created_moves |= StockMove.create(move_vals_list)
 
         return created_moves
 
