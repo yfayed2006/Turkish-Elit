@@ -88,47 +88,65 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
         if not source_location:
             return []
 
-        quant_domain = [
-            ("location_id", "child_of", source_location.id),
-            ("product_id", "!=", False),
-            ("quantity", ">", 0),
-        ]
-        if "active" in self.env["product.product"]._fields:
-            quant_domain.append(("product_id.active", "=", True))
+        if hasattr(visit, "_get_vehicle_available_qty_map"):
+            qty_by_product = visit._get_vehicle_available_qty_map()
+        else:
+            Quant = self.env["stock.quant"]
+            qty_field = "available_quantity" if "available_quantity" in Quant._fields else "quantity"
+            qty_by_product = defaultdict(float)
+            for quant in Quant.search([
+                ("location_id", "child_of", source_location.id),
+                ("product_id", "!=", False),
+                ("quantity", ">", 0),
+            ]):
+                qty = max(getattr(quant, qty_field, 0.0) or 0.0, 0.0)
+                if qty > 0 and quant.product_id:
+                    qty_by_product[quant.product_id.id] += qty
 
-        quants = self.env["stock.quant"].search(quant_domain)
+        if not qty_by_product:
+            return []
 
-        qty_by_product = defaultdict(float)
-        for quant in quants:
-            product = quant.product_id
-            if not product or not product.exists() or quant.quantity <= 0:
-                continue
-            qty_by_product[product.id] += quant.quantity
-
-        rows = []
         Product = self.env["product.product"]
-        for product_id, available_qty in qty_by_product.items():
-            product = Product.browse(product_id)
-            if not product.exists():
+        products = Product.browse(list(qty_by_product)).exists()
+        if "active" in Product._fields:
+            products = products.filtered(lambda product: product.active)
+
+        price_by_product = self._get_default_unit_price_map(visit, products)
+        rows = []
+        for product in products:
+            available_qty = qty_by_product.get(product.id, 0.0)
+            if available_qty <= 0:
                 continue
             rows.append({
                 "product_id": product.id,
                 "available_qty": available_qty,
                 "quantity": 0.0,
-                "unit_price": self._get_default_unit_price(visit, product),
+                "unit_price": price_by_product.get(product.id, product.lst_price or 0.0),
             })
 
         rows.sort(key=lambda vals: Product.browse(vals["product_id"]).display_name or "")
         return rows
 
-    def _get_default_unit_price(self, visit, product):
-        balance = self.env["outlet.stock.balance"].search([
+    def _get_default_unit_price_map(self, visit, products):
+        if not visit or not products:
+            return {}
+        balances = self.env["outlet.stock.balance"].search([
             ("outlet_id", "=", visit.outlet_id.id),
-            ("product_id", "=", product.id),
-        ], limit=1)
-        if balance and balance.unit_price:
-            return balance.unit_price
-        return product.lst_price or 0.0
+            ("product_id", "in", products.ids),
+        ])
+        price_by_product = {
+            balance.product_id.id: balance.unit_price
+            for balance in balances
+            if balance.product_id and balance.unit_price
+        }
+        for product in products:
+            price_by_product.setdefault(product.id, product.lst_price or 0.0)
+        return price_by_product
+
+    def _get_default_unit_price(self, visit, product):
+        if not product:
+            return 0.0
+        return self._get_default_unit_price_map(visit, product).get(product.id, product.lst_price or 0.0)
 
     @api.depends("visit_id.source_location_id", "visit_id.vehicle_id.stock_location_id")
     def _compute_source_location(self):
@@ -260,9 +278,17 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
 
         visit._sync_source_location_from_vehicle()
         visit_line_model = self.env["route.visit.line"]
-        created_lines = self.env["route.visit.line"]
+        products = selected_lines.mapped("product_id")
+        vehicle_qty_by_product = (
+            visit._get_vehicle_available_qty_map(products)
+            if hasattr(visit, "_get_vehicle_available_qty_map")
+            else {}
+        )
+        line_vals_list = []
         for line in selected_lines:
-            available_qty = visit._get_vehicle_available_qty_for_product(line.product_id)
+            available_qty = vehicle_qty_by_product.get(line.product_id.id)
+            if available_qty is None:
+                available_qty = visit._get_vehicle_available_qty_for_product(line.product_id)
             if line.quantity - available_qty > 1e-9:
                 raise UserError(_(
                     "The requested quantity for %(product)s is greater than the vehicle available quantity.\nRequested: %(requested).2f\nAvailable: %(available).2f"
@@ -271,7 +297,7 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                     "requested": line.quantity,
                     "available": available_qty,
                 })
-            created_lines |= visit_line_model.create({
+            line_vals_list.append({
                 "visit_id": visit.id,
                 "company_id": visit.company_id.id if "company_id" in visit._fields else self.env.company.id,
                 "product_id": line.product_id.id,
@@ -283,8 +309,8 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                 "unit_price": line.unit_price or line.product_id.lst_price or 0.0,
             })
 
-        if created_lines:
-            visit._update_vehicle_available_on_lines(created_lines)
+        if line_vals_list:
+            visit_line_model.create(line_vals_list)
 
         self._write_visit_state(visit, {
             "visit_process_state": "reconciled",
