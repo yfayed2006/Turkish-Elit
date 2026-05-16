@@ -926,10 +926,10 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         Payment = self.env["route.visit.payment"]
         visit = self.visit_id
         payment_splits = payment_splits or self._get_active_payment_splits()
-        created = Payment
         targets = list(visit._get_direct_stop_previous_due_visits()) + [visit]
+        target_due_by_id = {target.id: self._get_direct_stop_target_due(target) for target in targets}
         allocated_by_target = {}
-        last_payment = Payment
+        vals_list = []
         total_collection_amount = sum(split.get("amount") or 0.0 for split in payment_splits)
         settlement_remaining_after_payment = max((visit.direct_stop_grand_due_amount or 0.0) - (total_collection_amount or 0.0), 0.0)
 
@@ -938,16 +938,19 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             if remaining_amount <= 0.0:
                 continue
             for target in targets:
+                if remaining_amount <= 0.0:
+                    break
                 already_allocated = allocated_by_target.get(target.id, 0.0)
-                due = max((self._get_direct_stop_target_due(target) or 0.0) - already_allocated, 0.0)
-                if remaining_amount <= 0.0 or due <= 0.0:
+                due = max((target_due_by_id.get(target.id, 0.0) or 0.0) - already_allocated, 0.0)
+                if due <= 0.0:
                     continue
                 allocation = min(remaining_amount, due)
-                payment = Payment.create(self._prepare_payment_vals(target, allocation, "full", payment_data=split))
-                created |= payment
-                last_payment = payment
+                vals_list.append(self._prepare_payment_vals(target, allocation, "full", payment_data=split))
                 allocated_by_target[target.id] = already_allocated + allocation
                 remaining_amount -= allocation
+
+        created = Payment.create(vals_list) if vals_list else Payment
+        last_payment = created[-1] if created else Payment
 
         if self.collection_type == "partial" and settlement_remaining_after_payment > 0.0 and last_payment:
             last_payment.write({
@@ -967,15 +970,15 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         self.ensure_one()
         Payment = self.env["route.visit.payment"]
         payment_splits = payment_splits or self._get_active_payment_splits()
-        created = Payment
-        last_payment = Payment
+        vals_list = []
         for split in payment_splits:
             amount = split.get("amount") or 0.0
             if amount <= 0.0:
                 continue
-            payment = Payment.create(self._prepare_payment_vals(self.visit_id, amount, "full", payment_data=split))
-            created |= payment
-            last_payment = payment
+            vals_list.append(self._prepare_payment_vals(self.visit_id, amount, "full", payment_data=split))
+
+        created = Payment.create(vals_list) if vals_list else Payment
+        last_payment = created[-1] if created else Payment
 
         if self.collection_type == "partial" and last_payment:
             last_payment.write({
