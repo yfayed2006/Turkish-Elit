@@ -115,13 +115,36 @@ class RouteSalespersonRouteMap(models.TransientModel):
         Visit = self.env["route.visit"]
         for route_map in self:
             visits = Visit.search(route_map._get_visit_domain(), order="date asc, id asc")
-            mapped = visits.filtered(lambda visit: route_map._visit_has_outlet_point(visit))
-            missing = visits - mapped
-            done = visits.filtered(lambda visit: route_map._visit_bucket(visit) == "done")
-            active = visits.filtered(lambda visit: route_map._visit_bucket(visit) == "active")
+            mapped_visit_ids = []
+            done_visit_ids = []
+            active_visit_ids = []
+            outside_zone_count = 0
+            inside_zone_count = 0
+
+            # Build Today's Route Map counters in a single pass.  The mobile map
+            # opens often during the day, so avoid repeatedly filtering the same
+            # visit recordset for each counter.
+            for visit in visits:
+                if route_map._visit_has_outlet_point(visit):
+                    mapped_visit_ids.append(visit.id)
+
+                bucket = route_map._visit_bucket(visit)
+                if bucket == "done":
+                    done_visit_ids.append(visit.id)
+                elif bucket == "active":
+                    active_visit_ids.append(visit.id)
+
+                geo_status = getattr(visit, "geo_checkin_status", False)
+                if geo_status == "outside":
+                    outside_zone_count += 1
+                elif geo_status == "inside":
+                    inside_zone_count += 1
+
+            mapped = Visit.browse(mapped_visit_ids)
+            done = Visit.browse(done_visit_ids)
+            active = Visit.browse(active_visit_ids)
             pending = visits - done - active
-            outside = visits.filtered(lambda visit: getattr(visit, "geo_checkin_status", False) == "outside")
-            inside = visits.filtered(lambda visit: getattr(visit, "geo_checkin_status", False) == "inside")
+            missing = visits - mapped
             next_visit = (pending or active or visits)[:1]
 
             route_map.total_visit_count = len(visits)
@@ -130,8 +153,8 @@ class RouteSalespersonRouteMap(models.TransientModel):
             route_map.done_visit_count = len(done)
             route_map.active_visit_count = len(active)
             route_map.pending_visit_count = len(pending)
-            route_map.outside_zone_count = len(outside)
-            route_map.inside_zone_count = len(inside)
+            route_map.outside_zone_count = outside_zone_count
+            route_map.inside_zone_count = inside_zone_count
             route_map.route_visit_ids = [(6, 0, visits.ids)]
             route_map.next_visit_label = next_visit.outlet_id.display_name or next_visit.display_name if next_visit else _("No visit available")
             route_map.route_map_note = ""
