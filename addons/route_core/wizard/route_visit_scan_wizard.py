@@ -614,12 +614,15 @@ class RouteVisitScanWizard(models.TransientModel):
             "unit_price": product.lst_price or 0.0,
         })
 
-    def _get_current_scan_counted_increase(self):
+    def _get_current_scan_counted_increase(self, scan_info=False):
         self.ensure_one()
         if not self.visit_id or not self.barcode or not self.barcode.strip() or self.quantity <= 0:
             return 0.0
         try:
-            scan_info = self.visit_id._resolve_scanned_barcode(self.barcode)
+            # action_scan_and_add already resolves the barcode once.  Reuse that
+            # result to avoid running product/packaging/lot barcode lookup twice
+            # for every scan.
+            scan_info = scan_info or self.visit_id._resolve_scanned_barcode(self.barcode)
             product = scan_info["product"]
             if scan_info.get("scan_type") == "box":
                 return (self.quantity or 0.0) * (scan_info.get("box_qty") or 1.0)
@@ -676,7 +679,7 @@ class RouteVisitScanWizard(models.TransientModel):
 
         preview_counted_increase = 0.0
         if self.scan_mode == "count":
-            preview_counted_increase = self._get_current_scan_counted_increase()
+            preview_counted_increase = self._get_current_scan_counted_increase(scan_info=scan_info)
             if preview_counted_increase <= 0:
                 preview_counted_increase = self.counted_increase or self.quantity or 0.0
 
@@ -771,5 +774,6 @@ class RouteVisitScanWizard(models.TransientModel):
         if self.visit_id and hasattr(self.visit_id, "_normalize_scanned_lot_activity_lines"):
             self.visit_id._normalize_scanned_lot_activity_lines()
         return {"type": "ir.actions.client", "tag": "reload"}
+
 
 
