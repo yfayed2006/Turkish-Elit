@@ -317,12 +317,9 @@ class RouteVisitLine(models.Model):
             if outlet and not is_direct:
                 rate = outlet._get_consignment_category_commission_rate(line.product_id.categ_id)
                 if outlet._use_consignment_commission_deduction():
-                    # Commission must be calculated on the collectible net value after returns.
-                    # If returns are equal to or greater than sales for the line/category, the
-                    # commission base is zero and no commission is charged for that net-zero value.
-                    commission_base = base_net
-                    commission_amount = min(commission_base * (rate / 100.0), max(commission_base, 0.0))
-                    net_payable = max(base_net - commission_amount, 0.0)
+                    commission_base = gross_sold
+                    commission_amount = min(commission_base * (rate / 100.0), max(gross_sold, 0.0))
+                    net_payable = max(gross_sold - returns - commission_amount, 0.0)
 
             line.route_commission_rate = rate
             line.route_commission_base_amount = commission_base
@@ -379,10 +376,9 @@ class RouteVisit(models.Model):
         lines = self.line_ids.filtered(lambda line: line.product_id)
         gross_sale = sum((line.sold_amount or 0.0) for line in lines)
         returns = sum((line.return_amount or 0.0) for line in lines)
-        breakdown = self._get_consignment_category_commission_breakdown()
-        gross_after_returns = breakdown.get("total_gross_after_returns", max(gross_sale - returns, 0.0))
-        commission = breakdown.get("total_commission_amount", 0.0)
-        net_payable = breakdown.get("total_net_payable_amount", 0.0)
+        commission = sum((line.route_commission_amount or 0.0) for line in lines)
+        gross_after_returns = max(gross_sale - returns, 0.0)
+        net_payable = sum((line.route_net_payable_amount or 0.0) for line in lines)
         if not lines:
             net_payable = 0.0
         return {
@@ -427,7 +423,9 @@ class RouteVisit(models.Model):
         for line in lines:
             sold_value = line.sold_amount or 0.0
             return_value = line.return_amount or 0.0
-            if not any((sold_value, return_value, line.sold_qty or 0.0, line.return_qty or 0.0)):
+            commission_amount = line.route_commission_amount or 0.0
+            net_payable = line.route_net_payable_amount or max(sold_value - return_value - commission_amount, 0.0)
+            if not any((sold_value, return_value, commission_amount, net_payable, line.sold_qty or 0.0, line.return_qty or 0.0)):
                 continue
 
             category = line.product_id.categ_id
@@ -452,6 +450,8 @@ class RouteVisit(models.Model):
             bucket["return_qty"] += line.return_qty or 0.0
             bucket["sold_value"] += sold_value
             bucket["return_value"] += return_value
+            bucket["commission_amount"] += commission_amount
+            bucket["net_payable_amount"] += net_payable
             if line.product_id:
                 bucket["product_ids"].add(line.product_id.id)
             # Keep the displayed rate meaningful if products in the same category are using the same rule.
@@ -464,11 +464,6 @@ class RouteVisit(models.Model):
         totals["lines"] = result_lines
         for bucket in sorted(buckets.values(), key=lambda val: val["category_name"] or ""):
             bucket["gross_after_returns"] = max((bucket["sold_value"] or 0.0) - (bucket["return_value"] or 0.0), 0.0)
-            bucket["commission_amount"] = min(
-                bucket["gross_after_returns"] * ((bucket["commission_rate"] or 0.0) / 100.0),
-                bucket["gross_after_returns"],
-            )
-            bucket["net_payable_amount"] = max(bucket["gross_after_returns"] - bucket["commission_amount"], 0.0)
             bucket["product_count"] = len(bucket.pop("product_ids", set()))
             result_lines.append(bucket)
             totals["total_sold_qty"] += bucket["sold_qty"]
