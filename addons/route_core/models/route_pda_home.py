@@ -836,11 +836,31 @@ class RoutePdaHome(models.TransientModel):
             else:
                 rec.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
 
-            done_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "done")
-            in_progress_visits = today_visits.filtered(lambda v: rec._get_visit_execution_bucket(v) == "in_progress")
+            done_visit_ids = []
+            in_progress_visit_ids = []
+            mapped_visit_ids = []
+            outside_zone_visit_ids = []
+
+            # Route Workspace is the salesperson's most-opened screen.  Build the
+            # visit progress/location counters in one pass instead of filtering
+            # the same recordset several times.
+            for visit in today_visits:
+                bucket = rec._get_visit_execution_bucket(visit)
+                if bucket == "done":
+                    done_visit_ids.append(visit.id)
+                elif bucket == "in_progress":
+                    in_progress_visit_ids.append(visit.id)
+
+                if visit.outlet_id and (visit.outlet_id.geo_latitude or visit.outlet_id.geo_longitude):
+                    mapped_visit_ids.append(visit.id)
+                if getattr(visit, "geo_checkin_status", False) == "outside":
+                    outside_zone_visit_ids.append(visit.id)
+
+            done_visits = Visit.browse(done_visit_ids)
+            in_progress_visits = Visit.browse(in_progress_visit_ids)
             pending_visits = today_visits - done_visits - in_progress_visits
-            mapped_visits = today_visits.filtered(lambda v: v.outlet_id and (v.outlet_id.geo_latitude or v.outlet_id.geo_longitude))
-            outside_zone_visits = today_visits.filtered(lambda v: getattr(v, "geo_checkin_status", False) == "outside")
+            mapped_visits = Visit.browse(mapped_visit_ids)
+            outside_zone_visits = Visit.browse(outside_zone_visit_ids)
 
             if current_visit:
                 rec.current_visit_empty_message = _("Visit %s at %s is already in progress. Use Current Visit to continue it.") % (
