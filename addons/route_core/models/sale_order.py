@@ -134,6 +134,31 @@ class SaleOrder(models.Model):
         compute="_compute_direct_sale_payment_summary",
     )
 
+    route_is_consignment_order = fields.Boolean(
+        string="Route Consignment Order",
+        compute="_compute_route_pda_order_amounts",
+        store=False,
+        help="Technical flag used by Route/PDA views to show outlet commission instead of discount.",
+    )
+    route_sale_gross_amount = fields.Monetary(
+        string="Gross Sold Value",
+        currency_field="currency_id",
+        compute="_compute_route_pda_order_amounts",
+        store=False,
+    )
+    route_outlet_commission_amount = fields.Monetary(
+        string="Outlet Commission",
+        currency_field="currency_id",
+        compute="_compute_route_pda_order_amounts",
+        store=False,
+    )
+    route_net_payable_amount = fields.Monetary(
+        string="Net Payable",
+        currency_field="currency_id",
+        compute="_compute_route_pda_order_amounts",
+        store=False,
+    )
+
 
     route_enable_direct_sale = fields.Boolean(
         related="company_id.route_enable_direct_sale",
@@ -156,6 +181,57 @@ class SaleOrder(models.Model):
         store=False,
     )
 
+
+    def _route_is_consignment_order_for_pda(self):
+        """Return True when this order is a route consignment visit order.
+
+        Odoo's native sale.order.line discount field is used internally to deduct
+        the outlet commission for consignment visits. The PDA must not show that
+        value to the salesperson as a commercial customer discount.
+        """
+        self.ensure_one()
+        if self.route_order_mode == "direct_sale":
+            return False
+
+        visit = self._get_linked_route_visit() if hasattr(self, "_get_linked_route_visit") else self.env["route.visit"].browse()
+        if not visit and self.origin:
+            visit = self.env["route.visit"].search([("name", "=", self.origin)], limit=1)
+        if visit:
+            if getattr(visit, "visit_execution_mode", False) == "direct_sales":
+                return False
+            outlet = getattr(visit, "outlet_id", False)
+            if outlet and getattr(outlet, "outlet_operation_mode", False) == "consignment":
+                return True
+            return bool(getattr(visit, "visit_execution_mode", False) != "direct_sales")
+
+        outlet = self.route_outlet_id
+        if outlet and getattr(outlet, "outlet_operation_mode", False) == "consignment":
+            return True
+        return False
+
+    @api.depends(
+        "route_order_mode",
+        "route_outlet_id.outlet_operation_mode",
+        "origin",
+        "order_line.product_uom_qty",
+        "order_line.price_unit",
+        "order_line.discount",
+        "order_line.price_subtotal",
+    )
+    def _compute_route_pda_order_amounts(self):
+        for order in self:
+            is_consignment = order._route_is_consignment_order_for_pda()
+            gross_amount = 0.0
+            commission_amount = 0.0
+            for line in order.order_line.filtered(lambda line: not line.display_type):
+                gross = (line.product_uom_qty or 0.0) * (line.price_unit or 0.0)
+                gross_amount += gross
+                if is_consignment:
+                    commission_amount += max(gross - (line.price_subtotal or 0.0), 0.0)
+            order.route_is_consignment_order = is_consignment
+            order.route_sale_gross_amount = gross_amount
+            order.route_outlet_commission_amount = commission_amount
+            order.route_net_payable_amount = max(gross_amount - commission_amount, 0.0)
 
     @api.depends("origin", "state", "route_order_mode", "route_enable_direct_return")
     def _compute_route_show_no_direct_return(self):
@@ -1089,4 +1165,51 @@ class SaleOrderLine(models.Model):
         readonly=True,
         store=False,
     )
+    route_show_outlet_commission = fields.Boolean(
+        string="Show Outlet Commission",
+        compute="_compute_route_pda_line_amounts",
+        store=False,
+    )
+    route_gross_value = fields.Monetary(
+        string="Gross Value",
+        currency_field="currency_id",
+        compute="_compute_route_pda_line_amounts",
+        store=False,
+    )
+    route_outlet_commission_rate = fields.Float(
+        string="Outlet Commission %",
+        compute="_compute_route_pda_line_amounts",
+        store=False,
+        digits=(16, 2),
+    )
+    route_outlet_commission_value = fields.Monetary(
+        string="Commission Value",
+        currency_field="currency_id",
+        compute="_compute_route_pda_line_amounts",
+        store=False,
+    )
+    route_net_payable_value = fields.Monetary(
+        string="Net Payable",
+        currency_field="currency_id",
+        compute="_compute_route_pda_line_amounts",
+        store=False,
+    )
+
+    @api.depends(
+        "product_uom_qty",
+        "price_unit",
+        "discount",
+        "price_subtotal",
+        "order_id.route_is_consignment_order",
+    )
+    def _compute_route_pda_line_amounts(self):
+        for line in self:
+            gross = (line.product_uom_qty or 0.0) * (line.price_unit or 0.0)
+            show_commission = bool(line.order_id and line.order_id.route_is_consignment_order and (line.discount or 0.0))
+            commission = max(gross - (line.price_subtotal or 0.0), 0.0) if show_commission else 0.0
+            line.route_show_outlet_commission = show_commission
+            line.route_gross_value = gross
+            line.route_outlet_commission_rate = line.discount if show_commission else 0.0
+            line.route_outlet_commission_value = commission
+            line.route_net_payable_value = max(gross - commission, 0.0)
 
