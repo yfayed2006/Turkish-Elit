@@ -9315,3 +9315,107 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
         border: 1px solid #fed7aa !important;
     }
 }
+
+
+/* ROUTECORE_FIX_2026_05_16_REFILL_PROPOSAL_VISIBLE_ON_PDA
+   Keep the suggested refill quantity visible in the consignment refill step.
+   The XML now places Refill Proposal before Approved Refill, so this final
+   mobile override corrects label fallbacks and keeps Proposed/Approved as
+   clear side-by-side product-card values. */
+@media (max-width: 768px) {
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="refill_proposal_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="refill_proposal_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="refill_proposal_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(11)::before {
+        content: "Refill Proposal" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="approved_refill_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="approved_refill_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="approved_refill_qty"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(12)::before {
+        content: "Approved Refill" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="unit_price"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="unit_price"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="unit_price"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(13)::before {
+        content: "Unit Price" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="sold_amount"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="sold_amount"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="sold_amount"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(14)::before {
+        content: "Sold Amount" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="uom_id"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="uom_id"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="uom_id"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(15)::before {
+        content: "UoM" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_route"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_route"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_route"]::before,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(16)::before {
+        content: "Return Route" !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="refill_proposal_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="refill_proposal_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="refill_proposal_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(11),
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="approved_refill_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="approved_refill_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="approved_refill_qty"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(12) {
+        grid-column: span 1 !important;
+        min-height: 62px !important;
+        background: #ecfeff !important;
+        border: 1px solid #a5f3fc !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="refill_proposal_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="refill_proposal_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="refill_proposal_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(11) .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="approved_refill_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="approved_refill_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="approved_refill_qty"] .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(12) .o_field_widget,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="approved_refill_qty"] .o_input,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="approved_refill_qty"] .o_input,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="approved_refill_qty"] .o_input,
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(12) .o_input {
+        font-size: 1rem !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="unit_price"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="unit_price"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="unit_price"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(13),
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="sold_amount"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="sold_amount"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="sold_amount"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(14) {
+        background: #fff7ed !important;
+        border: 1px solid #fed7aa !important;
+    }
+
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="uom_id"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="uom_id"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="uom_id"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(15),
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_route"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_route"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_route"],
+    .route_pda_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(16) {
+        grid-column: 1 / -1 !important;
+    }
+}
