@@ -1,3 +1,5 @@
+import json
+
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
@@ -984,12 +986,68 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             })
         return created
 
+    def _get_statement_collection_return_context(self):
+        self.ensure_one()
+
+        def _date_value(value):
+            return fields.Date.to_string(value) if value else False
+
+        def _datetime_value(value):
+            return fields.Datetime.to_string(value) if value else False
+
+        payment_lines_payload = []
+        if self.settlement_mode == "split" and self.collection_type == "full" and self.payment_line_ids:
+            for line in self.payment_line_ids:
+                payment_lines_payload.append({
+                    "payment_mode": line.payment_mode or "cash",
+                    "payment_date": _datetime_value(line.payment_date),
+                    "amount": line.amount or 0.0,
+                    "reference": line.reference or False,
+                    "bank_name": line.bank_name or False,
+                    "pos_terminal": line.pos_terminal or False,
+                    "cheque_number": line.cheque_number or False,
+                    "cheque_date": _date_value(line.cheque_date),
+                    "cheque_holder_name": line.cheque_holder_name or False,
+                    "cheque_note": line.cheque_note or False,
+                })
+
+        return {
+            "default_return_to_collection": True,
+            "default_return_settlement_mode": self.settlement_mode or "single",
+            "default_return_collection_type": self.collection_type or "full",
+            "default_return_payment_mode": self.payment_mode or "cash",
+            "default_return_payment_date": _datetime_value(self.payment_date),
+            "default_return_amount": self.amount or 0.0,
+            "default_return_promise_date": _date_value(self.promise_date),
+            "default_return_promise_amount": self.promise_amount or 0.0,
+            "default_return_due_date": _date_value(self.due_date),
+            "default_return_reference": self.reference or False,
+            "default_return_bank_name": self.bank_name or False,
+            "default_return_pos_terminal": self.pos_terminal or False,
+            "default_return_cheque_number": self.cheque_number or False,
+            "default_return_cheque_date": _date_value(self.cheque_date),
+            "default_return_cheque_holder_name": self.cheque_holder_name or False,
+            "default_return_cheque_note": self.cheque_note or False,
+            "default_return_note": self.note or False,
+            "default_return_direct_stop_credit_policy": self.direct_stop_credit_policy or False,
+            "default_return_direct_stop_credit_note": self.direct_stop_credit_note or False,
+            "default_return_payment_line_payload": json.dumps(payment_lines_payload),
+        }
+
     def action_open_statement_of_account(self):
         self.ensure_one()
         visit = self.visit_id
         if not visit:
             raise ValidationError(_("Visit is required."))
-        return visit.action_open_statement_of_account() if hasattr(visit, "action_open_statement_of_account") else {"type": "ir.actions.act_window_close"}
+
+        if not hasattr(visit, "action_open_statement_of_account"):
+            return {"type": "ir.actions.act_window_close"}
+
+        action = visit.action_open_statement_of_account()
+        context = dict(action.get("context") or {})
+        context.update(self._get_statement_collection_return_context())
+        action["context"] = context
+        return action
 
     def _ensure_collection_is_open(self):
         self.ensure_one()
