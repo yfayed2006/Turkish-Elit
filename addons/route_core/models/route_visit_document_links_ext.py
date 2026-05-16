@@ -155,6 +155,42 @@ class RouteVisit(models.Model):
             raise UserError(_("There are no sales deliveries linked to this visit."))
         return self._get_pickings_action(deliveries, _("Sales Delivery"))
 
+    def action_view_sale_order(self):
+        self.ensure_one()
+        sale_order = False
+        if hasattr(self, "_get_route_receipt_sale_order"):
+            sale_order = self._get_route_receipt_sale_order()
+        if not sale_order:
+            sale_order = self.sale_order_id
+        sale_order = sale_order.exists() if sale_order else self.env["sale.order"]
+        if not sale_order:
+            raise UserError(_("There is no sale order linked to this visit."))
+
+        action = self.env.ref("sale.action_orders").read()[0]
+        form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
+        action.update({
+            "name": _("Sale Order"),
+            "res_model": "sale.order",
+            "res_id": sale_order.id,
+            "view_mode": "form",
+            "target": "current",
+            "domain": [("id", "=", sale_order.id)],
+            "context": dict(
+                self.env.context,
+                default_origin=self.name,
+                default_route_visit_id=self.id,
+                route_visit_id=self.id,
+                route_visit_back_id=self.id,
+                route_pda_salesperson_mode=1,
+                create=False,
+                edit=False,
+                delete=False,
+            ),
+        })
+        if form_view:
+            action["views"] = [(form_view.id, "form")]
+        return action
+
     def action_view_return_transfers(self):
         self.ensure_one()
         transfers = self.env["stock.picking"].search(
