@@ -6,6 +6,26 @@
 <form string="Statement of Account" create="0" edit="0" delete="0" class="route_pda_statement_form">
 <sheet class="route_pda_statement_sheet route_pda_payment_sheet">
 <field name="can_continue_to_collection" invisible="1"/>
+<field name="return_to_collection" invisible="1"/>
+<field name="return_settlement_mode" invisible="1"/>
+<field name="return_collection_type" invisible="1"/>
+<field name="return_payment_mode" invisible="1"/>
+<field name="return_payment_date" invisible="1"/>
+<field name="return_amount" invisible="1"/>
+<field name="return_promise_date" invisible="1"/>
+<field name="return_promise_amount" invisible="1"/>
+<field name="return_due_date" invisible="1"/>
+<field name="return_reference" invisible="1"/>
+<field name="return_bank_name" invisible="1"/>
+<field name="return_pos_terminal" invisible="1"/>
+<field name="return_cheque_number" invisible="1"/>
+<field name="return_cheque_date" invisible="1"/>
+<field name="return_cheque_holder_name" invisible="1"/>
+<field name="return_cheque_note" invisible="1"/>
+<field name="return_note" invisible="1"/>
+<field name="return_direct_stop_credit_policy" invisible="1"/>
+<field name="return_direct_stop_credit_note" invisible="1"/>
+<field name="return_payment_line_payload" invisible="1"/>
 <div class="route_pda_statement_section">
 <div class="route_pda_group_title route_pda_payment_section_title">Visit Context</div>
 <div class="route_pda_statement_grid">
