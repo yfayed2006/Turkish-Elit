@@ -312,3 +312,4 @@ class RouteVisit(models.Model):
             delete=False,
         )
         return action
+
