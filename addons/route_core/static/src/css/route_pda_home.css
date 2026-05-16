@@ -9169,3 +9169,148 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
         border: 1px solid #a5f3fc !important;
     }
 }
+
+/* Return transfer confirmation: keep the consignment return step focused on returned products only. */
+.route_pda_return_transfer_summary {
+    margin: 0 0 14px 0;
+}
+
+.route_pda_return_summary_card {
+    border-color: #bae6fd !important;
+    background: #f0f9ff !important;
+}
+
+.route_pda_return_summary_value {
+    background: #fff7ed !important;
+    border-color: #fed7aa !important;
+}
+
+@media (max-width: 768px) {
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        padding: 14px 12px !important;
+        margin: 0 0 14px 0 !important;
+        border-radius: 20px !important;
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-left: 5px solid #06b6d4 !important;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td {
+        min-width: 0 !important;
+        width: 100% !important;
+        min-height: 74px !important;
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+        background: #f8fafc !important;
+        border: 1px solid #eef2f7 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+    }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td::before {
+        display: block !important;
+        color: #6b7280 !important;
+        font-weight: 900 !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        text-transform: uppercase !important;
+        margin-bottom: 6px !important;
+    }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="route_product_image_128"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="route_product_image_128"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="route_product_image_128"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(1)::before { content: "Image" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="product_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="product_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="product_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(2)::before { content: "Product" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="barcode"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="barcode"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="barcode"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(3)::before { content: "Barcode" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="lot_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="lot_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="lot_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(4)::before { content: "Lot/Serial" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="expiry_date"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="expiry_date"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="expiry_date"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(5)::before { content: "Expiry Date" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_qty"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_qty"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_qty"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(6)::before { content: "Returned Qty" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_route"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_route"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_route"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(7)::before { content: "Return Route" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="unit_price"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="unit_price"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="unit_price"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(8)::before { content: "Unit Price" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_amount"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_amount"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_amount"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(9)::before { content: "Return Value" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="uom_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="uom_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="uom_id"]::before,
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(10)::before { content: "UoM" !important; }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="route_product_image_128"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="route_product_image_128"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="route_product_image_128"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(1),
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="product_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="product_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="product_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(2),
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="barcode"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="barcode"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="barcode"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(3),
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="uom_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="uom_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="uom_id"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(10) {
+        grid-column: 1 / -1 !important;
+    }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_qty"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_qty"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_qty"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(6) {
+        background: #ecfeff !important;
+        border: 1px solid #a5f3fc !important;
+    }
+
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="unit_price"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="unit_price"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="unit_price"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(8),
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[name="return_amount"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-name="return_amount"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-field="return_amount"],
+    .route_pda_return_transfer_lines_x2many table.o_list_table tbody tr.o_data_row > td:nth-child(9) {
+        background: #fff7ed !important;
+        border: 1px solid #fed7aa !important;
+    }
+}
