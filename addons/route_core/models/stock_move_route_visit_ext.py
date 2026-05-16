@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class StockMove(models.Model):
@@ -35,6 +35,30 @@ class StockMove(models.Model):
         store=False,
         readonly=True,
     )
+    route_product_image_128 = fields.Image(
+        string="Image",
+        related="product_id.image_128",
+        store=False,
+        readonly=True,
+    )
+    route_move_lot_label = fields.Char(
+        string="Lot/Serial",
+        compute="_compute_route_move_card_info",
+        store=False,
+        readonly=True,
+    )
+    route_move_expiry_date = fields.Date(
+        string="Expiry Date",
+        compute="_compute_route_move_card_info",
+        store=False,
+        readonly=True,
+    )
+    route_move_return_route_display = fields.Char(
+        string="Route / Reason",
+        compute="_compute_route_move_card_info",
+        store=False,
+        readonly=True,
+    )
 
     route_currency_id = fields.Many2one(
         "res.currency",
@@ -57,3 +81,57 @@ class StockMove(models.Model):
         copy=False,
         help="Estimated direct return line amount used for settlement visibility.",
     )
+
+    @api.depends(
+        "move_line_ids.lot_id",
+        "move_line_ids.lot_id.expiration_date",
+        "route_visit_line_id.lot_id",
+        "route_visit_line_id.lot_id.expiration_date",
+        "route_visit_line_id.expiry_date",
+        "route_visit_line_id.return_qty",
+        "route_visit_line_id.return_route",
+        "route_direct_return_line_id.lot_id",
+        "route_direct_return_line_id.lot_id.expiration_date",
+        "route_direct_return_line_id.lot_name",
+        "route_direct_return_line_id.expiry_date",
+        "route_direct_return_line_id.return_reason_label",
+    )
+    def _compute_route_move_card_info(self):
+        route_selection = dict(self.env["route.visit.line"]._fields["return_route"].selection)
+        for move in self:
+            move_sudo = move.sudo()
+            lot_names = []
+            expiry_date = False
+
+            visit_line = move_sudo.route_visit_line_id
+            direct_return_line = move_sudo.route_direct_return_line_id
+
+            lots = move_sudo.move_line_ids.sudo().mapped("lot_id")
+            if visit_line and visit_line.lot_id:
+                lots |= visit_line.lot_id.sudo()
+            if direct_return_line and direct_return_line.lot_id:
+                lots |= direct_return_line.lot_id.sudo()
+
+            for lot in lots:
+                if lot and lot.display_name not in lot_names:
+                    lot_names.append(lot.display_name)
+                if not expiry_date and getattr(lot, "expiration_date", False):
+                    expiry_date = fields.Date.to_date(lot.expiration_date)
+
+            if not lot_names and direct_return_line and getattr(direct_return_line, "lot_name", False):
+                lot_names.append(direct_return_line.lot_name)
+
+            if not expiry_date and visit_line and getattr(visit_line, "expiry_date", False):
+                expiry_date = visit_line.expiry_date
+            if not expiry_date and direct_return_line and getattr(direct_return_line, "expiry_date", False):
+                expiry_date = direct_return_line.expiry_date
+
+            route_label = False
+            if visit_line and (visit_line.return_qty or 0.0) > 0:
+                route_label = route_selection.get(visit_line.return_route or "vehicle", visit_line.return_route or "vehicle")
+            if not route_label and direct_return_line and getattr(direct_return_line, "return_reason_label", False):
+                route_label = direct_return_line.return_reason_label
+
+            move.route_move_lot_label = ", ".join(lot_names) if lot_names else False
+            move.route_move_expiry_date = expiry_date
+            move.route_move_return_route_display = route_label
