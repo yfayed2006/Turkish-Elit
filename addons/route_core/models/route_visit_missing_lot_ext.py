@@ -86,6 +86,8 @@ class RouteVisit(models.Model):
 
     def action_ux_reconcile_count(self):
         self.ensure_one()
+        if hasattr(self, "_normalize_scanned_lot_activity_lines"):
+            self._normalize_scanned_lot_activity_lines()
         if not self.env.context.get("skip_missing_lot_check"):
             action = self._open_missing_lots_wizard("reconcile_count")
             if action:
