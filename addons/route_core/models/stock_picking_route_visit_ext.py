@@ -105,6 +105,48 @@ class StockPicking(models.Model):
             action["views"] = [(view.id, "form")]
         return action
 
+    def action_back_to_visit_or_outlet_form(self):
+        self.ensure_one()
+
+        visit = self.env["route.visit"].browse()
+        visit_id = (
+            self.env.context.get("route_visit_back_id")
+            or self.env.context.get("route_visit_id")
+            or self.env.context.get("default_route_visit_id")
+        )
+        if visit_id:
+            visit = self.env["route.visit"].browse(visit_id).exists()
+
+        if not visit and self.route_visit_id:
+            visit = self.route_visit_id.exists()
+
+        if not visit and self.origin:
+            visit = self.env["route.visit"].search([("name", "=", self.origin)], limit=1)
+
+        if visit:
+            pda_view = self.env.ref("route_core.view_route_visit_pda_form", raise_if_not_found=False)
+            fallback_view = self.env.ref("route_core.view_route_visit_form", raise_if_not_found=False)
+            form_view = pda_view or fallback_view
+            action = {
+                "type": "ir.actions.act_window",
+                "name": visit.display_name,
+                "res_model": "route.visit",
+                "res_id": visit.id,
+                "view_mode": "form",
+                "target": "current",
+                "context": dict(
+                    self.env.context,
+                    create=False,
+                    edit=True,
+                    delete=False,
+                ),
+            }
+            if form_view:
+                action["views"] = [(form_view.id, "form")]
+            return action
+
+        return self.action_back_to_outlet_form()
+
     def _get_route_visit_finish_return_action(self):
         self.ensure_one()
         if not self.env.context.get("route_return_to_finish_summary"):
