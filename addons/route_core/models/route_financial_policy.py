@@ -114,7 +114,7 @@ class RouteOutlet(models.Model):
     @api.depends("commission_line_ids")
     def _compute_route_commission_line_count(self):
         for outlet in self:
-            outlet.commission_line_count = len(outlet.commission_line_ids)
+            outlet.commission_line_count = len(outlet.sudo().commission_line_ids)
 
     @api.depends(
         "financial_policy",
@@ -185,7 +185,7 @@ class RouteOutlet(models.Model):
             return default_rate
 
         ancestor_ids = self._get_category_ancestor_ids(category)
-        active_lines = self.commission_line_ids.filtered(lambda line: line.active and line.category_id)
+        active_lines = self.sudo().commission_line_ids.filtered(lambda line: line.active and line.category_id)
         if not active_lines:
             return default_rate
 
@@ -261,24 +261,28 @@ class RouteVisitLine(models.Model):
         string="Commission %",
         digits=(16, 2),
         compute="_compute_route_financial_amounts",
+        compute_sudo=True,
         store=False,
     )
     route_commission_base_amount = fields.Monetary(
         string="Commission Base",
         currency_field="currency_id",
         compute="_compute_route_financial_amounts",
+        compute_sudo=True,
         store=False,
     )
     route_commission_amount = fields.Monetary(
         string="Commission Amount",
         currency_field="currency_id",
         compute="_compute_route_financial_amounts",
+        compute_sudo=True,
         store=False,
     )
     route_net_payable_amount = fields.Monetary(
         string="Net Payable",
         currency_field="currency_id",
         compute="_compute_route_financial_amounts",
+        compute_sudo=True,
         store=False,
     )
 
@@ -330,18 +334,21 @@ class RouteVisit(models.Model):
         string="Commission Amount",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
+        compute_sudo=True,
         store=False,
     )
     consignment_gross_after_returns_amount = fields.Monetary(
         string="Gross After Returns",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
+        compute_sudo=True,
         store=False,
     )
     consignment_net_payable_amount = fields.Monetary(
         string="Net Payable After Commission",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
+        compute_sudo=True,
         store=False,
     )
     consignment_settlement_policy = fields.Selection(
@@ -353,11 +360,13 @@ class RouteVisit(models.Model):
     show_consignment_category_commission_breakdown = fields.Boolean(
         string="Show Category Commission Breakdown",
         compute="_compute_consignment_category_commission_html",
+        compute_sudo=True,
         store=False,
     )
     consignment_category_commission_html = fields.Html(
         string="Category Commission Breakdown",
         compute="_compute_consignment_category_commission_html",
+        compute_sudo=True,
         sanitize=False,
         store=False,
     )
