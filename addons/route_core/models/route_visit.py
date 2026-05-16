@@ -2662,15 +2662,27 @@ class RouteVisit(models.Model):
     def _get_route_sale_delivery_form_action(self, picking):
         self.ensure_one()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
+        pda_form_view = self.env.ref("route_core.view_stock_picking_outlet_pda_form", raise_if_not_found=False)
+        fallback_form_view = self.env.ref("stock.view_picking_form", raise_if_not_found=False)
+        form_view = pda_form_view or fallback_form_view
         action["res_id"] = picking.id
-        action["views"] = [(self.env.ref("stock.view_picking_form").id, "form")]
+        action["view_mode"] = "form"
+        action["target"] = "current"
+        if form_view:
+            action["views"] = [(form_view.id, "form")]
         action["context"] = dict(
             self.env.context,
             default_origin=self.name,
             route_visit_name=self.name,
             default_route_visit_id=self.id,
             route_visit_id=self.id,
+            route_visit_back_id=self.id,
             route_return_to_finish_summary=True,
+            route_pda_salesperson_mode=1,
+            pda_mode=True,
+            create=False,
+            edit=False,
+            delete=False,
         )
         return action
 
@@ -2871,4 +2883,5 @@ class RouteVisit(models.Model):
                 "source_location_id": False,
                 "destination_location_id": False,
             })
+
 
