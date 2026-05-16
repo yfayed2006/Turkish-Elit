@@ -247,17 +247,16 @@ class RouteVisitFirstConsignmentWizard(models.TransientModel):
                 },
             }
 
-        invalid_selected_lines = self.line_ids.filtered(
-            lambda line: not line.product_id and (line.quantity or 0.0) > 0
-        )
-        if invalid_selected_lines:
-            raise UserError(_(
-                "One or more selected rows do not have a product. Please close the setup popup, open it again, and select valid vehicle products only."
-            ))
-
+        # Odoo editable one2many lists can sometimes keep transient/empty browser rows.
+        # Only rows with a real product are valid route products. The XML view uses
+        # force_save on readonly product fields so selected products are preserved
+        # when the salesperson edits only the quantity column.
         selected_lines = self.line_ids.filtered(lambda line: line.product_id and (line.quantity or 0.0) > 0)
         if not selected_lines:
-            raise UserError(_("Enter at least one product quantity to add from the vehicle."))
+            raise UserError(_(
+                "Enter at least one valid product quantity to add from the vehicle. "
+                "If you selected quantities and see this message, close this setup popup and open it again."
+            ))
 
         visit._sync_source_location_from_vehicle()
         visit_line_model = self.env["route.visit.line"]
