@@ -19,6 +19,7 @@
 <field name="show_save_draft_button" invisible="1"/>
 <field name="show_single_payment_fields" invisible="1"/>
 <field name="show_split_payment_lines" invisible="1"/>
+<field name="show_partial_payment_plan" invisible="1"/>
 <field name="payment_line_total" invisible="1"/>
 <field name="payment_line_remaining" invisible="1"/>
 <div class="route_pda_payment_section" invisible="is_direct_sales_stop">
@@ -179,6 +180,114 @@
 <span class="route_pda_payment_meta_label">Cheque Details</span>
 <field name="cheque_note" widget="text" nolabel="1" placeholder="Optional cheque details, branch, or remarks..."/>
 </div>
+</div>
+<div invisible="not show_partial_payment_plan">
+<div class="route_pda_group_title route_pda_payment_section_title">Collect Now</div>
+<div class="route_pda_statement_grid route_pda_statement_grid_summary">
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Current Visit Remaining</span>
+<field name="direct_stop_grand_due_amount" readonly="1" nolabel="1" invisible="not is_direct_sales_stop"/>
+<field name="visit_remaining_due" readonly="1" nolabel="1" invisible="is_direct_sales_stop"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Collected Now</span>
+<field name="amount" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
+<span class="route_pda_payment_meta_label">Deferred Balance</span>
+<field name="promise_amount" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Now Payment Mode</span>
+<field name="payment_mode" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Now Collection Date</span>
+<field name="payment_date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode not in ('bank', 'pos')">
+<span class="route_pda_payment_meta_label">Now Reference</span>
+<field name="reference" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'bank'">
+<span class="route_pda_payment_meta_label">Now Bank Name</span>
+<field name="bank_name" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'pos'">
+<span class="route_pda_payment_meta_label">Now POS Terminal</span>
+<field name="pos_terminal" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Now Cheque Number</span>
+<field name="cheque_number" nolabel="1" placeholder="Type cheque number"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Now Cheque Bank</span>
+<field name="bank_name" nolabel="1" placeholder="Type bank name"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Now Cheque Date</span>
+<field name="cheque_date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Now Cheque Holder</span>
+<field name="cheque_holder_name" nolabel="1" placeholder="Optional drawer / holder name"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide" invisible="payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Now Cheque Details</span>
+<field name="cheque_note" widget="text" nolabel="1" placeholder="Optional cheque details, branch, or remarks..."/>
+</div>
+</div>
+<div class="route_pda_group_title route_pda_payment_section_title">Deferred Balance Plan</div>
+<div class="route_pda_payment_meta_grid route_pda_payment_decision_grid">
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Deferred Amount</span>
+<field name="promise_amount" readonly="1" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Expected Collection Date</span>
+<field name="promise_date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item">
+<span class="route_pda_payment_meta_label">Expected Payment Mode</span>
+<field name="deferred_payment_mode" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode not in ('bank', 'pos')">
+<span class="route_pda_payment_meta_label">Deferred Reference</span>
+<field name="deferred_reference" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'bank'">
+<span class="route_pda_payment_meta_label">Deferred Bank Name</span>
+<field name="deferred_bank_name" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'pos'">
+<span class="route_pda_payment_meta_label">Deferred POS Terminal</span>
+<field name="deferred_pos_terminal" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Deferred Cheque Number</span>
+<field name="deferred_cheque_number" nolabel="1" placeholder="Type post-dated cheque number"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Deferred Cheque Bank</span>
+<field name="deferred_bank_name" nolabel="1" placeholder="Type bank name"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Deferred Cheque Date</span>
+<field name="deferred_cheque_date" nolabel="1"/>
+</div>
+<div class="route_pda_payment_meta_item" invisible="deferred_payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Deferred Cheque Holder</span>
+<field name="deferred_cheque_holder_name" nolabel="1" placeholder="Optional drawer / holder name"/>
+</div>
+<div class="route_pda_payment_meta_item route_pda_payment_meta_item_wide" invisible="deferred_payment_mode != 'cheque'">
+<span class="route_pda_payment_meta_label">Deferred Cheque Details</span>
+<field name="deferred_cheque_note" widget="text" nolabel="1" placeholder="Optional cheque details, branch, or remarks..."/>
+</div>
+</div>
+<div class="route_pda_statement_info route_pda_statement_info_warning" role="alert"> This section separates what is collected now from the carried-forward balance. If a post-dated cheque is received for the deferred balance, record it under Deferred Balance Plan. </div>
 </div>
 <div invisible="not show_split_payment_lines">
 <div class="route_pda_group_title route_pda_payment_section_title">Split Payment Lines</div>
