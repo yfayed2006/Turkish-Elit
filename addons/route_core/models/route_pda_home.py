@@ -367,7 +367,7 @@ class RoutePdaHome(models.TransientModel):
         end_utc = end_local.astimezone(pytz.UTC).replace(tzinfo=None)
         return today, fields.Datetime.to_string(start_utc), fields.Datetime.to_string(end_utc)
 
-    def _get_workspace_active_visits(self, user=None, snapshot_mode=False, today_only=True):
+    def _get_workspace_active_visit_domain(self, user=None, snapshot_mode=False, today_only=True):
         self.ensure_one()
         user = user or self.env.user
         domain = [
@@ -376,14 +376,24 @@ class RoutePdaHome(models.TransientModel):
         ]
         if today_only:
             domain.append(("date", "=", fields.Date.context_today(self)))
-        visits = self.env["route.visit"].search(domain, order="start_datetime desc, id desc")
         if snapshot_mode in ("consignment", "direct_sales"):
-            visits = visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) == snapshot_mode)
-        return visits
+            domain.append(("visit_execution_mode", "=", snapshot_mode))
+        return domain
+
+    def _get_workspace_active_visits(self, user=None, snapshot_mode=False, today_only=True):
+        self.ensure_one()
+        return self.env["route.visit"].search(
+            self._get_workspace_active_visit_domain(user=user, snapshot_mode=snapshot_mode, today_only=today_only),
+            order="start_datetime desc, id desc",
+        )
 
     def _get_workspace_current_visit(self, user=None, snapshot_mode=False, today_only=True):
         self.ensure_one()
-        return self._get_workspace_active_visits(user=user, snapshot_mode=snapshot_mode, today_only=today_only)[:1]
+        return self.env["route.visit"].search(
+            self._get_workspace_active_visit_domain(user=user, snapshot_mode=snapshot_mode, today_only=today_only),
+            order="start_datetime desc, id desc",
+            limit=1,
+        )
 
     def _get_visit_execution_bucket(self, visit):
         visit_process_state = getattr(visit, "visit_process_state", False) or False
@@ -790,10 +800,10 @@ class RoutePdaHome(models.TransientModel):
         Closing = self.env["route.vehicle.closing"]
         Payment = self.env["route.visit.payment"]
 
-        today_visits = Visit.search([
+        today_visit_domain = [
             ("user_id", "=", user.id),
             ("date", "=", today),
-        ])
+        ]
         today_plan_count = Plan.search_count([
             ("user_id", "=", user.id),
             ("date", "=", today),
@@ -802,28 +812,29 @@ class RoutePdaHome(models.TransientModel):
             ("user_id", "=", user.id),
             ("plan_date", "=", today),
         ])
-        current_visit = Visit.search([
-            ("user_id", "=", user.id),
-            ("date", "=", today),
+        current_visit = Visit.search(today_visit_domain + [("state", "=", "in_progress")], order="start_datetime desc, id desc", limit=1)
+
+        done_states = ["done", "cancel", "cancelled"]
+        active_process_states = ["checked_in", "counting", "reconciled", "collection_done", "ready_to_close"]
+        visit_count = Visit.search_count(today_visit_domain)
+        done_count = Visit.search_count(today_visit_domain + [
+            "|",
+            ("state", "in", done_states),
+            ("visit_process_state", "=", "done"),
+        ])
+        in_progress_count = Visit.search_count(today_visit_domain + [
+            ("state", "not in", done_states),
+            ("visit_process_state", "!=", "done"),
+            "|",
             ("state", "=", "in_progress"),
-        ], order="start_datetime desc, id desc", limit=1)
-
-        done_count = 0
-        in_progress_count = 0
-        mapped_count = 0
-        outside_count = 0
-        for visit in today_visits:
-            bucket = self._get_visit_execution_bucket(visit)
-            if bucket == "done":
-                done_count += 1
-            elif bucket == "in_progress":
-                in_progress_count += 1
-            if visit.outlet_id and (visit.outlet_id.geo_latitude or visit.outlet_id.geo_longitude):
-                mapped_count += 1
-            if getattr(visit, "geo_checkin_status", False) == "outside":
-                outside_count += 1
-
-        visit_count = len(today_visits)
+            ("visit_process_state", "in", active_process_states),
+        ])
+        mapped_count = Visit.search_count(today_visit_domain + [
+            "|",
+            ("outlet_id.geo_latitude", "!=", False),
+            ("outlet_id.geo_longitude", "!=", False),
+        ])
+        outside_count = Visit.search_count(today_visit_domain + [("geo_checkin_status", "=", "outside")])
         pending_count = max(visit_count - done_count - in_progress_count, 0)
         missing_count = max(visit_count - mapped_count, 0)
 
@@ -1209,7 +1220,10 @@ class RoutePdaHome(models.TransientModel):
         self.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if hasattr(current_visit, "summary_sale_order_ref") else "-"
         self.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if hasattr(current_visit, "summary_refill_transfer_ref") else "-"
         self.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if hasattr(current_visit, "summary_return_transfer_refs") else "-"
-        self.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if hasattr(current_visit, "display_payment_ids") else 0
+        self.current_visit_payment_count = self.env["route.visit.payment"].search_count([
+            ("visit_id", "=", current_visit.id),
+            ("state", "=", "confirmed"),
+        ])
         self.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if hasattr(current_visit, "outlet_near_expiry_count") else 0
         self.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if hasattr(current_visit, "pending_near_expiry_line_count") else 0
 
