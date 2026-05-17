@@ -576,7 +576,7 @@
 <field name="name" readonly="1"/>
 </h1>
 </div>
-<!--     ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4     -->
+<!--      ROUTECORE_FIX_2026_05_14_2355_OUTLET_PROFILE_MOBILE_CARDS_V4      -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_snapshot_group">
 <div class="route_pda_group_title">Quick Snapshot</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -606,7 +606,7 @@
 </div>
 </div>
 </div>
-<!--    ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS    -->
+<!--     ROUTECORE_FIX_2026_05_15_OUTLET_PROFILE_COMMERCIAL_SETUP_CARDS     -->
 <div class="route_pda_group route_pda_product_center_group route_pda_outlet_commercial_group">
 <div class="route_pda_group_title">Commercial Setup</div>
 <div class="route_pda_card_grid route_pda_card_grid_2 route_pda_outlet_summary_card_grid">
@@ -873,21 +873,151 @@
 </div>
 </div>
 </page>
-<page string="Stock" invisible="outlet_operation_mode != 'consignment'">
-<group string="Consignment Stock Snapshot" col="2">
-<group>
-<field name="stock_balance_count" readonly="1"/>
-<field name="stock_total_qty" readonly="1"/>
-<field name="stock_total_value" readonly="1"/>
-<field name="refill_needed_count" readonly="1"/>
-</group>
-<group>
-<field name="zero_stock_product_count" readonly="1"/>
-<field name="near_expiry_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="expired_product_count" readonly="1" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False"/>
-<field name="last_stock_update_at" readonly="1"/>
-</group>
-</group>
+<page string="Stock" class="route_pda_outlet_stock_page" invisible="outlet_operation_mode != 'consignment'">
+<div class="route_pda_group route_pda_outlet_stock_snapshot_group">
+<div class="route_pda_group_title">Consignment Stock Snapshot</div>
+<div class="route_pda_payment_summary_grid route_outlet_stock_summary_grid">
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card">
+<div class="route_pda_info_label">Stock Items</div>
+<div class="route_pda_info_value">
+<field name="stock_balance_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card">
+<div class="route_pda_info_label">Total Shelf Qty</div>
+<div class="route_pda_info_value">
+<field name="stock_total_qty" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card route_outlet_stock_value_card">
+<div class="route_pda_info_label">Stock Value</div>
+<div class="route_pda_info_value route_pda_money_value">
+<field name="stock_total_value" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card route_outlet_stock_attention_card">
+<div class="route_pda_info_label">Refill Needed</div>
+<div class="route_pda_info_value">
+<field name="refill_needed_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card">
+<div class="route_pda_info_label">Zero Stock</div>
+<div class="route_pda_info_value">
+<field name="zero_stock_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_pda_info_label">Near Expiry</div>
+<div class="route_pda_info_value">
+<field name="near_expiry_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card" invisible="route_enable_lot_serial_tracking == False or route_enable_expiry_tracking == False">
+<div class="route_pda_info_label">Expired</div>
+<div class="route_pda_info_value">
+<field name="expired_product_count" readonly="1" nolabel="1"/>
+</div>
+</div>
+<div class="route_pda_info_card route_pda_payment_summary_card route_outlet_stock_summary_card route_outlet_stock_update_card">
+<div class="route_pda_info_label">Last Stock Update</div>
+<div class="route_pda_info_value">
+<field name="last_stock_update_at" readonly="1" nolabel="1"/>
+</div>
+</div>
+</div>
+</div>
+<div class="route_pda_group route_pda_outlet_stock_cards_group">
+<div class="route_pda_group_title">Product Stock Cards</div>
+<field name="stock_balance_ids" readonly="1" nolabel="1" mode="kanban" class="route_outlet_stock_balance_x2many">
+<kanban class="route_outlet_stock_inline_kanban route_pda_document_kanban" create="0" edit="0" delete="0">
+<field name="product_image_128"/>
+<field name="product_id"/>
+<field name="barcode"/>
+<field name="product_categ_id"/>
+<field name="qty"/>
+<field name="unit_price"/>
+<field name="stock_value"/>
+<field name="stock_status"/>
+<field name="stock_status_label"/>
+<field name="lot_names"/>
+<field name="nearest_expiry_date"/>
+<field name="nearest_alert_date"/>
+<field name="last_updated_at"/>
+<field name="currency_id"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_outlet_stock_product_card route_pda_document_product_card">
+<div class="route_pda_document_product_top route_outlet_stock_product_top">
+<div class="route_pda_document_product_image_box route_outlet_stock_image_box">
+<field name="product_image_128" widget="image" class="route_pda_document_product_image route_outlet_stock_product_image" options="{'size': [128, 128], 'preview_image': 'product_image_128'}"/>
+</div>
+<div class="route_pda_document_product_title_box route_outlet_stock_title_box">
+<div class="route_pda_document_product_title route_outlet_stock_product_title">
+<field name="product_id"/>
+</div>
+<div class="route_pda_document_product_subtitle route_outlet_stock_product_subtitle" t-if="record.barcode.raw_value">
+Barcode:
+<field name="barcode"/>
+</div>
+<div class="route_pda_document_product_badges route_outlet_stock_badges">
+<span class="route_pda_document_product_badge route_outlet_stock_status_badge">
+<field name="stock_status_label"/>
+</span>
+<span class="route_pda_document_product_badge" t-if="record.product_categ_id.raw_value">
+<field name="product_categ_id"/>
+</span>
+<span class="route_pda_document_product_badge" t-if="record.lot_names.raw_value">
+Lot:
+<field name="lot_names"/>
+</span>
+</div>
+</div>
+</div>
+<div class="route_pda_document_product_grid route_outlet_stock_product_grid">
+<div class="route_pda_document_product_metric route_outlet_stock_metric route_outlet_stock_qty_metric">
+<span>Shelf Qty</span>
+<strong>
+<field name="qty"/>
+</strong>
+</div>
+<div class="route_pda_document_product_metric route_outlet_stock_metric">
+<span>Unit Price</span>
+<strong>
+<field name="unit_price"/>
+</strong>
+</div>
+<div class="route_pda_document_product_metric route_outlet_stock_metric route_pda_document_product_metric_total">
+<span>Stock Value</span>
+<strong>
+<field name="stock_value"/>
+</strong>
+</div>
+<div class="route_pda_document_product_metric route_outlet_stock_metric">
+<span>Expiry Date</span>
+<strong>
+<field name="nearest_expiry_date"/>
+</strong>
+</div>
+<div class="route_pda_document_product_metric route_outlet_stock_metric">
+<span>Alert Date</span>
+<strong>
+<field name="nearest_alert_date"/>
+</strong>
+</div>
+<div class="route_pda_document_product_metric route_outlet_stock_metric">
+<span>Last Update</span>
+<strong>
+<field name="last_updated_at"/>
+</strong>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</div>
 </page>
 </notebook>
 </sheet>
