@@ -1,4 +1,6 @@
 from datetime import timedelta
+import re
+from html import unescape
 
 from markupsafe import escape
 
@@ -412,10 +414,30 @@ class RouteVisitPayment(models.Model):
             rec.settlement_document_ref = settlement_ref
             rec.payment_business_flow = business_flow
 
+
+    @api.model
+    def _route_clean_plain_text(self, value):
+        if not value:
+            return ""
+        text = unescape(str(value))
+        text = re.sub(r"<\s*br\s*/?\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"</\s*(div|p|li|tr|h[1-6])\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = text.replace("\xa0", " ")
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n[ \t]+", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    def _get_clean_note_text(self):
+        self.ensure_one()
+        return self._route_clean_plain_text(self.note or "")
+
     @api.depends("note")
     def _compute_note_display_html(self):
         for rec in self:
-            rendered = escape(rec.note or "")
+            clean_note = rec._get_clean_note_text()
+            rendered = escape(clean_note)
             rec.note_display_html = str(rendered).replace("\n", "<br/>") if rendered else False
 
     @api.depends("visit_id", "settlement_visit_id", "source_type", "source_document_ref", "settlement_document_ref")
