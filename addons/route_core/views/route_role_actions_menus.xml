@@ -203,8 +203,6 @@
 <field name="name">My Visit Collections</field>
 <field name="res_model">route.visit.payment</field>
 <field name="view_mode">kanban,list,form</field>
-<field name="view_id" ref="route_core.view_route_visit_collection_fast_kanban"/>
-<field name="search_view_id" ref="route_core.view_route_visit_collection_fast_search"/>
 <field name="domain">[("salesperson_id", "=", uid), ("state", "=", "confirmed")]</field>
 <field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_fast_collections': True}</field>
 <field name="limit">20</field>
