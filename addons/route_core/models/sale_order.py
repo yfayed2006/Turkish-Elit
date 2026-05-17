@@ -242,6 +242,132 @@ class SaleOrder(models.Model):
             order.route_outlet_commission_amount = commission_amount
             order.route_net_payable_amount = max(gross_amount - commission_amount, 0.0)
 
+
+    def _route_pda_html_escape(self, value):
+        return html.escape(str(value or ""), quote=True)
+
+    def _route_pda_format_qty(self, value):
+        value = value or 0.0
+        return "%.2f" % value
+
+    def _route_pda_format_money(self, amount, currency=False):
+        amount = amount or 0.0
+        symbol = currency.symbol if currency else ""
+        if currency and currency.position == "before":
+            return "%s %.2f" % (symbol, amount)
+        if symbol:
+            return "%.2f %s" % (amount, symbol)
+        return "%.2f" % amount
+
+    def _route_pda_format_date_label(self, value):
+        if not value:
+            return False
+        try:
+            if hasattr(value, "strftime"):
+                return value.strftime("%b %d")
+        except Exception:
+            pass
+        return str(value)
+
+    @api.depends(
+        "order_line.product_id",
+        "order_line.product_id.barcode",
+        "order_line.product_id.image_128",
+        "order_line.product_uom_qty",
+        "order_line.product_uom",
+        "order_line.price_unit",
+        "order_line.discount",
+        "order_line.price_subtotal",
+        "order_line.price_tax",
+        "order_line.price_total",
+        "order_line.route_gross_value",
+        "order_line.route_show_outlet_commission",
+        "order_line.route_outlet_commission_rate",
+        "order_line.route_outlet_commission_value",
+        "order_line.route_net_payable_value",
+    )
+    def _compute_route_pda_order_lines_html(self):
+        for order in self:
+            cards = []
+            currency = order.currency_id or order.company_id.currency_id
+            for line in order.order_line.filtered(lambda item: item.product_id and not item.display_type):
+                product = line.product_id
+                image_url = "/web/image/product.product/%s/image_128" % product.id
+                product_name = self._route_pda_html_escape(product.display_name or line.name)
+                barcode = self._route_pda_html_escape(getattr(line, "route_product_barcode", False) or product.barcode or "")
+                lot = getattr(line, "route_lot_id", False)
+                lot_label = self._route_pda_html_escape(lot.display_name if lot else "")
+                expiry_value = getattr(line, "route_expiry_month_label", False) or self._route_pda_format_date_label(getattr(line, "route_expiry_date", False))
+                expiry_label = self._route_pda_html_escape(expiry_value or "")
+                uom_label = self._route_pda_html_escape(line.product_uom.display_name or product.uom_id.display_name or "")
+                qty = self._route_pda_format_qty(line.product_uom_qty)
+                unit_price = self._route_pda_format_money(line.price_unit, currency)
+                gross = self._route_pda_format_money(line.route_gross_value or (line.product_uom_qty * line.price_unit), currency)
+                tax = self._route_pda_format_money(line.price_tax, currency)
+                total = self._route_pda_format_money(line.price_total, currency)
+
+                badges = []
+                if lot_label:
+                    badges.append('<span class="route_pda_document_product_badge">Lot:%s</span>' % lot_label)
+                if expiry_label:
+                    badges.append('<span class="route_pda_document_product_badge">Expiry:%s</span>' % expiry_label)
+
+                if line.route_show_outlet_commission:
+                    extra_metrics = """
+                        <div class="route_pda_document_product_metric"><span>Outlet Commission %%</span><strong>%.2f</strong></div>
+                        <div class="route_pda_document_product_metric"><span>Commission Value</span><strong>%s</strong></div>
+                        <div class="route_pda_document_product_metric route_pda_document_product_metric_total"><span>Net Payable</span><strong>%s</strong></div>
+                        <div class="route_pda_document_product_metric"><span>Tax</span><strong>%s</strong></div>
+                        <div class="route_pda_document_product_metric route_pda_document_product_metric_total"><span>Total Incl. Tax</span><strong>%s</strong></div>
+                    """ % (
+                        line.route_outlet_commission_rate or 0.0,
+                        self._route_pda_format_money(line.route_outlet_commission_value, currency),
+                        self._route_pda_format_money(line.route_net_payable_value, currency),
+                        tax,
+                        total,
+                    )
+                else:
+                    extra_metrics = """
+                        <div class="route_pda_document_product_metric"><span>Disc. %%</span><strong>%.2f</strong></div>
+                        <div class="route_pda_document_product_metric"><span>Tax</span><strong>%s</strong></div>
+                        <div class="route_pda_document_product_metric route_pda_document_product_metric_total"><span>Total Incl. Tax</span><strong>%s</strong></div>
+                    """ % (line.discount or 0.0, tax, total)
+
+                cards.append("""
+                    <div class="route_pda_document_product_card">
+                        <div class="route_pda_document_product_top">
+                            <div class="route_pda_document_product_image_box"><img src="%s" alt="" loading="lazy"/></div>
+                            <div class="route_pda_document_product_title_box">
+                                <div class="route_pda_document_product_title">%s</div>
+                                %s
+                                <div class="route_pda_document_product_badges">%s</div>
+                            </div>
+                        </div>
+                        <div class="route_pda_document_product_grid">
+                            <div class="route_pda_document_product_metric"><span>Qty</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>UoM</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>Unit Price</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>Gross Value</span><strong>%s</strong></div>
+                            %s
+                        </div>
+                    </div>
+                """ % (
+                    image_url,
+                    product_name,
+                    ('<div class="route_pda_document_product_subtitle">Barcode: %s</div>' % barcode) if barcode else "",
+                    "".join(badges),
+                    qty,
+                    uom_label,
+                    unit_price,
+                    gross,
+                    extra_metrics,
+                ))
+
+            if cards:
+                order.route_pda_order_lines_html = '<div class="route_pda_document_product_cards_html">%s</div>' % "".join(cards)
+            else:
+                order.route_pda_order_lines_html = '<div class="route_pda_document_product_cards_html"><div class="route_pda_document_product_card"><div class="route_pda_document_product_title">No product lines.</div></div></div>'
+
     @api.depends("origin", "state", "route_order_mode", "route_enable_direct_return")
     def _compute_route_show_no_direct_return(self):
         for order in self:
