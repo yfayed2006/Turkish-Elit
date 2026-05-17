@@ -198,7 +198,7 @@ class RoutePdaHome(models.TransientModel):
             "view_mode": "form",
             "views": [(view.id, "form")],
             "target": "main",
-            "context": {"create": 0, "edit": 0, "delete": 0},
+            "context": {"create": 0, "edit": 0, "delete": 0, "route_pda_dashboard_scope": "home"},
         }
 
     def _refresh_dashboard_snapshot(self):
@@ -209,11 +209,26 @@ class RoutePdaHome(models.TransientModel):
 
     def _open_self_view(self, view_xmlid, title, extra_context=None):
         self.ensure_one()
-        self._refresh_dashboard_snapshot()
+        # Do not force a full dashboard recompute before every internal
+        # workspace navigation.  Odoo will read the fields required by the
+        # destination view after the action opens; forcing _compute_dashboard()
+        # here made every Back / Center button do the same expensive work twice.
         if self.name != title:
             self.name = title
         view = self.env.ref(view_xmlid)
-        context = {"create": 0, "edit": 0, "delete": 0}
+        scope_by_view = {
+            "route_core.view_route_pda_home_form": "home",
+            "route_core.view_route_pda_product_center_form": "product_center",
+            "route_core.view_route_pda_outlet_center_form": "outlet_center",
+            "route_core.view_route_pda_visit_collections_center_form": "collections",
+            "route_core.view_route_pda_collections_snapshot_form": "collections",
+        }
+        context = {
+            "create": 0,
+            "edit": 0,
+            "delete": 0,
+            "route_pda_dashboard_scope": scope_by_view.get(view_xmlid, "full"),
+        }
         if extra_context:
             context.update(extra_context)
         return {
@@ -714,6 +729,205 @@ class RoutePdaHome(models.TransientModel):
         )
         return action
 
+    def _reset_dashboard_default_values(self):
+        """Assign safe defaults for all fields sharing _compute_dashboard.
+
+        This lets lightweight workspace screens compute only the values they show
+        without leaving any computed field unassigned.  It is intentionally kept
+        generic so future dashboard fields get a harmless default instead of
+        making the main workspace pay for heavy counters it does not display.
+        """
+        self.ensure_one()
+        for field_name, field in self._fields.items():
+            if getattr(field, "compute", None) != "_compute_dashboard":
+                continue
+            if field.type in ("integer",):
+                self[field_name] = 0
+            elif field.type in ("float", "monetary"):
+                self[field_name] = 0.0
+            elif field.type == "boolean":
+                self[field_name] = False
+            else:
+                self[field_name] = False
+
+    def _format_workspace_money(self, amount, currency=None):
+        currency = currency or self.currency_id or self.company_id.currency_id or self.env.company.currency_id
+        text = f"{amount or 0.0:,.2f}"
+        if currency and currency.symbol:
+            return f"{currency.symbol}{text}" if currency.position == "before" else f"{text} {currency.symbol}"
+        return text
+
+    def _compute_dashboard_light_home(self, user, today, start_dt, end_dt):
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        Plan = self.env["route.plan"]
+        Closing = self.env["route.vehicle.closing"]
+        Payment = self.env["route.visit.payment"]
+
+        today_visits = Visit.search([
+            ("user_id", "=", user.id),
+            ("date", "=", today),
+        ])
+        today_plan_count = Plan.search_count([
+            ("user_id", "=", user.id),
+            ("date", "=", today),
+        ])
+        today_closing_count = Closing.search_count([
+            ("user_id", "=", user.id),
+            ("plan_date", "=", today),
+        ])
+        current_visit = Visit.search([
+            ("user_id", "=", user.id),
+            ("date", "=", today),
+            ("state", "=", "in_progress"),
+        ], order="start_datetime desc, id desc", limit=1)
+
+        done_count = 0
+        in_progress_count = 0
+        mapped_count = 0
+        outside_count = 0
+        for visit in today_visits:
+            bucket = self._get_visit_execution_bucket(visit)
+            if bucket == "done":
+                done_count += 1
+            elif bucket == "in_progress":
+                in_progress_count += 1
+            if visit.outlet_id and (visit.outlet_id.geo_latitude or visit.outlet_id.geo_longitude):
+                mapped_count += 1
+            if getattr(visit, "geo_checkin_status", False) == "outside":
+                outside_count += 1
+
+        visit_count = len(today_visits)
+        pending_count = max(visit_count - done_count - in_progress_count, 0)
+        missing_count = max(visit_count - mapped_count, 0)
+
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+        self.today_plan_count = today_plan_count
+        self.today_visit_count = visit_count
+        self.today_done_visit_count = done_count
+        self.today_in_progress_visit_count = in_progress_count
+        self.today_pending_visit_count = pending_count
+        self.today_mapped_visit_count = mapped_count
+        self.today_missing_location_visit_count = missing_count
+        self.today_outside_zone_visit_count = outside_count
+        self.current_visit_count = 1 if current_visit else 0
+        self.vehicle_closing_count = today_closing_count
+
+        next_plan = self._get_next_or_latest_plan()
+        self.next_plan_available = bool(next_plan)
+        self.next_plan_ref = next_plan.name if next_plan else False
+        self.next_plan_date_label = fields.Date.to_string(next_plan.date) if next_plan and next_plan.date else False
+        self.next_plan_outlet_summary = next_plan.outlet_summary if next_plan else False
+        self.next_plan_status_label = dict(next_plan._fields["state"].selection).get(next_plan.state, next_plan.state) if next_plan else False
+
+        if current_visit:
+            self.current_visit_empty_message = _("Visit %s at %s is already in progress. Use Current Visit to continue it.") % (
+                current_visit.display_name or "-",
+                current_visit.outlet_id.display_name or "-",
+            )
+            self.current_visit_button_hint = _("Active Outlet")
+            self.current_visit_button_value = current_visit.outlet_id.display_name or current_visit.display_name or _("Open active visit")
+            self.current_visit_name = current_visit.display_name
+            self.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit.outlet_id else "-"
+        elif today_visits:
+            self.current_visit_empty_message = _("No visit is in progress right now. Today has %s scheduled visits: %s done, %s in progress, and %s pending.") % (
+                visit_count,
+                done_count,
+                in_progress_count,
+                pending_count,
+            )
+            self.current_visit_button_hint = _("Today's Progress")
+            self.current_visit_button_value = _("%s done • %s pending") % (done_count, pending_count)
+            self.current_visit_name = _("No active visit")
+            self.current_visit_outlet_name = "-"
+        elif next_plan and next_plan.date and next_plan.date >= today:
+            self.current_visit_empty_message = _("No visit is in progress right now. The next available daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+            self.current_visit_button_hint = _("Next Plan")
+            self.current_visit_button_value = next_plan.name
+            self.current_visit_name = _("No active visit")
+            self.current_visit_outlet_name = "-"
+        else:
+            self.current_visit_empty_message = _("No visit is in progress right now.")
+            self.current_visit_button_hint = _("Today's Progress")
+            self.current_visit_button_value = _("No active visit")
+            self.current_visit_name = _("No active visit")
+            self.current_visit_outlet_name = "-"
+
+        if next_plan and next_plan.date and next_plan.date >= today:
+            self.today_visits_empty_message = _("No visits are scheduled for today. The next available daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+        elif next_plan:
+            self.today_visits_empty_message = _("No visits are scheduled for today. The latest daily plan is %s on %s.") % (next_plan.name, fields.Date.to_string(next_plan.date))
+        else:
+            self.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
+
+        cash_today_payments = Payment.search([
+            ("salesperson_id", "=", user.id),
+            ("payment_date", ">=", start_dt),
+            ("payment_date", "<", end_dt),
+            ("state", "=", "confirmed"),
+            ("payment_mode", "=", "cash"),
+        ])
+        cash_with_salesperson = cash_today_payments.filtered(
+            lambda p: (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
+        )
+        self.cash_today_amount = sum((p.amount or 0.0) for p in cash_with_salesperson)
+
+        primary_payments = Payment.browse()
+        if hasattr(Payment, "_route_custody_primary_ids_sql"):
+            primary_payments = Payment.browse(Payment._route_custody_primary_ids_sql(
+                custody_states=("with_salesperson", "handed_to_accounting"),
+                salesperson_id=user.id,
+            )).exists()
+        custody_cash = primary_payments.filtered(lambda p: p.payment_mode == "cash")
+        custody_cheques = primary_payments.filtered(lambda p: p.payment_mode == "cheque")
+        custody_electronic = primary_payments.filtered(lambda p: p.payment_mode in ("bank", "pos"))
+        self.custody_cash_amount = sum((getattr(p, "cash_custody_total_amount", 0.0) or p.amount or 0.0) for p in custody_cash)
+        self.custody_cheque_count = len(custody_cheques)
+        self.custody_electronic_amount = sum((p.amount or 0.0) for p in custody_electronic)
+        self.custody_electronic_count = len(custody_electronic)
+        self.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s • Bank/POS: %(electronic)s") % {
+            "cash": self._format_workspace_money(self.custody_cash_amount),
+            "cheques": self.custody_cheque_count,
+            "electronic": self.custody_electronic_count,
+        }
+
+    def _compute_dashboard_light_product_center(self, user, today, start_dt, end_dt):
+        self.ensure_one()
+        Product = self.env["product.template"]
+        OutletBalance = self.env["outlet.stock.balance"]
+        vehicle = self._get_current_vehicle()
+        warehouse_loc = self._get_main_warehouse_location()
+
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+        self.current_vehicle_name = vehicle.display_name if vehicle else "-"
+        self.current_source_name = warehouse_loc.display_name if warehouse_loc else "-"
+        self.product_count = Product.search_count([("sale_ok", "=", True), ("active", "=", True)])
+        self.outlet_balance_count = OutletBalance.search_count([
+            ("outlet_id.outlet_operation_mode", "=", "consignment"),
+            ("qty", ">", 0),
+        ])
+        vehicle_quant_domain = [("quantity", ">", 0), ("location_id", "in", self._get_quant_location_ids(vehicle.stock_location_id))] if vehicle and getattr(vehicle, "stock_location_id", False) else [("id", "=", 0)]
+        warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", self._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
+        self.vehicle_product_count = self._count_distinct_quant_products(vehicle_quant_domain) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
+        self.warehouse_product_count = self._count_distinct_quant_products(warehouse_quant_domain) if warehouse_loc else 0
+
+    def _compute_dashboard_light_outlet_center(self, user, today, start_dt, end_dt):
+        self.ensure_one()
+        Prospect = self.env["route.outlet.prospect"]
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+        outlet_summary = self._get_active_outlet_count_summary()
+        self.direct_sale_customer_count = outlet_summary["direct_sale_customer_count"]
+        self.consignment_customer_count = outlet_summary["consignment_customer_count"]
+        self.active_outlet_count = outlet_summary["active_outlet_count"]
+        self.potential_customer_count = Prospect.search_count([
+            ("salesperson_id", "=", user.id),
+            ("active", "=", True),
+            ("state", "in", ["draft", "submitted", "needs_correction"]),
+        ])
+
     @api.depends("user_id")
     def _compute_dashboard(self):
         Visit = self.env["route.visit"]
@@ -733,6 +947,18 @@ class RoutePdaHome(models.TransientModel):
         for rec in self:
             user = rec.user_id or self.env.user
             today, start_dt, end_dt = rec._today_bounds()
+            rec._reset_dashboard_default_values()
+
+            dashboard_scope = self.env.context.get("route_pda_dashboard_scope") or "full"
+            if dashboard_scope == "home":
+                rec._compute_dashboard_light_home(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "product_center":
+                rec._compute_dashboard_light_product_center(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "outlet_center":
+                rec._compute_dashboard_light_outlet_center(user, today, start_dt, end_dt)
+                continue
 
             today_plans = Plan.search([
                 ("user_id", "=", user.id),
