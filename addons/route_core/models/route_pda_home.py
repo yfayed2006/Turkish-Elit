@@ -220,8 +220,13 @@ class RoutePdaHome(models.TransientModel):
             "route_core.view_route_pda_home_form": "home",
             "route_core.view_route_pda_product_center_form": "product_center",
             "route_core.view_route_pda_outlet_center_form": "outlet_center",
+            "route_core.view_route_pda_sales_center_form": "product_actions",
             "route_core.view_route_pda_visit_collections_center_form": "collections",
             "route_core.view_route_pda_collections_snapshot_form": "collections",
+            "route_core.view_route_pda_today_overview_form": "home",
+            "route_core.view_route_pda_current_visit_snapshot_form": "current_visit_snapshot",
+            "route_core.view_route_pda_current_visit_empty_form": "home",
+            "route_core.view_route_pda_today_visits_empty_form": "home",
         }
         context = {
             "create": 0,
@@ -713,8 +718,15 @@ class RoutePdaHome(models.TransientModel):
             action_xmlid = "route_core.action_route_main_warehouse_stock_snapshot"
             default_search_flag = "search_default_filter_main_has_qty"
 
-        location_ids = self._get_quant_location_ids(location, exclude_route_locations=exclude_route_locations)
-        domain = [("quantity", ">", 0), ("location_id", "in", location_ids)] if location_ids else [("id", "=", 0)]
+        if not location:
+            domain = [("id", "=", 0)]
+        elif exclude_route_locations:
+            location_ids = self._get_quant_location_ids(location, exclude_route_locations=True)
+            domain = [("quantity", ">", 0), ("location_id", "in", location_ids)] if location_ids else [("id", "=", 0)]
+        else:
+            # For vehicle stock, let PostgreSQL/Odoo resolve child locations instead
+            # of materializing every stock.location id in Python on each button click.
+            domain = [("quantity", ">", 0), ("location_id", "child_of", location.id)]
         action = self._prepare_action(
             action_xmlid,
             name=title,
@@ -727,6 +739,7 @@ class RoutePdaHome(models.TransientModel):
                 "route_workspace_back": True,
             },
         )
+        action["limit"] = 80
         return action
 
     def _reset_dashboard_default_values(self):
@@ -908,8 +921,8 @@ class RoutePdaHome(models.TransientModel):
             ("outlet_id.outlet_operation_mode", "=", "consignment"),
             ("qty", ">", 0),
         ])
-        vehicle_quant_domain = [("quantity", ">", 0), ("location_id", "in", self._get_quant_location_ids(vehicle.stock_location_id))] if vehicle and getattr(vehicle, "stock_location_id", False) else [("id", "=", 0)]
-        warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", self._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
+        vehicle_quant_domain = [("quantity", ">", 0), ("location_id", "child_of", vehicle.stock_location_id.id)] if vehicle and getattr(vehicle, "stock_location_id", False) else [("id", "=", 0)]
+        warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "child_of", warehouse_loc.id)] if warehouse_loc else [("id", "=", 0)]
         self.vehicle_product_count = self._count_distinct_quant_products(vehicle_quant_domain) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
         self.warehouse_product_count = self._count_distinct_quant_products(warehouse_quant_domain) if warehouse_loc else 0
 
@@ -927,6 +940,199 @@ class RoutePdaHome(models.TransientModel):
             ("active", "=", True),
             ("state", "in", ["draft", "submitted", "needs_correction"]),
         ])
+
+    def _compute_dashboard_light_sales_center(self, user, today, start_dt, end_dt):
+        """Compute only the numbers displayed by the Product Actions screen."""
+        self.ensure_one()
+        SaleOrder = self.env["sale.order"]
+        DirectReturn = self.env["route.direct.return"]
+        Move = self.env["stock.move"]
+
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+
+        order_domain = [
+            ("user_id", "=", user.id),
+            ("route_order_mode", "=", "direct_sale"),
+            ("date_order", ">=", start_dt),
+            ("date_order", "<", end_dt),
+            ("state", "in", ["sale", "done"]),
+        ]
+        order_group = SaleOrder.read_group(order_domain, ["amount_total"], [], lazy=False)
+        order_summary = order_group[0] if order_group else {}
+        self.direct_sale_order_today_count = order_summary.get("__count", 0) or 0
+        self.direct_sale_today_amount = order_summary.get("amount_total", 0.0) or 0.0
+
+        return_domain = [
+            ("user_id", "=", user.id),
+            ("return_date", "=", today),
+            ("state", "=", "done"),
+        ]
+        return_fields = ["amount_total"] if "amount_total" in DirectReturn._fields else []
+        return_group = DirectReturn.read_group(return_domain, return_fields, [], lazy=False) if return_fields else []
+        return_summary = return_group[0] if return_group else {}
+        self.direct_return_today_count = return_summary.get("__count", DirectReturn.search_count(return_domain)) or 0
+        self.direct_return_today_amount = return_summary.get("amount_total", 0.0) or 0.0
+
+        transfers = self._get_workspace_direct_transfers(start_dt=start_dt, end_dt=end_dt)
+        self.direct_transfer_today_count = len(transfers)
+        self.direct_transfer_today_qty = 0.0
+        if transfers:
+            move_domain = [("picking_id", "in", transfers.ids)]
+            qty_field = "product_uom_qty" if "product_uom_qty" in Move._fields else "quantity"
+            move_group = Move.read_group(move_domain, [qty_field], [], lazy=False)
+            self.direct_transfer_today_qty = (move_group[0].get(qty_field, 0.0) if move_group else 0.0) or 0.0
+
+    def _compute_dashboard_light_collections(self, user, today, start_dt, end_dt):
+        """Compute only the KPIs used by Visit Collections screens.
+
+        The old full dashboard computation also calculated planning, stock,
+        product and current-visit data.  Opening the Collections card should not
+        pay that cost.
+        """
+        self.ensure_one()
+        Visit = self.env["route.visit"]
+        Payment = self.env["route.visit.payment"]
+
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+
+        payment_snapshot_mode = self._get_payment_snapshot_mode
+        payment_snapshot_amount = self._get_payment_snapshot_amount
+        payment_promise_status = self._get_payment_snapshot_promise_status
+        payment_target_visit = self._get_payment_target_visit
+        payment_business_flow = self._get_payment_business_flow
+        payment_cheque_open_due_amount = self._get_payment_cheque_open_due_amount
+        payment_cheque_pending_clearance_amount = self._get_payment_cheque_pending_clearance_amount
+        payment_cheque_cleared_amount = self._get_payment_cheque_financially_cleared_amount
+
+        today_payments = Payment.search([
+            ("salesperson_id", "=", user.id),
+            ("payment_date", ">=", start_dt),
+            ("payment_date", "<", end_dt),
+            ("state", "=", "confirmed"),
+        ])
+        followup_payments = Payment.search([
+            ("salesperson_id", "=", user.id),
+            ("state", "=", "confirmed"),
+            "|", "|",
+            ("promise_amount", ">", 0.0),
+            ("payment_mode", "=", "cheque"),
+            ("collection_due_bucket", "=", "remaining_due"),
+        ])
+
+        cash_with_salesperson = today_payments.filtered(
+            lambda p: payment_snapshot_mode(p) == "cash"
+            and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
+        )
+        self.cash_today_amount = sum(payment_snapshot_amount(p) for p in cash_with_salesperson)
+        self.bank_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "bank")
+        self.pos_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "pos")
+        self.cheque_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "cheque")
+        self.collection_collected_today_amount = self.cash_today_amount + self.bank_today_amount + self.pos_today_amount + self.cheque_today_amount
+
+        deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
+        self.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
+        self.deferred_payment_count = len(deferred_entries)
+
+        open_promise_entries = followup_payments.filtered(lambda p: payment_promise_status(p) in ("open", "due_today", "overdue"))
+        overdue_promise_entries = open_promise_entries.filtered(lambda p: payment_promise_status(p) == "overdue")
+        self.open_promise_entry_count = len(open_promise_entries)
+        self.overdue_promise_entry_count = len(overdue_promise_entries)
+        self.open_promise_amount = sum((p.promise_amount or 0.0) for p in open_promise_entries)
+
+        cheque_open_due_payments = followup_payments.filtered(lambda p: payment_cheque_open_due_amount(p) > 0.0)
+        cheque_pending_clearance_payments = followup_payments.filtered(lambda p: payment_cheque_pending_clearance_amount(p) > 0.0)
+        today_cheque_cleared_payments = today_payments.filtered(
+            lambda p: payment_cheque_cleared_amount(p) > 0.0 and payment_snapshot_mode(p) == "cheque"
+        )
+        self.cheque_followup_entry_count = len(cheque_open_due_payments)
+        self.cheque_pending_clearance_entry_count = len(cheque_pending_clearance_payments)
+        self.cheque_open_due_amount = sum(payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
+        self.cheque_pending_clearance_amount = sum(payment_cheque_pending_clearance_amount(p) for p in cheque_pending_clearance_payments)
+        self.cheque_cleared_today_amount = sum(payment_cheque_cleared_amount(p) for p in today_cheque_cleared_payments)
+
+        visit_collection_targets = set(today_payments.filtered(lambda p: payment_business_flow(p) == "consignment_visit").mapped("visit_id").ids)
+        direct_stop_payments = today_payments.filtered(lambda p: payment_business_flow(p) == "direct_stop")
+        direct_stop_targets = set(direct_stop_payments.mapped("settlement_visit_id").ids) | set(direct_stop_payments.mapped("visit_id").ids)
+        direct_sale_order_targets = set(today_payments.filtered(lambda p: payment_business_flow(p) == "direct_sale_order").mapped("sale_order_id").ids)
+        self.visit_collection_count = len(visit_collection_targets)
+        self.direct_stop_payment_count = len(direct_stop_targets)
+        self.direct_sale_order_payment_count = len(direct_sale_order_targets)
+        self.confirmed_collection_count = len(followup_payments)
+        self.collection_followup_count = len(followup_payments.filtered(
+            lambda p: (p.promise_amount or 0.0) > 0.0 or payment_cheque_open_due_amount(p) > 0.0 or (getattr(p, "collection_due_bucket", False) == "remaining_due")
+        ))
+
+        active_visits = Visit.search([
+            ("user_id", "=", user.id),
+            ("date", "=", today),
+            ("state", "not in", ["done", "cancel", "cancelled"]),
+        ])
+        active_visit_ids = set(active_visits.ids)
+        active_visit_remaining_due = sum(
+            (visit.direct_stop_settlement_remaining_amount or 0.0)
+            if getattr(visit, "visit_execution_mode", False) == "direct_sales"
+            else (visit.remaining_due_amount or 0.0)
+            for visit in active_visits
+        )
+        closed_or_unlinked_cheque_open_due = 0.0
+        for payment in cheque_open_due_payments:
+            target_visit = payment_target_visit(payment)
+            if not target_visit or target_visit.id not in active_visit_ids:
+                closed_or_unlinked_cheque_open_due += payment_cheque_open_due_amount(payment)
+        self.remaining_due_amount = active_visit_remaining_due + closed_or_unlinked_cheque_open_due
+
+        self.collection_total_signal_amount = self.collection_collected_today_amount + self.deferred_today_amount + self.remaining_due_amount
+        mix_total = self.collection_collected_today_amount + self.deferred_today_amount
+        if mix_total:
+            self.collection_cash_share_percent = (self.cash_today_amount / mix_total) * 100.0
+            self.collection_bank_share_percent = (self.bank_today_amount / mix_total) * 100.0
+            self.collection_pos_share_percent = (self.pos_today_amount / mix_total) * 100.0
+            self.collection_cheque_share_percent = (self.cheque_today_amount / mix_total) * 100.0
+            self.collection_deferred_share_percent = (self.deferred_today_amount / mix_total) * 100.0
+        flow_total = self.visit_collection_count + self.direct_stop_payment_count + self.direct_sale_order_payment_count
+        if flow_total:
+            self.collection_consignment_share_percent = (self.visit_collection_count / flow_total) * 100.0
+            self.collection_direct_stop_share_percent = (self.direct_stop_payment_count / flow_total) * 100.0
+            self.collection_direct_sale_order_share_percent = (self.direct_sale_order_payment_count / flow_total) * 100.0
+        self.collection_followup_share_percent = (self.collection_followup_count / self.confirmed_collection_count) * 100.0 if self.confirmed_collection_count else 0.0
+
+    def _compute_dashboard_light_current_visit_snapshot(self, user, today, start_dt, end_dt):
+        """Compute only the fields used by Current Visit Snapshot."""
+        self.ensure_one()
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+        current_visit = self._get_workspace_current_visit(user=user, today_only=True)
+        if not current_visit:
+            self.current_visit_name = _("No active visit")
+            self.current_visit_outlet_name = "-"
+            self.current_visit_customer_name = "-"
+            self.current_vehicle_name = "-"
+            self.current_visit_area_name = "-"
+            self.current_visit_execution_mode_label = "-"
+            self.current_visit_stage_title = _("No active visit in progress")
+            self.current_visit_stage_help = _("Open Today's Visits to start or continue a visit.")
+            return
+
+        self.current_visit_name = current_visit.display_name or "-"
+        self.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit.outlet_id else "-"
+        self.current_visit_customer_name = current_visit.partner_id.display_name if current_visit.partner_id else "-"
+        self.current_vehicle_name = current_visit.vehicle_id.display_name if current_visit.vehicle_id else "-"
+        self.current_visit_area_name = current_visit.area_id.display_name if current_visit.area_id else "-"
+        self.current_visit_execution_mode_label = current_visit.visit_execution_mode_label if hasattr(current_visit, "visit_execution_mode_label") else "-"
+        self.current_visit_stage_title = current_visit.ux_stage_title if hasattr(current_visit, "ux_stage_title") else _("Current Visit")
+        self.current_visit_stage_help = current_visit.ux_stage_help if hasattr(current_visit, "ux_stage_help") else ""
+        self.current_visit_current_due_amount = current_visit.outlet_current_due_amount or 0.0
+        self.current_visit_net_due_amount = current_visit.net_due_amount or 0.0
+        self.current_visit_collected_amount = current_visit.collected_amount or 0.0
+        self.current_visit_remaining_due_amount = current_visit.remaining_due_amount or 0.0
+        self.current_visit_sale_order_ref = current_visit.summary_sale_order_ref if hasattr(current_visit, "summary_sale_order_ref") else "-"
+        self.current_visit_refill_ref = current_visit.summary_refill_transfer_ref if hasattr(current_visit, "summary_refill_transfer_ref") else "-"
+        self.current_visit_return_transfer_refs = current_visit.summary_return_transfer_refs if hasattr(current_visit, "summary_return_transfer_refs") else "-"
+        self.current_visit_payment_count = len(current_visit.display_payment_ids.filtered(lambda p: p.state == "confirmed")) if hasattr(current_visit, "display_payment_ids") else 0
+        self.current_visit_near_expiry_count = current_visit.outlet_near_expiry_count if hasattr(current_visit, "outlet_near_expiry_count") else 0
+        self.current_visit_pending_near_expiry_count = current_visit.pending_near_expiry_line_count if hasattr(current_visit, "pending_near_expiry_line_count") else 0
 
     @api.depends("user_id")
     def _compute_dashboard(self):
@@ -958,6 +1164,15 @@ class RoutePdaHome(models.TransientModel):
                 continue
             if dashboard_scope == "outlet_center":
                 rec._compute_dashboard_light_outlet_center(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "product_actions":
+                rec._compute_dashboard_light_sales_center(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "collections":
+                rec._compute_dashboard_light_collections(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "current_visit_snapshot":
+                rec._compute_dashboard_light_current_visit_snapshot(user, today, start_dt, end_dt)
                 continue
 
             today_plans = Plan.search([
@@ -1413,6 +1628,7 @@ class RoutePdaHome(models.TransientModel):
             if view
         ]
         action["help"] = _("<p class='o_view_nocontent_smiling_face'>No visits are scheduled for today.</p><p>Open My Daily Plans or My Weekly Schedule to review the next working day.</p>")
+        action["limit"] = 40
         return action
 
     def action_open_today_visits_empty_screen(self):
@@ -1519,12 +1735,14 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_my_vehicle_closing(self):
         self.ensure_one()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_vehicle_closing_salesperson",
             name="My Vehicle Closings",
             domain=[("user_id", "=", self.env.user.id), ("state", "=", "closed")],
             context={"search_default_filter_closed": 1, "create": 0, "edit": 0, "delete": 0},
         )
+        action["limit"] = 40
+        return action
 
     def action_open_my_shortages(self):
         self.ensure_one()
@@ -1758,6 +1976,7 @@ class RoutePdaHome(models.TransientModel):
             "search_view_id": search_view.id if search_view else False,
             "domain": [("qty", ">", 0)],
             "target": "current",
+            "limit": 80,
             "context": {
                 "create": 0,
                 "edit": 0,
@@ -1775,7 +1994,7 @@ class RoutePdaHome(models.TransientModel):
                 custody_states=("with_salesperson", "handed_to_accounting"),
                 salesperson_id=self.env.user.id,
             )
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_salesperson_custody",
             name="My Custody",
             domain=[
@@ -1791,15 +2010,19 @@ class RoutePdaHome(models.TransientModel):
                 "delete": 0,
             },
         )
+        action["limit"] = 40
+        return action
 
     def action_open_visit_collections(self):
         self.ensure_one()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_visit_collection_salesperson",
             name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
+        action["limit"] = 40
+        return action
 
     def action_open_direct_sale_payments(self):
         self.ensure_one()
@@ -1868,6 +2091,7 @@ class RoutePdaHome(models.TransientModel):
             "search_default_filter_to_sell": 1,
         })
         action["context"] = context
+        action["limit"] = 80
         return action
 
     def action_open_vehicle_products(self):
@@ -1964,16 +2188,14 @@ class RoutePdaHome(models.TransientModel):
             action["view_mode"] = "kanban,list,form"
         if search_view:
             action["search_view_id"] = search_view.id
+        action["limit"] = 80
         return action
 
     def action_open_consignment_outlet_stock(self):
         self.ensure_one()
-        outlets = self.env["route.outlet"].sudo().search([
-            ("outlet_operation_mode", "=", "consignment"),
-            ("stock_location_id", "!=", False),
-        ])
-        if outlets:
-            outlets._sync_outlet_stock_balance_records()
+        # Do not resync every consignment outlet on button click.  Stock balance
+        # records are maintained by the operational flows; forcing a global sync
+        # here made opening Outlet Stock slow on mobile and on demo databases.
         action = self._prepare_action(
             "route_core.action_outlet_stock_balance",
             name="Outlet Stock",
@@ -2004,6 +2226,7 @@ class RoutePdaHome(models.TransientModel):
             action["view_mode"] = "kanban,list,form"
         if search_view:
             action["search_view_id"] = search_view.id
+        action["limit"] = 80
         return action
 
     def action_open_direct_sale_customers(self):
