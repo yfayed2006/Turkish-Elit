@@ -71,6 +71,4 @@ class RouteVisit(models.Model):
     def _create_pending_refill_backorder(self):
         self._ensure_customer_partner(raise_if_missing=True)
         return super()._create_pending_refill_backorder()
-    def _create_pending_refill_backorder(self):
-        self._ensure_customer_partner(raise_if_missing=True)
-        return super()._create_pending_refill_backorder()
+
