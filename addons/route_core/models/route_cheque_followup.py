@@ -147,14 +147,14 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             ("cancelled", "Cancelled"),
         ],
         string="Financial Effect",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_stored",
         store=True,
         index=True,
         copy=False,
     )
     cheque_financial_state_label = fields.Char(
         string="Financial Effect Label",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
     )
     cheque_collection_effect_bucket = fields.Selection(
@@ -173,44 +173,44 @@ class RouteVisitPaymentChequeFollowup(models.Model):
     cheque_effective_collected_amount = fields.Monetary(
         string="Effective Collected",
         currency_field="currency_id",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
     )
     cheque_route_coverage_amount = fields.Monetary(
         string="Route Coverage",
         currency_field="currency_id",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
         help="Amount that still covers the route/customer balance before final bank clearance. Bounced or cancelled cheques do not cover the balance.",
     )
     cheque_pending_clearance_amount = fields.Monetary(
         string="Pending Bank Clearance",
         currency_field="currency_id",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
         help="Confirmed cheque amount waiting for bank deposit/clearance.",
     )
     cheque_financially_cleared_amount = fields.Monetary(
         string="Financially Cleared Amount",
         currency_field="currency_id",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
         help="Cheque amount that is finally cleared by the bank and can be treated as cash/bank collected for accounting integration.",
     )
     cheque_open_due_amount = fields.Monetary(
         string="Open Due From Cheque Allocation",
         currency_field="currency_id",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
     )
     cheque_is_financially_cleared = fields.Boolean(
         string="Financially Cleared",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_display",
         store=False,
     )
     cheque_needs_followup = fields.Boolean(
         string="Needs Follow-up",
-        compute="_compute_cheque_financial_policy",
+        compute="_compute_cheque_financial_policy_stored",
         store=True,
         index=True,
     )
@@ -1790,53 +1790,91 @@ class RouteVisitPaymentChequeFollowup(models.Model):
             else:
                 rec.cheque_collection_effect_bucket = "pending"
 
+    def _route_get_cheque_financial_policy_values(self):
+        """Return the cheque financial effect without duplicating compute logic.
+
+        Odoo 19 warns when stored and non-stored computed fields share the
+        same compute method.  This helper keeps one business rule, while the
+        stored filter fields and the non-stored display amounts use separate
+        compute methods.
+        """
+        self.ensure_one()
+        values = {
+            "financial_state": False,
+            "financial_state_label": False,
+            "effective_collected_amount": 0.0,
+            "route_coverage_amount": 0.0,
+            "pending_clearance_amount": 0.0,
+            "financially_cleared_amount": 0.0,
+            "open_due_amount": 0.0,
+            "is_financially_cleared": False,
+            "needs_followup": False,
+        }
+
+        if self.payment_mode != "cheque":
+            return values
+
+        followup_state = self.cheque_followup_state or "received"
+        amount = self.amount or 0.0
+
+        if self.state != "confirmed":
+            values.update({
+                "financial_state": "pending",
+                "financial_state_label": _("Pending Confirmation"),
+            })
+            return values
+
+        if followup_state == "cleared":
+            values.update({
+                "financial_state": "cleared",
+                "financial_state_label": _("Financially Cleared"),
+                "effective_collected_amount": amount,
+                "route_coverage_amount": amount,
+                "financially_cleared_amount": amount,
+                "is_financially_cleared": True,
+            })
+        elif followup_state == "bounced":
+            values.update({
+                "financial_state": "open_due",
+                "financial_state_label": _("Bounced - Open Due"),
+                "open_due_amount": amount,
+                "needs_followup": True,
+            })
+        elif followup_state == "cancelled":
+            values.update({
+                "financial_state": "cancelled",
+                "financial_state_label": _("Cancelled - No Collection"),
+                "open_due_amount": amount,
+                "needs_followup": True,
+            })
+        else:
+            values.update({
+                "financial_state": "pending",
+                "financial_state_label": _("Pending Bank Clearance"),
+                "effective_collected_amount": amount,
+                "route_coverage_amount": amount,
+                "pending_clearance_amount": amount,
+            })
+        return values
+
     @api.depends("payment_mode", "state", "amount", "cheque_followup_state")
-    def _compute_cheque_financial_policy(self):
+    def _compute_cheque_financial_policy_stored(self):
         for rec in self:
-            rec.cheque_financial_state = False
-            rec.cheque_financial_state_label = False
-            rec.cheque_effective_collected_amount = 0.0
-            rec.cheque_route_coverage_amount = 0.0
-            rec.cheque_pending_clearance_amount = 0.0
-            rec.cheque_financially_cleared_amount = 0.0
-            rec.cheque_open_due_amount = 0.0
-            rec.cheque_is_financially_cleared = False
-            rec.cheque_needs_followup = False
+            values = rec._route_get_cheque_financial_policy_values()
+            rec.cheque_financial_state = values["financial_state"]
+            rec.cheque_needs_followup = values["needs_followup"]
 
-            if rec.payment_mode != "cheque":
-                continue
-
-            followup_state = rec.cheque_followup_state or "received"
-            amount = rec.amount or 0.0
-
-            if rec.state != "confirmed":
-                rec.cheque_financial_state = "pending"
-                rec.cheque_financial_state_label = _("Pending Confirmation")
-                continue
-
-            if followup_state == "cleared":
-                rec.cheque_financial_state = "cleared"
-                rec.cheque_financial_state_label = _("Financially Cleared")
-                rec.cheque_effective_collected_amount = amount
-                rec.cheque_route_coverage_amount = amount
-                rec.cheque_financially_cleared_amount = amount
-                rec.cheque_is_financially_cleared = True
-            elif followup_state == "bounced":
-                rec.cheque_financial_state = "open_due"
-                rec.cheque_financial_state_label = _("Bounced - Open Due")
-                rec.cheque_open_due_amount = amount
-                rec.cheque_needs_followup = True
-            elif followup_state == "cancelled":
-                rec.cheque_financial_state = "cancelled"
-                rec.cheque_financial_state_label = _("Cancelled - No Collection")
-                rec.cheque_open_due_amount = amount
-                rec.cheque_needs_followup = True
-            else:
-                rec.cheque_financial_state = "pending"
-                rec.cheque_financial_state_label = _("Pending Bank Clearance")
-                rec.cheque_effective_collected_amount = amount
-                rec.cheque_route_coverage_amount = amount
-                rec.cheque_pending_clearance_amount = amount
+    @api.depends("payment_mode", "state", "amount", "cheque_followup_state")
+    def _compute_cheque_financial_policy_display(self):
+        for rec in self:
+            values = rec._route_get_cheque_financial_policy_values()
+            rec.cheque_financial_state_label = values["financial_state_label"]
+            rec.cheque_effective_collected_amount = values["effective_collected_amount"]
+            rec.cheque_route_coverage_amount = values["route_coverage_amount"]
+            rec.cheque_pending_clearance_amount = values["pending_clearance_amount"]
+            rec.cheque_financially_cleared_amount = values["financially_cleared_amount"]
+            rec.cheque_open_due_amount = values["open_due_amount"]
+            rec.cheque_is_financially_cleared = values["is_financially_cleared"]
 
     def _get_route_collection_covered_amount(self):
         """Operational amount that currently covers the outlet balance.
