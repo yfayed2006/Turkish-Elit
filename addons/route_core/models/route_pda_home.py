@@ -834,7 +834,12 @@ class RoutePdaHome(models.TransientModel):
             ("outlet_id.geo_latitude", "!=", False),
             ("outlet_id.geo_longitude", "!=", False),
         ])
-        outside_count = Visit.search_count(today_visit_domain + [("geo_checkin_status", "=", "outside")])
+        # geo_checkin_status is a non-stored computed field, so it cannot be
+        # used in SQL domains/search_count. Use the stored review state instead
+        # to keep the fast counter without breaking Route Workspace loading.
+        outside_count = Visit.search_count(today_visit_domain + [
+            ("geo_review_state", "in", ["outside_no_reason", "outside_with_reason"]),
+        ])
         pending_count = max(visit_count - done_count - in_progress_count, 0)
         missing_count = max(visit_count - mapped_count, 0)
 
@@ -867,7 +872,7 @@ class RoutePdaHome(models.TransientModel):
             self.current_visit_button_value = current_visit.outlet_id.display_name or current_visit.display_name or _("Open active visit")
             self.current_visit_name = current_visit.display_name
             self.current_visit_outlet_name = current_visit.outlet_id.display_name if current_visit.outlet_id else "-"
-        elif today_visits:
+        elif visit_count:
             self.current_visit_empty_message = _("No visit is in progress right now. Today has %s scheduled visits: %s done, %s in progress, and %s pending.") % (
                 visit_count,
                 done_count,
@@ -2535,3 +2540,4 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
+
