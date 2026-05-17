@@ -1,3 +1,5 @@
+import html
+
 from odoo import api, fields, models
 
 
@@ -33,6 +35,13 @@ class StockPicking(models.Model):
         currency_field="route_pda_currency_id",
         compute="_compute_route_pda_return_summary",
         store=False,
+    )
+    route_pda_move_lines_html = fields.Html(
+        string="Product Cards",
+        compute="_compute_route_pda_move_lines_html",
+        sanitize=False,
+        store=False,
+        help="Read-only Route/PDA stock movement cards. This avoids switching between list and kanban when screen size changes.",
     )
 
     @api.depends(
