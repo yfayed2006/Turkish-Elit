@@ -1,3 +1,6 @@
+import re
+from html import unescape
+
 from markupsafe import escape
 
 from odoo import api, fields, models, _
@@ -1425,6 +1428,32 @@ class RouteVisit(models.Model):
         except Exception:
             return fields.Date.to_string(value)
 
+    def _route_clean_payment_note_text(self, value):
+        """Return safe plain text for payment notes shown in PDA/summary HTML cards.
+
+        Some historical notes were saved with literal HTML line breaks (``<br/>``),
+        escaped HTML (``&lt;br/&gt;``), or double-escaped HTML after being passed
+        through different wizards.  The completed visit summary builds HTML manually,
+        so it must normalize those notes before escaping them for display.
+        """
+        if not value:
+            return ""
+        text = str(value)
+        for _index in range(5):
+            unescaped = unescape(text)
+            if unescaped == text:
+                break
+            text = unescaped
+        text = re.sub(r"<\s*br\s*/?\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"</\s*(div|p|li|tr|h[1-6])\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = text.replace("\xa0", " ")
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n[ \t]+", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
     def _build_payment_cards_html(self, payments, empty_message=None, show_source=False, show_settlement=False, show_notes=True):
         self.ensure_one()
         payments = payments.filtered(lambda p: p.state != "cancelled") if payments else payments
@@ -1561,11 +1590,13 @@ class RouteVisit(models.Model):
                 )
 
             note_html = ""
-            clean_note = payment._get_clean_note_text() if hasattr(payment, "_get_clean_note_text") else (payment.note or "")
+            raw_note = payment.note or ""
+            clean_note = self._route_clean_payment_note_text(raw_note)
             if show_notes and clean_note:
+                escaped_note = str(escape(clean_note)).replace("\n", "<br/>")
                 note_html = (
                     "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
-                    f"{escape(clean_note).replace(chr(10), '<br/>')}"
+                    f"{escaped_note}"
                     "</div>"
                 )
 
