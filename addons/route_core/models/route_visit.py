@@ -1561,10 +1561,11 @@ class RouteVisit(models.Model):
                 )
 
             note_html = ""
-            if show_notes and payment.note:
+            clean_note = payment._get_clean_note_text() if hasattr(payment, "_get_clean_note_text") else (payment.note or "")
+            if show_notes and clean_note:
                 note_html = (
                     "<div class='route_pda_multilingual_note route_pda_payment_card_note'>"
-                    f"{escape(payment.note).replace(chr(10), '<br/>')}"
+                    f"{escape(clean_note).replace(chr(10), '<br/>')}"
                     "</div>"
                 )
 
