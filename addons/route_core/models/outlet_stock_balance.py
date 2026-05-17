@@ -139,45 +139,63 @@ class OutletStockBalance(models.Model):
     @api.depends("outlet_id", "product_id")
     def _compute_lot_tracking_info(self):
         Quant = self.env["stock.quant"]
+        records = self.filtered(lambda rec: rec.outlet_id and rec.product_id)
+
         for rec in self:
             rec.lot_names = False
             rec.nearest_expiry_date = False
             rec.nearest_alert_date = False
 
-            if not rec.outlet_id or not rec.product_id:
-                continue
+        if not records:
+            return
 
+        records_by_location = {}
+        for rec in records:
             stock_location_field = rec.outlet_id._fields.get("stock_location_id")
             location = stock_location_field and rec.outlet_id.stock_location_id or False
             if not location:
                 continue
+            records_by_location.setdefault(location.id, self.browse())
+            records_by_location[location.id] |= rec
+
+        for location_id, location_records in records_by_location.items():
+            product_ids = location_records.mapped("product_id").ids
+            if not product_ids:
+                continue
 
             quants = Quant.search([
-                ("location_id", "child_of", location.id),
-                ("product_id", "=", rec.product_id.id),
+                ("location_id", "child_of", location_id),
+                ("product_id", "in", product_ids),
                 ("quantity", ">", 0),
                 ("lot_id", "!=", False),
             ])
+            lots_by_product = {}
+            for quant in quants:
+                if not quant.product_id or not quant.lot_id:
+                    continue
+                lots_by_product.setdefault(quant.product_id.id, self.env["stock.lot"].browse())
+                lots_by_product[quant.product_id.id] |= quant.lot_id
 
-            lots = quants.mapped("lot_id")
-            if not lots:
-                continue
+            for rec in location_records:
+                lots = lots_by_product.get(rec.product_id.id, self.env["stock.lot"].browse())
+                if not lots:
+                    continue
 
-            unique_lots = lots.sorted(lambda lot: (lot.name or "", lot.id))
-            rec.lot_names = ", ".join(dict.fromkeys(unique_lots.mapped("name")))
+                unique_lots = lots.sorted(lambda lot: (lot.name or "", lot.id))
+                rec.lot_names = ", ".join(dict.fromkeys(unique_lots.mapped("name")))
 
-            expiry_dates = []
-            alert_dates = []
-            for lot in unique_lots:
-                if lot.expiration_date:
-                    expiry_dates.append(fields.Date.to_date(lot.expiration_date))
-                if lot.alert_date:
-                    alert_dates.append(fields.Date.to_date(lot.alert_date))
+                expiry_dates = []
+                alert_dates = []
+                for lot in unique_lots:
+                    if lot.expiration_date:
+                        expiry_dates.append(fields.Date.to_date(lot.expiration_date))
+                    if lot.alert_date:
+                        alert_dates.append(fields.Date.to_date(lot.alert_date))
 
-            if expiry_dates:
-                rec.nearest_expiry_date = min(expiry_dates)
-            if alert_dates:
-                rec.nearest_alert_date = min(alert_dates)
+                if expiry_dates:
+                    rec.nearest_expiry_date = min(expiry_dates)
+                if alert_dates:
+                    rec.nearest_alert_date = min(alert_dates)
 
     @api.onchange("product_id")
     def _onchange_product_id_set_unit_price(self):
@@ -214,4 +232,3 @@ class OutletStockBalance(models.Model):
                 raise ValidationError("Quantity cannot be negative.")
             if rec.unit_price < 0:
                 raise ValidationError("Unit Price cannot be negative.")
-
