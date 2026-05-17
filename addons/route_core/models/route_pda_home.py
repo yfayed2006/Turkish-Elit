@@ -441,7 +441,20 @@ class RoutePdaHome(models.TransientModel):
         return self.env["route.weekly.schedule"]
 
     def _prepare_action(self, xmlid, name=None, domain=None, context=None):
-        action = self.env.ref(xmlid).read()[0]
+        """Return an action dict without doing a heavy generic read.
+
+        Route Workspace buttons are pressed many times during a route day.
+        `ir.actions.actions._for_xml_id()` is the lightweight/cached Odoo path
+        for resolving actions by XML id and avoids materializing unnecessary
+        fields through `read()` on every PDA navigation click.
+        """
+        action = False
+        try:
+            action = self.env["ir.actions.actions"]._for_xml_id(xmlid)
+        except Exception:
+            action_ref = self.env.ref(xmlid, raise_if_not_found=False)
+            action = action_ref.read()[0] if action_ref else False
+        action = dict(action or {})
         if name:
             action["name"] = name
         if domain is not None:
