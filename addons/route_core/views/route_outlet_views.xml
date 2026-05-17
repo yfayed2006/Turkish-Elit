@@ -929,7 +929,7 @@
 </div>
 <div class="route_pda_group route_pda_outlet_stock_cards_group">
 <div class="route_pda_group_title">Product Stock Cards</div>
-<field name="stock_balance_ids" readonly="1" nolabel="1" mode="kanban" class="route_outlet_stock_balance_x2many">
+<field name="stock_balance_ids" readonly="1" nolabel="1" mode="kanban" class="route_outlet_stock_balance_x2many" options="{'no_open': True}">
 <kanban class="route_outlet_stock_inline_kanban route_pda_document_kanban" create="0" edit="0" delete="0">
 <field name="product_image_128"/>
 <field name="product_id"/>
@@ -947,7 +947,7 @@
 <field name="currency_id"/>
 <templates>
 <t t-name="card">
-<div class="o_kanban_record route_outlet_stock_product_card route_pda_document_product_card route_outlet_stock_display_only_card">
+<div class="o_kanban_record route_outlet_stock_product_card route_pda_document_product_card route_outlet_stock_display_only_card" style="pointer-events: none; cursor: default;">
 <div class="route_pda_document_product_top route_outlet_stock_product_top">
 <div class="route_pda_document_product_image_box route_outlet_stock_image_box">
 <field name="product_image_128" widget="image" class="route_pda_document_product_image route_outlet_stock_product_image" options="{'size': [128, 128], 'preview_image': 'product_image_128'}"/>
