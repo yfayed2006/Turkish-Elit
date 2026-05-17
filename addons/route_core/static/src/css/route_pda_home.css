@@ -9814,3 +9814,26 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     pointer-events: none !important;
 }
 
+
+/* ROUTECORE_FIX_2026_05_17_DOCUMENT_HTML_PRODUCT_CARDS
+   Sale Order / Refill Transfer / Return Transfer product lines are rendered as
+   readonly HTML cards so they stay visible when the browser switches from
+   desktop width to mobile width without a full Odoo view reload. */
+.route_pda_document_product_cards_html{
+    display:grid!important;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;
+    gap:12px!important;
+    padding:6px 0!important;
+    background:transparent!important;
+}
+.route_pda_document_product_html_field .o_field_html,
+.route_pda_document_product_html_field .o_readonly_modifier{
+    width:100%!important;
+}
+@media (max-width: 768px){
+    .route_pda_document_product_cards_html{
+        grid-template-columns:1fr!important;
+        gap:10px!important;
+    }
+}
+
