@@ -106,6 +106,33 @@ class OutletStockBalance(models.Model):
         readonly=True,
     )
 
+
+    stock_value = fields.Monetary(
+        string="Stock Value",
+        currency_field="currency_id",
+        compute="_compute_stock_card_metrics",
+        readonly=True,
+    )
+
+    stock_status = fields.Selection(
+        [
+            ("good", "Good"),
+            ("refill", "Needs Refill"),
+            ("zero", "Zero Stock"),
+            ("near_expiry", "Near Expiry"),
+            ("expired", "Expired"),
+        ],
+        string="Stock Status",
+        compute="_compute_stock_card_metrics",
+        readonly=True,
+    )
+
+    stock_status_label = fields.Char(
+        string="Status Label",
+        compute="_compute_stock_card_metrics",
+        readonly=True,
+    )
+
     company_id = fields.Many2one(
         "res.company",
         string="Company",
@@ -196,6 +223,29 @@ class OutletStockBalance(models.Model):
                     rec.nearest_expiry_date = min(expiry_dates)
                 if alert_dates:
                     rec.nearest_alert_date = min(alert_dates)
+
+
+    @api.depends("qty", "unit_price", "nearest_expiry_date", "nearest_alert_date")
+    def _compute_stock_card_metrics(self):
+        today = fields.Date.context_today(self)
+        labels = dict(self._fields["stock_status"].selection)
+        for rec in self:
+            qty = rec.qty or 0.0
+            rec.stock_value = qty * (rec.unit_price or 0.0)
+
+            if rec.nearest_expiry_date and rec.nearest_expiry_date < today:
+                status = "expired"
+            elif rec.nearest_alert_date and rec.nearest_alert_date <= today:
+                status = "near_expiry"
+            elif qty <= 0:
+                status = "zero"
+            elif qty <= 5:
+                status = "refill"
+            else:
+                status = "good"
+
+            rec.stock_status = status
+            rec.stock_status_label = labels.get(status, status)
 
     @api.onchange("product_id")
     def _onchange_product_id_set_unit_price(self):
