@@ -170,8 +170,3 @@ class RouteVisitEndWizard(models.TransientModel):
 
     def action_cancel(self):
         return {"type": "ir.actions.act_window_close"}
-
-        return self._get_return_action()
-
-    def action_cancel(self):
-        return {"type": "ir.actions.act_window_close"}
