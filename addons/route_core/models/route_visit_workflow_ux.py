@@ -2064,6 +2064,106 @@ class RouteVisit(models.Model):
             url = "%s&access_token=%s" % (url, token)
         return url
 
+    def _get_route_receipt_payment_plan_items(self, payments=None):
+        self.ensure_one()
+        Payment = self.env["route.visit.payment"]
+        payments = payments or Payment
+        payments = payments.filtered(lambda p: p.state == "confirmed" and ((p.amount or 0.0) > 0.0 or (p.promise_amount or 0.0) > 0.0))
+        if not payments:
+            return []
+
+        mode_labels = dict(Payment._fields["payment_mode"].selection)
+        deferred_mode_labels = dict(Payment._fields["deferred_payment_mode"].selection) if "deferred_payment_mode" in Payment._fields else {}
+        collection_labels = dict(Payment._fields["collection_type"].selection)
+        items = []
+
+        for payment in payments.sorted(key=lambda p: (p.payment_date or fields.Datetime.now(), p.id), reverse=True):
+            promise_amount = getattr(payment, "effective_promise_amount", False) or payment.promise_amount or 0.0
+            now_details = []
+            if payment.reference:
+                now_details.append({"label": _("Reference"), "value": payment.reference})
+            if payment.payment_mode == "bank" and payment.bank_name:
+                now_details.append({"label": _("Bank"), "value": payment.bank_name})
+            if payment.payment_mode == "pos" and payment.pos_terminal:
+                now_details.append({"label": _("POS Terminal"), "value": payment.pos_terminal})
+            if payment.payment_mode == "cheque":
+                if payment.cheque_number:
+                    now_details.append({"label": _("Cheque Number"), "value": payment.cheque_number})
+                if payment.bank_name:
+                    now_details.append({"label": _("Cheque Bank"), "value": payment.bank_name})
+                if payment.cheque_date:
+                    now_details.append({"label": _("Cheque Date"), "value": self._format_route_payment_date(payment.cheque_date)})
+                if payment.cheque_holder_name:
+                    now_details.append({"label": _("Cheque Holder"), "value": payment.cheque_holder_name})
+
+            deferred_details = []
+            deferred_mode = payment.deferred_payment_mode or False
+            if promise_amount:
+                if payment.promise_date:
+                    deferred_details.append({"label": _("Expected Date"), "value": self._format_route_payment_date(payment.promise_date)})
+                if deferred_mode:
+                    deferred_details.append({"label": _("Expected Mode"), "value": deferred_mode_labels.get(deferred_mode, deferred_mode)})
+                if payment.deferred_reference:
+                    deferred_details.append({"label": _("Deferred Reference"), "value": payment.deferred_reference})
+                if deferred_mode == "bank" and payment.deferred_bank_name:
+                    deferred_details.append({"label": _("Expected Bank"), "value": payment.deferred_bank_name})
+                if deferred_mode == "pos" and payment.deferred_pos_terminal:
+                    deferred_details.append({"label": _("Expected POS"), "value": payment.deferred_pos_terminal})
+                if deferred_mode == "cheque":
+                    if payment.deferred_cheque_number:
+                        deferred_details.append({"label": _("Deferred Cheque"), "value": payment.deferred_cheque_number})
+                    if payment.deferred_bank_name:
+                        deferred_details.append({"label": _("Deferred Cheque Bank"), "value": payment.deferred_bank_name})
+                    if payment.deferred_cheque_date:
+                        deferred_details.append({"label": _("Deferred Cheque Date"), "value": self._format_route_payment_date(payment.deferred_cheque_date)})
+                    if payment.deferred_cheque_holder_name:
+                        deferred_details.append({"label": _("Deferred Cheque Holder"), "value": payment.deferred_cheque_holder_name})
+
+            clean_note = payment._get_clean_note_text() if hasattr(payment, "_get_clean_note_text") else (payment.note or "")
+            items.append({
+                "payment": payment,
+                "collection_type_label": collection_labels.get(payment.collection_type, payment.collection_type or ""),
+                "now_mode_label": mode_labels.get(payment.payment_mode, payment.payment_mode or ""),
+                "now_amount": payment.amount or 0.0,
+                "now_amount_label": self._format_route_currency_amount(payment.amount or 0.0),
+                "now_date_label": self._format_route_payment_datetime(payment.payment_date),
+                "now_details": now_details,
+                "deferred_amount": promise_amount,
+                "deferred_amount_label": self._format_route_currency_amount(promise_amount),
+                "deferred_mode_label": deferred_mode_labels.get(deferred_mode, deferred_mode or ""),
+                "deferred_date_label": self._format_route_payment_date(payment.promise_date) if payment.promise_date else "",
+                "deferred_details": deferred_details,
+                "note": clean_note,
+            })
+        return items
+
+    def _build_route_whatsapp_collection_plan_lines(self, payments=None):
+        self.ensure_one()
+        plan_items = self._get_route_receipt_payment_plan_items(payments)
+        if not plan_items:
+            return []
+
+        lines = [_('Collection Plan')]
+        for item in plan_items:
+            lines.append(_('Collected Now: %(amount)s | %(mode)s | %(date)s') % {
+                'amount': item.get('now_amount_label') or '-',
+                'mode': item.get('now_mode_label') or '-',
+                'date': item.get('now_date_label') or '-',
+            })
+            for detail in item.get('now_details') or []:
+                lines.append(_('%(label)s: %(value)s') % detail)
+            if item.get('deferred_amount'):
+                lines.append(_('Deferred Balance: %(amount)s | Due: %(date)s | Expected Mode: %(mode)s') % {
+                    'amount': item.get('deferred_amount_label') or '-',
+                    'date': item.get('deferred_date_label') or '-',
+                    'mode': item.get('deferred_mode_label') or '-',
+                })
+                for detail in item.get('deferred_details') or []:
+                    if detail.get('label') in (_('Expected Date'), _('Expected Mode')):
+                        continue
+                    lines.append(_('%(label)s: %(value)s') % detail)
+        return lines
+
     def _build_consignment_whatsapp_message(self, pdf_url=False):
         self.ensure_one()
         summary = self._get_consignment_receipt_summary()
@@ -2084,7 +2184,7 @@ class RouteVisit(models.Model):
             _("Gross Sale: %.2f %s") % (gross_sale, currency_code),
             _("Returns: %.2f %s") % (returned_value, currency_code),
             _("Gross After Returns: %.2f %s") % (gross_after_returns, currency_code),
-            _("Category Commission: %.2f %s") % (commission_amount, currency_code),
+            _("Applied Commission: %.2f %s") % (commission_amount, currency_code),
             _("Net Payable: %.2f %s") % (summary.get("current_visit_net", 0.0), currency_code),
             _("Total Outlet Due: %.2f %s") % (summary.get("total_outlet_due", summary.get("current_due", 0.0)), currency_code),
             _("Collected Now: %.2f %s") % (summary.get("settled_amount", 0.0), currency_code),
@@ -2099,7 +2199,7 @@ class RouteVisit(models.Model):
         elif (summary.get("remaining_amount") or 0.0) <= 0.0:
             lines.append(_("Settlement Status: Paid in full"))
 
-        payment_lines = self._build_whatsapp_payment_method_lines(self._get_consignment_receipt_payments())
+        payment_lines = self._build_route_whatsapp_collection_plan_lines(self._get_consignment_receipt_payments())
         if payment_lines:
             lines += [""] + payment_lines
 
