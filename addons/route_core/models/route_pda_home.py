@@ -764,9 +764,13 @@ class RoutePdaHome(models.TransientModel):
                 "delete": 0,
                 default_search_flag: 1,
                 "route_workspace_back": True,
+                "group_by": False,
+                "group_by_no_leaf": False,
             },
         )
-        action["limit"] = 80
+        # Vehicle/Warehouse stock are quick mobile lookup pages.  Keep the first
+        # page light; search and pagination still access the full stock set.
+        action["limit"] = 40
         return action
 
     def _reset_dashboard_default_values(self):
@@ -2189,7 +2193,7 @@ class RoutePdaHome(models.TransientModel):
             "search_view_id": search_view.id if search_view else False,
             "domain": [("qty", ">", 0)],
             "target": "current",
-            "limit": 80,
+            "limit": 40,
             "context": {
                 "create": 0,
                 "edit": 0,
@@ -2270,7 +2274,7 @@ class RoutePdaHome(models.TransientModel):
             name="Direct Sale Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "in", ["direct_stop", "direct_sale_order"])],
         )
-        action["limit"] = 80
+        action["limit"] = 40
         return action
 
     def action_open_payments(self):
@@ -2280,7 +2284,7 @@ class RoutePdaHome(models.TransientModel):
             name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
-        action["limit"] = 80
+        action["limit"] = 40
         return action
 
     def action_open_products(self):
@@ -2331,9 +2335,13 @@ class RoutePdaHome(models.TransientModel):
             "edit": 0,
             "delete": 0,
             "search_default_filter_to_sell": 1,
+            "group_by": False,
+            "group_by_no_leaf": False,
         })
         action["context"] = context
-        action["limit"] = 80
+        # Product Catalog can be large.  Keep the initial mobile load smaller;
+        # search still works on the full product table.
+        action["limit"] = 40
         return action
 
     def action_open_vehicle_products(self):
@@ -2534,7 +2542,9 @@ class RoutePdaHome(models.TransientModel):
             action["view_mode"] = "kanban,list,form"
         if search_view:
             action["search_view_id"] = search_view.id
-        action["limit"] = 80
+        # Outlet stock cards include product images and stock value tiles; use a
+        # smaller first page for faster mobile opening.
+        action["limit"] = 40
         return action
 
     def action_open_direct_sale_customers(self):
