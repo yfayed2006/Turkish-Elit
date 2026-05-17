@@ -1,5 +1,5 @@
 <odoo>
-<!--                                     Admin / all payments                                     -->
+<!--                                      Admin / all payments                                      -->
 <record id="view_route_visit_payment_list" model="ir.ui.view">
 <field name="name">route.visit.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -43,7 +43,7 @@
 </list>
 </field>
 </record>
-<!--                                     Tailored visit list                                     -->
+<!--                                      Tailored visit list                                      -->
 <record id="view_route_visit_collection_list" model="ir.ui.view">
 <field name="name">route.visit.collection.list</field>
 <field name="model">route.visit.payment</field>
@@ -72,7 +72,7 @@
 </list>
 </field>
 </record>
-<!--                                     Tailored direct sale list                                     -->
+<!--                                      Tailored direct sale list                                      -->
 <record id="view_route_direct_sale_payment_list" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.list</field>
 <field name="model">route.visit.payment</field>
@@ -680,7 +680,7 @@
 </form>
 </field>
 </record>
-<!--                                     Admin / all payments search                                     -->
+<!--                                      Admin / all payments search                                      -->
 <record id="view_route_visit_payment_search" model="ir.ui.view">
 <field name="name">route.visit.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -767,7 +767,179 @@
 </search>
 </field>
 </record>
-<!--                                     Visit collections search                                     -->
+<!--                                      Fast visit collections cards for PDA / workspace                                      -->
+<record id="view_route_visit_collection_fast_kanban" model="ir.ui.view">
+<field name="name">route.visit.collection.fast.kanban</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_payment_kanban route_pda_payment_kanban_fast" create="0" edit="0" delete="0">
+<field name="payment_date"/>
+<field name="payment_business_flow"/>
+<field name="payment_business_flow_short"/>
+<field name="payment_mode"/>
+<field name="collection_type"/>
+<field name="collection_type_short"/>
+<field name="source_document_ref"/>
+<field name="settlement_document_ref"/>
+<field name="outlet_id"/>
+<field name="area_id"/>
+<field name="state"/>
+<field name="amount"/>
+<field name="remaining_due_amount"/>
+<field name="effective_promise_amount"/>
+<field name="promise_status"/>
+<field name="promise_date"/>
+<field name="cheque_number"/>
+<field name="bank_name"/>
+<field name="cheque_date"/>
+<templates>
+<t t-name="card">
+<div class="oe_kanban_global_click o_kanban_record route_pda_payment_card route_pda_payment_card_collection route_pda_payment_card_fast">
+<div class="route_pda_payment_head">
+<div>
+<div class="route_pda_payment_title">
+<t t-if="record.source_document_ref.raw_value">
+<span>Source: </span>
+<t t-esc="record.source_document_ref.value"/>
+</t>
+<t t-if="!record.source_document_ref.raw_value">Collection</t>
+</div>
+<div class="route_pda_payment_subtitle" t-if="record.outlet_id.raw_value or record.area_id.raw_value">
+<t t-if="record.outlet_id.raw_value" t-esc="record.outlet_id.value"/>
+<t t-if="record.outlet_id.raw_value and record.area_id.raw_value"> • </t>
+<t t-if="record.area_id.raw_value" t-esc="record.area_id.value"/>
+</div>
+</div>
+<div class="route_pda_payment_date">
+<field name="payment_date"/>
+</div>
+</div>
+<div class="route_pda_payment_badges route_pda_payment_badges_primary">
+<span class="route_pda_payment_badge route_pda_payment_badge_flow">
+<t t-esc="record.payment_business_flow_short.value or record.payment_business_flow.value or ''"/>
+</span>
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_mode route_pda_payment_mode_#{record.payment_mode.raw_value or 'none'}">
+<t t-esc="record.payment_mode.value or ''"/>
+</span>
+<span class="route_pda_payment_badge route_pda_payment_badge_collection">
+<t t-esc="record.collection_type_short.value or record.collection_type.value or ''"/>
+</span>
+<t t-if="record.promise_status.raw_value">
+<span t-attf-class="route_pda_payment_badge route_pda_payment_badge_status route_pda_payment_status_#{record.promise_status.raw_value or 'none'}">
+<t t-esc="record.promise_status.value"/>
+</span>
+</t>
+<t t-if="record.state.raw_value">
+<span class="route_pda_payment_badge route_pda_payment_footer_token_subtle">
+<t t-esc="record.state.value"/>
+</span>
+</t>
+</div>
+<div class="route_pda_payment_metrics">
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Collected</span>
+<span class="route_pda_payment_metric_value">
+<field name="amount"/>
+</span>
+</div>
+<div class="route_pda_payment_metric">
+<span class="route_pda_payment_metric_label">Uncovered Due</span>
+<span class="route_pda_payment_metric_value">
+<field name="remaining_due_amount"/>
+</span>
+</div>
+<t t-if="record.effective_promise_amount.raw_value">
+<div class="route_pda_payment_metric route_pda_payment_metric_single route_pda_payment_metric_promise">
+<span class="route_pda_payment_metric_label">Promise / Deferred</span>
+<span class="route_pda_payment_metric_value">
+<field name="effective_promise_amount"/>
+</span>
+</div>
+</t>
+</div>
+<div class="route_pda_payment_footer" t-if="record.settlement_document_ref.raw_value or record.promise_date.raw_value or record.cheque_number.raw_value or record.bank_name.raw_value or record.cheque_date.raw_value">
+<t t-if="record.settlement_document_ref.raw_value and record.settlement_document_ref.raw_value != record.source_document_ref.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Settlement</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.settlement_document_ref.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_number.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Cheque No.</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.cheque_number.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.bank_name.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token">
+<span class="route_pda_payment_footer_label">Bank</span>
+<span class="route_pda_payment_footer_value">
+<t t-esc="record.bank_name.value"/>
+</span>
+</div>
+</t>
+<t t-if="record.payment_mode.raw_value == 'cheque' and record.cheque_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Cheque Date</span>
+<span class="route_pda_payment_footer_value">
+<field name="cheque_date"/>
+</span>
+</div>
+</t>
+<t t-if="record.promise_date.raw_value">
+<div class="route_pda_payment_footer_item route_pda_payment_footer_token route_pda_payment_footer_token_subtle">
+<span class="route_pda_payment_footer_label">Promise On</span>
+<span class="route_pda_payment_footer_value">
+<field name="promise_date"/>
+</span>
+</div>
+</t>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
+<record id="view_route_visit_collection_fast_search" model="ir.ui.view">
+<field name="name">route.visit.collection.fast.search</field>
+<field name="model">route.visit.payment</field>
+<field name="arch" type="xml">
+<search string="Fast Collections">
+<field name="source_document_ref" string="Source Document"/>
+<field name="settlement_document_ref" string="Settlement Visit"/>
+<field name="outlet_id"/>
+<field name="payment_mode"/>
+<field name="cheque_number" string="Cheque Number"/>
+<field name="bank_name" string="Bank"/>
+<filter name="filter_my_payments" string="My Collections" domain="[('salesperson_id', '=', uid)]"/>
+<filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+<separator/>
+<filter name="filter_collection_today" string="Today" domain="[('collection_time_bucket', '=', 'today')]"/>
+<filter name="filter_collection_last_7_days" string="Last 7 Days" domain="[('collection_time_bucket', '=', 'last_7_days')]"/>
+<filter name="filter_collection_last_30_days" string="Last 30 Days" domain="[('collection_time_bucket', '=', 'last_30_days')]"/>
+<filter name="filter_collection_older" string="Older" domain="[('collection_time_bucket', '=', 'older')]"/>
+<separator/>
+<filter name="filter_cash" string="Cash" domain="[('payment_mode', '=', 'cash')]"/>
+<filter name="filter_bank" string="Bank Transfer" domain="[('payment_mode', '=', 'bank')]"/>
+<filter name="filter_pos" string="POS" domain="[('payment_mode', '=', 'pos')]"/>
+<filter name="filter_cheque" string="Cheque" domain="[('payment_mode', '=', 'cheque')]"/>
+<separator/>
+<filter name="filter_remaining_due" string="Remaining Due" domain="[('collection_due_bucket', '=', 'remaining_due')]"/>
+<filter name="filter_has_open_promise" string="Open Promise" domain="[('collection_promise_bucket', 'in', ['open', 'due_today', 'overdue'])]"/>
+<filter name="filter_overdue_promise" string="Overdue Promise" domain="[('collection_promise_bucket', '=', 'overdue')]"/>
+<separator/>
+<filter name="group_by_time" string="Collection Time" domain="[]" context="{'group_by': 'collection_time_bucket'}"/>
+<filter name="group_by_payment_mode" string="Payment Mode" domain="[]" context="{'group_by': 'payment_mode'}"/>
+<filter name="group_by_outlet" string="Outlet" domain="[]" context="{'group_by': 'outlet_id'}"/>
+</search>
+</field>
+</record>
+<!--                                      Visit collections search                                      -->
 <record id="view_route_visit_collection_search" model="ir.ui.view">
 <field name="name">route.visit.collection.search</field>
 <field name="model">route.visit.payment</field>
@@ -856,7 +1028,7 @@
 </search>
 </field>
 </record>
-<!--                                     Direct sale payments search                                     -->
+<!--                                      Direct sale payments search                                      -->
 <record id="view_route_direct_sale_payment_search" model="ir.ui.view">
 <field name="name">route.direct.sale.payment.search</field>
 <field name="model">route.visit.payment</field>
@@ -1343,4 +1515,17 @@
 <field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'default_source_type': 'direct_sale'}</field>
 </record>
 <menuitem id="menu_route_visit_payment" name="All Payments" parent="menu_route_visit_root" action="action_route_visit_payment" sequence="61"/>
+<!--  Fast salesperson collections action is updated here after the fast kanban/search views are defined.
+         route_role_actions_menus.xml is loaded earlier in some databases, so it must not reference
+         these view XML IDs directly during its own load step.  -->
+<record id="action_route_visit_collection_salesperson" model="ir.actions.act_window">
+<field name="name">My Visit Collections</field>
+<field name="res_model">route.visit.payment</field>
+<field name="view_mode">kanban,list,form</field>
+<field name="view_id" ref="route_core.view_route_visit_collection_fast_kanban"/>
+<field name="search_view_id" ref="route_core.view_route_visit_collection_fast_search"/>
+<field name="domain">[("salesperson_id", "=", uid), ("state", "=", "confirmed")]</field>
+<field name="context">{'search_default_filter_my_payments': 1, 'search_default_filter_confirmed': 1, 'create': 0, 'edit': 0, 'delete': 0, 'route_fast_collections': True}</field>
+<field name="limit">20</field>
+</record>
 </odoo>
