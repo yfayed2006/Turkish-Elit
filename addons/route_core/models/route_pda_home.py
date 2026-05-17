@@ -2158,9 +2158,9 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_outlets(self):
         self.ensure_one()
-        # Legacy fallback used by older workspace buttons. Keep it aligned with All Outlets.
-        return self._prepare_outlet_workspace_action(
-            name="All Outlets",
+        # Legacy fallback used by older workspace buttons. Keep it aligned with Existing Outlets.
+        return self._prepare_outlet_fast_workspace_action(
+            name="Existing Outlets",
             domain=[("active", "=", True)],
         )
 
@@ -2426,6 +2426,50 @@ class RoutePdaHome(models.TransientModel):
         action["limit"] = 80
         return action
 
+    def _prepare_outlet_fast_workspace_action(self, *, name, domain, context=None):
+        """Open outlet lists with lightweight record views.
+
+        The regular PDA outlet kanban/list includes live financial and visit
+        counters. Those are useful in drill-down screens, but expensive for the
+        high-frequency Existing Outlets button.  This helper keeps navigation
+        fast by reading only identity/contact/location fields; the full outlet
+        profile still opens with all details after selecting a record.
+        """
+        self.ensure_one()
+        action = self._prepare_action(
+            "route_core.action_route_outlet",
+            name=name,
+            domain=domain,
+            context={
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+                "route_fast_outlet_list": True,
+                "route_hide_near_expiry": True,
+                "group_by": False,
+                "group_by_no_leaf": False,
+                **(context or {}),
+            },
+        )
+        kanban_view = self.env.ref("route_core.view_route_outlet_pda_fast_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_outlet_pda_fast_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_outlet_pda_form", raise_if_not_found=False)
+        search_view = self.env.ref("route_core.view_route_outlet_pda_search", raise_if_not_found=False)
+        views = []
+        if kanban_view:
+            views.append((kanban_view.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = "kanban,list,form"
+        if search_view:
+            action["search_view_id"] = search_view.id
+        action["limit"] = 40
+        return action
+
     def action_open_consignment_outlet_stock(self):
         self.ensure_one()
         # Do not resync every consignment outlet on button click.  Stock balance
@@ -2482,8 +2526,12 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_all_outlets(self):
         self.ensure_one()
-        return self._prepare_outlet_workspace_action(
-            name="All Outlets",
+        # Existing Outlets is opened many times from the Customer Profiles center.
+        # Use lightweight views that do not read heavy financial/visit counters for
+        # every outlet row; the full profile still opens when the salesperson picks
+        # a specific outlet.
+        return self._prepare_outlet_fast_workspace_action(
+            name="Existing Outlets",
             domain=[("active", "=", True)],
         )
 
@@ -2621,4 +2669,5 @@ class RoutePdaHome(models.TransientModel):
             "limit": 80,
         })
         return action
+
 
