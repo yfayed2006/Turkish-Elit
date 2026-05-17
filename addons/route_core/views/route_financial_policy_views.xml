@@ -1,7 +1,7 @@
 <odoo>
-<!--     Dedicated management setup views for outlets.
+<!--      Dedicated management setup views for outlets.
       This action is the unified setup screen for creating and maintaining outlets:
-      identity, customer, operation mode, pricing/commission, consignment stock, and location.    -->
+      identity, customer, operation mode, pricing/commission, consignment stock, and location.     -->
 <record id="view_route_outlet_management_config_search" model="ir.ui.view">
 <field name="name">route.outlet.management.config.search</field>
 <field name="model">route.outlet</field>
@@ -251,12 +251,12 @@
 <field name="arch" type="xml">
 <xpath expr="//field[@name='line_ids']//field[@name='sold_amount']" position="after">
 <field name="route_commission_rate" string="Commission %" readonly="1" optional="hide"/>
-<field name="route_commission_amount" string="Commission" readonly="1" optional="hide"/>
+<field name="route_commission_amount" string="Applied Commission" readonly="1" optional="hide"/>
 <field name="route_net_payable_amount" string="Net Payable" readonly="1" optional="hide"/>
 </xpath>
 <xpath expr="//field[@name='consignment_current_visit_return_amount']/ancestor::div[contains(@class, 'route_mobile_info_card')][1]" position="after">
 <div class="route_mobile_info_card" invisible="visit_execution_mode == 'direct_sales' or consignment_commission_amount == 0">
-<div class="route_mobile_info_label">Commission</div>
+<div class="route_mobile_info_label">Applied Commission</div>
 <div class="route_mobile_info_value">
 <field name="consignment_commission_amount" readonly="1" nolabel="1"/>
 </div>
@@ -271,7 +271,7 @@
 <field name="arch" type="xml">
 <xpath expr="//field[@name='line_ids']//field[@name='sold_amount']" position="after">
 <field name="route_commission_rate" string="Commission %" readonly="1" optional="hide"/>
-<field name="route_commission_amount" string="Commission" readonly="1" optional="hide"/>
+<field name="route_commission_amount" string="Applied Commission" readonly="1" optional="hide"/>
 <field name="route_net_payable_amount" string="Net Payable" readonly="1" optional="hide"/>
 </xpath>
 </field>
