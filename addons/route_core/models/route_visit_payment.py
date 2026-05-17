@@ -239,6 +239,24 @@ class RouteVisitPayment(models.Model):
 
     due_date = fields.Date(string="Deferred Due Date")
 
+    deferred_payment_mode = fields.Selection(
+        [
+            ("cash", "Cash"),
+            ("bank", "Bank Transfer"),
+            ("pos", "POS"),
+            ("cheque", "Cheque"),
+        ],
+        string="Expected Deferred Payment Mode",
+        help="Expected method for collecting the carried-forward balance on a partial payment.",
+    )
+    deferred_reference = fields.Char(string="Deferred Reference")
+    deferred_bank_name = fields.Char(string="Deferred Bank Name")
+    deferred_pos_terminal = fields.Char(string="Deferred POS Terminal")
+    deferred_cheque_number = fields.Char(string="Deferred Cheque Number")
+    deferred_cheque_date = fields.Date(string="Deferred Cheque Date")
+    deferred_cheque_holder_name = fields.Char(string="Deferred Cheque Holder")
+    deferred_cheque_note = fields.Text(string="Deferred Cheque Details")
+
     reference = fields.Char(string="Reference")
     bank_name = fields.Char(string="Bank Name")
     pos_terminal = fields.Char(string="POS Terminal")
@@ -587,6 +605,20 @@ class RouteVisitPayment(models.Model):
             if rec.payment_mode == "cheque" and rec.cheque_number and not rec.reference:
                 rec.reference = rec.cheque_number
 
+    def _validate_deferred_collection_plan(self):
+        self.ensure_one()
+        if self.collection_type != "partial":
+            return
+        if not self.deferred_payment_mode:
+            return
+        if self.deferred_payment_mode == "cheque":
+            if not self.deferred_cheque_number:
+                raise ValidationError(_("Please enter the deferred cheque number."))
+            if not self.deferred_bank_name:
+                raise ValidationError(_("Please enter the deferred cheque bank name."))
+            if not self.deferred_cheque_date:
+                raise ValidationError(_("Please enter the deferred cheque date."))
+
     def _validate_cheque_details(self):
         self.ensure_one()
         if self.payment_mode != "cheque":
@@ -659,6 +691,7 @@ class RouteVisitPayment(models.Model):
             raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
 
         self._validate_cheque_details()
+        self._validate_deferred_collection_plan()
 
         # Direct-stop settlements can be split across older unpaid visits plus the current stop.
         # The settlement wizard already validates the total collection against the direct-stop
@@ -954,7 +987,23 @@ class RouteVisitPayment(models.Model):
                 if rec.sale_order_id.route_order_mode != "direct_sale":
                     raise ValidationError(_("Only Direct Sale orders can be used here."))
 
-    @api.constrains("amount", "collection_type", "due_date", "promise_date", "promise_amount", "visit_id", "sale_order_id", "payment_mode", "bank_name", "cheque_number", "cheque_date")
+    @api.constrains(
+        "amount",
+        "collection_type",
+        "due_date",
+        "promise_date",
+        "promise_amount",
+        "visit_id",
+        "sale_order_id",
+        "payment_mode",
+        "bank_name",
+        "cheque_number",
+        "cheque_date",
+        "deferred_payment_mode",
+        "deferred_bank_name",
+        "deferred_cheque_number",
+        "deferred_cheque_date",
+    )
     def _check_payment_rules(self):
         for rec in self:
             if not rec._get_target_model():
@@ -977,6 +1026,7 @@ class RouteVisitPayment(models.Model):
                 raise ValidationError(_("Deferred payment mode is only allowed for defer-to-date or next-visit scenarios."))
 
             rec._validate_cheque_details()
+            rec._validate_deferred_collection_plan()
 
             if rec.collection_type == "full":
                 if due <= 0:
