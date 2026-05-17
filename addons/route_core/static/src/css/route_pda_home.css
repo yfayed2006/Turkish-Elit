@@ -9804,3 +9804,13 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     }
 }
 
+/* Route Core: Outlet Profile stock cards are display-only in PDA/mobile.
+   Prevent Odoo x2many kanban default open-popup behaviour while keeping scroll natural. */
+.route_outlet_stock_display_only_card {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+.route_outlet_stock_display_only_card * {
+    pointer-events: none !important;
+}
+
