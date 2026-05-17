@@ -919,31 +919,72 @@ class RoutePdaHome(models.TransientModel):
         else:
             self.today_visits_empty_message = _("No visits are scheduled for today, and no daily plans are available yet.")
 
-        cash_today_payments = Payment.search([
+        def _payment_sum(domain, field_name="amount"):
+            groups = Payment.read_group(domain, [field_name], [], lazy=False)
+            return (groups[0].get(field_name, 0.0) if groups else 0.0) or 0.0
+
+        cash_today_domain = [
             ("salesperson_id", "=", user.id),
             ("payment_date", ">=", start_dt),
             ("payment_date", "<", end_dt),
             ("state", "=", "confirmed"),
             ("payment_mode", "=", "cash"),
-        ])
-        cash_with_salesperson = cash_today_payments.filtered(
-            lambda p: (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
-        )
-        self.cash_today_amount = sum((p.amount or 0.0) for p in cash_with_salesperson)
+        ]
+        if "cash_custody_state" in Payment._fields:
+            cash_today_domain += [
+                "|",
+                ("cash_custody_state", "=", False),
+                ("cash_custody_state", "=", "with_salesperson"),
+            ]
+        self.cash_today_amount = _payment_sum(cash_today_domain)
 
-        primary_payments = Payment.browse()
+        # My Custody is visible on the home card, so avoid browsing all primary
+        # payment records and triggering card-summary computes on every home load.
+        # Cash is summed from the real cash lines; cheque/electronic counts use
+        # the existing primary-id SQL helper so grouped cheque and Bank/POS cards
+        # still count as the user sees them in My Custody.
+        cash_custody_domain = [
+            ("salesperson_id", "=", user.id),
+            ("state", "=", "confirmed"),
+            ("payment_mode", "=", "cash"),
+        ]
+        if "cash_custody_state" in Payment._fields:
+            cash_custody_domain += [
+                "|",
+                ("cash_custody_state", "=", False),
+                ("cash_custody_state", "=", "with_salesperson"),
+            ]
+        self.custody_cash_amount = _payment_sum(cash_custody_domain)
+
+        primary_ids = []
         if hasattr(Payment, "_route_custody_primary_ids_sql"):
-            primary_payments = Payment.browse(Payment._route_custody_primary_ids_sql(
-                custody_states=("with_salesperson", "handed_to_accounting"),
+            primary_ids = Payment._route_custody_primary_ids_sql(
+                custody_states=("with_salesperson",),
                 salesperson_id=user.id,
-            )).exists()
-        custody_cash = primary_payments.filtered(lambda p: p.payment_mode == "cash")
-        custody_cheques = primary_payments.filtered(lambda p: p.payment_mode == "cheque")
-        custody_electronic = primary_payments.filtered(lambda p: p.payment_mode in ("bank", "pos"))
-        self.custody_cash_amount = sum((getattr(p, "cash_custody_total_amount", 0.0) or p.amount or 0.0) for p in custody_cash)
-        self.custody_cheque_count = len(custody_cheques)
-        self.custody_electronic_amount = sum((p.amount or 0.0) for p in custody_electronic)
-        self.custody_electronic_count = len(custody_electronic)
+            )
+
+        self.custody_cheque_count = 0
+        self.custody_electronic_amount = 0.0
+        self.custody_electronic_count = 0
+        if primary_ids:
+            primary_domain = [("id", "in", primary_ids), ("salesperson_id", "=", user.id), ("state", "=", "confirmed")]
+            grouped = Payment.read_group(
+                primary_domain + [("payment_mode", "in", ["cheque", "bank", "pos"])],
+                ["amount", "payment_mode"],
+                ["payment_mode"],
+                lazy=False,
+            )
+            for group in grouped:
+                mode_value = group.get("payment_mode")
+                mode = mode_value[0] if isinstance(mode_value, (list, tuple)) else mode_value
+                count = group.get("__count", 0) or 0
+                amount = group.get("amount", 0.0) or 0.0
+                if mode == "cheque":
+                    self.custody_cheque_count = count
+                elif mode in ("bank", "pos"):
+                    self.custody_electronic_count += count
+                    self.custody_electronic_amount += amount
+
         self.custody_summary_label = _("Cash: %(cash)s • Cheques: %(cheques)s • Bank/POS: %(electronic)s") % {
             "cash": self._format_workspace_money(self.custody_cash_amount),
             "cheques": self.custody_cheque_count,
@@ -2160,7 +2201,7 @@ class RoutePdaHome(models.TransientModel):
         primary_ids = []
         if hasattr(Payment, "_route_custody_primary_ids_sql"):
             primary_ids = Payment._route_custody_primary_ids_sql(
-                custody_states=("with_salesperson", "handed_to_accounting"),
+                custody_states=("with_salesperson",),
                 salesperson_id=self.env.user.id,
             )
         action = self._prepare_action(
@@ -2171,7 +2212,6 @@ class RoutePdaHome(models.TransientModel):
                 ("salesperson_id", "=", self.env.user.id),
                 ("state", "=", "confirmed"),
                 ("payment_mode", "in", ["cash", "cheque", "bank", "pos"]),
-                ("route_custody_with_salesperson_visible", "=", True),
             ],
             context={
                 "create": 0,
