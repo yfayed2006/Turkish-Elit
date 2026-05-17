@@ -1093,9 +1093,12 @@ class RouteOutlet(models.Model):
                 product = balance.product_id
                 product_name = html.escape(product.display_name or "-")
                 barcode = html.escape(balance.barcode or "")
-                category = html.escape(balance.product_categ_id.display_name or "")
-                lot_names = html.escape(balance.lot_names or "")
-                status_label = html.escape(balance.stock_status_label or "")
+                # Keep values raw here and let _route_stock_html_badge escape once.
+                # Escaping twice makes labels such as "Dragees & Candies" appear as
+                # "Dragees &amp; Candies" in the mobile outlet stock cards.
+                category = balance.product_categ_id.display_name or ""
+                lot_names = balance.lot_names or ""
+                status_label = balance.stock_status_label or ""
                 image_src = (
                     f"/web/image/product.product/{product.id}/image_128"
                     if product
