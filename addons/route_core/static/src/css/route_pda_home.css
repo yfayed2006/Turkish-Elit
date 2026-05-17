@@ -9702,3 +9702,105 @@ html[dir="rtl"] .route_pda_collect_payment_sheet .route_pda_split_payment_lines 
     .route_first_consignment_lines_x2many table.o_list_table tbody tr.o_data_row > td[data-tooltip="Estimated Value"]::before { content: "Estimated Value" !important; }
 }
 
+/* ROUTECORE_FIX_2026_05_17_OUTLET_PROFILE_STOCK_CARDS
+   Lightweight Outlet Profile stock cards using existing outlet.stock.balance rows
+   and product image_128 only. No extra heavy image or per-card search is needed. */
+.route_pda_outlet_stock_page .route_pda_outlet_stock_snapshot_group,
+.route_pda_outlet_stock_page .route_pda_outlet_stock_cards_group {
+    margin-top: 14px !important;
+}
+
+.route_outlet_stock_summary_grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.route_outlet_stock_summary_card {
+    min-height: 78px !important;
+}
+
+.route_outlet_stock_value_card,
+.route_outlet_stock_attention_card {
+    background: #f8fbff !important;
+    border-color: #bfdbfe !important;
+}
+
+.route_outlet_stock_balance_x2many .o_kanban_renderer,
+.route_outlet_stock_inline_kanban .o_kanban_renderer {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 8px 0 !important;
+    background: transparent !important;
+}
+
+.route_outlet_stock_product_card {
+    min-height: 100% !important;
+}
+
+.route_outlet_stock_product_card .route_pda_document_product_metric_total strong,
+.route_outlet_stock_value_card .route_pda_info_value,
+.route_outlet_stock_attention_card .route_pda_info_value {
+    color: #0f766e !important;
+}
+
+.route_outlet_stock_status_badge {
+    background: #ecfeff !important;
+    border-color: #99f6e4 !important;
+    color: #0f766e !important;
+}
+
+.route_outlet_stock_product_title .o_field_many2one,
+.route_outlet_stock_product_title a {
+    color: #0f172a !important;
+    font-weight: 900 !important;
+    text-decoration: none !important;
+}
+
+.route_outlet_stock_product_grid .route_pda_document_product_metric strong .o_field_widget,
+.route_outlet_stock_product_grid .route_pda_document_product_metric strong span,
+.route_outlet_stock_product_grid .route_pda_document_product_metric strong {
+    font-size: 13px !important;
+    font-weight: 850 !important;
+}
+
+@media (max-width: 768px) {
+    .route_outlet_stock_summary_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    .route_outlet_stock_summary_card {
+        min-height: 74px !important;
+        padding: 11px !important;
+    }
+
+    .route_outlet_stock_balance_x2many .o_kanban_renderer,
+    .route_outlet_stock_inline_kanban .o_kanban_renderer {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        padding: 6px 0 !important;
+    }
+
+    .route_outlet_stock_product_card {
+        border-radius: 18px !important;
+        padding: 12px !important;
+    }
+
+    .route_outlet_stock_product_top {
+        align-items: center !important;
+    }
+
+    .route_outlet_stock_image_box,
+    .route_outlet_stock_product_image img {
+        width: 64px !important;
+        height: 64px !important;
+        flex-basis: 64px !important;
+    }
+
+    .route_outlet_stock_product_grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
