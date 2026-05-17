@@ -419,7 +419,16 @@ class RouteVisitPayment(models.Model):
     def _route_clean_plain_text(self, value):
         if not value:
             return ""
-        text = unescape(str(value))
+        text = str(value)
+        # Notes may be saved as literal HTML, escaped HTML, or double-escaped HTML
+        # depending on whether they came from the wizard, receipt text, or old tests.
+        # Unescape a few times before stripping tags so Completed Visit Summary never
+        # shows raw <br/> / &lt;br/&gt; text inside payment cards.
+        for _index in range(3):
+            unescaped = unescape(text)
+            if unescaped == text:
+                break
+            text = unescaped
         text = re.sub(r"<\s*br\s*/?\s*>", "\n", text, flags=re.IGNORECASE)
         text = re.sub(r"</\s*(div|p|li|tr|h[1-6])\s*>", "\n", text, flags=re.IGNORECASE)
         text = re.sub(r"<[^>]+>", "", text)
