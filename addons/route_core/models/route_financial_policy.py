@@ -272,7 +272,7 @@ class RouteVisitLine(models.Model):
         store=False,
     )
     route_commission_amount = fields.Monetary(
-        string="Commission Amount",
+        string="Applied Commission",
         currency_field="currency_id",
         compute="_compute_route_financial_amounts",
         compute_sudo=True,
@@ -331,7 +331,7 @@ class RouteVisit(models.Model):
     _inherit = "route.visit"
 
     consignment_commission_amount = fields.Monetary(
-        string="Commission Amount",
+        string="Applied Commission",
         currency_field="currency_id",
         compute="_compute_route_consignment_policy_totals",
         compute_sudo=True,
@@ -371,21 +371,46 @@ class RouteVisit(models.Model):
         store=False,
     )
 
+    def _get_route_line_applied_commission_amount(self, line):
+        """Return the commission amount actually used in the payable formula.
+
+        ``route_commission_amount`` is the rule-based commission before some
+        return/capping situations.  The amount the accountant needs to audit is
+        the applied commission that makes this formula true:
+
+            Net Payable = Sold Value - Returns - Applied Commission
+
+        Keeping this helper central prevents the receipt, WhatsApp message,
+        payment popup, and category breakdown from showing inconsistent totals.
+        """
+        sold_value = line.sold_amount or 0.0
+        return_value = line.return_amount or 0.0
+        gross_after_returns = max(sold_value - return_value, 0.0)
+        net_payable = line.route_net_payable_amount or 0.0
+        applied = max(gross_after_returns - net_payable, 0.0)
+        currency = line.currency_id or self.currency_id or self.env.company.currency_id
+        return currency.round(applied) if currency else applied
+
     def _get_route_consignment_financial_amounts(self):
         self.ensure_one()
         lines = self.line_ids.filtered(lambda line: line.product_id)
         gross_sale = sum((line.sold_amount or 0.0) for line in lines)
         returns = sum((line.return_amount or 0.0) for line in lines)
-        commission = sum((line.route_commission_amount or 0.0) for line in lines)
+        gross_commission = sum((line.route_commission_amount or 0.0) for line in lines)
+        applied_commission = sum(self._get_route_line_applied_commission_amount(line) for line in lines)
         gross_after_returns = max(gross_sale - returns, 0.0)
         net_payable = sum((line.route_net_payable_amount or 0.0) for line in lines)
         if not lines:
             net_payable = 0.0
+            applied_commission = 0.0
+            gross_commission = 0.0
         return {
             "gross_sale_amount": gross_sale,
             "return_amount": returns,
             "gross_after_returns_amount": gross_after_returns,
-            "commission_amount": commission,
+            "gross_commission_amount": gross_commission,
+            "commission_amount": applied_commission,
+            "applied_commission_amount": applied_commission,
             "net_payable_amount": net_payable,
         }
 
@@ -423,9 +448,10 @@ class RouteVisit(models.Model):
         for line in lines:
             sold_value = line.sold_amount or 0.0
             return_value = line.return_amount or 0.0
-            commission_amount = line.route_commission_amount or 0.0
-            net_payable = line.route_net_payable_amount or max(sold_value - return_value - commission_amount, 0.0)
-            if not any((sold_value, return_value, commission_amount, net_payable, line.sold_qty or 0.0, line.return_qty or 0.0)):
+            gross_commission_amount = line.route_commission_amount or 0.0
+            net_payable = line.route_net_payable_amount or max(sold_value - return_value - gross_commission_amount, 0.0)
+            commission_amount = self._get_route_line_applied_commission_amount(line)
+            if not any((sold_value, return_value, commission_amount, gross_commission_amount, net_payable, line.sold_qty or 0.0, line.return_qty or 0.0)):
                 continue
 
             category = line.product_id.categ_id
@@ -442,6 +468,7 @@ class RouteVisit(models.Model):
                     "gross_after_returns": 0.0,
                     "commission_rate": rate,
                     "commission_amount": 0.0,
+                    "gross_commission_amount": 0.0,
                     "net_payable_amount": 0.0,
                     "product_ids": set(),
                 }
@@ -451,6 +478,7 @@ class RouteVisit(models.Model):
             bucket["sold_value"] += sold_value
             bucket["return_value"] += return_value
             bucket["commission_amount"] += commission_amount
+            bucket["gross_commission_amount"] += gross_commission_amount
             bucket["net_payable_amount"] += net_payable
             if line.product_id:
                 bucket["product_ids"].add(line.product_id.id)
@@ -472,6 +500,8 @@ class RouteVisit(models.Model):
             totals["total_return_value"] += bucket["return_value"]
             totals["total_gross_after_returns"] += bucket["gross_after_returns"]
             totals["total_commission_amount"] += bucket["commission_amount"]
+            totals.setdefault("total_gross_commission_amount", 0.0)
+            totals["total_gross_commission_amount"] += bucket.get("gross_commission_amount", 0.0)
             totals["total_net_payable_amount"] += bucket["net_payable_amount"]
         return totals
 
@@ -530,9 +560,9 @@ class RouteVisit(models.Model):
                     "<div><span>Sold Value</span><strong>", money(sold_value), "</strong></div>",
                     "<div><span>Returns</span><strong>", money(return_value), "</strong></div>",
                     "<div><span>Commission %</span><strong>", percent(commission_rate), "</strong></div>",
-                    "<div><span>Outlet Commission</span><strong>", money(commission_amount), "</strong></div>",
+                    "<div><span>Applied Commission</span><strong>", money(commission_amount), "</strong></div>",
                     "</div>",
-                    "<div class='route_commission_mobile_formula'>Net payable = sold value - returns - outlet commission.</div>",
+                    "<div class='route_commission_mobile_formula'>Net payable = sold value - returns - applied commission.</div>",
                     "</div>",
                 ])
             )
@@ -564,16 +594,16 @@ class RouteVisit(models.Model):
                 "<div><span>Sold Value</span><strong>", money(breakdown.get("total_sold_value", 0.0)), "</strong></div>",
                 "<div><span>Returns</span><strong>", money(breakdown.get("total_return_value", 0.0)), "</strong></div>",
                 "<div><span>After Returns</span><strong>", money(breakdown.get("total_gross_after_returns", 0.0)), "</strong></div>",
-                "<div><span>Outlet Commission</span><strong>", money(breakdown.get("total_commission_amount", 0.0)), "</strong></div>",
+                "<div><span>Applied Commission</span><strong>", money(breakdown.get("total_commission_amount", 0.0)), "</strong></div>",
                 "</div>",
-                "<div class='route_commission_mobile_formula'>Total net payable = sold value - returns - outlet commission.</div>",
+                "<div class='route_commission_mobile_formula'>Total net payable = sold value - returns - applied commission.</div>",
                 "</div>",
             ])
         )
         return "".join([
             "<div class='route_commission_breakdown'>",
-            "<div class='route_commission_title'>Category Commission Breakdown</div>",
-            "<div class='route_commission_hint'>Each category shows the sale value, returns, agreed commission, outlet commission, and final net payable.</div>",
+            "<div class='route_commission_title'>Applied Commission Breakdown</div>",
+            "<div class='route_commission_hint'>Each category shows the sale value, returns, agreed commission, applied commission, and final net payable.</div>",
             "<div class='route_commission_table_wrap route_commission_desktop_table'>",
             "<table class='route_commission_table'>",
             "<thead><tr>",
@@ -583,7 +613,7 @@ class RouteVisit(models.Model):
             "<th>Returns</th>",
             "<th>After Returns</th>",
             "<th>Commission %</th>",
-            "<th>Outlet Commission</th>",
+            "<th>Applied Commission</th>",
             "<th>Net Payable</th>",
             "</tr></thead>",
             "<tbody>",
