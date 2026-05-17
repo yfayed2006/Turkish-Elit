@@ -130,6 +130,12 @@ class RouteOutlet(models.Model):
         "outlet_id",
         string="Stock Balances",
     )
+    route_stock_cards_html = fields.Html(
+        string="Product Stock Cards",
+        compute="_compute_route_stock_cards_html",
+        sanitize=False,
+        readonly=True,
+    )
 
     plan_line_ids = fields.One2many(
         "route.plan.line",
@@ -1025,6 +1031,113 @@ class RouteOutlet(models.Model):
             record.near_expiry_product_count = near_expiry_count
             record.expired_product_count = expired_count
             record.last_stock_update_at = last_update.last_updated_at if last_update else False
+
+    def _route_stock_html_float(self, value):
+        value = value or 0.0
+        text = f"{value:,.2f}"
+        return text.rstrip("0").rstrip(".") if "." in text else text
+
+    def _route_stock_html_money(self, value, currency):
+        amount = self._route_stock_html_float(value)
+        symbol = currency.symbol if currency and currency.symbol else ""
+        return f"{amount} {html.escape(symbol)}".strip()
+
+    def _route_stock_html_date(self, value):
+        return html.escape(fields.Date.to_string(value)) if value else ""
+
+    def _route_stock_html_datetime(self, value):
+        if not value:
+            return ""
+        try:
+            value = fields.Datetime.context_timestamp(self, value)
+        except Exception:
+            pass
+        return html.escape(value.strftime("%b %d, %I:%M %p"))
+
+    def _route_stock_html_badge(self, label, extra_class=""):
+        if not label:
+            return ""
+        class_attr = f"route_pda_document_product_badge {extra_class}".strip()
+        return f'<span class="{class_attr}">{html.escape(str(label))}</span>'
+
+    @api.depends(
+        "stock_balance_ids",
+        "stock_balance_ids.product_id",
+        "stock_balance_ids.product_id.display_name",
+        "stock_balance_ids.product_id.image_128",
+        "stock_balance_ids.barcode",
+        "stock_balance_ids.product_categ_id",
+        "stock_balance_ids.qty",
+        "stock_balance_ids.unit_price",
+        "stock_balance_ids.stock_value",
+        "stock_balance_ids.stock_status_label",
+        "stock_balance_ids.lot_names",
+        "stock_balance_ids.nearest_expiry_date",
+        "stock_balance_ids.nearest_alert_date",
+        "stock_balance_ids.last_updated_at",
+        "stock_balance_ids.currency_id",
+    )
+    def _compute_route_stock_cards_html(self):
+        # Render mobile-friendly outlet stock cards as display-only HTML.
+        # This replaces the clickable one2many kanban in the salesperson view.
+        for record in self:
+            cards = []
+            balances = record.stock_balance_ids.sorted(
+                key=lambda bal: (
+                    bal.product_id.display_name or "",
+                    bal.lot_names or "",
+                    bal.id,
+                )
+            )
+            for balance in balances:
+                product = balance.product_id
+                product_name = html.escape(product.display_name or "-")
+                barcode = html.escape(balance.barcode or "")
+                category = html.escape(balance.product_categ_id.display_name or "")
+                lot_names = html.escape(balance.lot_names or "")
+                status_label = html.escape(balance.stock_status_label or "")
+                image_src = (
+                    f"/web/image/product.product/{product.id}/image_128"
+                    if product
+                    else "/web/static/img/placeholder.png"
+                )
+                badges = []
+                if status_label:
+                    badges.append(self._route_stock_html_badge(status_label, "route_outlet_stock_status_badge"))
+                if category:
+                    badges.append(self._route_stock_html_badge(category))
+                if lot_names:
+                    badges.append(self._route_stock_html_badge(f"Lot:{lot_names}"))
+                barcode_html = (
+                    f'<div class="route_pda_document_product_subtitle route_outlet_stock_product_subtitle">Barcode: {barcode}</div>'
+                    if barcode
+                    else ""
+                )
+                cards.append(f'''
+<div class="route_outlet_stock_product_card route_pda_document_product_card route_outlet_stock_display_only_card">
+  <div class="route_pda_document_product_top route_outlet_stock_product_top">
+    <div class="route_pda_document_product_image_box route_outlet_stock_image_box">
+      <img src="{image_src}" class="route_pda_document_product_image route_outlet_stock_product_image" loading="lazy" alt=""/>
+    </div>
+    <div class="route_pda_document_product_title_box route_outlet_stock_title_box">
+      <div class="route_pda_document_product_title route_outlet_stock_product_title">{product_name}</div>
+      {barcode_html}
+      <div class="route_pda_document_product_badges route_outlet_stock_badges">{''.join(badges)}</div>
+    </div>
+  </div>
+  <div class="route_pda_document_product_grid route_outlet_stock_product_grid">
+    <div class="route_pda_document_product_metric route_outlet_stock_metric route_outlet_stock_qty_metric"><span>Shelf Qty</span><strong>{html.escape(self._route_stock_html_float(balance.qty))}</strong></div>
+    <div class="route_pda_document_product_metric route_outlet_stock_metric"><span>Unit Price</span><strong>{self._route_stock_html_money(balance.unit_price, balance.currency_id)}</strong></div>
+    <div class="route_pda_document_product_metric route_outlet_stock_metric route_pda_document_product_metric_total"><span>Stock Value</span><strong>{self._route_stock_html_money(balance.stock_value, balance.currency_id)}</strong></div>
+    <div class="route_pda_document_product_metric route_outlet_stock_metric"><span>Expiry Date</span><strong>{self._route_stock_html_date(balance.nearest_expiry_date)}</strong></div>
+    <div class="route_pda_document_product_metric route_outlet_stock_metric"><span>Alert Date</span><strong>{self._route_stock_html_date(balance.nearest_alert_date)}</strong></div>
+    <div class="route_pda_document_product_metric route_outlet_stock_metric"><span>Last Update</span><strong>{self._route_stock_html_datetime(balance.last_updated_at)}</strong></div>
+  </div>
+</div>''')
+            if cards:
+                record.route_stock_cards_html = '<div class="route_outlet_stock_cards_html route_pda_document_kanban route_outlet_stock_inline_kanban">' + ''.join(cards) + '</div>'
+            else:
+                record.route_stock_cards_html = '<div class="alert alert-info mb-0">No stock balance records found for this outlet.</div>'
 
     @api.depends("shortage_ids", "shortage_ids.state", "shortage_ids.date")
     def _compute_shortage_stats(self):
