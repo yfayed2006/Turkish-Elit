@@ -250,6 +250,26 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
     )
 
     due_date = fields.Date(string="Deferred Due Date")
+
+    deferred_payment_mode = fields.Selection(
+        [
+            ("cash", "Cash"),
+            ("bank", "Bank Transfer"),
+            ("pos", "POS"),
+            ("cheque", "Cheque"),
+        ],
+        string="Expected Payment Mode",
+        default="cash",
+        help="Expected method for collecting the carried-forward balance. If a post-dated cheque is received now, choose Cheque and enter its details here.",
+    )
+    deferred_reference = fields.Char(string="Deferred Reference")
+    deferred_bank_name = fields.Char(string="Deferred Bank Name")
+    deferred_pos_terminal = fields.Char(string="Deferred POS Terminal")
+    deferred_cheque_number = fields.Char(string="Deferred Cheque Number")
+    deferred_cheque_date = fields.Date(string="Deferred Cheque Date")
+    deferred_cheque_holder_name = fields.Char(string="Deferred Cheque Holder")
+    deferred_cheque_note = fields.Text(string="Deferred Cheque Details")
+
     reference = fields.Char(string="Reference")
     bank_name = fields.Char(string="Bank Name")
     pos_terminal = fields.Char(string="POS Terminal")
@@ -440,6 +460,11 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         store=False,
         readonly=True,
     )
+    show_partial_payment_plan = fields.Boolean(
+        compute="_compute_ui_flags",
+        store=False,
+        readonly=True,
+    )
     payment_line_total = fields.Monetary(
         string="Payment Lines Total",
         currency_field="currency_id",
@@ -479,7 +504,12 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 and rec.settlement_mode == "split"
             )
             rec.show_split_payment_lines = split_is_available
-            rec.show_single_payment_fields = bool(rec.show_collection_decision and not split_is_available)
+            rec.show_partial_payment_plan = bool(rec.show_collection_decision and rec.collection_type == "partial")
+            rec.show_single_payment_fields = bool(
+                rec.show_collection_decision
+                and not split_is_available
+                and rec.collection_type != "partial"
+            )
 
             rec.show_full_payment_help = bool(rec.show_collection_decision and rec.collection_type == "full" and not split_is_available)
             rec.show_partial_payment_help = bool(rec.show_collection_decision and rec.collection_type == "partial")
@@ -604,12 +634,21 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 vals.setdefault("promise_date", draft_template.promise_date or False)
                 vals.setdefault("promise_amount", draft_template.promise_amount or 0.0)
                 vals.setdefault("due_date", draft_template.due_date or False)
+                vals.setdefault("deferred_payment_mode", getattr(draft_template, "deferred_payment_mode", False) or "cash")
+                vals.setdefault("deferred_reference", getattr(draft_template, "deferred_reference", False) or False)
+                vals.setdefault("deferred_bank_name", getattr(draft_template, "deferred_bank_name", False) or False)
+                vals.setdefault("deferred_pos_terminal", getattr(draft_template, "deferred_pos_terminal", False) or False)
+                vals.setdefault("deferred_cheque_number", getattr(draft_template, "deferred_cheque_number", False) or False)
+                vals.setdefault("deferred_cheque_date", getattr(draft_template, "deferred_cheque_date", False) or False)
+                vals.setdefault("deferred_cheque_holder_name", getattr(draft_template, "deferred_cheque_holder_name", False) or False)
+                vals.setdefault("deferred_cheque_note", getattr(draft_template, "deferred_cheque_note", False) or False)
                 vals.setdefault("amount", sum(existing_drafts.mapped("amount")) if existing_drafts else 0.0)
             else:
                 if "payment_date" in fields_list:
                     vals.setdefault("payment_date", fields.Datetime.now())
                 if "collection_type" in fields_list:
                     vals.setdefault("collection_type", "full")
+                vals.setdefault("deferred_payment_mode", "cash")
                 if "amount" in fields_list:
                     if is_direct:
                         vals["amount"] = max(getattr(visit, "direct_stop_settlement_remaining_amount", 0.0) or 0.0, 0.0)
@@ -632,6 +671,54 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         if self.settlement_mode == "split" and self.collection_type == "full":
             return self._get_split_payment_total()
         return self.amount or 0.0
+
+    def _deferred_plan_vals(self):
+        self.ensure_one()
+        return {
+            "deferred_payment_mode": self.deferred_payment_mode or "cash",
+            "deferred_reference": self.deferred_cheque_number if self.deferred_payment_mode == "cheque" and self.deferred_cheque_number else self.deferred_reference,
+            "deferred_bank_name": self.deferred_bank_name,
+            "deferred_pos_terminal": self.deferred_pos_terminal,
+            "deferred_cheque_number": self.deferred_cheque_number,
+            "deferred_cheque_date": self.deferred_cheque_date,
+            "deferred_cheque_holder_name": self.deferred_cheque_holder_name,
+            "deferred_cheque_note": self.deferred_cheque_note,
+        }
+
+    def _deferred_plan_note_fragment(self):
+        self.ensure_one()
+        if self.collection_type != "partial":
+            return False
+        mode_labels = dict(self._fields["deferred_payment_mode"].selection)
+        parts = [
+            _("Deferred collection plan:"),
+            _("Amount: %s") % (self.promise_amount or 0.0),
+            _("Date: %s") % (self.promise_date or "-"),
+            _("Expected Mode: %s") % (mode_labels.get(self.deferred_payment_mode) or self.deferred_payment_mode or "-"),
+        ]
+        if self.deferred_payment_mode == "cheque":
+            parts.extend([
+                _("Cheque Number: %s") % (self.deferred_cheque_number or "-"),
+                _("Cheque Bank: %s") % (self.deferred_bank_name or "-"),
+                _("Cheque Date: %s") % (self.deferred_cheque_date or "-"),
+            ])
+        elif self.deferred_payment_mode == "bank" and self.deferred_bank_name:
+            parts.append(_("Bank: %s") % self.deferred_bank_name)
+        elif self.deferred_payment_mode == "pos" and self.deferred_pos_terminal:
+            parts.append(_("POS Terminal: %s") % self.deferred_pos_terminal)
+        if self.deferred_reference:
+            parts.append(_("Reference: %s") % self.deferred_reference)
+        if self.deferred_cheque_note:
+            parts.append(_("Details: %s") % self.deferred_cheque_note)
+        return "\n".join(parts)
+
+    def _compose_payment_note(self):
+        self.ensure_one()
+        base_note = self.note or ""
+        deferred_fragment = self._deferred_plan_note_fragment()
+        if deferred_fragment:
+            return (base_note + "\n\n" + deferred_fragment).strip() if base_note else deferred_fragment
+        return base_note
 
     def _single_payment_data(self):
         self.ensure_one()
@@ -684,6 +771,8 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 rec.due_date = False
                 if rec.payment_mode == "deferred":
                     rec.payment_mode = "cash"
+                if not rec.deferred_payment_mode:
+                    rec.deferred_payment_mode = "cash"
                 if due <= 0:
                     rec.amount = 0.0
                 elif rec.amount <= 0 or rec.amount >= due:
@@ -775,6 +864,40 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             if rec.payment_mode == "cheque" and rec.cheque_number and not rec.reference:
                 rec.reference = rec.cheque_number
 
+    @api.onchange("deferred_payment_mode")
+    def _onchange_deferred_payment_mode(self):
+        for rec in self:
+            if rec.deferred_payment_mode == "cash":
+                rec.deferred_reference = False
+                rec.deferred_bank_name = False
+                rec.deferred_pos_terminal = False
+                rec.deferred_cheque_number = False
+                rec.deferred_cheque_date = False
+                rec.deferred_cheque_holder_name = False
+                rec.deferred_cheque_note = False
+            elif rec.deferred_payment_mode == "bank":
+                rec.deferred_pos_terminal = False
+                rec.deferred_cheque_number = False
+                rec.deferred_cheque_date = False
+                rec.deferred_cheque_holder_name = False
+                rec.deferred_cheque_note = False
+            elif rec.deferred_payment_mode == "pos":
+                rec.deferred_bank_name = False
+                rec.deferred_cheque_number = False
+                rec.deferred_cheque_date = False
+                rec.deferred_cheque_holder_name = False
+                rec.deferred_cheque_note = False
+            elif rec.deferred_payment_mode == "cheque":
+                rec.deferred_pos_terminal = False
+                if rec.deferred_cheque_number and not rec.deferred_reference:
+                    rec.deferred_reference = rec.deferred_cheque_number
+
+    @api.onchange("deferred_cheque_number")
+    def _onchange_deferred_cheque_number(self):
+        for rec in self:
+            if rec.deferred_payment_mode == "cheque" and rec.deferred_cheque_number and not rec.deferred_reference:
+                rec.deferred_reference = rec.deferred_cheque_number
+
     def _validate_cheque_details(self):
         self.ensure_one()
         if self.payment_mode != "cheque" or self.collection_type in ("defer_date", "next_visit"):
@@ -855,6 +978,15 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 raise ValidationError(_("Please set the promise to pay date for the carried-forward balance."))
             if (self.promise_amount or 0.0) <= 0:
                 raise ValidationError(_("Please set the promise to pay amount."))
+            if not self.deferred_payment_mode:
+                raise ValidationError(_("Please choose the expected payment mode for the carried-forward balance."))
+            if self.deferred_payment_mode == "cheque":
+                if not self.deferred_cheque_number:
+                    raise ValidationError(_("Please enter the deferred cheque number."))
+                if not self.deferred_bank_name:
+                    raise ValidationError(_("Please enter the deferred cheque bank name."))
+                if not self.deferred_cheque_date:
+                    raise ValidationError(_("Please enter the deferred cheque date."))
             if not self.note:
                 raise ValidationError(_("Please add a note for the carried-forward balance."))
 
@@ -902,8 +1034,9 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "cheque_date": payment_data.get("cheque_date"),
             "cheque_holder_name": payment_data.get("cheque_holder_name"),
             "cheque_note": payment_data.get("cheque_note"),
-            "note": self.note,
+            "note": self._compose_payment_note(),
             "state": "draft",
+            **(self._deferred_plan_vals() if collection_type == "partial" else {}),
         }
 
     def _get_direct_stop_target_due(self, target_visit):
@@ -957,7 +1090,8 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 "collection_type": "partial",
                 "promise_date": self.promise_date,
                 "promise_amount": self.promise_amount,
-                "note": self.note,
+                "note": self._compose_payment_note(),
+                **self._deferred_plan_vals(),
             })
 
         return created
@@ -985,7 +1119,8 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
                 "collection_type": "partial",
                 "promise_date": self.promise_date,
                 "promise_amount": self.promise_amount,
-                "note": self.note,
+                "note": self._compose_payment_note(),
+                **self._deferred_plan_vals(),
             })
         return created
 
@@ -1024,6 +1159,14 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "default_return_promise_date": _date_value(self.promise_date),
             "default_return_promise_amount": self.promise_amount or 0.0,
             "default_return_due_date": _date_value(self.due_date),
+            "default_return_deferred_payment_mode": self.deferred_payment_mode or "cash",
+            "default_return_deferred_reference": self.deferred_reference or False,
+            "default_return_deferred_bank_name": self.deferred_bank_name or False,
+            "default_return_deferred_pos_terminal": self.deferred_pos_terminal or False,
+            "default_return_deferred_cheque_number": self.deferred_cheque_number or False,
+            "default_return_deferred_cheque_date": _date_value(self.deferred_cheque_date),
+            "default_return_deferred_cheque_holder_name": self.deferred_cheque_holder_name or False,
+            "default_return_deferred_cheque_note": self.deferred_cheque_note or False,
             "default_return_reference": self.reference or False,
             "default_return_bank_name": self.bank_name or False,
             "default_return_pos_terminal": self.pos_terminal or False,
