@@ -483,18 +483,62 @@ class RouteVisit(models.Model):
         "line_ids.supplied_qty",
         "line_ids.return_qty",
     )
+    def _get_ux_return_transfer_map(self):
+        """Return {visit_id: True} for visits that already have return transfers.
+
+        The UX workflow is computed very often on PDA visit screens and list/card
+        views. The old code checked return transfers visit by visit, which could
+        trigger one stock.picking search for every visit shown on the screen. This
+        helper keeps the same business filters but loads the related pickings in
+        one batch and then checks them in memory.
+        """
+        visits = self.filtered(lambda visit: visit.id)
+        if not visits:
+            return {}
+
+        return_transfer_candidates = visits.filtered(
+            lambda visit: any((line.return_qty or 0.0) > 0.0 for line in visit.line_ids)
+        )
+        if not return_transfer_candidates:
+            return {}
+
+        pickings = self.env["stock.picking"].search([
+            ("route_visit_id", "in", return_transfer_candidates.ids),
+            ("state", "!=", "cancel"),
+            ("picking_type_id.code", "=", "internal"),
+        ])
+        if not pickings:
+            return {}
+
+        visits_by_id = {visit.id: visit for visit in return_transfer_candidates}
+        result = {}
+        for picking in pickings:
+            visit = visits_by_id.get(picking.route_visit_id.id)
+            if not visit:
+                continue
+
+            outlet_location = visit.outlet_id.stock_location_id if visit.outlet_id else False
+            if outlet_location and picking.location_id != outlet_location:
+                continue
+
+            if visit.refill_picking_id and picking.id == visit.refill_picking_id.id:
+                continue
+
+            if visit.sale_order_id and picking.origin == visit.sale_order_id.name:
+                continue
+
+            result[visit.id] = True
+
+        return result
+
     def _compute_ux_workflow(self):
+        return_transfer_map = self._get_ux_return_transfer_map()
         for rec in self:
             direct_sales_stop = rec.visit_execution_mode == "direct_sales"
             has_lines = bool(rec.line_ids)
             has_supplied_qty = any((line.supplied_qty or 0.0) > 0 for line in rec.line_ids)
             has_return_qty = any((line.return_qty or 0.0) > 0 for line in rec.line_ids)
-            if has_return_qty and rec.id and hasattr(rec, "_get_route_receipt_return_pickings"):
-                has_return_transfers = bool(rec._get_route_receipt_return_pickings())
-            elif has_return_qty and rec.id and hasattr(rec, "_get_return_transfer_domain"):
-                has_return_transfers = bool(self.env["stock.picking"].search_count(rec._get_return_transfer_domain()))
-            else:
-                has_return_transfers = False
+            has_return_transfers = bool(has_return_qty and rec.id and return_transfer_map.get(rec.id))
 
             load_balance_required = (
                 rec.state == "in_progress"
