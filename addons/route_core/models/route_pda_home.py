@@ -1761,34 +1761,65 @@ class RoutePdaHome(models.TransientModel):
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
 
-    def _get_consignment_visits(self):
+    def _get_consignment_visit_domain(self):
+        """Return the salesperson consignment-visit domain without loading visits.
+
+        Several workspace document buttons used to search all salesperson visits,
+        filter them in Python, then map sale orders or transfers.  That becomes
+        slow as history grows.  Keep the same business scope, but let PostgreSQL
+        filter through relational domains wherever possible.
+        """
         self.ensure_one()
-        visits = self.env["route.visit"].search([("user_id", "=", self.env.user.id)], order="date desc, id desc")
-        return visits.filtered(lambda v: getattr(v, "visit_execution_mode", False) != "direct_sales")
+        return [
+            ("user_id", "=", self.env.user.id),
+            ("visit_execution_mode", "!=", "direct_sales"),
+        ]
+
+    def _get_consignment_visits(self, limit=None):
+        self.ensure_one()
+        return self.env["route.visit"].search(
+            self._get_consignment_visit_domain(),
+            order="date desc, id desc",
+            limit=limit,
+        )
+
+    def _get_consignment_sale_order_domain(self):
+        self.ensure_one()
+        return [
+            ("user_id", "=", self.env.user.id),
+            ("route_order_mode", "!=", "direct_sale"),
+            ("origin", "!=", False),
+            ("state", "!=", "cancel"),
+        ]
+
+    def _get_consignment_internal_transfer_domain(self):
+        self.ensure_one()
+        return [
+            ("route_visit_id.user_id", "=", self.env.user.id),
+            ("route_visit_id.visit_execution_mode", "!=", "direct_sales"),
+            ("state", "!=", "cancel"),
+        ]
 
     def _get_consignment_sale_orders(self):
         self.ensure_one()
-        sale_orders = self._get_consignment_visits().mapped("sale_order_id")
-        return sale_orders.filtered(lambda so: so and getattr(so, "route_order_mode", "standard") != "direct_sale")
+        return self.env["sale.order"].search(self._get_consignment_sale_order_domain(), order="date_order desc, id desc")
 
     def _get_consignment_internal_transfers(self):
         self.ensure_one()
-        visits = self._get_consignment_visits()
-        pickings = visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")
-        return pickings.filtered(lambda p: p and p.state != "cancel")
+        return self.env["stock.picking"].search(self._get_consignment_internal_transfer_domain(), order="scheduled_date desc, id desc")
 
     def action_open_consignment_sale_orders(self):
         self.ensure_one()
         self._ensure_consignment_tools_enabled()
-        sale_orders = self._get_consignment_sale_orders()
         action = {
             "type": "ir.actions.act_window",
             "name": _("Consignment Sales Orders"),
             "res_model": "sale.order",
             "view_mode": "list,form",
             "target": "current",
-            "domain": [("id", "in", sale_orders.ids)],
+            "domain": self._get_consignment_sale_order_domain(),
             "context": {"create": 0, "delete": 0},
+            "limit": 80,
         }
         tree_view = self.env.ref("sale.view_quotation_tree_with_onboarding", raise_if_not_found=False)
         form_view = self.env.ref("sale.view_order_form", raise_if_not_found=False)
@@ -1807,23 +1838,25 @@ class RoutePdaHome(models.TransientModel):
     def action_open_consignment_internal_transfers(self):
         self.ensure_one()
         self._ensure_consignment_tools_enabled()
-        pickings = self._get_consignment_internal_transfers()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action.update({
             "name": _("Returns, Transfers and Lots") if self.route_show_lot_ui else _("Returns and Internal Transfers"),
-            "domain": [("id", "in", pickings.ids)],
+            "domain": self._get_consignment_internal_transfer_domain(),
             "context": {"create": 0, "delete": 0},
+            "limit": 80,
         })
         return action
 
     def action_open_consignment_payments(self):
         self.ensure_one()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_visit_collection_salesperson",
             name=_("Consignment Collections"),
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "=", "consignment_visit"), ("state", "=", "confirmed")],
             context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
         )
+        action["limit"] = 80
+        return action
 
     def action_open_direct_sale_orders(self):
         self.ensure_one()
@@ -1849,35 +1882,54 @@ class RoutePdaHome(models.TransientModel):
             action["views"] = views
         if search_view:
             action["search_view_id"] = search_view.id
+        action["limit"] = 80
         return action
 
-    def _get_direct_sale_order_recordset(self):
-        return self.env["sale.order"].search([
+    def _get_direct_sale_order_domain(self):
+        self.ensure_one()
+        return [
             ("route_order_mode", "=", "direct_sale"),
             ("user_id", "=", self.env.user.id),
-        ])
+            ("state", "!=", "cancel"),
+        ]
+
+    def _get_direct_sale_order_recordset(self, limit=None):
+        return self.env["sale.order"].search(self._get_direct_sale_order_domain(), order="date_order desc, id desc", limit=limit)
+
+    def _get_direct_sale_delivery_domain(self):
+        self.ensure_one()
+        Picking = self.env["stock.picking"]
+        if "sale_id" in Picking._fields:
+            return [
+                ("sale_id.route_order_mode", "=", "direct_sale"),
+                ("sale_id.user_id", "=", self.env.user.id),
+                ("state", "!=", "cancel"),
+            ]
+        # Fallback for databases without sale_stock's sale_id relation.  Keep the
+        # old behavior, but only materialize order names as a last resort.
+        orders = self._get_direct_sale_order_recordset()
+        names = [name for name in orders.mapped("name") if name]
+        return [("origin", "in", names), ("state", "!=", "cancel")] if names else [("id", "=", 0)]
 
     def action_open_direct_sale_deliveries(self):
         self.ensure_one()
         self._ensure_direct_sale_enabled()
-        orders = self._get_direct_sale_order_recordset()
-        pickings = self.env["stock.picking"].search([
-            ("origin", "in", orders.mapped("name")),
-            ("state", "!=", "cancel"),
-        ], order="id desc")
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action["name"] = "Direct Sale Deliveries"
-        action["domain"] = [("id", "in", pickings.ids)]
+        action["domain"] = self._get_direct_sale_delivery_domain()
+        action["limit"] = 80
         return action
 
     def action_open_direct_sale_returns(self):
         self.ensure_one()
         self._ensure_direct_return_enabled()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_direct_return",
             name="Direct Returns",
             domain=[("user_id", "=", self.env.user.id), ("state", "!=", "cancel")],
         )
+        action["limit"] = 80
+        return action
 
     def action_open_direct_sale_outlets(self):
         self.ensure_one()
@@ -2027,19 +2079,23 @@ class RoutePdaHome(models.TransientModel):
     def action_open_direct_sale_payments(self):
         self.ensure_one()
         self._ensure_direct_sale_enabled()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_direct_sale_payment",
             name="Direct Sale Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("payment_business_flow", "in", ["direct_stop", "direct_sale_order"])],
         )
+        action["limit"] = 80
+        return action
 
     def action_open_payments(self):
         self.ensure_one()
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_visit_payment",
             name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id)],
         )
+        action["limit"] = 80
+        return action
 
     def action_open_products(self):
         self.ensure_one()
@@ -2386,4 +2442,3 @@ class RoutePdaHome(models.TransientModel):
             "context": {"create": 0, "delete": 0},
         })
         return action
-
