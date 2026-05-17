@@ -80,9 +80,3 @@ class RouteVehicleClosingScanWizard(models.TransientModel):
         self.ensure_one()
         self.closing_id.action_mark_count_done()
         return self.closing_id._open_form_action()
-
-
-    def action_done(self):
-        self.ensure_one()
-        self.closing_id.action_mark_count_done()
-        return self.closing_id._open_form_action()
