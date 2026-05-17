@@ -2196,3 +2196,4 @@ Expiry:
 <field name="act_window_id" ref="action_route_outlet"/>
 </record>
 <menuitem id="menu_route_outlet" name="Outlets" parent="menu_route_visit_root" action="action_route_outlet" sequence="30"/>
+</odoo>
