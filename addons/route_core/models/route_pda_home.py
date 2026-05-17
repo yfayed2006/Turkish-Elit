@@ -1740,12 +1740,14 @@ class RoutePdaHome(models.TransientModel):
     def action_open_today_plans(self):
         self.ensure_one()
         today = fields.Date.context_today(self)
-        return self._prepare_action(
+        action = self._prepare_action(
             "route_core.action_route_plan",
             name="My Route Plans",
             domain=[("user_id", "=", self.env.user.id), ("date", "=", today)],
             context={"search_default_filter_my_plans": 1, "search_default_filter_today": 1},
         )
+        action["limit"] = 30
+        return action
 
     def action_open_today_route_map(self):
         self.ensure_one()
@@ -1881,7 +1883,7 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_history_salesperson",
             name="My Visit History",
             domain=[("user_id", "=", self.env.user.id), ("state", "in", ["done", "cancel", "cancelled"])],
-            context={"search_default_filter_today": 1, "create": 0, "edit": 0, "delete": 0, "route_history_mobile_mode": 1},
+            context={"search_default_filter_last_30_days": 1, "create": 0, "edit": 0, "delete": 0, "route_history_mobile_mode": 1},
         )
         action["view_mode"] = "kanban,list,form"
         action["views"] = [
@@ -1889,6 +1891,7 @@ class RoutePdaHome(models.TransientModel):
             (self.env.ref("route_core.view_route_visit_tree").id, "list"),
             (self.env.ref("route_core.view_route_visit_pda_form").id, "form"),
         ]
+        action["limit"] = 30
         return action
 
     def action_open_my_vehicle_closing(self):
@@ -1899,7 +1902,7 @@ class RoutePdaHome(models.TransientModel):
             domain=[("user_id", "=", self.env.user.id), ("state", "=", "closed")],
             context={"search_default_filter_closed": 1, "create": 0, "edit": 0, "delete": 0},
         )
-        action["limit"] = 40
+        action["limit"] = 30
         return action
 
     def action_open_my_shortages(self):
@@ -2695,5 +2698,6 @@ class RoutePdaHome(models.TransientModel):
             "limit": 80,
         })
         return action
+
 
 
