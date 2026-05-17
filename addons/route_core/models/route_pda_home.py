@@ -1019,12 +1019,12 @@ class RoutePdaHome(models.TransientModel):
         self.direct_return_today_count = return_summary.get("__count", DirectReturn.search_count(return_domain)) or 0
         self.direct_return_today_amount = return_summary.get("amount_total", 0.0) or 0.0
 
-        transfers = self._get_workspace_direct_transfers(start_dt=start_dt, end_dt=end_dt)
-        self.direct_transfer_today_count = len(transfers)
+        transfer_domain = self._get_workspace_direct_transfer_domain(start_dt=start_dt, end_dt=end_dt)
+        self.direct_transfer_today_count = self.env["stock.picking"].search_count(transfer_domain)
         self.direct_transfer_today_qty = 0.0
-        if transfers:
-            move_domain = [("picking_id", "in", transfers.ids)]
+        if self.direct_transfer_today_count:
             qty_field = "product_uom_qty" if "product_uom_qty" in Move._fields else "quantity"
+            move_domain = self._get_workspace_direct_transfer_move_domain(start_dt=start_dt, end_dt=end_dt)
             move_group = Move.read_group(move_domain, [qty_field], [], lazy=False)
             self.direct_transfer_today_qty = (move_group[0].get(qty_field, 0.0) if move_group else 0.0) or 0.0
 
@@ -2297,7 +2297,7 @@ class RoutePdaHome(models.TransientModel):
         self.ensure_one()
         return "Route Workspace / Direct Transfer"
 
-    def _get_workspace_direct_transfers(self, start_dt=None, end_dt=None):
+    def _get_workspace_direct_transfer_domain(self, start_dt=None, end_dt=None):
         self.ensure_one()
         domain = [
             ("company_id", "=", self.env.company.id),
@@ -2310,7 +2310,29 @@ class RoutePdaHome(models.TransientModel):
             domain.append(("create_date", ">=", start_dt))
         if end_dt:
             domain.append(("create_date", "<", end_dt))
-        return self.env["stock.picking"].search(domain, order="create_date desc, id desc")
+        return domain
+
+    def _get_workspace_direct_transfer_move_domain(self, start_dt=None, end_dt=None):
+        self.ensure_one()
+        domain = [
+            ("picking_id.company_id", "=", self.env.company.id),
+            ("picking_id.picking_type_id.code", "=", "internal"),
+            ("picking_id.origin", "ilike", self._workspace_direct_transfer_origin_prefix()),
+            ("picking_id.create_uid", "=", self.env.user.id),
+            ("picking_id.state", "!=", "cancel"),
+        ]
+        if start_dt:
+            domain.append(("picking_id.create_date", ">=", start_dt))
+        if end_dt:
+            domain.append(("picking_id.create_date", "<", end_dt))
+        return domain
+
+    def _get_workspace_direct_transfers(self, start_dt=None, end_dt=None):
+        self.ensure_one()
+        return self.env["stock.picking"].search(
+            self._get_workspace_direct_transfer_domain(start_dt=start_dt, end_dt=end_dt),
+            order="create_date desc, id desc",
+        )
 
     def _get_workspace_internal_picking_type(self, source_location=False):
         self.ensure_one()
@@ -2551,12 +2573,12 @@ class RoutePdaHome(models.TransientModel):
 
     def action_open_previous_direct_transfer_orders(self):
         self.ensure_one()
-        transfers = self._get_workspace_direct_transfers()
         action = self.env.ref("stock.action_picking_tree_all").read()[0]
         action.update({
             "name": "Previous Direct Transfer Orders",
-            "domain": [("id", "in", transfers.ids)],
+            "domain": self._get_workspace_direct_transfer_domain(),
             "context": {"create": 0, "delete": 0},
+            "limit": 80,
         })
         return action
 
