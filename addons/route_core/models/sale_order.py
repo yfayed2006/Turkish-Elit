@@ -1,3 +1,5 @@
+import html
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -157,6 +159,13 @@ class SaleOrder(models.Model):
         currency_field="currency_id",
         compute="_compute_route_pda_order_amounts",
         store=False,
+    )
+    route_pda_order_lines_html = fields.Html(
+        string="Product Cards",
+        compute="_compute_route_pda_order_lines_html",
+        sanitize=False,
+        store=False,
+        help="Read-only Route/PDA product cards. This avoids switching between list and kanban when screen size changes.",
     )
 
 
