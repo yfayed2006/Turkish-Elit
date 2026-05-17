@@ -218,6 +218,10 @@ class RoutePdaHome(models.TransientModel):
         view = self.env.ref(view_xmlid)
         scope_by_view = {
             "route_core.view_route_pda_home_form": "home",
+            "route_core.view_route_pda_direct_sale_mode_form": "navigation",
+            "route_core.view_route_pda_consignment_mode_form": "navigation",
+            "route_core.view_route_pda_snapshot_center_form": "navigation",
+            "route_core.view_route_pda_review_center_form": "navigation",
             "route_core.view_route_pda_product_center_form": "product_center",
             "route_core.view_route_pda_outlet_center_form": "outlet_center",
             "route_core.view_route_pda_sales_center_form": "product_actions",
@@ -793,6 +797,18 @@ class RoutePdaHome(models.TransientModel):
             return f"{currency.symbol}{text}" if currency.position == "before" else f"{text} {currency.symbol}"
         return text
 
+    def _compute_dashboard_navigation_only(self, user, today, start_dt, end_dt):
+        """Compute only the tiny header values needed by menu-only screens.
+
+        Screens such as Consignment, Direct Sale, and Snapshot Center are just
+        navigation launchers.  They do not show visit, stock, collection, or
+        document counters, so making them run the full dashboard calculation
+        makes every intermediate click slower without adding useful data.
+        """
+        self.ensure_one()
+        self.user_display_name = user.display_name or "-"
+        self.today_display_label = today.strftime("%b %d") if today else ""
+
     def _compute_dashboard_light_home(self, user, today, start_dt, end_dt):
         self.ensure_one()
         Visit = self.env["route.visit"]
@@ -1256,6 +1272,9 @@ class RoutePdaHome(models.TransientModel):
             dashboard_scope = self.env.context.get("route_pda_dashboard_scope") or "full"
             if dashboard_scope == "home":
                 rec._compute_dashboard_light_home(user, today, start_dt, end_dt)
+                continue
+            if dashboard_scope == "navigation":
+                rec._compute_dashboard_navigation_only(user, today, start_dt, end_dt)
                 continue
             if dashboard_scope == "product_center":
                 rec._compute_dashboard_light_product_center(user, today, start_dt, end_dt)
