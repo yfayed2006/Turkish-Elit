@@ -40,7 +40,7 @@ class RouteDirectReturn(models.Model):
     )
     return_date = fields.Date(string="Return Date", default=fields.Date.context_today, required=True)
     note = fields.Text(string="Notes")
-    state = fields.Selection([("draft", "Draft"), ("done", "Done"), ("cancel", "Cancelled")], default="draft", tracking=True)
+    state = fields.Selection([("draft", "Draft"), ("done", "Done"), ("cancel", "Cancelled")], default="draft")
     line_ids = fields.One2many("route.direct.return.line", "return_id", string="Return Lines", copy=True)
     picking_ids = fields.One2many("stock.picking", "route_direct_return_id", string="Generated Returns")
     picking_count = fields.Integer(string="Return Pickings", compute="_compute_picking_count")
