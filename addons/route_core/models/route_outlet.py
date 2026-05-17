@@ -712,56 +712,6 @@ class RouteOutlet(models.Model):
             )
         return area
 
-    def _get_direct_sale_orders(self):
-        self.ensure_one()
-        return self.env["sale.order"].search([
-            ("route_outlet_id", "=", self.id),
-            ("route_order_mode", "=", "direct_sale"),
-            ("state", "!=", "cancel"),
-        ], order="date_order desc, id desc")
-
-    def _get_consignment_transfer_pickings(self):
-        self.ensure_one()
-        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
-        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
-            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
-        )
-        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
-
-    @api.depends(
-        "visit_ids.return_picking_ids",
-        "visit_ids.return_picking_ids.name",
-        "visit_ids.return_picking_ids.state",
-        "visit_ids.refill_picking_id",
-        "visit_ids.refill_picking_id.name",
-        "visit_ids.refill_picking_id.state",
-        "visit_ids.refill_picking_id.scheduled_date",
-        "visit_ids.return_picking_ids.scheduled_date",
-    )
-    def _compute_reference_stats(self):
-        direct_return_model = self.env["route.direct.return"]
-        for record in self:
-            record.return_order_count = 0
-            record.transfer_count = 0
-            record.last_return_ref = False
-            record.last_transfer_ref = False
-
-            if record.outlet_operation_mode == "direct_sale":
-                direct_returns = direct_return_model.search([
-                    ("outlet_id", "=", record.id),
-                    ("state", "!=", "cancel"),
-                ], order="return_date desc, id desc")
-                record.return_order_count = len(direct_returns)
-                record.last_return_ref = direct_returns[:1].name if direct_returns else False
-            else:
-                pickings = record._get_consignment_transfer_pickings()
-                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
-                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
-                record.return_order_count = len(return_pickings)
-                record.transfer_count = len(pickings)
-                record.last_return_ref = return_pickings[:1].name if return_pickings else False
-                record.last_transfer_ref = pickings[:1].name if pickings else False
-
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -1100,29 +1050,47 @@ class RouteOutlet(models.Model):
     def _compute_plan_stats(self):
         PlanLine = self.env["route.plan.line"]
         today = fields.Date.context_today(self)
+        far_future = fields.Date.to_date("9999-12-31")
+
         for record in self:
-            pending_lines = PlanLine.search(
-                [
-                    ("outlet_id", "=", record.id),
-                    ("state", "=", "pending"),
-                    ("plan_id.state", "in", ["draft", "in_progress"]),
-                ]
-            )
-            pending_lines = pending_lines.sorted(
+            record.next_route_plan_id = False
+            record.next_planned_visit_date = False
+            record.open_plan_count = 0
+
+        if not self:
+            return
+
+        pending_lines = PlanLine.search([
+            ("outlet_id", "in", self.ids),
+            ("state", "=", "pending"),
+            ("plan_id.state", "in", ["draft", "in_progress"]),
+        ])
+        lines_by_outlet = {}
+        empty_lines = PlanLine.browse()
+        for line in pending_lines:
+            outlet_id = line.outlet_id.id
+            lines_by_outlet[outlet_id] = lines_by_outlet.get(outlet_id, empty_lines) | line
+
+        for record in self:
+            outlet_lines = lines_by_outlet.get(record.id, empty_lines)
+            if not outlet_lines:
+                continue
+
+            outlet_lines = outlet_lines.sorted(
                 key=lambda line: (
-                    line.plan_id.date or fields.Date.to_date("9999-12-31"),
+                    line.plan_id.date or far_future,
                     line.sequence or 0,
                     line.id,
                 )
             )
-            future_lines = pending_lines.filtered(
+            future_lines = outlet_lines.filtered(
                 lambda line: line.plan_id.date and line.plan_id.date >= today
             )
-            next_line = (future_lines[:1] or pending_lines[:1]) if pending_lines else False
+            next_line = future_lines[:1] or outlet_lines[:1]
 
             record.next_route_plan_id = next_line.plan_id if next_line else False
             record.next_planned_visit_date = next_line.plan_id.date if next_line else False
-            record.open_plan_count = len(pending_lines.mapped("plan_id"))
+            record.open_plan_count = len(outlet_lines.mapped("plan_id"))
 
     @api.depends(
         "stock_balance_ids",
@@ -1221,56 +1189,6 @@ class RouteOutlet(models.Model):
                 "</div>"
             )
 
-    def _get_direct_sale_orders(self):
-        self.ensure_one()
-        return self.env["sale.order"].search([
-            ("route_outlet_id", "=", self.id),
-            ("route_order_mode", "=", "direct_sale"),
-            ("state", "!=", "cancel"),
-        ], order="date_order desc, id desc")
-
-    def _get_consignment_transfer_pickings(self):
-        self.ensure_one()
-        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
-        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
-            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
-        )
-        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
-
-    @api.depends(
-        "visit_ids.return_picking_ids",
-        "visit_ids.return_picking_ids.name",
-        "visit_ids.return_picking_ids.state",
-        "visit_ids.refill_picking_id",
-        "visit_ids.refill_picking_id.name",
-        "visit_ids.refill_picking_id.state",
-        "visit_ids.refill_picking_id.scheduled_date",
-        "visit_ids.return_picking_ids.scheduled_date",
-    )
-    def _compute_reference_stats(self):
-        direct_return_model = self.env["route.direct.return"]
-        for record in self:
-            record.return_order_count = 0
-            record.transfer_count = 0
-            record.last_return_ref = False
-            record.last_transfer_ref = False
-
-            if record.outlet_operation_mode == "direct_sale":
-                direct_returns = direct_return_model.search([
-                    ("outlet_id", "=", record.id),
-                    ("state", "!=", "cancel"),
-                ], order="return_date desc, id desc")
-                record.return_order_count = len(direct_returns)
-                record.last_return_ref = direct_returns[:1].name if direct_returns else False
-            else:
-                pickings = record._get_consignment_transfer_pickings()
-                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
-                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
-                record.return_order_count = len(return_pickings)
-                record.transfer_count = len(pickings)
-                record.last_return_ref = return_pickings[:1].name if return_pickings else False
-                record.last_transfer_ref = pickings[:1].name if pickings else False
-
     @api.depends(
         "visit_ids",
         "visit_ids.date",
@@ -1349,56 +1267,6 @@ class RouteOutlet(models.Model):
                 "</table>"
                 "</div>"
             )
-
-    def _get_direct_sale_orders(self):
-        self.ensure_one()
-        return self.env["sale.order"].search([
-            ("route_outlet_id", "=", self.id),
-            ("route_order_mode", "=", "direct_sale"),
-            ("state", "!=", "cancel"),
-        ], order="date_order desc, id desc")
-
-    def _get_consignment_transfer_pickings(self):
-        self.ensure_one()
-        visits = self.visit_ids.filtered(lambda v: v.state != "cancel")
-        pickings = (visits.mapped("return_picking_ids") | visits.mapped("refill_picking_id")).filtered(
-            lambda p: p and p.state != "cancel" and getattr(p.picking_type_id, "code", False) == "internal"
-        )
-        return pickings.sorted(key=lambda p: ((p.scheduled_date or p.date_done or p.create_date or fields.Datetime.now()), p.id), reverse=True)
-
-    @api.depends(
-        "visit_ids.return_picking_ids",
-        "visit_ids.return_picking_ids.name",
-        "visit_ids.return_picking_ids.state",
-        "visit_ids.refill_picking_id",
-        "visit_ids.refill_picking_id.name",
-        "visit_ids.refill_picking_id.state",
-        "visit_ids.refill_picking_id.scheduled_date",
-        "visit_ids.return_picking_ids.scheduled_date",
-    )
-    def _compute_reference_stats(self):
-        direct_return_model = self.env["route.direct.return"]
-        for record in self:
-            record.return_order_count = 0
-            record.transfer_count = 0
-            record.last_return_ref = False
-            record.last_transfer_ref = False
-
-            if record.outlet_operation_mode == "direct_sale":
-                direct_returns = direct_return_model.search([
-                    ("outlet_id", "=", record.id),
-                    ("state", "!=", "cancel"),
-                ], order="return_date desc, id desc")
-                record.return_order_count = len(direct_returns)
-                record.last_return_ref = direct_returns[:1].name if direct_returns else False
-            else:
-                pickings = record._get_consignment_transfer_pickings()
-                refill_ids = set(record.visit_ids.mapped("refill_picking_id").ids)
-                return_pickings = pickings.filtered(lambda p: p.id not in refill_ids)
-                record.return_order_count = len(return_pickings)
-                record.transfer_count = len(pickings)
-                record.last_return_ref = return_pickings[:1].name if return_pickings else False
-                record.last_transfer_ref = pickings[:1].name if pickings else False
 
     @api.depends(
         "visit_ids",
