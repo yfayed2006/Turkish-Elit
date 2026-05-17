@@ -999,9 +999,11 @@ class RoutePdaHome(models.TransientModel):
     def _compute_dashboard_light_collections(self, user, today, start_dt, end_dt):
         """Compute only the KPIs used by Visit Collections screens.
 
-        The old full dashboard computation also calculated planning, stock,
-        product and current-visit data.  Opening the Collections card should not
-        pay that cost.
+        Keep the same dashboard numbers, but avoid materializing every
+        confirmed collection in Python.  The collections center is opened often
+        from the salesperson workspace, so the heavy historical counters are
+        calculated with search_count/read_group and only small follow-up
+        recordsets are loaded when their relationship logic is needed.
         """
         self.ensure_one()
         Visit = self.env["route.visit"]
@@ -1010,72 +1012,122 @@ class RoutePdaHome(models.TransientModel):
         self.user_display_name = user.display_name or "-"
         self.today_display_label = today.strftime("%b %d") if today else ""
 
-        payment_snapshot_mode = self._get_payment_snapshot_mode
-        payment_snapshot_amount = self._get_payment_snapshot_amount
-        payment_promise_status = self._get_payment_snapshot_promise_status
-        payment_target_visit = self._get_payment_target_visit
-        payment_business_flow = self._get_payment_business_flow
-        payment_cheque_open_due_amount = self._get_payment_cheque_open_due_amount
-        payment_cheque_pending_clearance_amount = self._get_payment_cheque_pending_clearance_amount
-        payment_cheque_cleared_amount = self._get_payment_cheque_financially_cleared_amount
-
-        today_payments = Payment.search([
+        base_domain = [
             ("salesperson_id", "=", user.id),
+            ("state", "=", "confirmed"),
+        ]
+        today_domain = base_domain + [
             ("payment_date", ">=", start_dt),
             ("payment_date", "<", end_dt),
-            ("state", "=", "confirmed"),
+        ]
+
+        def _sum(field_name, domain):
+            groups = Payment.read_group(domain, [field_name], [], lazy=False)
+            if not groups:
+                return 0.0
+            return groups[0].get(field_name, 0.0) or 0.0
+
+        def _m2o_group_ids(domain, field_name):
+            groups = Payment.read_group(domain, [field_name], [field_name], lazy=False)
+            result = set()
+            for group in groups:
+                value = group.get(field_name)
+                if isinstance(value, (list, tuple)) and value:
+                    result.add(value[0])
+                elif isinstance(value, int):
+                    result.add(value)
+            return result
+
+        # Daily Money Snapshot.  These fields are stored/simple on
+        # route.visit.payment, so read_group keeps the card opening light.
+        self.cash_today_amount = _sum("amount", today_domain + [
+            ("payment_mode", "=", "cash"),
+            "|",
+            ("cash_custody_state", "=", False),
+            ("cash_custody_state", "=", "with_salesperson"),
         ])
-        followup_payments = Payment.search([
-            ("salesperson_id", "=", user.id),
-            ("state", "=", "confirmed"),
-            "|", "|",
-            ("promise_amount", ">", 0.0),
+        self.bank_today_amount = _sum("amount", today_domain + [("payment_mode", "=", "bank")])
+        self.pos_today_amount = _sum("amount", today_domain + [("payment_mode", "=", "pos")])
+        self.cheque_today_amount = _sum("amount", today_domain + [
             ("payment_mode", "=", "cheque"),
-            ("collection_due_bucket", "=", "remaining_due"),
+            ("cheque_financial_state", "in", ["pending", "cleared"]),
         ])
-
-        cash_with_salesperson = today_payments.filtered(
-            lambda p: payment_snapshot_mode(p) == "cash"
-            and (getattr(p, "cash_custody_state", False) or "with_salesperson") == "with_salesperson"
+        self.collection_collected_today_amount = (
+            self.cash_today_amount
+            + self.bank_today_amount
+            + self.pos_today_amount
+            + self.cheque_today_amount
         )
-        self.cash_today_amount = sum(payment_snapshot_amount(p) for p in cash_with_salesperson)
-        self.bank_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "bank")
-        self.pos_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "pos")
-        self.cheque_today_amount = sum(payment_snapshot_amount(p) for p in today_payments if payment_snapshot_mode(p) == "cheque")
-        self.collection_collected_today_amount = self.cash_today_amount + self.bank_today_amount + self.pos_today_amount + self.cheque_today_amount
 
-        deferred_entries = today_payments.filtered(lambda p: (p.promise_amount or 0.0) > 0.0)
-        self.deferred_today_amount = sum((p.promise_amount or 0.0) for p in deferred_entries)
-        self.deferred_payment_count = len(deferred_entries)
+        self.deferred_today_amount = _sum("promise_amount", today_domain + [("promise_amount", ">", 0.0)])
+        self.deferred_payment_count = Payment.search_count(today_domain + [("promise_amount", ">", 0.0)])
 
-        open_promise_entries = followup_payments.filtered(lambda p: payment_promise_status(p) in ("open", "due_today", "overdue"))
-        overdue_promise_entries = open_promise_entries.filtered(lambda p: payment_promise_status(p) == "overdue")
-        self.open_promise_entry_count = len(open_promise_entries)
-        self.overdue_promise_entry_count = len(overdue_promise_entries)
-        self.open_promise_amount = sum((p.promise_amount or 0.0) for p in open_promise_entries)
+        # Promise / follow-up counters.  Avoid the non-stored promise_status
+        # helper in this screen; the same operational result is derived with
+        # date/domain checks and the stored remaining-due bucket.
+        open_promise_domain = base_domain + [
+            ("promise_amount", ">", 0.0),
+            "|",
+            ("payment_business_flow", "=", "direct_stop"),
+            ("collection_due_bucket", "=", "remaining_due"),
+        ]
+        overdue_promise_domain = open_promise_domain + [("promise_date", "<", today)] if today else open_promise_domain + [("id", "=", 0)]
+        self.open_promise_entry_count = Payment.search_count(open_promise_domain)
+        self.overdue_promise_entry_count = Payment.search_count(overdue_promise_domain)
+        self.open_promise_amount = _sum("promise_amount", open_promise_domain)
 
-        cheque_open_due_payments = followup_payments.filtered(lambda p: payment_cheque_open_due_amount(p) > 0.0)
-        cheque_pending_clearance_payments = followup_payments.filtered(lambda p: payment_cheque_pending_clearance_amount(p) > 0.0)
-        today_cheque_cleared_payments = today_payments.filtered(
-            lambda p: payment_cheque_cleared_amount(p) > 0.0 and payment_snapshot_mode(p) == "cheque"
+        # Cheque lifecycle counters use the stored financial state introduced
+        # for Odoo 19 stability, instead of recomputing the display amounts for
+        # every cheque record.
+        cheque_open_due_domain = base_domain + [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_financial_state", "in", ["open_due", "cancelled"]),
+        ]
+        cheque_pending_domain = base_domain + [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_financial_state", "=", "pending"),
+        ]
+        cheque_cleared_today_domain = today_domain + [
+            ("payment_mode", "=", "cheque"),
+            ("cheque_financial_state", "=", "cleared"),
+        ]
+        self.cheque_followup_entry_count = Payment.search_count(cheque_open_due_domain)
+        self.cheque_pending_clearance_entry_count = Payment.search_count(cheque_pending_domain)
+        self.cheque_open_due_amount = _sum("amount", cheque_open_due_domain)
+        self.cheque_pending_clearance_amount = _sum("amount", cheque_pending_domain)
+        self.cheque_cleared_today_amount = _sum("amount", cheque_cleared_today_domain)
+
+        # Collection source cards.  Count unique business documents without
+        # loading today's payment records.
+        visit_collection_targets = _m2o_group_ids(
+            today_domain + [("payment_business_flow", "=", "consignment_visit"), ("visit_id", "!=", False)],
+            "visit_id",
         )
-        self.cheque_followup_entry_count = len(cheque_open_due_payments)
-        self.cheque_pending_clearance_entry_count = len(cheque_pending_clearance_payments)
-        self.cheque_open_due_amount = sum(payment_cheque_open_due_amount(p) for p in cheque_open_due_payments)
-        self.cheque_pending_clearance_amount = sum(payment_cheque_pending_clearance_amount(p) for p in cheque_pending_clearance_payments)
-        self.cheque_cleared_today_amount = sum(payment_cheque_cleared_amount(p) for p in today_cheque_cleared_payments)
-
-        visit_collection_targets = set(today_payments.filtered(lambda p: payment_business_flow(p) == "consignment_visit").mapped("visit_id").ids)
-        direct_stop_payments = today_payments.filtered(lambda p: payment_business_flow(p) == "direct_stop")
-        direct_stop_targets = set(direct_stop_payments.mapped("settlement_visit_id").ids) | set(direct_stop_payments.mapped("visit_id").ids)
-        direct_sale_order_targets = set(today_payments.filtered(lambda p: payment_business_flow(p) == "direct_sale_order").mapped("sale_order_id").ids)
+        direct_stop_targets = _m2o_group_ids(
+            today_domain + [("payment_business_flow", "=", "direct_stop"), ("settlement_visit_id", "!=", False)],
+            "settlement_visit_id",
+        )
+        direct_stop_targets |= _m2o_group_ids(
+            today_domain + [("payment_business_flow", "=", "direct_stop"), ("settlement_visit_id", "=", False), ("visit_id", "!=", False)],
+            "visit_id",
+        )
+        direct_sale_order_targets = _m2o_group_ids(
+            today_domain + [("payment_business_flow", "=", "direct_sale_order"), ("sale_order_id", "!=", False)],
+            "sale_order_id",
+        )
         self.visit_collection_count = len(visit_collection_targets)
         self.direct_stop_payment_count = len(direct_stop_targets)
         self.direct_sale_order_payment_count = len(direct_sale_order_targets)
-        self.confirmed_collection_count = len(followup_payments)
-        self.collection_followup_count = len(followup_payments.filtered(
-            lambda p: (p.promise_amount or 0.0) > 0.0 or payment_cheque_open_due_amount(p) > 0.0 or (getattr(p, "collection_due_bucket", False) == "remaining_due")
-        ))
+
+        # The All Collections badge is a count only; do not load all historical
+        # collections just to show this number.
+        self.confirmed_collection_count = Payment.search_count(base_domain)
+        self.collection_followup_count = Payment.search_count(base_domain + [
+            "|", "|",
+            ("promise_amount", ">", 0.0),
+            ("collection_due_bucket", "=", "remaining_due"),
+            ("cheque_financial_state", "in", ["open_due", "cancelled"]),
+        ])
 
         active_visits = Visit.search([
             ("user_id", "=", user.id),
@@ -1089,14 +1141,23 @@ class RoutePdaHome(models.TransientModel):
             else (visit.remaining_due_amount or 0.0)
             for visit in active_visits
         )
+
+        # Only open-due cheque lines need record-level inspection to know
+        # whether their visit is still active.  This set is much smaller than
+        # all confirmed payments.
+        payment_target_visit = self._get_payment_target_visit
         closed_or_unlinked_cheque_open_due = 0.0
-        for payment in cheque_open_due_payments:
+        for payment in Payment.search(cheque_open_due_domain):
             target_visit = payment_target_visit(payment)
             if not target_visit or target_visit.id not in active_visit_ids:
-                closed_or_unlinked_cheque_open_due += payment_cheque_open_due_amount(payment)
+                closed_or_unlinked_cheque_open_due += payment.amount or 0.0
         self.remaining_due_amount = active_visit_remaining_due + closed_or_unlinked_cheque_open_due
 
-        self.collection_total_signal_amount = self.collection_collected_today_amount + self.deferred_today_amount + self.remaining_due_amount
+        self.collection_total_signal_amount = (
+            self.collection_collected_today_amount
+            + self.deferred_today_amount
+            + self.remaining_due_amount
+        )
         mix_total = self.collection_collected_today_amount + self.deferred_today_amount
         if mix_total:
             self.collection_cash_share_percent = (self.cash_today_amount / mix_total) * 100.0
@@ -1104,12 +1165,17 @@ class RoutePdaHome(models.TransientModel):
             self.collection_pos_share_percent = (self.pos_today_amount / mix_total) * 100.0
             self.collection_cheque_share_percent = (self.cheque_today_amount / mix_total) * 100.0
             self.collection_deferred_share_percent = (self.deferred_today_amount / mix_total) * 100.0
+
         flow_total = self.visit_collection_count + self.direct_stop_payment_count + self.direct_sale_order_payment_count
         if flow_total:
             self.collection_consignment_share_percent = (self.visit_collection_count / flow_total) * 100.0
             self.collection_direct_stop_share_percent = (self.direct_stop_payment_count / flow_total) * 100.0
             self.collection_direct_sale_order_share_percent = (self.direct_sale_order_payment_count / flow_total) * 100.0
-        self.collection_followup_share_percent = (self.collection_followup_count / self.confirmed_collection_count) * 100.0 if self.confirmed_collection_count else 0.0
+        self.collection_followup_share_percent = (
+            (self.collection_followup_count / self.confirmed_collection_count) * 100.0
+            if self.confirmed_collection_count
+            else 0.0
+        )
 
     def _compute_dashboard_light_current_visit_snapshot(self, user, today, start_dt, end_dt):
         """Compute only the fields used by Current Visit Snapshot."""
