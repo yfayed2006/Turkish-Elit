@@ -661,6 +661,35 @@ class RoutePdaHome(models.TransientModel):
         groups = self.env["stock.quant"].read_group(domain, ["product_id"], ["product_id"], lazy=False)
         return len([group for group in groups if group.get("product_id")])
 
+    def _get_active_outlet_count_summary(self):
+        """Return lightweight outlet counters for the Route Workspace.
+
+        Loading all active outlets only to count by operation mode is expensive
+        when the customer/outlet database grows.  Keep the same numbers, but
+        calculate them with count/read_group queries instead of materializing the
+        whole outlet recordset in Python.
+        """
+        Outlet = self.env["route.outlet"]
+        active_domain = [("active", "=", True)]
+
+        def _partner_count_for_mode(mode):
+            groups = Outlet.read_group(
+                active_domain + [
+                    ("outlet_operation_mode", "=", mode),
+                    ("partner_id", "!=", False),
+                ],
+                ["partner_id"],
+                ["partner_id"],
+                lazy=False,
+            )
+            return len([group for group in groups if group.get("partner_id")])
+
+        return {
+            "active_outlet_count": Outlet.search_count(active_domain),
+            "direct_sale_customer_count": _partner_count_for_mode("direct_sale"),
+            "consignment_customer_count": _partner_count_for_mode("consignment"),
+        }
+
     def _open_quants_by_location(self, location, title, exclude_route_locations=False, stock_mode="vehicle"):
         self.ensure_one()
         action_xmlid = "route_core.action_route_vehicle_stock_snapshot"
@@ -963,12 +992,10 @@ class RoutePdaHome(models.TransientModel):
             warehouse_quant_domain = [("quantity", ">", 0), ("location_id", "in", rec._get_quant_location_ids(warehouse_loc, exclude_route_locations=True))] if warehouse_loc else [("id", "=", 0)]
             rec.vehicle_product_count = rec._count_distinct_quant_products(vehicle_quant_domain) if vehicle and getattr(vehicle, "stock_location_id", False) else 0
             rec.warehouse_product_count = rec._count_distinct_quant_products(warehouse_quant_domain) if warehouse_loc else 0
-            active_outlets = Outlet.search([("active", "=", True)])
-            direct_sale_customers = active_outlets.filtered(lambda outlet: outlet.outlet_operation_mode == "direct_sale")
-            consignment_customers = active_outlets.filtered(lambda outlet: outlet.outlet_operation_mode == "consignment")
-            rec.direct_sale_customer_count = len(direct_sale_customers.mapped("partner_id"))
-            rec.consignment_customer_count = len(consignment_customers.mapped("partner_id"))
-            rec.active_outlet_count = len(active_outlets)
+            outlet_summary = rec._get_active_outlet_count_summary()
+            rec.direct_sale_customer_count = outlet_summary["direct_sale_customer_count"]
+            rec.consignment_customer_count = outlet_summary["consignment_customer_count"]
+            rec.active_outlet_count = outlet_summary["active_outlet_count"]
             rec.potential_customer_count = Prospect.search_count([
                 ("salesperson_id", "=", user.id),
                 ("active", "=", True),
