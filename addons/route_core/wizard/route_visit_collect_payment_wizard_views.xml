@@ -38,7 +38,7 @@
 <field name="visit_return_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item" invisible="visit_commission_amount == 0">
-<span class="route_pda_payment_meta_label">Commission</span>
+<span class="route_pda_payment_meta_label">Applied Commission</span>
 <field name="visit_commission_amount" readonly="1" nolabel="1"/>
 </div>
 <div class="route_pda_payment_meta_item route_pda_info_card_emphasis">
