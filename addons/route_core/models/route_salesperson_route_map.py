@@ -1,5 +1,3 @@
-import time
-
 from markupsafe import Markup
 
 from odoo import _, api, fields, models
@@ -103,7 +101,19 @@ class RouteSalespersonRouteMap(models.TransientModel):
         self.ensure_one()
         if not self.id:
             return ""
-        url = "/route_core/pda/today_route_map/frame/%s?ts=%s" % (self.id, int(time.time()))
+        # Keep the iframe URL stable during normal field recomputes.  Using
+        # time.time() made the embedded map reload every time Odoo re-read the
+        # form, which is visible on mobile when returning from a visit/card.
+        # write_date changes when the transient is refreshed/opened again.
+        stamp_value = self.write_date or self.create_date
+        if stamp_value:
+            try:
+                stamp = int(fields.Datetime.to_datetime(stamp_value).timestamp())
+            except Exception:
+                stamp = self.id
+        else:
+            stamp = self.id
+        url = "/route_core/pda/today_route_map/frame/%s?ts=%s" % (self.id, stamp)
         return Markup(
             '<iframe src="%s" '
             'style="width:100%%; height:clamp(620px, 78vh, 780px); min-height:620px; border:0; border-radius:14px; background:#f5f6f7;" '
@@ -162,14 +172,27 @@ class RouteSalespersonRouteMap(models.TransientModel):
 
     @api.model
     def action_open_salesperson_today_route_map(self):
-        route_map = self.create(
-            {
-                "name": _("Today's Route Map"),
-                "company_id": self.env.company.id,
-                "user_id": self.env.user.id,
-                "visit_date": fields.Date.context_today(self),
-            }
-        )
+        today = fields.Date.context_today(self)
+        vals = {
+            "name": _("Today's Route Map"),
+            "company_id": self.env.company.id,
+            "user_id": self.env.user.id,
+            "visit_date": today,
+        }
+        # Reuse the latest transient for the same user/day instead of creating a
+        # new route-map record on every click.  Computed counters and iframe data
+        # still read live visit data, while repeated PDA back/open actions become
+        # lighter and produce less transient-table churn.
+        route_map = self.search([
+            ("company_id", "=", self.env.company.id),
+            ("user_id", "=", self.env.user.id),
+            ("visit_date", "=", today),
+        ], order="write_date desc, id desc", limit=1)
+        if route_map:
+            route_map.write(vals)
+        else:
+            route_map = self.create(vals)
+
         view = self.env.ref("route_core.view_route_salesperson_route_map_form", raise_if_not_found=False)
         action = {
             "type": "ir.actions.act_window",
@@ -239,4 +262,3 @@ class RouteSalespersonRouteMap(models.TransientModel):
             "target": "current",
             "context": context,
         }
-
