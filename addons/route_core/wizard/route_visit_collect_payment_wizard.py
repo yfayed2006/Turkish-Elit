@@ -1,4 +1,6 @@
 import json
+import re
+from html import unescape
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
@@ -685,6 +687,29 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
             "deferred_cheque_note": self.deferred_cheque_note,
         }
 
+    def _clean_plain_text(self, value):
+        if not value:
+            return ""
+        text = unescape(str(value))
+        text = re.sub(r"<\s*br\s*/?\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"</\s*(div|p|li|tr|h[1-6])\s*>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = text.replace("\xa0", " ")
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n[ \t]+", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    def _format_note_money(self, amount):
+        self.ensure_one()
+        currency = self.currency_id or self.env.company.currency_id
+        amount = currency.round(amount or 0.0) if currency else (amount or 0.0)
+        symbol = currency.symbol or currency.name or "" if currency else ""
+        formatted = f"{amount:,.2f}"
+        if not symbol:
+            return formatted
+        return f"{symbol} {formatted}" if currency.position == "before" else f"{formatted} {symbol}"
+
     def _deferred_plan_note_fragment(self):
         self.ensure_one()
         if self.collection_type != "partial":
@@ -692,29 +717,31 @@ class RouteVisitCollectPaymentWizard(models.TransientModel):
         mode_labels = dict(self._fields["deferred_payment_mode"].selection)
         parts = [
             _("Deferred collection plan:"),
-            _("Amount: %s") % (self.promise_amount or 0.0),
-            _("Date: %s") % (self.promise_date or "-"),
+            _("Deferred Amount: %s") % self._format_note_money(self.promise_amount or 0.0),
+            _("Expected Date: %s") % (self.promise_date or "-"),
             _("Expected Mode: %s") % (mode_labels.get(self.deferred_payment_mode) or self.deferred_payment_mode or "-"),
         ]
         if self.deferred_payment_mode == "cheque":
             parts.extend([
-                _("Cheque Number: %s") % (self.deferred_cheque_number or "-"),
-                _("Cheque Bank: %s") % (self.deferred_bank_name or "-"),
-                _("Cheque Date: %s") % (self.deferred_cheque_date or "-"),
+                _("Deferred Cheque Number: %s") % (self.deferred_cheque_number or "-"),
+                _("Deferred Cheque Bank: %s") % (self.deferred_bank_name or "-"),
+                _("Deferred Cheque Date: %s") % (self.deferred_cheque_date or "-"),
             ])
+            if self.deferred_cheque_holder_name:
+                parts.append(_("Deferred Cheque Holder: %s") % self._clean_plain_text(self.deferred_cheque_holder_name))
         elif self.deferred_payment_mode == "bank" and self.deferred_bank_name:
-            parts.append(_("Bank: %s") % self.deferred_bank_name)
+            parts.append(_("Expected Bank: %s") % self._clean_plain_text(self.deferred_bank_name))
         elif self.deferred_payment_mode == "pos" and self.deferred_pos_terminal:
-            parts.append(_("POS Terminal: %s") % self.deferred_pos_terminal)
+            parts.append(_("Expected POS Terminal: %s") % self._clean_plain_text(self.deferred_pos_terminal))
         if self.deferred_reference:
-            parts.append(_("Reference: %s") % self.deferred_reference)
+            parts.append(_("Deferred Reference: %s") % self._clean_plain_text(self.deferred_reference))
         if self.deferred_cheque_note:
-            parts.append(_("Details: %s") % self.deferred_cheque_note)
+            parts.append(_("Deferred Details: %s") % self._clean_plain_text(self.deferred_cheque_note))
         return "\n".join(parts)
 
     def _compose_payment_note(self):
         self.ensure_one()
-        base_note = self.note or ""
+        base_note = self._clean_plain_text(self.note or "")
         deferred_fragment = self._deferred_plan_note_fragment()
         if deferred_fragment:
             return (base_note + "\n\n" + deferred_fragment).strip() if base_note else deferred_fragment
