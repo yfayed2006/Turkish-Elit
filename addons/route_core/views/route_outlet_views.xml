@@ -133,6 +133,84 @@
 </kanban>
 </field>
 </record>
+<record id="view_route_outlet_pda_fast_list" model="ir.ui.view">
+<field name="name">route.outlet.pda.fast.list</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<list string="Existing Outlets" create="0" edit="0" delete="0">
+<field name="code" string="Outlet Code" optional="show"/>
+<field name="name" string="Outlet"/>
+<field name="partner_id" string="Customer" optional="show"/>
+<field name="outlet_operation_mode" string="Mode" widget="badge" optional="show" decoration-info="outlet_operation_mode == 'consignment'" decoration-warning="outlet_operation_mode == 'direct_sale'"/>
+<field name="route_city_id" string="City" optional="show"/>
+<field name="route_area_name" string="Area" optional="show"/>
+<field name="phone" optional="hide"/>
+<field name="mobile" optional="hide"/>
+</list>
+</field>
+</record>
+<record id="view_route_outlet_pda_fast_kanban" model="ir.ui.view">
+<field name="name">route.outlet.pda.fast.kanban</field>
+<field name="model">route.outlet</field>
+<field name="arch" type="xml">
+<kanban class="route_pda_mobile_outlet_kanban route_pda_fast_outlet_kanban" create="0" edit="0" delete="0">
+<field name="name"/>
+<field name="code"/>
+<field name="partner_id"/>
+<field name="outlet_operation_mode"/>
+<field name="route_city_id"/>
+<field name="route_area_name"/>
+<field name="phone"/>
+<field name="mobile"/>
+<templates>
+<t t-name="card">
+<div t-attf-class="oe_kanban_global_click o_kanban_record route_pda_outlet_card route_pda_outlet_fast_card route_pda_outlet_card_mode_#{record.outlet_operation_mode.raw_value or 'unknown'}">
+<div class="route_pda_outlet_card_head">
+<div t-attf-class="route_pda_outlet_title route_pda_outlet_title_mode_#{record.outlet_operation_mode.raw_value or 'unknown'}">
+<field name="name"/>
+</div>
+<div class="route_pda_outlet_code">
+<field name="code"/>
+</div>
+</div>
+<div class="route_pda_outlet_customer">
+<field name="partner_id"/>
+</div>
+<div class="route_pda_outlet_badges">
+<span class="route_pda_outlet_badge route_pda_outlet_badge_mode">
+<field name="outlet_operation_mode" widget="badge"/>
+</span>
+<t t-if="record.route_city_id.value">
+<span class="route_pda_outlet_badge">
+<field name="route_city_id"/>
+</span>
+</t>
+<t t-if="record.route_area_name.value">
+<span class="route_pda_outlet_badge">
+<field name="route_area_name"/>
+</span>
+</t>
+</div>
+<div class="route_pda_outlet_metrics">
+<div class="route_pda_outlet_metric">
+<span class="route_pda_outlet_metric_label">Phone</span>
+<span class="route_pda_outlet_metric_value">
+<field name="phone"/>
+</span>
+</div>
+<div class="route_pda_outlet_metric">
+<span class="route_pda_outlet_metric_label">Mobile</span>
+<span class="route_pda_outlet_metric_value">
+<field name="mobile"/>
+</span>
+</div>
+</div>
+</div>
+</t>
+</templates>
+</kanban>
+</field>
+</record>
 <record id="view_route_outlet_form" model="ir.ui.view">
 <field name="name">route.outlet.form</field>
 <field name="model">route.outlet</field>
