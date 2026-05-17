@@ -68,6 +68,110 @@ class StockPicking(models.Model):
             picking.route_pda_return_qty = total_qty
             picking.route_pda_return_value = total_value
 
+
+    def _route_pda_html_escape(self, value):
+        return html.escape(str(value or ""), quote=True)
+
+    def _route_pda_format_qty(self, value):
+        value = value or 0.0
+        return "%.2f" % value
+
+    def _route_pda_format_money(self, amount, currency=False):
+        amount = amount or 0.0
+        symbol = currency.symbol if currency else ""
+        if currency and currency.position == "before":
+            return "%s %.2f" % (symbol, amount)
+        if symbol:
+            return "%.2f %s" % (amount, symbol)
+        return "%.2f" % amount
+
+    def _route_pda_format_date_label(self, value):
+        if not value:
+            return False
+        try:
+            if hasattr(value, "strftime"):
+                return value.strftime("%b %d")
+        except Exception:
+            pass
+        return str(value)
+
+    @api.depends(
+        "move_ids.product_id",
+        "move_ids.product_id.barcode",
+        "move_ids.product_id.image_128",
+        "move_ids.product_uom_qty",
+        "move_ids.quantity",
+        "move_ids.product_uom",
+        "move_ids.route_move_lot_label",
+        "move_ids.route_move_expiry_date",
+        "move_ids.route_move_return_route_display",
+        "move_ids.route_move_unit_price_display",
+        "move_ids.route_move_value_display",
+    )
+    def _compute_route_pda_move_lines_html(self):
+        for picking in self:
+            currency = picking.company_id.currency_id
+            cards = []
+            moves = picking.move_ids.filtered(lambda move: move.product_id)
+            for move in moves:
+                product = move.product_id
+                image_url = "/web/image/product.product/%s/image_128" % product.id
+                product_name = self._route_pda_html_escape(product.display_name or move.display_name)
+                barcode = self._route_pda_html_escape(product.barcode or "")
+                lot_label = self._route_pda_html_escape(move.route_move_lot_label or "")
+                expiry_label = self._route_pda_html_escape(self._route_pda_format_date_label(move.route_move_expiry_date) or "")
+                route_label = self._route_pda_html_escape(move.route_move_return_route_display or "")
+                uom_label = self._route_pda_html_escape(move.product_uom.display_name or product.uom_id.display_name or "")
+                demand = self._route_pda_format_qty(move.product_uom_qty)
+                done = self._route_pda_format_qty(getattr(move, "quantity", 0.0) or 0.0)
+                unit_price = self._route_pda_format_money(move.route_move_unit_price_display, currency)
+                value = self._route_pda_format_money(move.route_move_value_display, currency)
+
+                badges = []
+                if lot_label:
+                    badges.append('<span class="route_pda_document_product_badge">Lot:%s</span>' % lot_label)
+                if expiry_label:
+                    badges.append('<span class="route_pda_document_product_badge">Expiry:%s</span>' % expiry_label)
+                if route_label:
+                    badges.append('<span class="route_pda_document_product_badge route_pda_document_route_badge">%s</span>' % route_label)
+
+                cards.append("""
+                    <div class="route_pda_document_product_card">
+                        <div class="route_pda_document_product_top">
+                            <div class="route_pda_document_product_image_box"><img src="%s" alt="" loading="lazy"/></div>
+                            <div class="route_pda_document_product_title_box">
+                                <div class="route_pda_document_product_title">%s</div>
+                                %s
+                                <div class="route_pda_document_product_badges">%s</div>
+                            </div>
+                        </div>
+                        <div class="route_pda_document_product_grid">
+                            <div class="route_pda_document_product_metric"><span>Demand</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>Done</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>UoM</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>Movement Route</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric"><span>Unit Price</span><strong>%s</strong></div>
+                            <div class="route_pda_document_product_metric route_pda_document_product_metric_total"><span>Value</span><strong>%s</strong></div>
+                        </div>
+                    </div>
+                """ % (
+                    image_url,
+                    product_name,
+                    ('<div class="route_pda_document_product_subtitle">Barcode: %s</div>' % barcode) if barcode else "",
+                    "".join(badges),
+                    demand,
+                    done,
+                    uom_label,
+                    route_label,
+                    unit_price,
+                    value,
+                ))
+
+            if cards:
+                picking.route_pda_move_lines_html = '<div class="route_pda_document_product_cards_html">%s</div>' % "".join(cards)
+            else:
+                picking.route_pda_move_lines_html = '<div class="route_pda_document_product_cards_html"><div class="route_pda_document_product_card"><div class="route_pda_document_product_title">No product lines.</div></div></div>'
+
     def _get_related_consignment_outlets_for_balance_sync(self):
         self.ensure_one()
         outlet_model = self.env["route.outlet"].sudo()
