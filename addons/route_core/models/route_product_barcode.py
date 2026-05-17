@@ -345,7 +345,22 @@ class ProductTemplate(models.Model):
         product_domain = self.env["product.product"]._route_source_available_domain()
         if not product_domain:
             return []
-        available_template_ids = self.env["product.product"].with_context(route_only_source_available_products=False).search(product_domain).mapped("product_tmpl_id").ids
+
+        # Product lookup is used constantly from salesperson/mobile screens.
+        # Do not materialize every available product only to map product_tmpl_id;
+        # group variants by template in SQL and return the template ids directly.
+        Product = self.env["product.product"].with_context(route_only_source_available_products=False)
+        grouped_products = Product.read_group(
+            product_domain,
+            ["product_tmpl_id"],
+            ["product_tmpl_id"],
+            lazy=False,
+        )
+        available_template_ids = [
+            group["product_tmpl_id"][0]
+            for group in grouped_products
+            if group.get("product_tmpl_id")
+        ]
         return [("id", "in", available_template_ids or [0])]
 
     @api.model
@@ -381,3 +396,4 @@ class ProductTemplate(models.Model):
         if source_template_domain:
             domain = expression.AND([domain, source_template_domain])
         return super().name_search(name, domain, operator, limit)
+
