@@ -596,6 +596,7 @@ Date:
 <div class="page" style="font-size:12px; color:#1f2937;">
 <t t-set="summary" t-value="doc._get_consignment_receipt_summary()"/>
 <t t-set="payments" t-value="doc._get_consignment_receipt_payments()"/>
+<t t-set="payment_plans" t-value="doc._get_route_receipt_payment_plan_items(payments)"/>
 <t t-set="items" t-value="doc._get_consignment_receipt_line_items()"/>
 <t t-set="currency_label" t-value="doc.currency_id.name or ''"/>
 <t t-set="total_outlet_due" t-value="summary.get('total_outlet_due', summary.get('current_due', 0.0))"/>
@@ -731,7 +732,7 @@ Date:
 <td style="padding:6px 10px; border-top:1px solid #e5e7eb;">
 <span t-esc="'%.2f %s' % (gross_after_returns_amount, currency_label)"/>
 </td>
-<td style="padding:6px 10px; font-weight:700; color:#334155; border-top:1px solid #e5e7eb;">Category Commission</td>
+<td style="padding:6px 10px; font-weight:700; color:#334155; border-top:1px solid #e5e7eb;">Applied Commission</td>
 <td style="padding:6px 10px; border-top:1px solid #e5e7eb;">
 <span t-esc="'%.2f %s' % (commission_amount, currency_label)"/>
 </td>
@@ -795,10 +796,10 @@ Date:
 </table>
 <table t-if="category_breakdown.get('lines')" style="width:100%; border-collapse:collapse; margin-bottom:14px; border:1px solid #cbd5e1;">
 <tr>
-<td colspan="8" style="padding:8px 10px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Category Commission Breakdown</td>
+<td colspan="8" style="padding:8px 10px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #cbd5e1;">Applied Commission Breakdown</td>
 </tr>
 <tr>
-<td colspan="8" style="padding:7px 10px; background:#f8fafc; color:#475569; font-size:10.5px; line-height:1.45; border-bottom:1px solid #e5e7eb;">Net Payable = Sold Value - Returns - Category Commission. The table groups sold value, returns, commission percentage, outlet commission, and final net payable by product category.</td>
+<td colspan="8" style="padding:7px 10px; background:#f8fafc; color:#475569; font-size:10.5px; line-height:1.45; border-bottom:1px solid #e5e7eb;">Net Payable = After Returns - Applied Commission. The table groups sold value, returns, commission percentage, applied commission, and final net payable by product category.</td>
 </tr>
 <tr style="background:#f8fafc; color:#475569; font-size:10px; font-weight:700;">
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb;">Category</td>
@@ -807,7 +808,7 @@ Date:
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Returns</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">After Returns</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission %</td>
-<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Commission</td>
+<td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Applied Commission</td>
 <td style="padding:6px 7px; border-bottom:1px solid #e5e7eb; text-align:right;">Net Payable</td>
 </tr>
 <tr t-foreach="category_breakdown.get('lines')" t-as="line">
@@ -898,6 +899,64 @@ Date:
 <td colspan="3" style="background:#f8fafc; border-top:1px solid #dbe3ec;"> </td>
 </tr>
 </tfoot>
+</table>
+</div>
+<div style="margin-top:8px; border:1px solid #dbe3ec; margin-bottom:12px;" t-if="payment_plans">
+<div style="padding:6px 8px; background:#ecfeff; color:#155e75; font-weight:700; font-size:13px; border-bottom:1px solid #dbe3ec;">Collection Now and Deferred Plan</div>
+<table style="width:100%; border-collapse:collapse;">
+<thead>
+<tr>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:28%;">Collected Now</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:36%;">Current Payment Details</th>
+<th style="text-align:left; padding:6px 8px; border-bottom:1px solid #e5e7eb; background:#fcfcfd; width:36%;">Deferred Balance Plan</th>
+</tr>
+</thead>
+<tbody>
+<tr t-foreach="payment_plans" t-as="plan">
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<div>
+<strong t-esc="plan.get('now_amount_label') or '-'"/>
+</div>
+<div style="color:#475569; font-size:10.5px;" t-esc="plan.get('now_mode_label') or '-'"/>
+<div style="color:#64748b; font-size:10.5px;" t-esc="plan.get('now_date_label') or '-'"/>
+</td>
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<t t-if="not plan.get('now_details')">-</t>
+<t t-foreach="plan.get('now_details')" t-as="detail">
+<div style="font-size:10.5px; line-height:1.45;">
+<strong t-esc="detail.get('label')"/>
+:
+<span t-esc="detail.get('value')"/>
+</div>
+</t>
+</td>
+<td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top;">
+<t t-if="not plan.get('deferred_amount')">Paid in full</t>
+<t t-if="plan.get('deferred_amount')">
+<div>
+<strong t-esc="plan.get('deferred_amount_label')"/>
+</div>
+<div style="color:#475569; font-size:10.5px;">
+Expected Date:
+<span t-esc="plan.get('deferred_date_label') or '-'"/>
+</div>
+<div style="color:#475569; font-size:10.5px;">
+Expected Mode:
+<span t-esc="plan.get('deferred_mode_label') or '-'"/>
+</div>
+<t t-foreach="plan.get('deferred_details')" t-as="detail">
+<t t-if="detail.get('label') not in ('Expected Date', 'Expected Mode')">
+<div style="font-size:10.5px; line-height:1.45;">
+<strong t-esc="detail.get('label')"/>
+:
+<span t-esc="detail.get('value')"/>
+</div>
+</t>
+</t>
+</t>
+</td>
+</tr>
+</tbody>
 </table>
 </div>
 <div style="margin-top:8px; border:1px solid #dbe3ec; margin-bottom:10px;">
