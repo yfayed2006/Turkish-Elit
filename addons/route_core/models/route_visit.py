@@ -2539,6 +2539,8 @@ class RouteVisit(models.Model):
                 plan_line.plan_id._ensure_no_unresolved_previous_pending(plan_line)
 
             rec._ensure_single_active_plan_visit()
+            effective_source_location = rec._route_get_effective_source_location()
+            is_direct_sales_stop = rec._is_direct_sales_stop()
 
             rec.write({
                 "state": "in_progress",
@@ -2556,8 +2558,8 @@ class RouteVisit(models.Model):
                 "direct_stop_skip_return": False,
                 "direct_stop_credit_policy": False,
                 "direct_stop_credit_note": False,
-                "source_location_id": rec._route_get_effective_source_location().id if rec._route_get_effective_source_location() else False,
-                "destination_location_id": False if rec._is_direct_sales_stop() else (rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False),
+                "source_location_id": effective_source_location.id if effective_source_location else False,
+                "destination_location_id": False if is_direct_sales_stop else (rec.outlet_id.stock_location_id.id if rec.outlet_id and getattr(rec.outlet_id, "stock_location_id", False) else False),
             })
 
     def _prepare_sale_order_line_vals(self):
@@ -2785,55 +2787,6 @@ class RouteVisit(models.Model):
 
             if not delivery:
                 return self._get_sale_order_form_action(self.sale_order_id)
-
-            self.with_context(route_visit_force_write=True).write({
-                "state": "done",
-                "visit_process_state": "done",
-                "end_datetime": fields.Datetime.now(),
-            })
-            return True
-
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("End Visit"),
-            "res_model": "route.visit.end.wizard",
-            "view_mode": "form",
-            "target": "new",
-            "context": {
-                "default_visit_id": self.id,
-            },
-        }
-
-    def action_cancel(self):
-        for rec in self:
-            if rec.state == "done":
-                raise UserError(_("You cannot cancel a completed visit."))
-            rec.with_context(route_visit_force_write=True).write({
-                "state": "cancel",
-                "visit_process_state": "cancel",
-            })
-
-    def action_reset_to_draft(self):
-        for rec in self:
-            rec.with_context(route_visit_force_write=True, route_visit_force_pending_line=True).write({
-                "state": "draft",
-                "visit_process_state": "draft",
-                "start_datetime": False,
-                "end_datetime": False,
-                "sale_order_id": False,
-                "no_sale_reason": False,
-                "collection_skip_reason": False,
-                "has_returns": False,
-                "returns_step_done": False,
-                "has_refill": False,
-                "has_pending_refill": False,
-                "no_refill": False,
-                "refill_datetime": False,
-                "refill_backorder_id": False,
-                "refill_picking_id": False,
-                "source_location_id": False,
-                "destination_location_id": False,
-            })
 
             self.with_context(route_visit_force_write=True).write({
                 "state": "done",
