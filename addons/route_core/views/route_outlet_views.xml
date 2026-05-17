@@ -947,7 +947,7 @@
 <field name="currency_id"/>
 <templates>
 <t t-name="card">
-<div class="oe_kanban_global_click o_kanban_record route_outlet_stock_product_card route_pda_document_product_card">
+<div class="o_kanban_record route_outlet_stock_product_card route_pda_document_product_card route_outlet_stock_display_only_card">
 <div class="route_pda_document_product_top route_outlet_stock_product_top">
 <div class="route_pda_document_product_image_box route_outlet_stock_image_box">
 <field name="product_image_128" widget="image" class="route_pda_document_product_image route_outlet_stock_product_image" options="{'size': [128, 128], 'preview_image': 'product_image_128'}"/>
@@ -2196,4 +2196,3 @@ Expiry:
 <field name="act_window_id" ref="action_route_outlet"/>
 </record>
 <menuitem id="menu_route_outlet" name="Outlets" parent="menu_route_visit_root" action="action_route_outlet" sequence="30"/>
-</odoo>
