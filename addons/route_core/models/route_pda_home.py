@@ -2228,9 +2228,35 @@ class RoutePdaHome(models.TransientModel):
             "route_core.action_route_visit_collection_salesperson",
             name="All Collections",
             domain=[("salesperson_id", "=", self.env.user.id), ("state", "=", "confirmed")],
-            context={"search_default_filter_my_payments": 1, "search_default_filter_confirmed": 1, "create": 0, "edit": 0, "delete": 0},
+            context={
+                "search_default_filter_my_payments": 1,
+                "search_default_filter_confirmed": 1,
+                "create": 0,
+                "edit": 0,
+                "delete": 0,
+                "route_fast_collections": True,
+            },
         )
-        action["limit"] = 40
+        fast_kanban = self.env.ref("route_core.view_route_visit_collection_fast_kanban", raise_if_not_found=False)
+        list_view = self.env.ref("route_core.view_route_visit_collection_list", raise_if_not_found=False)
+        form_view = self.env.ref("route_core.view_route_visit_payment_form", raise_if_not_found=False)
+        fast_search = self.env.ref("route_core.view_route_visit_collection_fast_search", raise_if_not_found=False)
+        views = []
+        if fast_kanban:
+            views.append((fast_kanban.id, "kanban"))
+        if list_view:
+            views.append((list_view.id, "list"))
+        if form_view:
+            views.append((form_view.id, "form"))
+        if views:
+            action["views"] = views
+            action["view_mode"] = ",".join(mode for _view_id, mode in views)
+            action["view_id"] = views[0][0]
+        if fast_search:
+            action["search_view_id"] = [fast_search.id, "search"]
+        # Keep first page small: the collection cards are visually rich, so 20
+        # records is noticeably faster and still enough for salesperson review.
+        action["limit"] = 20
         return action
 
     def action_open_direct_sale_payments(self):
