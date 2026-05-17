@@ -274,7 +274,7 @@ class SaleOrder(models.Model):
         "order_line.product_id.barcode",
         "order_line.product_id.image_128",
         "order_line.product_uom_qty",
-        "order_line.product_uom",
+        "order_line.product_uom_id",
         "order_line.price_unit",
         "order_line.discount",
         "order_line.price_subtotal",
@@ -299,7 +299,8 @@ class SaleOrder(models.Model):
                 lot_label = self._route_pda_html_escape(lot.display_name if lot else "")
                 expiry_value = getattr(line, "route_expiry_month_label", False) or self._route_pda_format_date_label(getattr(line, "route_expiry_date", False))
                 expiry_label = self._route_pda_html_escape(expiry_value or "")
-                uom_label = self._route_pda_html_escape(line.product_uom.display_name or product.uom_id.display_name or "")
+                uom = getattr(line, "product_uom_id", False) or getattr(line, "product_uom", False) or product.uom_id
+                uom_label = self._route_pda_html_escape(uom.display_name if uom else "")
                 qty = self._route_pda_format_qty(line.product_uom_qty)
                 unit_price = self._route_pda_format_money(line.price_unit, currency)
                 gross = self._route_pda_format_money(line.route_gross_value or (line.product_uom_qty * line.price_unit), currency)
